@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct SonoraApp: App {
+    @StateObject private var memoStore = MemoStore()
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(memoStore)
         }
     }
 }

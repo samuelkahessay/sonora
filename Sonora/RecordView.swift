@@ -1,0 +1,120 @@
+//
+//  RecordView.swift
+//  Sonora
+//
+//  Created by Samuel Kahessay on 2025-08-23.
+//
+
+import SwiftUI
+
+struct RecordView: View {
+    @StateObject private var audioRecorder = AudioRecorder()
+    @EnvironmentObject var memoStore: MemoStore
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 40) {
+                Spacer()
+                
+                if !audioRecorder.hasPermission {
+                    VStack(spacing: 16) {
+                        Image(systemName: "mic.slash.circle")
+                            .font(.system(size: 80))
+                            .foregroundColor(.red)
+                        
+                        Text("Microphone Permission Required")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        Text("Please allow microphone access to record audio memos")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Button("Request Permission") {
+                            audioRecorder.checkPermissions()
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                } else {
+                    VStack(spacing: 30) {
+                        VStack(spacing: 8) {
+                            if audioRecorder.isRecording {
+                                Text("Recording...")
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.red)
+                                
+                                Text(formatTime(audioRecorder.recordingTime))
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primary)
+                                    .monospacedDigit()
+                            } else {
+                                Text("Ready to Record")
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                        
+                        Button(action: {
+                            if audioRecorder.isRecording {
+                                audioRecorder.stopRecording()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    memoStore.loadMemos()
+                                }
+                            } else {
+                                audioRecorder.startRecording()
+                            }
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(audioRecorder.isRecording ? Color.red : Color.blue)
+                                    .frame(width: 120, height: 120)
+                                
+                                if audioRecorder.isRecording {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.white)
+                                        .frame(width: 40, height: 40)
+                                } else {
+                                    Image(systemName: "mic.fill")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .scaleEffect(audioRecorder.isRecording ? 0.9 : 1.0)
+                            .animation(.easeInOut(duration: 0.1), value: audioRecorder.isRecording)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        if audioRecorder.isRecording {
+                            HStack {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 8, height: 8)
+                                    .opacity(0.8)
+                                    .scaleEffect(1.2)
+                                    .animation(.easeInOut(duration: 0.8).repeatForever(), value: audioRecorder.isRecording)
+                                
+                                Text("Recording in progress")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+                
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Record")
+        }
+    }
+    
+    private func formatTime(_ time: TimeInterval) -> String {
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+}
