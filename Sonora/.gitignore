@@ -1,0 +1,28 @@
+# Xcode
+*.xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.xcuserstate
+
+# SwiftPM
+.build/
+
+# Cocoapods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Secrets
+Secrets.plist
+
+# macOS
+.DS_Store
