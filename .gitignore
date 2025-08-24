@@ -1,0 +1,44 @@
+# Xcode
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcuserstate
+*.xcuserdatad/
+
+# Server secrets and temp files
+server/.env
+server/uploads/
+server/node_modules/
+
+# Local memo metadata (contains transcriptions)
+*_metadata.json
+
+# Xcode
+*.xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.xcuserstate
+
+# SwiftPM
+.build/
+
+# Cocoapods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Secrets
+Secrets.plist
+
+# macOS
+.DS_Store

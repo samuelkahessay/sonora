@@ -33,7 +33,9 @@ struct MemosView: View {
                 } else {
                     List {
                         ForEach(memoStore.memos) { memo in
-                            MemoRowView(memo: memo)
+                            NavigationLink(destination: MemoDetailView(memo: memo)) {
+                                MemoRowView(memo: memo)
+                            }
                         }
                         .onDelete(perform: deleteMemos)
                     }
@@ -63,20 +65,33 @@ struct MemosView: View {
 struct MemoRowView: View {
     let memo: Memo
     @EnvironmentObject var memoStore: MemoStore
+    @State private var transcriptionState: TranscriptionState = .notStarted
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(memo.displayName)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                HStack {
+        VStack(spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(memo.displayName)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
                     Text(memo.filename)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
-                    Spacer()
+                }
+                
+                Spacer()
+                
+                VStack(spacing: 4) {
+                    Button(action: {
+                        memoStore.playMemo(memo)
+                    }) {
+                        Image(systemName: playButtonIcon(for: memo))
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                     
                     Text(memo.durationString)
                         .font(.caption)
@@ -85,19 +100,50 @@ struct MemoRowView: View {
                 }
             }
             
-            Spacer()
-            
-            Button(action: {
-                memoStore.playMemo(memo)
-            }) {
-                Image(systemName: playButtonIcon(for: memo))
-                    .font(.title2)
+            // Transcription Status Row
+            HStack {
+                TranscriptionStatusView(state: transcriptionState, compact: true)
+                
+                Spacer()
+                
+                if transcriptionState.isFailed {
+                    Button("Retry") {
+                        memoStore.retryTranscription(for: memo)
+                    }
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(6)
+                } else if transcriptionState.isInProgress {
+                    Text("Processing...")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                } else if transcriptionState.isNotStarted {
+                    Button("Transcribe") {
+                        memoStore.sharedTranscriptionManager.startTranscription(for: memo)
+                    }
+                    .font(.caption)
                     .foregroundColor(.blue)
-                    .frame(width: 44, height: 44)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(6)
+                }
             }
-            .buttonStyle(PlainButtonStyle())
         }
         .padding(.vertical, 4)
+        .onAppear {
+            updateTranscriptionState()
+        }
+        .onReceive(memoStore.sharedTranscriptionManager.$transcriptionStates) { _ in
+            updateTranscriptionState()
+        }
+    }
+    
+    private func updateTranscriptionState() {
+        transcriptionState = memoStore.getTranscriptionState(for: memo)
     }
     
     private func playButtonIcon(for memo: Memo) -> String {

@@ -18,9 +18,12 @@ class AudioRecorder: NSObject, ObservableObject {
     private var recordingTimer: Timer?
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     
+    var onRecordingFinished: ((URL) -> Void)?
+    
     override init() {
         super.init()
         checkPermissions()
+        print("🎬 AudioRecorder: Initialized")
     }
     
     private func requestMicPermission(_ completion: @escaping (Bool) -> Void) {
@@ -86,6 +89,9 @@ class AudioRecorder: NSObject, ObservableObject {
     }
     
     func stopRecording() {
+        print("🛑 AudioRecorder: stopRecording() called")
+        print("🛑 AudioRecorder: onRecordingFinished callback is \(onRecordingFinished != nil ? "SET" : "NIL")")
+        
         audioRecorder?.stop()
         recordingTimer?.invalidate()
         recordingTimer = nil
@@ -93,6 +99,8 @@ class AudioRecorder: NSObject, ObservableObject {
         
         let audioSession = AVAudioSession.sharedInstance()
         try? audioSession.setActive(false)
+        
+        print("🛑 AudioRecorder: Recording stopped, delegate should be called")
     }
     
     private func generateFilename() -> String {
@@ -111,7 +119,11 @@ class AudioRecorder: NSObject, ObservableObject {
 
 extension AudioRecorder: AVAudioRecorderDelegate {
     func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
-        if !flag {
+        print("🎬 AudioRecorder: Recording finished successfully: \(flag)")
+        if flag {
+            print("🎬 AudioRecorder: Calling onRecordingFinished callback for \(recorder.url.lastPathComponent)")
+            onRecordingFinished?(recorder.url)
+        } else {
             print("Recording failed")
         }
     }

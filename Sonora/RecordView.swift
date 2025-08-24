@@ -11,6 +11,18 @@ struct RecordView: View {
     @StateObject private var audioRecorder = AudioRecorder()
     @EnvironmentObject var memoStore: MemoStore
     
+    private func setupRecordingCallback() {
+        print("🔧 RecordView: Setting up callback function")
+        audioRecorder.onRecordingFinished = { url in
+            print("🎤 RecordView: Recording finished callback triggered for \(url.lastPathComponent)")
+            DispatchQueue.main.async {
+                print("🎤 RecordView: Calling memoStore.handleNewRecording")
+                memoStore.handleNewRecording(at: url)
+            }
+        }
+        print("🔧 RecordView: Callback function set successfully")
+    }
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 40) {
@@ -60,11 +72,12 @@ struct RecordView: View {
                         
                         Button(action: {
                             if audioRecorder.isRecording {
+                                print("🛑 RecordView: Stopping recording")
                                 audioRecorder.stopRecording()
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    memoStore.loadMemos()
-                                }
                             } else {
+                                print("▶️ RecordView: Starting recording")
+                                // Ensure callback is set before starting
+                                setupRecordingCallback()
                                 audioRecorder.startRecording()
                             }
                         }) {
@@ -109,6 +122,10 @@ struct RecordView: View {
             }
             .padding()
             .navigationTitle("Record")
+            .onAppear {
+                print("🎬 RecordView: Setting up recording callback on appear")
+                setupRecordingCallback()
+            }
         }
     }
     
