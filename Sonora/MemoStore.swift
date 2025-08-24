@@ -9,7 +9,7 @@ import Foundation
 import AVFoundation
 import Combine
 
-struct Memo: Identifiable, Equatable {
+struct Memo: Identifiable, Equatable, Hashable {
     let id = UUID()
     let filename: String
     let url: URL

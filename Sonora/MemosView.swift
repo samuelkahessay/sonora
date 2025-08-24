@@ -7,11 +7,21 @@
 
 import SwiftUI
 
+extension Notification.Name {
+    static let popToRootMemos = Notification.Name("popToRootMemos")
+}
+
 struct MemosView: View {
     @EnvironmentObject var memoStore: MemoStore
+    @State private var navigationPath = NavigationPath()
+    let popToRoot: (() -> Void)?
+    
+    init(popToRoot: (() -> Void)? = nil) {
+        self.popToRoot = popToRoot
+    }
     
     var body: some View {
-        NavigationView {
+        NavigationStack(path: $navigationPath) {
             Group {
                 if memoStore.memos.isEmpty {
                     VStack(spacing: 16) {
@@ -33,7 +43,7 @@ struct MemosView: View {
                 } else {
                     List {
                         ForEach(memoStore.memos) { memo in
-                            NavigationLink(destination: MemoDetailView(memo: memo)) {
+                            NavigationLink(value: memo) {
                                 MemoRowView(memo: memo)
                             }
                         }
@@ -45,12 +55,20 @@ struct MemosView: View {
                 }
             }
             .navigationTitle("Memos")
+            .navigationDestination(for: Memo.self) { memo in
+                MemoDetailView(memo: memo)
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Refresh") {
                         memoStore.loadMemos()
                     }
                 }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .popToRootMemos)) { _ in
+            if !navigationPath.isEmpty {
+                navigationPath.removeLast(navigationPath.count)
             }
         }
     }
@@ -156,6 +174,6 @@ struct MemoRowView: View {
 }
 
 #Preview {
-    MemosView()
+    MemosView(popToRoot: nil)
         .environmentObject(MemoStore())
 }
