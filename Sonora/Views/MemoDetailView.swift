@@ -6,6 +6,12 @@ struct MemoDetailView: View {
     @EnvironmentObject var memoStore: MemoStore
     @State private var transcriptionState: TranscriptionState = .notStarted
     @State private var isPlaying = false
+    @StateObject private var analysisService = AnalysisService()
+    @State private var selectedAnalysisMode: AnalysisMode?
+    @State private var analysisResult: Any?
+    @State private var analysisEnvelope: Any?
+    @State private var isAnalyzing = false
+    @State private var analysisError: String?
     
     var body: some View {
         ScrollView {
@@ -173,6 +179,19 @@ struct MemoDetailView: View {
                 .background(Color.white)
                 .cornerRadius(12)
                 .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+                
+                // Analysis Section
+                if transcriptionState.isCompleted, let transcriptText = transcriptionState.text {
+                    AnalysisSectionView(
+                        transcript: transcriptText,
+                        isAnalyzing: $isAnalyzing,
+                        analysisError: $analysisError,
+                        selectedAnalysisMode: $selectedAnalysisMode,
+                        analysisResult: $analysisResult,
+                        analysisEnvelope: $analysisEnvelope,
+                        analysisService: analysisService
+                    )
+                }
             }
             .padding()
         }

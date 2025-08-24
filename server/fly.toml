@@ -1,4 +1,3 @@
-# fly.toml
 app = "sonora"
 primary_region = "sea"
 
@@ -13,12 +12,12 @@ primary_region = "sea"
   processes = ["app"]
 
   [[http_service.checks]]
-    interval = "5s"
-    timeout = "2s"
+    interval = "10s"
+    timeout = "5s"
     method = "GET"
-    path = "/health"
+    path = "/"
 
 [[vm]]
-  memory = "1gb"   # you can drop to "256mb" later if needed
+  memory = "512mb"
   cpu_kind = "shared"
   cpus = 1

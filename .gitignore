@@ -42,3 +42,12 @@ Secrets.plist
 
 # macOS
 .DS_Store
+# Local/editor
+.claude/
+*.xcuserstate
+*.xcuserdatad/
+*.xcuserdata/
+
+# Server build artifacts
+server/dist/
+server/index.js.backup
