@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 @MainActor
-class TranscriptionManager: ObservableObject {
+class TranscriptionManager: ObservableObject, TranscriptionServiceProtocol {
     @Published var transcriptionStates: [String: TranscriptionState] = [:]
     
     private let transcriptionService = TranscriptionService()
