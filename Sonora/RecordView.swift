@@ -8,27 +8,16 @@
 import SwiftUI
 
 struct RecordView: View {
-    @StateObject private var audioRecorder = AudioRecorder()
+    @StateObject private var viewModel = RecordingViewModel()
     @EnvironmentObject var memoStore: MemoStore
     
-    private func setupRecordingCallback() {
-        print("🔧 RecordView: Setting up callback function")
-        audioRecorder.onRecordingFinished = { url in
-            print("🎤 RecordView: Recording finished callback triggered for \(url.lastPathComponent)")
-            DispatchQueue.main.async {
-                print("🎤 RecordView: Calling memoStore.handleNewRecording")
-                memoStore.handleNewRecording(at: url)
-            }
-        }
-        print("🔧 RecordView: Callback function set successfully")
-    }
     
     var body: some View {
         NavigationView {
             VStack(spacing: 40) {
                 Spacer()
                 
-                if !audioRecorder.hasPermission {
+                if !viewModel.hasPermission {
                     VStack(spacing: 16) {
                         Image(systemName: "mic.slash.circle")
                             .font(.system(size: 80))
@@ -44,33 +33,33 @@ struct RecordView: View {
                             .multilineTextAlignment(.center)
                         
                         Button("Request Permission") {
-                            audioRecorder.checkPermissions()
+                            viewModel.requestPermission()
                         }
                         .buttonStyle(.borderedProminent)
                     }
                 } else {
                     VStack(spacing: 30) {
                         VStack(spacing: 8) {
-                            if audioRecorder.isRecording {
-                                if audioRecorder.isInCountdown {
+                            if viewModel.isRecording {
+                                if viewModel.isInCountdown {
                                     Text("Recording ends in")
                                         .font(.title2)
                                         .fontWeight(.semibold)
                                         .foregroundColor(.orange)
                                     
-                                    Text("\(Int(ceil(audioRecorder.remainingTime)))")
+                                    Text(viewModel.formattedRemainingTime)
                                         .font(.system(size: 48, weight: .bold, design: .rounded))
                                         .foregroundColor(.red)
                                         .monospacedDigit()
-                                        .scaleEffect(audioRecorder.remainingTime.truncatingRemainder(dividingBy: 1.0) < 0.5 ? 1.1 : 1.0)
-                                        .animation(.easeInOut(duration: 0.5), value: Int(audioRecorder.remainingTime))
+                                        .scaleEffect(viewModel.countdownScale)
+                                        .animation(.easeInOut(duration: 0.5), value: Int(viewModel.remainingTime))
                                 } else {
                                     Text("Recording...")
                                         .font(.title2)
                                         .fontWeight(.semibold)
                                         .foregroundColor(.red)
                                     
-                                    Text(formatTime(audioRecorder.recordingTime))
+                                    Text(viewModel.formattedRecordingTime)
                                         .font(.largeTitle)
                                         .fontWeight(.bold)
                                         .foregroundColor(.primary)
@@ -85,22 +74,14 @@ struct RecordView: View {
                         }
                         
                         Button(action: {
-                            if audioRecorder.isRecording {
-                                print("🛑 RecordView: Stopping recording")
-                                audioRecorder.stopRecording()
-                            } else {
-                                print("▶️ RecordView: Starting recording")
-                                // Ensure callback is set before starting
-                                setupRecordingCallback()
-                                audioRecorder.startRecording()
-                            }
+                            viewModel.toggleRecording()
                         }) {
                             ZStack {
                                 Circle()
-                                    .fill(audioRecorder.isRecording ? Color.red : Color.blue)
+                                    .fill(viewModel.recordingButtonColor)
                                     .frame(width: 120, height: 120)
                                 
-                                if audioRecorder.isRecording {
+                                if viewModel.isRecording {
                                     RoundedRectangle(cornerRadius: 8)
                                         .fill(Color.white)
                                         .frame(width: 40, height: 40)
@@ -110,19 +91,19 @@ struct RecordView: View {
                                         .foregroundColor(.white)
                                 }
                             }
-                            .scaleEffect(audioRecorder.isRecording ? 0.9 : 1.0)
-                            .animation(.easeInOut(duration: 0.1), value: audioRecorder.isRecording)
+                            .scaleEffect(viewModel.recordingButtonScale)
+                            .animation(.easeInOut(duration: 0.1), value: viewModel.isRecording)
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        if audioRecorder.isRecording {
+                        if viewModel.shouldShowRecordingIndicator {
                             HStack {
                                 Circle()
                                     .fill(Color.red)
                                     .frame(width: 8, height: 8)
                                     .opacity(0.8)
                                     .scaleEffect(1.2)
-                                    .animation(.easeInOut(duration: 0.8).repeatForever(), value: audioRecorder.isRecording)
+                                    .animation(.easeInOut(duration: 0.8).repeatForever(), value: viewModel.isRecording)
                                 
                                 Text("Recording in progress")
                                     .font(.caption)
@@ -137,22 +118,15 @@ struct RecordView: View {
             .padding()
             .navigationTitle("Sonora")
             .onAppear {
-                print("🎬 RecordView: Setting up recording callback on appear")
-                setupRecordingCallback()
+                viewModel.onViewAppear()
             }
-            .alert("Recording Stopped", isPresented: $audioRecorder.recordingStoppedAutomatically) {
+            .alert("Recording Stopped", isPresented: $viewModel.showAutoStopAlert) {
                 Button("OK") {
-                    audioRecorder.autoStopMessage = nil
+                    viewModel.dismissAutoStopAlert()
                 }
             } message: {
-                Text(audioRecorder.autoStopMessage ?? "")
+                Text(viewModel.autoStopMessage ?? "")
             }
         }
-    }
-    
-    private func formatTime(_ time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
