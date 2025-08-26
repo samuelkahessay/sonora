@@ -15,6 +15,9 @@ final class RecordingViewModel: ObservableObject {
     private let audioRecordingService: AudioRecordingService // Still needed for state updates
     private var cancellables = Set<AnyCancellable>()
     
+    // MARK: - Debounce Management
+    private var recordButtonDebounceTask: Task<Void, Never>?
+    
     // MARK: - Published Properties
     @Published var isRecording: Bool = false
     @Published var recordingTime: TimeInterval = 0
@@ -81,6 +84,12 @@ final class RecordingViewModel: ObservableObject {
         setupRecordingCallback()
         
         print("🎬 RecordingViewModel: Initialized with dependency injection")
+    }
+    
+    deinit {
+        // Cancel any pending debounce task
+        recordButtonDebounceTask?.cancel()
+        print("🎬 RecordingViewModel: Deinitialized and cleaned up debounce task")
     }
     
     /// Convenience initializer using DIContainer
@@ -161,11 +170,42 @@ final class RecordingViewModel: ObservableObject {
     }
     
     /// Toggle recording state (start if stopped, stop if recording)
+    /// Implements 300ms debouncing to prevent rapid button tapping issues
     func toggleRecording() {
-        if isRecording {
-            stopRecording()
-        } else {
-            startRecording()
+        print("🎛️ RecordingViewModel: Toggle recording requested")
+        
+        // Cancel any pending debounce task
+        recordButtonDebounceTask?.cancel()
+        
+        // Create new debounced task
+        recordButtonDebounceTask = Task {
+            do {
+                // 300ms debounce delay
+                try await Task.sleep(nanoseconds: 300_000_000) // 300ms
+                
+                // Check if task was cancelled during sleep
+                guard !Task.isCancelled else {
+                    print("🎛️ RecordingViewModel: Toggle recording cancelled during debounce")
+                    return
+                }
+                
+                // Execute the actual toggle operation
+                print("🎛️ RecordingViewModel: Executing debounced toggle recording")
+                
+                if isRecording {
+                    stopRecording()
+                } else {
+                    startRecording()
+                }
+                
+                // Clear the task reference
+                recordButtonDebounceTask = nil
+                
+            } catch {
+                // Task was cancelled or failed
+                print("🎛️ RecordingViewModel: Toggle recording debounce interrupted: \(error)")
+                recordButtonDebounceTask = nil
+            }
         }
     }
     
@@ -212,6 +252,10 @@ final class RecordingViewModel: ObservableObject {
     
     func onViewDisappear() {
         print("🎬 RecordingViewModel: View disappeared")
+        
+        // Cancel any pending debounce task
+        recordButtonDebounceTask?.cancel()
+        
         // Stop recording if in progress to prevent issues
         if isRecording {
             stopRecording()
@@ -271,6 +315,28 @@ extension RecordingViewModel {
         - isInCountdown: \(isInCountdown)
         - remainingTime: \(formattedRemainingTime)
         - recordingStoppedAutomatically: \(recordingStoppedAutomatically)
+        - debounceTaskActive: \(recordButtonDebounceTask != nil)
         """
+    }
+    
+    /// Test rapid button tapping to verify debouncing works correctly
+    /// This method simulates rapid button presses to ensure only the last one executes
+    func testRapidButtonTapping() {
+        print("🧪 RecordingViewModel: Testing rapid button tapping (5 quick taps)")
+        
+        // Simulate 5 rapid button taps with 50ms intervals
+        for i in 1...5 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.05) {
+                print("🧪 RecordingViewModel: Rapid tap #\(i)")
+                self.toggleRecording()
+            }
+        }
+        
+        // Check result after debounce period
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            print("🧪 RecordingViewModel: Rapid tap test completed")
+            print("🧪 Result: isRecording = \(self.isRecording)")
+            print("🧪 Expected: Only one toggle should have executed")
+        }
     }
 }
