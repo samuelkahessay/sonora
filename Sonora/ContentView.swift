@@ -25,11 +25,11 @@ struct ContentView: View {
                     Text("Memos")
                 }
                 .tag(1)
-                .onTapGesture(count: 2) {
-                    if selectedTab == 1 {
-                        popToRoot()
-                    }
-                }
+        }
+        .onChange(of: selectedTab) { oldValue, newValue in
+            if oldValue == 1 && newValue == 1 {
+                popToRoot()
+            }
         }
     }
     
