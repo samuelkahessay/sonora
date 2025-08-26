@@ -8,8 +8,11 @@ import SwiftUI
 final class RecordingViewModel: ObservableObject {
     
     // MARK: - Dependencies
-    private let audioRecordingService: AudioRecordingService
-    private let memoRepository: MemoRepository
+    private let startRecordingUseCase: StartRecordingUseCaseProtocol
+    private let stopRecordingUseCase: StopRecordingUseCaseProtocol
+    private let requestPermissionUseCase: RequestMicrophonePermissionUseCaseProtocol
+    private let handleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol
+    private let audioRecordingService: AudioRecordingService // Still needed for state updates
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Published Properties
@@ -62,11 +65,17 @@ final class RecordingViewModel: ObservableObject {
     // MARK: - Initialization
     
     init(
-        audioRecordingService: AudioRecordingService,
-        memoRepository: MemoRepository
+        startRecordingUseCase: StartRecordingUseCaseProtocol,
+        stopRecordingUseCase: StopRecordingUseCaseProtocol,
+        requestPermissionUseCase: RequestMicrophonePermissionUseCaseProtocol,
+        handleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol,
+        audioRecordingService: AudioRecordingService
     ) {
+        self.startRecordingUseCase = startRecordingUseCase
+        self.stopRecordingUseCase = stopRecordingUseCase
+        self.requestPermissionUseCase = requestPermissionUseCase
+        self.handleNewRecordingUseCase = handleNewRecordingUseCase
         self.audioRecordingService = audioRecordingService
-        self.memoRepository = memoRepository
         
         setupBindings()
         setupRecordingCallback()
@@ -77,9 +86,15 @@ final class RecordingViewModel: ObservableObject {
     /// Convenience initializer using DIContainer
     convenience init() {
         let container = DIContainer.shared
+        let audioService = container.audioRecordingService()
+        let memoRepository = container.memoRepository()
+        
         self.init(
-            audioRecordingService: container.audioRecordingService(),
-            memoRepository: container.memoRepository()
+            startRecordingUseCase: StartRecordingUseCase(audioRecordingService: audioService),
+            stopRecordingUseCase: StopRecordingUseCase(audioRecordingService: audioService),
+            requestPermissionUseCase: RequestMicrophonePermissionUseCase(audioRecordingService: audioService),
+            handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository),
+            audioRecordingService: audioService
         )
     }
     
@@ -128,13 +143,21 @@ final class RecordingViewModel: ObservableObject {
     /// Start audio recording
     func startRecording() {
         print("▶️ RecordingViewModel: Starting recording")
-        audioRecordingService.startRecording()
+        do {
+            try startRecordingUseCase.execute()
+        } catch {
+            print("❌ RecordingViewModel: Failed to start recording: \(error)")
+        }
     }
     
     /// Stop audio recording
     func stopRecording() {
         print("🛑 RecordingViewModel: Stopping recording")
-        audioRecordingService.stopRecording()
+        do {
+            try stopRecordingUseCase.execute()
+        } catch {
+            print("❌ RecordingViewModel: Failed to stop recording: \(error)")
+        }
     }
     
     /// Toggle recording state (start if stopped, stop if recording)
@@ -149,7 +172,8 @@ final class RecordingViewModel: ObservableObject {
     /// Request microphone permission
     func requestPermission() {
         print("🎤 RecordingViewModel: Requesting microphone permission")
-        audioRecordingService.checkPermissions()
+        let hasPermission = requestPermissionUseCase.execute()
+        print("🎤 RecordingViewModel: Permission result: \(hasPermission)")
     }
     
     /// Dismiss auto-stop alert
@@ -170,8 +194,13 @@ final class RecordingViewModel: ObservableObject {
     
     private func handleRecordingFinished(at url: URL) {
         print("🎤 RecordingViewModel: Handling recording finished for \(url.lastPathComponent)")
-        print("🎤 RecordingViewModel: Calling memoRepository.handleNewRecording")
-        memoRepository.handleNewRecording(at: url)
+        Task {
+            do {
+                try await handleNewRecordingUseCase.execute(at: url)
+            } catch {
+                print("❌ RecordingViewModel: Failed to handle new recording: \(error)")
+            }
+        }
     }
     
     // MARK: - Lifecycle

@@ -84,6 +84,11 @@ enum AnalysisError: LocalizedError {
     case serverError(Int)
     case timeout
     case networkError(String)
+    case emptyTranscript
+    case transcriptTooShort
+    case analysisServiceError(String)
+    case invalidResponse
+    case serviceUnavailable
     
     var errorDescription: String? {
         switch self {
@@ -99,6 +104,16 @@ enum AnalysisError: LocalizedError {
             return "Request timed out"
         case .networkError(let message):
             return "Network error: \(message)"
+        case .emptyTranscript:
+            return "Transcript is empty or contains only whitespace"
+        case .transcriptTooShort:
+            return "Transcript is too short for meaningful analysis"
+        case .analysisServiceError(let message):
+            return "Analysis service error: \(message)"
+        case .invalidResponse:
+            return "Invalid response from analysis service"
+        case .serviceUnavailable:
+            return "Analysis service is currently unavailable"
         }
     }
 }

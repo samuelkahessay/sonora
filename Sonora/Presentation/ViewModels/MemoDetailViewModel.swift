@@ -8,9 +8,15 @@ import SwiftUI
 final class MemoDetailViewModel: ObservableObject {
     
     // MARK: - Dependencies
-    private let memoRepository: MemoRepository
-    private let analysisService: AnalysisServiceProtocol
-    private let transcriptionService: TranscriptionServiceProtocol
+    private let playMemoUseCase: PlayMemoUseCaseProtocol
+    private let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
+    private let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
+    private let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
+    private let analyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol
+    private let analyzeContentUseCase: AnalyzeContentUseCaseProtocol
+    private let analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol
+    private let analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol
+    private let memoRepository: MemoRepository // Still needed for state updates
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Current Memo
@@ -51,13 +57,25 @@ final class MemoDetailViewModel: ObservableObject {
     // MARK: - Initialization
     
     init(
-        memoRepository: MemoRepository,
-        analysisService: AnalysisServiceProtocol,
-        transcriptionService: TranscriptionServiceProtocol
+        playMemoUseCase: PlayMemoUseCaseProtocol,
+        startTranscriptionUseCase: StartTranscriptionUseCaseProtocol,
+        retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol,
+        getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
+        analyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol,
+        analyzeContentUseCase: AnalyzeContentUseCaseProtocol,
+        analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol,
+        analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol,
+        memoRepository: MemoRepository
     ) {
+        self.playMemoUseCase = playMemoUseCase
+        self.startTranscriptionUseCase = startTranscriptionUseCase
+        self.retryTranscriptionUseCase = retryTranscriptionUseCase
+        self.getTranscriptionStateUseCase = getTranscriptionStateUseCase
+        self.analyzeTLDRUseCase = analyzeTLDRUseCase
+        self.analyzeContentUseCase = analyzeContentUseCase
+        self.analyzeThemesUseCase = analyzeThemesUseCase
+        self.analyzeTodosUseCase = analyzeTodosUseCase
         self.memoRepository = memoRepository
-        self.analysisService = analysisService
-        self.transcriptionService = transcriptionService
         
         setupBindings()
         
@@ -67,10 +85,20 @@ final class MemoDetailViewModel: ObservableObject {
     /// Convenience initializer using DIContainer
     convenience init() {
         let container = DIContainer.shared
+        let memoRepository = container.memoRepository()
+        let analysisService = container.analysisService()
+        let transcriptionService = container.transcriptionService()
+        
         self.init(
-            memoRepository: container.memoRepository(),
-            analysisService: container.analysisService(),
-            transcriptionService: container.transcriptionService()
+            playMemoUseCase: PlayMemoUseCase(memoRepository: memoRepository),
+            startTranscriptionUseCase: StartTranscriptionUseCase(transcriptionService: transcriptionService),
+            retryTranscriptionUseCase: RetryTranscriptionUseCase(transcriptionService: transcriptionService),
+            getTranscriptionStateUseCase: GetTranscriptionStateUseCase(transcriptionService: transcriptionService),
+            analyzeTLDRUseCase: AnalyzeTLDRUseCase(analysisService: analysisService),
+            analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService),
+            analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService),
+            analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService),
+            memoRepository: memoRepository
         )
     }
     
@@ -90,7 +118,7 @@ final class MemoDetailViewModel: ObservableObject {
         guard let memo = currentMemo else { return }
         
         // Update transcription state
-        let newTranscriptionState = memoRepository.getTranscriptionState(for: memo)
+        let newTranscriptionState = getTranscriptionStateUseCase.execute(memo: memo)
         if !transcriptionState.isEqual(to: newTranscriptionState) {
             transcriptionState = newTranscriptionState
         }
@@ -118,21 +146,39 @@ final class MemoDetailViewModel: ObservableObject {
     func startTranscription() {
         guard let memo = currentMemo else { return }
         print("📝 MemoDetailViewModel: Starting transcription for: \(memo.filename)")
-        transcriptionService.startTranscription(for: memo)
+        Task {
+            do {
+                try await startTranscriptionUseCase.execute(memo: memo)
+            } catch {
+                print("❌ MemoDetailViewModel: Failed to start transcription: \(error)")
+            }
+        }
     }
     
     /// Retry transcription for the current memo
     func retryTranscription() {
         guard let memo = currentMemo else { return }
         print("📝 MemoDetailViewModel: Retrying transcription for: \(memo.filename)")
-        transcriptionService.retryTranscription(for: memo)
+        Task {
+            do {
+                try await retryTranscriptionUseCase.execute(memo: memo)
+            } catch {
+                print("❌ MemoDetailViewModel: Failed to retry transcription: \(error)")
+            }
+        }
     }
     
     /// Play or pause the current memo
     func playMemo() {
         guard let memo = currentMemo else { return }
         print("📝 MemoDetailViewModel: Playing memo: \(memo.filename)")
-        memoRepository.playMemo(memo)
+        Task {
+            do {
+                try await playMemoUseCase.execute(memo: memo)
+            } catch {
+                print("❌ MemoDetailViewModel: Failed to play memo: \(error)")
+            }
+        }
     }
     
     /// Perform analysis with the specified mode
@@ -149,7 +195,7 @@ final class MemoDetailViewModel: ObservableObject {
             do {
                 switch mode {
                 case .tldr:
-                    let envelope = try await analysisService.analyzeTLDR(transcript: transcript)
+                    let envelope = try await analyzeTLDRUseCase.execute(transcript: transcript)
                     await MainActor.run {
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
@@ -158,7 +204,7 @@ final class MemoDetailViewModel: ObservableObject {
                     }
                     
                 case .analysis:
-                    let envelope = try await analysisService.analyzeAnalysis(transcript: transcript)
+                    let envelope = try await analyzeContentUseCase.execute(transcript: transcript)
                     await MainActor.run {
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
@@ -167,7 +213,7 @@ final class MemoDetailViewModel: ObservableObject {
                     }
                     
                 case .themes:
-                    let envelope = try await analysisService.analyzeThemes(transcript: transcript)
+                    let envelope = try await analyzeThemesUseCase.execute(transcript: transcript)
                     await MainActor.run {
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
@@ -176,7 +222,7 @@ final class MemoDetailViewModel: ObservableObject {
                     }
                     
                 case .todos:
-                    let envelope = try await analysisService.analyzeTodos(transcript: transcript)
+                    let envelope = try await analyzeTodosUseCase.execute(transcript: transcript)
                     await MainActor.run {
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
@@ -197,7 +243,7 @@ final class MemoDetailViewModel: ObservableObject {
     // MARK: - Private Methods
     
     private func updateTranscriptionState(for memo: Memo) {
-        let newState = memoRepository.getTranscriptionState(for: memo)
+        let newState = getTranscriptionStateUseCase.execute(memo: memo)
         print("🔄 MemoDetailViewModel: Updating state for \(memo.filename)")
         print("🔄 MemoDetailViewModel: Current UI state: \(transcriptionState.statusText)")
         print("🔄 MemoDetailViewModel: New state from Repository: \(newState.statusText)")

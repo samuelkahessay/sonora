@@ -8,8 +8,14 @@ import SwiftUI
 final class MemoListViewModel: ObservableObject {
     
     // MARK: - Dependencies
-    private let memoRepository: MemoRepository
-    private let transcriptionService: TranscriptionServiceProtocol
+    private let loadMemosUseCase: LoadMemosUseCaseProtocol
+    private let deleteMemoUseCase: DeleteMemoUseCaseProtocol
+    private let playMemoUseCase: PlayMemoUseCaseProtocol
+    private let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
+    private let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
+    private let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
+    private let memoRepository: MemoRepository // Still needed for state updates
+    private let transcriptionService: TranscriptionServiceProtocol // Still needed for state updates
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Published Properties
@@ -44,9 +50,21 @@ final class MemoListViewModel: ObservableObject {
     // MARK: - Initialization
     
     init(
+        loadMemosUseCase: LoadMemosUseCaseProtocol,
+        deleteMemoUseCase: DeleteMemoUseCaseProtocol,
+        playMemoUseCase: PlayMemoUseCaseProtocol,
+        startTranscriptionUseCase: StartTranscriptionUseCaseProtocol,
+        retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol,
+        getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
         memoRepository: MemoRepository,
         transcriptionService: TranscriptionServiceProtocol
     ) {
+        self.loadMemosUseCase = loadMemosUseCase
+        self.deleteMemoUseCase = deleteMemoUseCase
+        self.playMemoUseCase = playMemoUseCase
+        self.startTranscriptionUseCase = startTranscriptionUseCase
+        self.retryTranscriptionUseCase = retryTranscriptionUseCase
+        self.getTranscriptionStateUseCase = getTranscriptionStateUseCase
         self.memoRepository = memoRepository
         self.transcriptionService = transcriptionService
         
@@ -59,9 +77,18 @@ final class MemoListViewModel: ObservableObject {
     /// Convenience initializer using DIContainer
     convenience init() {
         let container = DIContainer.shared
+        let memoRepository = container.memoRepository()
+        let transcriptionService = container.transcriptionService()
+        
         self.init(
-            memoRepository: container.memoRepository(),
-            transcriptionService: container.transcriptionService()
+            loadMemosUseCase: LoadMemosUseCase(memoRepository: memoRepository),
+            deleteMemoUseCase: DeleteMemoUseCase(memoRepository: memoRepository),
+            playMemoUseCase: PlayMemoUseCase(memoRepository: memoRepository),
+            startTranscriptionUseCase: StartTranscriptionUseCase(transcriptionService: transcriptionService),
+            retryTranscriptionUseCase: RetryTranscriptionUseCase(transcriptionService: transcriptionService),
+            getTranscriptionStateUseCase: GetTranscriptionStateUseCase(transcriptionService: transcriptionService),
+            memoRepository: memoRepository,
+            transcriptionService: transcriptionService
         )
     }
     
@@ -111,7 +138,13 @@ final class MemoListViewModel: ObservableObject {
     /// Load memos from repository
     func loadMemos() {
         print("📱 MemoListViewModel: Loading memos")
-        memoRepository.loadMemos()
+        Task {
+            do {
+                try await loadMemosUseCase.execute()
+            } catch {
+                print("❌ MemoListViewModel: Failed to load memos: \(error)")
+            }
+        }
     }
     
     /// Refresh memos (same as loadMemos, for pull-to-refresh)
@@ -124,15 +157,27 @@ final class MemoListViewModel: ObservableObject {
         guard index < memos.count else { return }
         let memo = memos[index]
         print("📱 MemoListViewModel: Deleting memo: \(memo.filename)")
-        memoRepository.deleteMemo(memo)
+        Task {
+            do {
+                try await deleteMemoUseCase.execute(memo: memo)
+            } catch {
+                print("❌ MemoListViewModel: Failed to delete memo: \(error)")
+            }
+        }
     }
     
     /// Delete memos at multiple indices
     func deleteMemos(at offsets: IndexSet) {
         print("📱 MemoListViewModel: Deleting \(offsets.count) memos")
-        for index in offsets {
-            if index < memos.count {
-                memoRepository.deleteMemo(memos[index])
+        Task {
+            for index in offsets {
+                if index < memos.count {
+                    do {
+                        try await deleteMemoUseCase.execute(memo: memos[index])
+                    } catch {
+                        print("❌ MemoListViewModel: Failed to delete memo at index \(index): \(error)")
+                    }
+                }
             }
         }
     }
@@ -140,24 +185,42 @@ final class MemoListViewModel: ObservableObject {
     /// Play or pause a memo
     func playMemo(_ memo: Memo) {
         print("📱 MemoListViewModel: Playing memo: \(memo.filename)")
-        memoRepository.playMemo(memo)
+        Task {
+            do {
+                try await playMemoUseCase.execute(memo: memo)
+            } catch {
+                print("❌ MemoListViewModel: Failed to play memo: \(error)")
+            }
+        }
     }
     
     /// Start transcription for a memo
     func startTranscription(for memo: Memo) {
         print("📱 MemoListViewModel: Starting transcription for: \(memo.filename)")
-        transcriptionService.startTranscription(for: memo)
+        Task {
+            do {
+                try await startTranscriptionUseCase.execute(memo: memo)
+            } catch {
+                print("❌ MemoListViewModel: Failed to start transcription: \(error)")
+            }
+        }
     }
     
     /// Retry transcription for a memo
     func retryTranscription(for memo: Memo) {
         print("📱 MemoListViewModel: Retrying transcription for: \(memo.filename)")
-        transcriptionService.retryTranscription(for: memo)
+        Task {
+            do {
+                try await retryTranscriptionUseCase.execute(memo: memo)
+            } catch {
+                print("❌ MemoListViewModel: Failed to retry transcription: \(error)")
+            }
+        }
     }
     
     /// Get transcription state for a memo
     func getTranscriptionState(for memo: Memo) -> TranscriptionState {
-        return transcriptionService.getTranscriptionState(for: memo)
+        return getTranscriptionStateUseCase.execute(memo: memo)
     }
     
     /// Pop navigation to root
