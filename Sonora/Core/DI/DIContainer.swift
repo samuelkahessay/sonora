@@ -10,41 +10,64 @@ final class DIContainer: ObservableObject {
     static let shared = DIContainer()
     
     // MARK: - Private Service Instances
-    private let _audioRecorder: AudioRecorder
-    private let _transcriptionManager: TranscriptionManager
-    private let _analysisService: AnalysisService
-    private let _memoStore: MemoStore
+    private var _audioRecorder: AudioRecorder!
+    private var _transcriptionManager: TranscriptionManager!
+    private var _analysisService: AnalysisService!
+    private var _memoStore: MemoStore!
     
     // MARK: - Initialization
     private init() {
-        // Initialize services in the same way they're currently created
-        self._memoStore = MemoStore()
-        self._audioRecorder = AudioRecorder()
-        self._transcriptionManager = TranscriptionManager()
-        self._analysisService = AnalysisService()
+        // Services will be injected after initialization
+        print("🏭 DIContainer: Initialized, waiting for service injection")
+    }
+    
+    /// Configure DIContainer with shared service instances
+    /// This ensures all parts of the app use the same service instances
+    func configure(
+        memoStore: MemoStore,
+        audioRecorder: AudioRecorder? = nil,
+        analysisService: AnalysisService? = nil
+    ) {
+        self._memoStore = memoStore
+        self._transcriptionManager = memoStore.sharedTranscriptionManager
+        self._audioRecorder = audioRecorder ?? AudioRecorder()
+        self._analysisService = analysisService ?? AnalysisService()
         
-        print("🏭 DIContainer: Initialized with all services")
+        print("🏭 DIContainer: Configured with shared service instances")
+        print("🏭 DIContainer: MemoStore: \(ObjectIdentifier(self._memoStore))")
+        print("🏭 DIContainer: TranscriptionManager: \(ObjectIdentifier(self._transcriptionManager))")
+    }
+    
+    /// Check if container has been properly configured
+    private func ensureConfigured() {
+        guard _memoStore != nil else {
+            fatalError("DIContainer has not been configured. Call configure() before using services.")
+        }
     }
     
     // MARK: - Protocol-Based Service Access
     
     /// Get audio recording service
     func audioRecordingService() -> AudioRecordingService {
+        ensureConfigured()
         return _audioRecorder
     }
     
     /// Get transcription service
     func transcriptionService() -> TranscriptionServiceProtocol {
+        ensureConfigured()
         return _transcriptionManager
     }
     
     /// Get analysis service
     func analysisService() -> AnalysisServiceProtocol {
+        ensureConfigured()
         return _analysisService
     }
     
     /// Get memo repository
     func memoRepository() -> MemoRepository {
+        ensureConfigured()
         return _memoStore
     }
     
@@ -53,24 +76,28 @@ final class DIContainer: ObservableObject {
     /// Get concrete AudioRecorder instance
     /// Use this during gradual migration from @StateObject
     func audioRecorder() -> AudioRecorder {
+        ensureConfigured()
         return _audioRecorder
     }
     
     /// Get concrete TranscriptionManager instance
     /// Use this during gradual migration from direct instantiation
     func transcriptionManager() -> TranscriptionManager {
+        ensureConfigured()
         return _transcriptionManager
     }
     
     /// Get concrete AnalysisService instance
     /// Use this during gradual migration from @StateObject
     func concreteAnalysisService() -> AnalysisService {
+        ensureConfigured()
         return _analysisService
     }
     
     /// Get concrete MemoStore instance
     /// Use this during gradual migration from @StateObject/@EnvironmentObject
     func memoStore() -> MemoStore {
+        ensureConfigured()
         return _memoStore
     }
     

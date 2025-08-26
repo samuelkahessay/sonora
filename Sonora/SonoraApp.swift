@@ -15,6 +15,12 @@ struct SonoraApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(memoStore)
+                .onAppear {
+                    // Configure DIContainer with the shared MemoStore instance
+                    // This ensures all ViewModels use the same service instances as EnvironmentObjects
+                    DIContainer.shared.configure(memoStore: memoStore)
+                    print("🚀 SonoraApp: DIContainer configured with shared services")
+                }
         }
     }
 }

@@ -12,8 +12,8 @@ extension Notification.Name {
 }
 
 struct MemosView: View {
-    @EnvironmentObject var memoStore: MemoStore
-    @State private var navigationPath = NavigationPath()
+    @StateObject private var viewModel = MemoListViewModel()
+    @EnvironmentObject var memoStore: MemoStore // Keep for transition compatibility
     let popToRoot: (() -> Void)?
     
     init(popToRoot: (() -> Void)? = nil) {
@@ -21,20 +21,20 @@ struct MemosView: View {
     }
     
     var body: some View {
-        NavigationStack(path: $navigationPath) {
+        NavigationStack(path: $viewModel.navigationPath) {
             Group {
-                if memoStore.memos.isEmpty {
+                if viewModel.isEmpty {
                     VStack(spacing: 16) {
-                        Image(systemName: "mic.slash")
+                        Image(systemName: viewModel.emptyStateIcon)
                             .font(.system(size: 60))
                             .foregroundColor(.gray)
                         
-                        Text("No Memos Yet")
+                        Text(viewModel.emptyStateTitle)
                             .font(.title2)
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
                         
-                        Text("Start recording to see your audio memos here")
+                        Text(viewModel.emptyStateSubtitle)
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -42,15 +42,15 @@ struct MemosView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
-                        ForEach(memoStore.memos) { memo in
+                        ForEach(viewModel.memos) { memo in
                             NavigationLink(value: memo) {
-                                MemoRowView(memo: memo)
+                                MemoRowView(memo: memo, viewModel: viewModel)
                             }
                         }
-                        .onDelete(perform: deleteMemos)
+                        .onDelete(perform: viewModel.deleteMemos)
                     }
                     .refreshable {
-                        memoStore.loadMemos()
+                        viewModel.refreshMemos()
                     }
                 }
             }
@@ -61,28 +61,22 @@ struct MemosView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Refresh") {
-                        memoStore.loadMemos()
+                        viewModel.loadMemos()
                     }
                 }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .popToRootMemos)) { _ in
-            if !navigationPath.isEmpty {
-                navigationPath.removeLast(navigationPath.count)
-            }
+        .onAppear {
+            viewModel.onViewAppear()
         }
     }
     
-    private func deleteMemos(at offsets: IndexSet) {
-        for index in offsets {
-            memoStore.deleteMemo(memoStore.memos[index])
-        }
-    }
 }
 
 struct MemoRowView: View {
     let memo: Memo
-    @EnvironmentObject var memoStore: MemoStore
+    let viewModel: MemoListViewModel
+    @EnvironmentObject var memoStore: MemoStore // Keep for transition compatibility
     @State private var transcriptionState: TranscriptionState = .notStarted
     
     var body: some View {
@@ -102,9 +96,9 @@ struct MemoRowView: View {
                 
                 VStack(spacing: 4) {
                     Button(action: {
-                        memoStore.playMemo(memo)
+                        viewModel.playMemo(memo)
                     }) {
-                        Image(systemName: playButtonIcon(for: memo))
+                        Image(systemName: viewModel.playButtonIcon(for: memo))
                             .font(.title2)
                             .foregroundColor(.blue)
                             .frame(width: 44, height: 44)
@@ -126,7 +120,7 @@ struct MemoRowView: View {
                 
                 if transcriptionState.isFailed {
                     Button("Retry") {
-                        memoStore.retryTranscription(for: memo)
+                        viewModel.retryTranscription(for: memo)
                     }
                     .font(.caption)
                     .foregroundColor(.orange)
@@ -140,7 +134,7 @@ struct MemoRowView: View {
                         .foregroundColor(.blue)
                 } else if transcriptionState.isNotStarted {
                     Button("Transcribe") {
-                        memoStore.sharedTranscriptionManager.startTranscription(for: memo)
+                        viewModel.startTranscription(for: memo)
                     }
                     .font(.caption)
                     .foregroundColor(.blue)
@@ -155,22 +149,15 @@ struct MemoRowView: View {
         .onAppear {
             updateTranscriptionState()
         }
-        .onReceive(memoStore.sharedTranscriptionManager.$transcriptionStates) { _ in
+        .onReceive(viewModel.$transcriptionStates) { _ in
             updateTranscriptionState()
         }
     }
     
     private func updateTranscriptionState() {
-        transcriptionState = memoStore.getTranscriptionState(for: memo)
+        transcriptionState = viewModel.getTranscriptionState(for: memo)
     }
     
-    private func playButtonIcon(for memo: Memo) -> String {
-        if memoStore.playingMemo?.id == memo.id && memoStore.isPlaying {
-            return "pause.circle.fill"
-        } else {
-            return "play.circle.fill"
-        }
-    }
 }
 
 #Preview {
