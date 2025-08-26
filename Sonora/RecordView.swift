@@ -52,16 +52,30 @@ struct RecordView: View {
                     VStack(spacing: 30) {
                         VStack(spacing: 8) {
                             if audioRecorder.isRecording {
-                                Text("Recording...")
-                                    .font(.title2)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.red)
-                                
-                                Text(formatTime(audioRecorder.recordingTime))
-                                    .font(.largeTitle)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.primary)
-                                    .monospacedDigit()
+                                if audioRecorder.isInCountdown {
+                                    Text("Recording ends in")
+                                        .font(.title2)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.orange)
+                                    
+                                    Text("\(Int(ceil(audioRecorder.remainingTime)))")
+                                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                                        .foregroundColor(.red)
+                                        .monospacedDigit()
+                                        .scaleEffect(audioRecorder.remainingTime.truncatingRemainder(dividingBy: 1.0) < 0.5 ? 1.1 : 1.0)
+                                        .animation(.easeInOut(duration: 0.5), value: Int(audioRecorder.remainingTime))
+                                } else {
+                                    Text("Recording...")
+                                        .font(.title2)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.red)
+                                    
+                                    Text(formatTime(audioRecorder.recordingTime))
+                                        .font(.largeTitle)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.primary)
+                                        .monospacedDigit()
+                                }
                             } else {
                                 Text("Ready to Record")
                                     .font(.title2)

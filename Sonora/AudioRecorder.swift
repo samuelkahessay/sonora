@@ -15,11 +15,14 @@ class AudioRecorder: NSObject, ObservableObject {
     @Published var hasPermission = false
     @Published var recordingStoppedAutomatically = false
     @Published var autoStopMessage: String?
+    @Published var isInCountdown = false
+    @Published var remainingTime: TimeInterval = 0
     
     private var audioRecorder: AVAudioRecorder?
     private var recordingTimer: Timer?
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private let maxRecordingDuration: TimeInterval = 60.0
+    private let countdownThreshold: TimeInterval = 10.0
     
     var onRecordingFinished: ((URL) -> Void)?
     
@@ -117,10 +120,21 @@ class AudioRecorder: NSObject, ObservableObject {
         if let recorder = audioRecorder {
             recordingTime = recorder.currentTime
             
+            let timeUntilLimit = maxRecordingDuration - recordingTime
+            
+            if timeUntilLimit <= countdownThreshold && timeUntilLimit > 0 {
+                isInCountdown = true
+                remainingTime = timeUntilLimit
+            } else {
+                isInCountdown = false
+                remainingTime = 0
+            }
+            
             if recordingTime >= maxRecordingDuration {
                 print("⏰ AudioRecorder: Maximum recording duration reached, stopping automatically")
                 recordingStoppedAutomatically = true
                 autoStopMessage = "Recording stopped automatically after 1 minute"
+                isInCountdown = false
                 stopRecording()
             }
         }
