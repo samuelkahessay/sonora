@@ -11,6 +11,7 @@ public enum SonoraError: LocalizedError, Equatable {
     case audioFileNotFound(String)
     case audioFileCorrupted(String)
     case audioFormatUnsupported(String)
+    case audioFileProcessingFailed(String)
     
     // MARK: - Transcription Errors
     case transcriptionServiceUnavailable
@@ -96,6 +97,8 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Audio file is corrupted: \(filename)"
         case .audioFormatUnsupported(let format):
             return "Unsupported audio format: \(format)"
+        case .audioFileProcessingFailed(let reason):
+            return "Audio file processing failed: \(reason)"
             
         // Transcription Errors
         case .transcriptionServiceUnavailable:
@@ -256,7 +259,7 @@ public enum SonoraError: LocalizedError, Equatable {
     /// Category of the error for grouping and handling
     public var category: SonoraErrorCategory {
         switch self {
-        case .audioPermissionDenied, .audioSessionSetupFailed, .audioRecordingFailed, .audioRecordingInterrupted, .audioFileNotFound, .audioFileCorrupted, .audioFormatUnsupported:
+        case .audioPermissionDenied, .audioSessionSetupFailed, .audioRecordingFailed, .audioRecordingInterrupted, .audioFileNotFound, .audioFileCorrupted, .audioFormatUnsupported, .audioFileProcessingFailed:
             return .audio
         case .transcriptionServiceUnavailable, .transcriptionFailed, .transcriptionTimeout, .transcriptionInvalidResponse, .transcriptionQuotaExceeded, .transcriptionFileTooBig, .transcriptionUnsupportedFormat:
             return .transcription
