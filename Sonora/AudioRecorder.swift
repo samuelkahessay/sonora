@@ -9,7 +9,7 @@ import Foundation
 import AVFoundation
 import Combine
 
-class AudioRecorder: NSObject, ObservableObject {
+class AudioRecorder: NSObject, ObservableObject, AudioRecordingService {
     @Published var isRecording = false
     @Published var recordingTime: TimeInterval = 0
     @Published var hasPermission = false
