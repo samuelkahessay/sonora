@@ -1,17 +1,11 @@
 import SwiftUI
 import AVFoundation
+import UIKit
 
 struct MemoDetailView: View {
     let memo: Memo
     @EnvironmentObject var memoStore: MemoStore
-    @State private var transcriptionState: TranscriptionState = .notStarted
-    @State private var isPlaying = false
-    @StateObject private var analysisService = AnalysisService()
-    @State private var selectedAnalysisMode: AnalysisMode?
-    @State private var analysisResult: Any?
-    @State private var analysisEnvelope: Any?
-    @State private var isAnalyzing = false
-    @State private var analysisError: String?
+    @StateObject private var viewModel = MemoDetailViewModel()
     
     var body: some View {
         ScrollView {
@@ -42,10 +36,10 @@ struct MemoDetailView: View {
                 VStack(spacing: 16) {
                     HStack {
                         Button(action: {
-                            memoStore.playMemo(memo)
+                            viewModel.playMemo()
                         }) {
                             HStack(spacing: 12) {
-                                Image(systemName: playButtonIcon)
+                                Image(systemName: viewModel.playButtonIcon)
                                     .font(.title2)
                                     .foregroundColor(.white)
                                     .frame(width: 50, height: 50)
@@ -53,7 +47,7 @@ struct MemoDetailView: View {
                                     .clipShape(Circle())
                                 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(isPlaying ? "Now Playing" : "Play Recording")
+                                    Text(viewModel.isPlaying ? "Now Playing" : "Play Recording")
                                         .font(.headline)
                                         .fontWeight(.semibold)
                                     
@@ -81,24 +75,24 @@ struct MemoDetailView: View {
                         
                         Spacer()
                         
-                        if transcriptionState.isInProgress {
+                        if viewModel.transcriptionState.isInProgress {
                             ProgressView()
                                 .scaleEffect(0.8)
-                        } else if transcriptionState.isFailed {
+                        } else if viewModel.transcriptionState.isFailed {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.orange)
                                 .font(.system(size: 14))
                         }
                     }
                     
-                    switch transcriptionState {
+                    switch viewModel.transcriptionState {
                     case .notStarted:
                         VStack(spacing: 12) {
                             Text("This memo hasn't been transcribed yet.")
                                 .foregroundColor(.secondary)
                             
                             Button("Start Transcription") {
-                                startTranscription()
+                                viewModel.startTranscription()
                             }
                             .buttonStyle(.borderedProminent)
                         }
@@ -165,7 +159,7 @@ struct MemoDetailView: View {
                                 .multilineTextAlignment(.center)
                             
                             Button("Try Again") {
-                                retryTranscription()
+                                viewModel.retryTranscription()
                             }
                             .buttonStyle(.borderedProminent)
                         }
@@ -181,15 +175,10 @@ struct MemoDetailView: View {
                 .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
                 
                 // Analysis Section
-                if transcriptionState.isCompleted, let transcriptText = transcriptionState.text {
+                if viewModel.isTranscriptionCompleted, let transcriptText = viewModel.transcriptionText {
                     AnalysisSectionView(
                         transcript: transcriptText,
-                        isAnalyzing: $isAnalyzing,
-                        analysisError: $analysisError,
-                        selectedAnalysisMode: $selectedAnalysisMode,
-                        analysisResult: $analysisResult,
-                        analysisEnvelope: $analysisEnvelope,
-                        analysisService: analysisService
+                        viewModel: viewModel
                     )
                 }
             }
@@ -198,48 +187,15 @@ struct MemoDetailView: View {
         .navigationTitle("Memo Details")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            updateTranscriptionState()
-            setupPlayingState()
+            viewModel.configure(with: memo)
+            viewModel.onViewAppear()
         }
-        .onReceive(memoStore.sharedTranscriptionManager.$transcriptionStates) { _ in
-            updateTranscriptionState()
-        }
-        .onReceive(memoStore.$playingMemo) { playingMemo in
-            isPlaying = playingMemo?.id == memo.id && memoStore.isPlaying
-        }
-        .onReceive(memoStore.$isPlaying) { playing in
-            isPlaying = memoStore.playingMemo?.id == memo.id && playing
+        .onDisappear {
+            viewModel.onViewDisappear()
         }
     }
     
-    private var playButtonIcon: String {
-        isPlaying ? "pause.fill" : "play.fill"
-    }
-    
-    private func updateTranscriptionState() {
-        let newState = memoStore.getTranscriptionState(for: memo)
-        print("🔄 MemoDetailView: Updating state for \(memo.filename)")
-        print("🔄 MemoDetailView: Current UI state: \(transcriptionState.statusText)")
-        print("🔄 MemoDetailView: New state from MemoStore: \(newState.statusText)")
-        print("🔄 MemoDetailView: New state is completed: \(newState.isCompleted)")
-        print("🔄 MemoDetailView: Memo URL: \(memo.url.lastPathComponent)")
-        
-        // Always update the state, don't compare strings
-        print("🔄 MemoDetailView: Forcing state update...")
-        transcriptionState = newState
-    }
-    
-    private func setupPlayingState() {
-        isPlaying = memoStore.playingMemo?.id == memo.id && memoStore.isPlaying
-    }
-    
-    private func startTranscription() {
-        memoStore.sharedTranscriptionManager.startTranscription(for: memo)
-    }
-    
-    private func retryTranscription() {
-        memoStore.retryTranscription(for: memo)
-    }
+    // MARK: - UI Helper Methods
     
     private func shareText(_ text: String) {
         let activityController = UIActivityViewController(

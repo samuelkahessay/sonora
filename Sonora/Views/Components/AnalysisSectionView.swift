@@ -2,12 +2,7 @@ import SwiftUI
 
 struct AnalysisSectionView: View {
     let transcript: String
-    @Binding var isAnalyzing: Bool
-    @Binding var analysisError: String?
-    @Binding var selectedAnalysisMode: AnalysisMode?
-    @Binding var analysisResult: Any?
-    @Binding var analysisEnvelope: Any?
-    let analysisService: AnalysisService
+    @ObservedObject var viewModel: MemoDetailViewModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -22,7 +17,7 @@ struct AnalysisSectionView: View {
             ], spacing: 12) {
                 ForEach(AnalysisMode.allCases, id: \.self) { mode in
                     Button(action: {
-                        performAnalysis(mode: mode)
+                        viewModel.performAnalysis(mode: mode, transcript: transcript)
                     }) {
                         VStack(spacing: 8) {
                             Image(systemName: mode.iconName)
@@ -46,13 +41,13 @@ struct AnalysisSectionView: View {
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .disabled(isAnalyzing)
-                    .opacity(isAnalyzing ? 0.6 : 1.0)
+                    .disabled(viewModel.isAnalyzing)
+                    .opacity(viewModel.isAnalyzing ? 0.6 : 1.0)
                 }
             }
             
             // Loading State
-            if isAnalyzing {
+            if viewModel.isAnalyzing {
                 HStack(spacing: 12) {
                     ProgressView()
                         .scaleEffect(0.8)
@@ -67,7 +62,7 @@ struct AnalysisSectionView: View {
             }
             
             // Error State
-            if let error = analysisError {
+            if let error = viewModel.analysisError {
                 HStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.red)
@@ -88,9 +83,9 @@ struct AnalysisSectionView: View {
             }
             
             // Results
-            if let mode = selectedAnalysisMode,
-               let result = analysisResult,
-               let envelope = analysisEnvelope {
+            if let mode = viewModel.selectedAnalysisMode,
+               let result = viewModel.analysisResult,
+               let envelope = viewModel.analysisEnvelope {
                 AnalysisResultsView(
                     mode: mode,
                     result: result,
@@ -102,57 +97,5 @@ struct AnalysisSectionView: View {
         .background(Color.white)
         .cornerRadius(12)
         .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-    }
-    
-    private func performAnalysis(mode: AnalysisMode) {
-        isAnalyzing = true
-        analysisError = nil
-        selectedAnalysisMode = mode
-        analysisResult = nil
-        analysisEnvelope = nil
-        
-        Task {
-            do {
-                switch mode {
-                case .tldr:
-                    let envelope = try await analysisService.analyzeTLDR(transcript: transcript)
-                    await MainActor.run {
-                        analysisResult = envelope.data
-                        analysisEnvelope = envelope
-                        isAnalyzing = false
-                    }
-                    
-                case .analysis:
-                    let envelope = try await analysisService.analyzeAnalysis(transcript: transcript)
-                    await MainActor.run {
-                        analysisResult = envelope.data
-                        analysisEnvelope = envelope
-                        isAnalyzing = false
-                    }
-                    
-                case .themes:
-                    let envelope = try await analysisService.analyzeThemes(transcript: transcript)
-                    await MainActor.run {
-                        analysisResult = envelope.data
-                        analysisEnvelope = envelope
-                        isAnalyzing = false
-                    }
-                    
-                case .todos:
-                    let envelope = try await analysisService.analyzeTodos(transcript: transcript)
-                    await MainActor.run {
-                        analysisResult = envelope.data
-                        analysisEnvelope = envelope
-                        isAnalyzing = false
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    analysisError = error.localizedDescription
-                    isAnalyzing = false
-                }
-                print("❌ Analysis failed: \(error)")
-            }
-        }
     }
 }
