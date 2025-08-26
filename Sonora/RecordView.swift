@@ -121,10 +121,17 @@ struct RecordView: View {
                 Spacer()
             }
             .padding()
-            .navigationTitle("Record")
+            .navigationTitle("Sonora")
             .onAppear {
                 print("🎬 RecordView: Setting up recording callback on appear")
                 setupRecordingCallback()
+            }
+            .alert("Recording Stopped", isPresented: $audioRecorder.recordingStoppedAutomatically) {
+                Button("OK") {
+                    audioRecorder.autoStopMessage = nil
+                }
+            } message: {
+                Text(audioRecorder.autoStopMessage ?? "")
             }
         }
     }

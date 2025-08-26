@@ -13,10 +13,13 @@ class AudioRecorder: NSObject, ObservableObject {
     @Published var isRecording = false
     @Published var recordingTime: TimeInterval = 0
     @Published var hasPermission = false
+    @Published var recordingStoppedAutomatically = false
+    @Published var autoStopMessage: String?
     
     private var audioRecorder: AVAudioRecorder?
     private var recordingTimer: Timer?
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    private let maxRecordingDuration: TimeInterval = 60.0
     
     var onRecordingFinished: ((URL) -> Void)?
     
@@ -113,6 +116,13 @@ class AudioRecorder: NSObject, ObservableObject {
     private func updateRecordingTime() {
         if let recorder = audioRecorder {
             recordingTime = recorder.currentTime
+            
+            if recordingTime >= maxRecordingDuration {
+                print("⏰ AudioRecorder: Maximum recording duration reached, stopping automatically")
+                recordingStoppedAutomatically = true
+                autoStopMessage = "Recording stopped automatically after 1 minute"
+                stopRecording()
+            }
         }
     }
 }
