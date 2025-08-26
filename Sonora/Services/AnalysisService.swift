@@ -1,7 +1,7 @@
 import Foundation
 
 @MainActor
-class AnalysisService: ObservableObject {
+class AnalysisService: ObservableObject, AnalysisServiceProtocol {
     private let baseURL = "https://sonora.fly.dev"
     
     func analyze<T: Codable>(mode: AnalysisMode, transcript: String, responseType: T.Type) async throws -> AnalyzeEnvelope<T> {

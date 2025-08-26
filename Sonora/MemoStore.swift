@@ -45,7 +45,7 @@ final class AudioPlayerProxy: NSObject, AVAudioPlayerDelegate {
 }
 
 @MainActor
-class MemoStore: ObservableObject {
+class MemoStore: ObservableObject, MemoRepository {
     @Published var memos: [Memo] = []
     @Published var playingMemo: Memo?
     @Published var isPlaying = false
