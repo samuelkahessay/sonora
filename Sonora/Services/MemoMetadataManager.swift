@@ -36,6 +36,34 @@ class MemoMetadataManager {
         let metadataURL = metadataURL(for: audioURL)
         try? FileManager.default.removeItem(at: metadataURL)
     }
+    
+    func loadMetadata (for audioURL: URL) -> [String: Any] {
+        let url = metadataURL(for: audioURL)
+        guard FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return [:]
+        }
+        return obj
+    }
+    
+    /// Merge and persist arbitrary metadata keys/values into the sidecar JSON.
+    /// Values should be JSON-serializable (String/Number/Bool/Array/Dictionary/NSNull).
+    func upsertMetadata(for audioURL: URL, changes: [String: Any]) {
+        let url = metadataURL(for: audioURL)
+
+        var merged = loadMetadata(for: audioURL)
+        for (k, v) in changes {
+            merged[k] = v
+        }
+
+        do {
+            let data = try JSONSerialization.data(withJSONObject: merged, options: [.prettyPrinted])
+            try data.write(to: url, options: [.atomic])
+        } catch {
+            print("Failed to upsert metadata: \(error)")
+        }
+    }
 }
 
 struct MemoMetadata: Codable {

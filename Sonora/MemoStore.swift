@@ -99,6 +99,26 @@ class MemoStore: ObservableObject, MemoRepository {
         }
     }
     
+    func saveMemo(_ memo: Memo) {
+        
+        if !memos.contains(where: { $0.id == memo.id || $0.url == memo.url }) {
+            memos.append(memo)
+            memos.sort { $0.createdAt > $1.createdAt }
+        }
+    }
+    
+    func getMemo(by id: UUID) -> Memo? {
+        memos.first { $0.id == id }
+    }
+    
+    func getMemo(by url: URL) -> Memo? {
+        memos.first { $0.url == url }
+    }
+    
+    func updateMemoMetadata(_ memo: Memo, metadata: [String: Any]) {
+        metadataManager.upsertMetadata(for: memo.url, changes: metadata)
+    }
+    
     func deleteMemo(_ memo: Memo) {
         do {
             try FileManager.default.removeItem(at: memo.url)

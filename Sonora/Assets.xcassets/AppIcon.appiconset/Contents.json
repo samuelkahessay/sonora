@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "background-removed.png",
+      "filename" : "SCR-20250826-nido 3.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "background-removed 2.png",
+      "filename" : "SCR-20250826-nido 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "background-removed 1.png",
+      "filename" : "SCR-20250826-nido 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

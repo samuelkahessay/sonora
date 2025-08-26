@@ -3,15 +3,19 @@ import Combine
 
 protocol MemoRepository: ObservableObject {
     var memos: [Memo] { get set }
-    var playingMemo: Memo? { get set }
-    var isPlaying: Bool { get set }
     
-    func loadMemos()
-    func deleteMemo(_ memo: Memo)
+    // Playback state
+    var playingMemo: Memo? { get }
+    var isPlaying: Bool { get }
     func playMemo(_ memo: Memo)
-    func pausePlaying()
     func stopPlaying()
+    
+    // Persistence
+    func loadMemos()
+    func saveMemo(_ memo: Memo)
+    func deleteMemo(_ memo: Memo)
+    func getMemo(by id: UUID) -> Memo?
+    func getMemo(by url: URL) -> Memo?
     func handleNewRecording(at url: URL)
-    func getTranscriptionState(for memo: Memo) -> TranscriptionState
-    func retryTranscription(for memo: Memo)
+    func updateMemoMetadata(_ memo: Memo, metadata: [String: Any])
 }
