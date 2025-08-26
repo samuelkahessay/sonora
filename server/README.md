@@ -30,10 +30,17 @@ Transcribes audio files using OpenAI Whisper.
 
 Analyzes transcripts with different modes.
 
+Supported modes:
+
+- `tldr` – returns a concise summary and key points
+- `analysis` – returns a summary and key points
+- `themes` – groups related ideas and sentiment
+- `todos` – extracts actionable items
+
 **Request:**
 ```json
 {
-  "mode": "analysis" | "themes" | "todos",
+  "mode": "tldr" | "analysis" | "themes" | "todos",
   "transcript": "string (10-10k chars)"
 }
 ```
@@ -52,6 +59,11 @@ Analyzes transcripts with different modes.
 ## Test with curl
 
 ```bash
+# TLDR mode
+curl -s https://sonora.fly.dev/analyze \
+  -H 'content-type: application/json' \
+  -d '{"mode":"tldr","transcript":"I rambled about shipping the MVP next Friday and texting Sam to confirm the beta list."}'
+
 # Analysis mode
 curl -s https://sonora.fly.dev/analyze \
   -H 'content-type: application/json' \
@@ -78,7 +90,7 @@ fly deploy
 
 ## Response Schemas
 
-**Analysis mode:**
+**TLDR & Analysis modes:**
 ```json
 {
   "summary": "2-4 sentence summary",
