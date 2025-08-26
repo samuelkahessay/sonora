@@ -182,7 +182,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     
     // MARK: - Recording Functionality (BackgroundAudioService Integration)
     
-    /// Start recording with proper background support
+    /// Start recording with proper background support (async version)
     func startRecording() async throws {
         // Stop any playing audio before recording
         if isPlaying {
@@ -191,6 +191,25 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         
         print("🎵 AudioRepositoryImpl: Starting background recording")
         try await backgroundAudioService.startRecording()
+    }
+    
+    /// Start recording synchronously (for use case compatibility)
+    func startRecordingSync() {
+        // Stop any playing audio before recording
+        if isPlaying {
+            stopAudio()
+        }
+        
+        print("🎵 AudioRepositoryImpl: Starting background recording (sync)")
+        
+        Task {
+            do {
+                try await backgroundAudioService.startRecording()
+                print("🎵 AudioRepositoryImpl: Background recording started successfully (sync)")
+            } catch {
+                print("❌ AudioRepositoryImpl: Failed to start recording (sync): \(error)")
+            }
+        }
     }
     
     /// Stop the current recording
