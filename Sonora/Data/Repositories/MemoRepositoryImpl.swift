@@ -81,10 +81,25 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     
     // MARK: - Playback
     func playMemo(_ memo: Memo) {
-        // Stop current if different
+        // Handle pause/resume toggle for same memo
+        if playingMemo?.id == memo.id && isPlaying {
+            pausePlaying()
+            return
+        }
+        
+        // Resume paused memo
+        if playingMemo?.id == memo.id && !isPlaying && player != nil {
+            player?.play()
+            isPlaying = true
+            print("▶️ MemoRepository: Resumed \(memo.filename)")
+            return
+        }
+        
+        // Stop current if different memo
         if let current = playingMemo, current.id != memo.id {
             stopPlaying()
         }
+        
         do {
             let audio = try AVAudioPlayer(contentsOf: memo.url)
             player = audio
@@ -101,7 +116,12 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         }
     }
     
-    // Playback handling
+    func pausePlaying() {
+        player?.pause()
+        isPlaying = false
+        print("⏸️ MemoRepository: Paused playback")
+    }
+    
     func stopPlaying() {
         player?.stop()
         player = nil
