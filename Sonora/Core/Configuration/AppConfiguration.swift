@@ -152,32 +152,24 @@ public final class AppConfiguration {
         // API Configuration - Build-specific URLs
         switch (buildConfig.buildType, buildConfig.distributionType) {
         case (.debug, .development):
-            // Development builds can use local server or staging
-            if let localURL = URL(string: "http://localhost:8000") {
-                apiBaseURL = localURL
-            } else {
-                apiBaseURL = URL(string: "https://sonora-staging.fly.dev")!
-            }
+            apiBaseURL = URL(string: "https://sonora.fly.dev")!
             analysisTimeoutInterval = 30.0 // Longer timeouts for development
             transcriptionTimeoutInterval = 180.0
             healthCheckTimeoutInterval = 10.0
             
         case (.testing, _):
-            // Testing builds use staging or mock endpoints
-            apiBaseURL = URL(string: "https://sonora-staging.fly.dev")!
+            apiBaseURL = URL(string: "https://sonora.fly.dev")!
             analysisTimeoutInterval = 15.0
             transcriptionTimeoutInterval = 120.0
             healthCheckTimeoutInterval = 8.0
             
         case (.release, .testFlight):
-            // TestFlight builds use staging for safety
-            apiBaseURL = URL(string: "https://sonora-staging.fly.dev")!
+            apiBaseURL = URL(string: "https://sonora.fly.dev")!
             analysisTimeoutInterval = 15.0
             transcriptionTimeoutInterval = 120.0
             healthCheckTimeoutInterval = 6.0
             
         case (.release, .appStore):
-            // Production App Store builds use production API
             apiBaseURL = URL(string: "https://sonora.fly.dev")!
             analysisTimeoutInterval = 12.0
             transcriptionTimeoutInterval = 120.0
