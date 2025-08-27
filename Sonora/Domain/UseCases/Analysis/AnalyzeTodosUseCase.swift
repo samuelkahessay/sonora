@@ -1,41 +1,60 @@
 import Foundation
 
-/// Use case for performing todos analysis on transcript
-/// Encapsulates the business logic for identifying action items and todos
+/// Use case for performing todos analysis on transcript with repository caching
+/// Encapsulates the business logic for identifying action items and todos with persistence
 protocol AnalyzeTodosUseCaseProtocol {
-    func execute(transcript: String) async throws -> AnalyzeEnvelope<TodosData>
+    func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<TodosData>
 }
 
 final class AnalyzeTodosUseCase: AnalyzeTodosUseCaseProtocol {
     
     // MARK: - Dependencies
     private let analysisService: AnalysisServiceProtocol
+    private let analysisRepository: AnalysisRepository
     
     // MARK: - Initialization
-    init(analysisService: AnalysisServiceProtocol) {
+    init(analysisService: AnalysisServiceProtocol, analysisRepository: AnalysisRepository) {
         self.analysisService = analysisService
+        self.analysisRepository = analysisRepository
     }
     
     // MARK: - Use Case Execution
-    func execute(transcript: String) async throws -> AnalyzeEnvelope<TodosData> {
-        // Validate transcript
+    func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<TodosData> {
+        // Validate inputs
         guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw AnalysisError.emptyTranscript
         }
         
-        // Check transcript length
         guard transcript.count >= 10 else {
             throw AnalysisError.transcriptTooShort
         }
         
-        print("✅ AnalyzeTodosUseCase: Starting todos analysis")
+        print("📋 AnalyzeTodosUseCase: Starting todos analysis for memo \(memoId)")
+        
+        // CACHE FIRST: Check if analysis already exists
+        if let cachedResult = await MainActor.run(body: {
+            analysisRepository.getAnalysisResult(for: memoId, mode: .todos, responseType: TodosData.self)
+        }) {
+            print("📋 AnalyzeTodosUseCase: Found cached todos analysis, returning immediately")
+            return cachedResult
+        }
+        
+        print("🌐 AnalyzeTodosUseCase: No cached result, calling analysis service")
         
         do {
+            // Call service to perform analysis
             let result = try await analysisService.analyzeTodos(transcript: transcript)
             
             print("✅ AnalyzeTodosUseCase: Todos analysis completed successfully")
             print("📋 Found \(result.data.todos.count) action items")
+            print("💾 AnalyzeTodosUseCase: Saving result to repository cache")
             
+            // SAVE TO CACHE: Store result for future use
+            await MainActor.run {
+                analysisRepository.saveAnalysisResult(result, for: memoId, mode: .todos)
+            }
+            
+            print("✅ AnalyzeTodosUseCase: Analysis cached successfully")
             return result
             
         } catch {

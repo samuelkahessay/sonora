@@ -88,6 +88,7 @@ final class MemoDetailViewModel: ObservableObject {
         let container = DIContainer.shared
         let memoRepository = container.memoRepository()
         let analysisService = container.analysisService()
+        let analysisRepository = container.analysisRepository()
         let transcriptionRepository = container.transcriptionRepository()
         let transcriptionService = container.transcriptionService()
         
@@ -109,10 +110,10 @@ final class MemoDetailViewModel: ObservableObject {
             startTranscriptionUseCase: startTranscriptionUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase,
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
-            analyzeTLDRUseCase: AnalyzeTLDRUseCase(analysisService: analysisService),
-            analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService),
-            analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService),
-            analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService),
+            analyzeTLDRUseCase: AnalyzeTLDRUseCase(analysisService: analysisService, analysisRepository: analysisRepository),
+            analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService, analysisRepository: analysisRepository),
+            analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService, analysisRepository: analysisRepository),
+            analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService, analysisRepository: analysisRepository),
             memoRepository: memoRepository
         )
     }
@@ -198,7 +199,13 @@ final class MemoDetailViewModel: ObservableObject {
     
     /// Perform analysis with the specified mode
     func performAnalysis(mode: AnalysisMode, transcript: String) {
-        print("📝 MemoDetailViewModel: Starting \(mode.displayName) analysis")
+        guard let memo = currentMemo else {
+            print("❌ MemoDetailViewModel: Cannot perform analysis - no current memo")
+            analysisError = "No memo selected for analysis"
+            return
+        }
+        
+        print("📝 MemoDetailViewModel: Starting \(mode.displayName) analysis for memo \(memo.id)")
         
         isAnalyzing = true
         analysisError = nil
@@ -210,39 +217,39 @@ final class MemoDetailViewModel: ObservableObject {
             do {
                 switch mode {
                 case .tldr:
-                    let envelope = try await analyzeTLDRUseCase.execute(transcript: transcript)
+                    let envelope = try await analyzeTLDRUseCase.execute(transcript: transcript, memoId: memo.id)
                     await MainActor.run {
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
                         isAnalyzing = false
-                        print("📝 MemoDetailViewModel: TLDR analysis completed")
+                        print("📝 MemoDetailViewModel: TLDR analysis completed (cached: \(envelope.latency_ms < 1000))")
                     }
                     
                 case .analysis:
-                    let envelope = try await analyzeContentUseCase.execute(transcript: transcript)
+                    let envelope = try await analyzeContentUseCase.execute(transcript: transcript, memoId: memo.id)
                     await MainActor.run {
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
                         isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Analysis completed")
+                        print("📝 MemoDetailViewModel: Analysis completed (cached: \(envelope.latency_ms < 1000))")
                     }
                     
                 case .themes:
-                    let envelope = try await analyzeThemesUseCase.execute(transcript: transcript)
+                    let envelope = try await analyzeThemesUseCase.execute(transcript: transcript, memoId: memo.id)
                     await MainActor.run {
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
                         isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Themes analysis completed")
+                        print("📝 MemoDetailViewModel: Themes analysis completed (cached: \(envelope.latency_ms < 1000))")
                     }
                     
                 case .todos:
-                    let envelope = try await analyzeTodosUseCase.execute(transcript: transcript)
+                    let envelope = try await analyzeTodosUseCase.execute(transcript: transcript, memoId: memo.id)
                     await MainActor.run {
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
                         isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Todos analysis completed")
+                        print("📝 MemoDetailViewModel: Todos analysis completed (cached: \(envelope.latency_ms < 1000))")
                     }
                 }
             } catch {
