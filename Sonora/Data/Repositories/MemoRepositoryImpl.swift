@@ -427,6 +427,33 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             print("❌ MemoRepository: Failed to update metadata for memo \(memo.filename): \(error)")
         }
     }
+    
+    // MARK: - Transcription Integration
+    
+    /// Get transcription state for a memo
+    /// Bridges to the existing TranscriptionManager for compatibility
+    func getTranscriptionState(for memo: Memo) -> TranscriptionState {
+        let transcriptionManager = DIContainer.shared.transcriptionManager()
+        let state = transcriptionManager.getTranscriptionState(for: memo)
+        print("🏪 MemoRepository: Getting transcription state for \(memo.filename)")
+        print("🏪 MemoRepository: State from TranscriptionManager: \(state.statusText)")
+        print("🏪 MemoRepository: State is completed: \(state.isCompleted)")
+        return state
+    }
+    
+    /// Retry transcription for a failed memo
+    /// Bridges to the existing TranscriptionManager for compatibility
+    func retryTranscription(for memo: Memo) {
+        let transcriptionManager = DIContainer.shared.transcriptionManager()
+        transcriptionManager.retryTranscription(for: memo)
+        print("🔄 MemoRepository: Retrying transcription for \(memo.filename)")
+    }
+    
+    /// Access to the shared TranscriptionManager for legacy compatibility
+    /// This maintains the same API surface as MemoStore during migration
+    var sharedTranscriptionManager: TranscriptionManager {
+        return DIContainer.shared.transcriptionManager()
+    }
 }
 
 // MARK: - Error Types
