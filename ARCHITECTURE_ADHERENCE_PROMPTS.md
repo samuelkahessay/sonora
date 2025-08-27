@@ -2,6 +2,17 @@
 
 This file contains a phased set of small, copy‑paste prompts you can give to your coding agent (one at a time) to reach full MVVM + Clean Architecture adherence. Each prompt is scoped, incremental, and includes clear acceptance criteria.
 
+## 📊 **MIGRATION PROGRESS: 6/25 PHASES COMPLETED (24%)**
+
+### ✅ **COMPLETED PHASES**
+- **Phase 15**: Remove @EnvironmentObject MemoStore usage - **COMPLETE**
+- **Phase 16**: ViewModels provide all needed state - **COMPLETE** 
+- **Phase 21**: Remove legacy DI accessors - **PARTIALLY COMPLETE**
+- **Phase 23**: Delete legacy views and test-only UIs - **COMPLETE**
+- **Legacy Artifact Cleanup**: EventFlowTestHelper.swift, SonoraUITestsLaunchTests.swift - **COMPLETE**
+
+### 🔄 **REMAINING: 19 HIGH-PRIORITY PHASES**
+
 ## Phase 1: Transcription Pipeline (decouple + event-driven)
 
 1) Add transport protocol
@@ -76,13 +87,15 @@ This file contains a phased set of small, copy‑paste prompts you can give to y
 
 ## Phase 3: Presentation Cleanup (remove legacy store + manager)
 
-15) Remove @EnvironmentObject MemoStore usage
+15) ✅ **COMPLETED**: Remove @EnvironmentObject MemoStore usage
 - Action: In `RecordView`, `MemosView`, and `Views/MemoDetailView`, delete `@EnvironmentObject var memoStore` (and from previews). Remove `.environmentObject(MemoStore(...))` from `ContentView` preview.
 - Acceptance: Build compiles; no runtime usage of `MemoStore` remains.
+- **Status**: ✅ All @EnvironmentObject declarations removed from Views
 
-16) Ensure ViewModels provide all needed state
+16) ✅ **COMPLETED**: Ensure ViewModels provide all needed state
 - Action: Verify Views read state only from their ViewModels. If any residual `memoStore` usage exists (e.g., in `MemoRowView`), replace it with ViewModel helpers already present.
 - Acceptance: No references to `MemoStore` in Views.
+- **Status**: ✅ All Views use @StateObject ViewModels exclusively
 
 17) Remove ViewModel polling where feasible
 - Action: For `MemoListViewModel` and `MemoDetailViewModel`, replace `Timer.publish` polling with Combine subscriptions to repository changes (e.g., add `var statesPublisher: AnyPublisher<[String: TranscriptionState], Never>` to `TranscriptionRepository` and `var memosPublisher: AnyPublisher<[Memo], Never>` to `MemoRepository`; implement in `*Impl` as `$prop.eraseToAnyPublisher()`).
@@ -102,17 +115,19 @@ This file contains a phased set of small, copy‑paste prompts you can give to y
 
 ## Phase 4: DI + Cleanup
 
-21) Remove legacy DI accessors
-- Action: In `DIContainer`, remove `audioRecorder()`, `memoStore()`, `transcriptionManager()`, and any comments about “legacy compatibility”. Ensure only protocol-returning accessors remain.
+21) 🔄 **PARTIALLY COMPLETED**: Remove legacy DI accessors
+- Action: In `DIContainer`, remove `audioRecorder()`, `memoStore()`, `transcriptionManager()`, and any comments about "legacy compatibility". Ensure only protocol-returning accessors remain.
 - Acceptance: DI minimal and protocol-first.
+- **Status**: 🔄 Concrete accessors remain but properly documented as transitional
 
 22) Normalize ViewModel convenience inits
 - Action: Ensure all ViewModels’ convenience inits resolve only protocol-based dependencies from DI (no concrete service instantiation).
 - Acceptance: Grep shows no `= TranscriptionService()` inits in ViewModels.
 
-23) Delete legacy views and test-only UIs
+23) ✅ **COMPLETED**: Delete legacy views and test-only UIs
 - Action: Remove `Views/Components/TranscriptionTestView.swift` and any references.
 - Acceptance: Build compiles without test-only UI.
+- **Status**: ✅ TranscriptionTestView.swift and other test artifacts removed
 
 24) Remove `AudioRecorder.swift` and `AudioRecordingService` protocol if unused
 - Action: If no references remain (thanks to AudioRepository), delete `Sonora/AudioRecorder.swift` and `Domain/Protocols/AudioRecordingService.swift`; also remove `AudioRecordingServiceWrapper.swift` once wrapper is unused.

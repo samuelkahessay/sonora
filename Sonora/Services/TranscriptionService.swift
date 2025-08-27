@@ -1,6 +1,6 @@
 import Foundation
 
-final class TranscriptionService {
+final class TranscriptionService: TranscriptionAPI {
     private let config = AppConfiguration.shared
     
     struct APIError: LocalizedError { 

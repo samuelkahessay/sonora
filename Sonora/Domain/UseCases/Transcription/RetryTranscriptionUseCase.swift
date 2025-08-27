@@ -10,12 +10,12 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
     
     // MARK: - Dependencies
     private let transcriptionRepository: TranscriptionRepository
-    private let transcriptionService: TranscriptionService
+    private let transcriptionAPI: TranscriptionAPI
     
     // MARK: - Initialization
-    init(transcriptionRepository: TranscriptionRepository, transcriptionService: TranscriptionService) {
+    init(transcriptionRepository: TranscriptionRepository, transcriptionAPI: TranscriptionAPI) {
         self.transcriptionRepository = transcriptionRepository
-        self.transcriptionService = transcriptionService
+        self.transcriptionAPI = transcriptionAPI
     }
     
     // MARK: - Factory Method (for backward compatibility)
@@ -23,7 +23,7 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
     static func create(transcriptionService: TranscriptionServiceProtocol) -> RetryTranscriptionUseCase {
         // Use DI container to get repository
         let repository = DIContainer.shared.transcriptionRepository()
-        return RetryTranscriptionUseCase(transcriptionRepository: repository, transcriptionService: TranscriptionService())
+        return RetryTranscriptionUseCase(transcriptionRepository: repository, transcriptionAPI: TranscriptionService())
     }
     
     
@@ -63,7 +63,7 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
         
         do {
             // Perform transcription retry
-            let transcriptionText = try await transcriptionService.transcribe(url: memo.url)
+            let transcriptionText = try await transcriptionAPI.transcribe(url: memo.url)
             print("✅ RetryTranscriptionUseCase: Transcription retry completed for \(memo.filename)")
             print("💾 RetryTranscriptionUseCase: Text: \(transcriptionText.prefix(100))...")
             

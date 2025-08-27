@@ -10,7 +10,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     
     // MARK: - Dependencies
     private let transcriptionRepository: TranscriptionRepository
-    private let transcriptionService: TranscriptionService
+    private let transcriptionAPI: TranscriptionAPI
     private let eventBus: EventBusProtocol
     private let operationCoordinator: OperationCoordinator
     private let logger: LoggerProtocol
@@ -18,13 +18,13 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     // MARK: - Initialization
     init(
         transcriptionRepository: TranscriptionRepository, 
-        transcriptionService: TranscriptionService, 
+        transcriptionAPI: TranscriptionAPI, 
         eventBus: EventBusProtocol = EventBus.shared,
         operationCoordinator: OperationCoordinator = OperationCoordinator.shared,
         logger: LoggerProtocol = Logger.shared
     ) {
         self.transcriptionRepository = transcriptionRepository
-        self.transcriptionService = transcriptionService
+        self.transcriptionAPI = transcriptionAPI
         self.eventBus = eventBus
         self.operationCoordinator = operationCoordinator
         self.logger = logger
@@ -37,7 +37,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         let repository = DIContainer.shared.transcriptionRepository()
         return StartTranscriptionUseCase(
             transcriptionRepository: repository, 
-            transcriptionService: TranscriptionService(), 
+            transcriptionAPI: TranscriptionService(), 
             eventBus: EventBus.shared,
             operationCoordinator: OperationCoordinator.shared,
             logger: Logger.shared
@@ -93,7 +93,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             
             // Perform transcription
             logger.info("Starting transcription service for file: \(memo.url.lastPathComponent)", category: .transcription, context: context)
-            let transcriptionText = try await transcriptionService.transcribe(url: memo.url)
+            let transcriptionText = try await transcriptionAPI.transcribe(url: memo.url)
             
             logger.info("Transcription completed successfully", category: .transcription, context: LogContext(
                 additionalInfo: [

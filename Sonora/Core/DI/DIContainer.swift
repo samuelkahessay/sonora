@@ -12,6 +12,7 @@ final class DIContainer: ObservableObject {
     // MARK: - Private Service Instances
     private var _audioRecorder: AudioRecorder!
     private var _transcriptionManager: TranscriptionManager!
+    private var _transcriptionAPI: TranscriptionAPI!
     private var _analysisService: AnalysisService!
     private var _memoStore: MemoStore!
     private var _memoRepository: MemoRepositoryImpl!
@@ -44,6 +45,7 @@ final class DIContainer: ObservableObject {
         // Create MemoStore with the transcription repository (for legacy compatibility)
         self._memoStore = MemoStore(transcriptionRepository: _transcriptionRepository)
         self._transcriptionManager = _memoStore.sharedTranscriptionManager
+        self._transcriptionAPI = TranscriptionService()
         self._audioRecorder = audioRecorder ?? AudioRecorder()
         self._analysisService = analysisService ?? AnalysisService()
         self._operationCoordinator = OperationCoordinator.shared
@@ -75,6 +77,12 @@ final class DIContainer: ObservableObject {
     func transcriptionService() -> TranscriptionServiceProtocol {
         ensureConfigured()
         return _transcriptionManager
+    }
+    
+    /// Get transcription API service
+    func transcriptionAPI() -> TranscriptionAPI {
+        ensureConfigured()
+        return _transcriptionAPI
     }
     
     /// Get analysis service
