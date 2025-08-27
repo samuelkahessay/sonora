@@ -31,6 +31,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _operationCoordinator: OperationCoordinator!
     private var _backgroundAudioService: BackgroundAudioService!
     private var _audioRepository: AudioRepository!
+    private var _startRecordingUseCase: StartRecordingUseCase!
     
     // MARK: - Initialization
     private init() {
@@ -66,6 +67,12 @@ final class DIContainer: ObservableObject, Resolver {
         register(AudioRepository.self) { resolver in
             return AudioRepositoryImpl()
         }
+        
+        // Register StartRecordingUseCase 
+        register(StartRecordingUseCase.self) { resolver in
+            let audioRepository = resolver.resolve(AudioRepository.self)!
+            return StartRecordingUseCase(audioRepository: audioRepository)
+        }
     }
     
     /// Configure DIContainer with shared service instances
@@ -89,6 +96,7 @@ final class DIContainer: ObservableObject, Resolver {
         // Initialize new services from registrations
         self._backgroundAudioService = resolve(BackgroundAudioService.self)!
         self._audioRepository = resolve(AudioRepository.self)!
+        self._startRecordingUseCase = resolve(StartRecordingUseCase.self)!
         
         // Create MemoStore with the transcription repository (for legacy compatibility)
         self._memoStore = MemoStore(transcriptionRepository: _transcriptionRepository)
@@ -108,7 +116,7 @@ final class DIContainer: ObservableObject, Resolver {
     
     /// Check if container has been properly configured
     private func ensureConfigured() {
-        guard _memoStore != nil, _memoRepository != nil, _audioRepository != nil else {
+        guard _memoStore != nil, _memoRepository != nil, _audioRepository != nil, _startRecordingUseCase != nil else {
             fatalError("DIContainer has not been configured. Call configure() before using services.")
         }
     }
@@ -167,6 +175,12 @@ final class DIContainer: ObservableObject, Resolver {
     func backgroundAudioService() -> BackgroundAudioService {
         ensureConfigured()
         return _backgroundAudioService
+    }
+    
+    /// Get start recording use case
+    func startRecordingUseCase() -> StartRecordingUseCase {
+        ensureConfigured()
+        return _startRecordingUseCase
     }
     
     /// Get logger service
