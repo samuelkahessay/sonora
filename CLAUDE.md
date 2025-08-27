@@ -1,116 +1,203 @@
-# Claude Development Notes for Sonora
+# Claude Code Development Guide for Sonora
 
-## Testing Best Practices
+**Sonora** is a Swift iOS voice memo app with AI analysis, built using **Clean Architecture + MVVM** patterns in a hybrid legacy/modern state.
 
-### UI Testing with XcodeBuildMCP
-- **Always use `describe_ui` before `tap`**: Never guess coordinates from screenshots
-- Use `describe_ui({ simulatorUuid: "UUID" })` to get precise element coordinates and frame data
-- Only use the coordinates returned by `describe_ui` for accurate automation
-- This prevents failed taps and ensures reliable UI interactions
+## 📐 Architecture Quick Reference
 
-### Common Commands
-- Build: `build_sim({ projectPath: '/path/to/project.xcodeproj', scheme: 'SchemeName', simulatorName: 'iPhone 16' })`
-- Launch: `launch_app_sim({ simulatorName: 'iPhone 16', bundleId: 'bundle.identifier' })`
-- UI Description: `describe_ui({ simulatorUuid: 'simulator-uuid' })`
-- Screenshot: `screenshot({ simulatorUuid: 'simulator-uuid' })`
+```
+┌─────────────────────────────────────────┐
+│            Presentation Layer           │ 🔄 HYBRID
+│  ┌─────────────────┐ ┌─────────────────┐│
+│  │      Views      │ │   ViewModels    ││
+│  │   (SwiftUI)     │ │ + Use Cases     ││
+│  └─────────────────┘ └─────────────────┘│
+└─────────────────────────────────────────┘
+                    │
+┌─────────────────────────────────────────┐
+│             Domain Layer                │ ✅ COMPLETE
+│  ┌─────────────────┐ ┌─────────────────┐│
+│  │   Use Cases     │ │   Domain Models ││
+│  │ (Business Logic)│ │   (Entities)    ││
+│  └─────────────────┘ └─────────────────┘│
+└─────────────────────────────────────────┘
+                    │
+┌─────────────────────────────────────────┐
+│              Data Layer                 │ 🔄 HYBRID
+│  ┌─────────────────┐ ┌─────────────────┐│
+│  │  Repositories   │ │ Legacy Services ││
+│  │   (Protocols)   │ │ + New Services  ││
+│  └─────────────────┘ └─────────────────┘│
+└─────────────────────────────────────────┘
+```
 
-## Architecture Notes
+## 🗂️ File Navigation Guide
 
-### Recording State Management
-- `RecordingViewModel` manages UI state with immediate updates
-- `isRecording` is set to `false` immediately when stop is requested for responsive UI
-- Proper error handling reverts state if stop operation fails
+| **Component Type** | **Location** | **Purpose** |
+|-------------------|--------------|-------------|
+| **Business Logic** | `Domain/UseCases/` | Single-responsibility operations |
+| **UI State** | `Presentation/ViewModels/` | ObservableObject coordinators |
+| **Data Access** | `Data/Repositories/` | Protocol implementations |
+| **External APIs** | `Data/Services/` & root services | Network & system services |
+| **DI Container** | `Core/DI/DIContainer.swift` | Service coordination |
+| **Operation Management** | `Core/Concurrency/` | Thread-safe operation tracking |
 
-### Dependency Injection
-- `DIContainer.shared` provides all services
-- `MemoListViewModel` uses convenience initializer with proper DI setup
-- Clean Architecture pattern with Use Cases for business logic
+```
+Sonora/
+├── Core/                      # Infrastructure
+│   ├── DI/DIContainer.swift   # 🏭 Dependency injection (hybrid legacy/modern)
+│   ├── Concurrency/           # 🔄 Operation coordination
+│   ├── Events/                # 📡 Event-driven architecture
+│   └── Logging/Logger.swift   # 📝 Structured logging
+├── Domain/                    # ✅ Complete business logic
+│   ├── UseCases/              # 🎯 Recording, Transcription, Analysis, Memo
+│   ├── Models/                # 📄 Domain entities
+│   └── Protocols/             # 🔌 Repository contracts
+├── Presentation/ViewModels/   # 🎬 UI coordinators (hybrid patterns)
+├── Data/Repositories/         # 💾 Modern data access
+└── [Root Services]            # ⚠️ Legacy services (gradual migration)
+```
 
-### Async/Await Pattern
-- `OperationStatusDelegate` methods are async to support MainActor isolation
-- Use `await MainActor.run` when updating UI properties from background contexts
+## 🚀 Development Patterns
 
-## Known Issues Fixed
-- Recording stop button state management (RecordingViewModel.swift:314-339)
-- OperationCoordinator async delegate method calls (OperationCoordinator.swift:458-472)
-- Protocol conformance for Swift 6 strict concurrency
+### Adding New Features (Follow This Flow)
 
-## Memos Tab Navigation Bug Analysis
-
-### Bug Description
-The Memos tab in TabView doesn't respond to direct taps, preventing navigation to the memos list.
-
-### Root Cause Discovered
-The VStack wrapper around TabView (added for debug button) breaks TabView's touch handling. TabView must be the root view for proper touch detection.
-
-### What We Tried (Chronological)
-
-#### ✅ Successful Fixes
-1. **Fixed RecordingViewModel State Management**
-   - Issue: Recording button wasn't updating UI when stop was triggered
-   - Solution: Set `isRecording = false` immediately in `stopRecording()` (RecordingViewModel.swift:314)
-   - Result: UI now updates immediately
-
-2. **Fixed Async Protocol Conformance**
-   - Issue: OperationStatusDelegate methods weren't async-compatible with MainActor
-   - Solution: Made delegate methods async (OperationStatus.swift:236-241)
-   - Result: Proper async/await flow for UI updates
-
-3. **Fixed MemoListViewModel Dependency Injection**
-   - Issue: Missing AnalysisRepository and wrong TranscriptionService types
-   - Solution: Added proper dependencies in convenience init (MemoListViewModel.swift:85-109)
-   - Result: ViewModel initializes without errors
-
-4. **Deferred Heavy Operations in MemoListViewModel**
-   - Issue: Timer.publish() in init was blocking view initialization
-   - Solution: Moved `setupBindings()` and `loadMemos()` to `onViewAppear()` (MemoListViewModel.swift:71-72)
-   - Result: Prevented initialization blocking
-
-5. **Added MemoStore Environment Object**
-   - Issue: MemosView expected @EnvironmentObject but it wasn't provided
-   - Solution: Added @StateObject in SonoraApp.swift and `.environmentObject(memoStore)`
-   - Result: Environment object properly injected
-
-6. **Removed Crashing Environment Object References**
-   - Issue: App crashed when navigating to Memos (went to home screen)
-   - Solution: Removed `@EnvironmentObject var memoStore` from MemosView and MemoRowView
-   - Result: Crash fixed, navigation works programmatically
-
-#### ❌ Failed Attempts
-1. **Direct Tab Taps Don't Work**
-   - Tapping the Memos tab in the tab bar has no effect
-   - No logs show selection change
-   - TabView isn't receiving touch events
-
-2. **describe_ui Returns Empty**
-   - The XcodeBuildMCP describe_ui function returns empty accessibility hierarchy
-   - Can't get precise coordinates for UI elements
-
-#### 🔍 Key Discovery
-**Programmatic navigation works but touch doesn't:**
-- Debug button that sets `selectedTab = 1` successfully navigates to Memos
-- Direct taps on tab bar don't register at all
-- Logs show: "🔄 TabView: Selection changed from 0 to 1" only with button, not taps
-- **Root cause: VStack wrapper around TabView breaks touch handling**
-
-### Current State
+#### 1. **Create Use Case** (Domain Layer)
 ```swift
-// ContentView.swift - PROBLEMATIC STRUCTURE
-var body: some View {
-    VStack(spacing: 0) {  // THIS BREAKS TAB TOUCH HANDLING
-        #if DEBUG
-        Button("Debug: Switch to Memos Tab") { ... }
-        #endif
-        
-        TabView(selection: $selectedTab) { ... }
+// Domain/UseCases/{Category}/NewFeatureUseCase.swift
+protocol NewFeatureUseCaseProtocol {
+    func execute(parameters: Parameters) async throws -> Result
+}
+
+final class NewFeatureUseCase: NewFeatureUseCaseProtocol {
+    private let repository: SomeRepository
+    
+    init(repository: SomeRepository) {
+        self.repository = repository
+    }
+    
+    func execute(parameters: Parameters) async throws -> Result {
+        // 1. Validate input
+        // 2. Execute business logic  
+        // 3. Return result
     }
 }
 ```
 
-### Solution Required
-Remove the VStack wrapper and find alternative way to add debug UI that doesn't interfere with TabView's touch handling. TabView must be the root view in body for proper touch detection.
+#### 2. **Update ViewModel** (Presentation Layer)
+```swift
+// Add to existing ViewModel or create new one
+@MainActor
+final class FeatureViewModel: ObservableObject {
+    private let newFeatureUseCase: NewFeatureUseCaseProtocol
+    @Published var result: Result?
+    
+    // Dependency injection via DIContainer
+    convenience init() {
+        let container = DIContainer.shared
+        self.init(newFeatureUseCase: NewFeatureUseCase(
+            repository: container.someRepository()
+        ))
+    }
+    
+    func performFeature() {
+        Task {
+            result = try await newFeatureUseCase.execute(...)
+        }
+    }
+}
+```
 
-### Diagnostic Logging Added
-- ContentView: Tab selection changes logged
-- MemosView: Initialization logged
-- MemoListViewModel: View lifecycle logged
+#### 3. **Update View** (Presentation Layer)
+```swift
+Button("Execute Feature") { viewModel.performFeature() }
+```
+
+## 🏗️ Dependency Injection (Hybrid State)
+
+**DIContainer provides both legacy and modern access:**
+
+```swift
+let container = DIContainer.shared
+
+// Modern Protocol-Based (Preferred)
+let repository = container.memoRepository()           // MemoRepository protocol
+let transcriptionRepo = container.transcriptionRepository()
+
+// Legacy Concrete Access (Transitional)
+let audioRecorder = container.audioRecorder()        // Concrete AudioRecorder
+let memoStore = container.memoStore()                 // Concrete MemoStore
+```
+
+## ⚡ Async/Await Patterns
+
+**Modern Use Cases:** All async/await
+```swift
+try await startRecordingUseCase.execute()
+let result = try await analysisUseCase.execute(transcript: text, memoId: id)
+```
+
+**MainActor for UI Updates:**
+```swift
+await MainActor.run {
+    self.isLoading = false
+    self.result = data
+}
+```
+
+**OperationStatusDelegate methods are async:**
+```swift
+func operationDidComplete(_ id: UUID, memoId: UUID, type: OperationType) async {
+    // Handle completion
+}
+```
+
+## 🧪 Testing Best Practices
+
+### UI Testing with XcodeBuildMCP
+- **Always use `describe_ui` before `tap`** - Never guess coordinates
+- Get precise coordinates: `describe_ui({ simulatorUuid: "UUID" })`
+- Common commands:
+  - Build: `build_sim({ projectPath: '/.../project.xcodeproj', scheme: 'Sonora', simulatorName: 'iPhone 16' })`
+  - Launch: `launch_app_sim({ simulatorName: 'iPhone 16', bundleId: 'com.samuelkahessay.Sonora' })`
+
+### Test Classes Available
+- `RecordingFlowTestUseCase` - Background recording tests
+- `TranscriptionPersistenceTestUseCase` - Repository persistence tests
+
+**Testing docs**: See `docs/testing/` for detailed guides
+
+## ⚠️ Important Implementation Notes
+
+### Recording State Management
+- `RecordingViewModel` sets `isRecording = false` immediately for responsive UI
+- Error handling reverts state if operations fail
+- Use `await MainActor.run` for UI updates from background contexts
+
+### SwiftUI TabView Requirement  
+**Critical**: TabView must be root view without wrapper containers (VStack, ZStack) for proper touch handling
+
+### Known Fixed Issues (Reference Only)
+- Recording button state management: RecordingViewModel.swift:314-339
+- OperationCoordinator async delegate calls: OperationCoordinator.swift:458-472
+- Swift 6 concurrency protocol conformance ✅
+
+## 🔧 Common Commands
+
+**Build & Test:**
+```bash
+# Build for simulator
+build_sim({ projectPath: '/Users/.../Sonora.xcodeproj', scheme: 'Sonora', simulatorName: 'iPhone 16' })
+
+# Launch app
+launch_app_sim({ simulatorName: 'iPhone 16', bundleId: 'com.samuelkahessay.Sonora' })
+```
+
+**Architecture Status:** Hybrid legacy/modern - Domain layer complete, gradual migration ongoing
+**Testing Coverage:** 45% implemented with expanding test classes
+**Key Legacy Components:** AudioRecorder, MemoStore, TranscriptionManager (see LEGACY.md)
+
+---
+
+For comprehensive architecture details, see README.md  
+For testing procedures, see docs/testing/  
+For migration status, see ARCHITECTURE_MIGRATION.md

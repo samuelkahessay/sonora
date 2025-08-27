@@ -1,5 +1,9 @@
 # Transcription Use Cases Repository Integration
 
+> **Status**: ACTIVE TECHNICAL DOCUMENTATION  
+> **Test Classes**: `TranscriptionPersistenceTestUseCase` (implemented)
+> **Purpose**: Document transcription repository integration and persistence
+
 ## ✅ Complete Integration with TranscriptionRepository
 
 The transcription use cases have been successfully updated to use the TranscriptionRepository for proper persistence, ensuring transcriptions survive app restarts and provide reliable data storage.
@@ -216,3 +220,4 @@ The transcription system now provides:
 - **Full backward compatibility** for seamless migration
 
 Test the persistence by running transcriptions, restarting the app, and verifying that transcription states and text are properly restored!
+

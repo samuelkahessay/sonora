@@ -1,5 +1,9 @@
 # Background Recording Test Instructions
 
+> **Status**: ACTIVE TESTING DOCUMENTATION
+> **Test Classes**: `RecordingFlowTestUseCase` (implemented)
+> **Purpose**: Verify background recording functionality with AudioRepositoryImpl
+
 ## Testing the Updated AudioRepositoryImpl with BackgroundAudioService
 
 ### What Was Updated:

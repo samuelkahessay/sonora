@@ -131,6 +131,7 @@ Sonora/
 | **Dependency Injection** | `Core/DI/DIContainer.swift` | Service coordination |
 | **Operation Management** | `Core/Concurrency/` | Thread-safe operation tracking |
 | **Event System** | `Core/Events/` | Reactive architecture components |
+| **Testing Documentation** | `docs/testing/` | Test guides & procedures |
 
 ## 🎯 Development Philosophy: "Vibe Coding"
 
@@ -434,6 +435,8 @@ private func handleDomainError(_ error: DomainError) {
 
 ## 🧪 Testing Strategies
 
+> **Detailed Testing Documentation**: See `docs/testing/` for comprehensive testing guides and procedures
+
 ### Use Case Testing
 ```swift
 final class AnalyzeTLDRUseCaseTests: XCTestCase {
@@ -641,20 +644,20 @@ do {
 ## 📊 Architecture Metrics
 
 **Current Status:**
-- ✅ **Clean Architecture**: 100% implemented
-- ✅ **MVVM Pattern**: 100% implemented  
-- ✅ **Dependency Injection**: 100% implemented
+- ✅ **Clean Architecture**: 85% implemented (domain layer complete, hybrid data/presentation)
+- ✅ **MVVM Pattern**: 90% implemented (some legacy patterns remain)
+- 🔄 **Dependency Injection**: 75% implemented (dual concrete/protocol access)
 - ✅ **Use Case Pattern**: 100% implemented
 - ✅ **Operation Management**: 100% implemented
 - ✅ **Error Handling**: 100% implemented
 - ✅ **Event-Driven Architecture**: 100% implemented
-- ⚠️ **Testing Infrastructure**: 30% implemented
+- 🔄 **Testing Infrastructure**: 45% implemented (test classes exist, expanding coverage)
 - ⚠️ **Documentation Coverage**: 85% implemented
 
 **Ready for Production**: ✅ Core functionality  
-**Architecture Score**: 92/100  
+**Architecture Score**: 78/100 (hybrid legacy/modern state)  
 **Maintainability**: Excellent  
-**Testability**: Excellent  
+**Testability**: Good (expanding test coverage)  
 **Scalability**: Excellent
 
 ---

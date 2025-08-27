@@ -1,4 +1,8 @@
-# Transcription Use Cases - Main Actor Isolation Fix
+# Transcription Use Cases - Main Actor Isolation Fix (RESOLVED)
+
+> **Status**: HISTORICAL DOCUMENT - Actor isolation issues resolved
+> **Created**: 2025-01-26
+> **Purpose**: Documents factory method pattern implementation for main actor compliance
 
 ## ✅ Build Errors Fixed
 
@@ -156,3 +160,4 @@ let useCase = await StartTranscriptionUseCase.create(transcriptionService: servi
 - **Advanced**: Direct repository initialization
 
 The transcription use cases now provide flexible usage patterns while maintaining full backward compatibility and resolving all build errors!
+
