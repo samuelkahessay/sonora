@@ -9,8 +9,6 @@ import SwiftUI
 
 struct RecordView: View {
     @StateObject private var viewModel = RecordingViewModel()
-    @EnvironmentObject var memoStore: MemoStore
-    
     
     var body: some View {
         NavigationView {
