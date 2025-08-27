@@ -9,6 +9,7 @@ import Foundation
 import AVFoundation
 import Combine
 
+@MainActor
 class AudioRecorder: NSObject, ObservableObject, AudioRecordingService {
     @Published var isRecording = false
     @Published var recordingTime: TimeInterval = 0
@@ -94,9 +95,13 @@ class AudioRecorder: NSObject, ObservableObject, AudioRecordingService {
             isRecording = true
             recordingTime = 0
             
-            recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-                self?.updateRecordingTime()
+            recordingTimer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    self?.updateRecordingTime()
+                }
             }
+            RunLoop.main.add(recordingTimer!, forMode: .common)
+            print("🕐 AudioRecorder: Timer started on main RunLoop")
         } catch {
             print("Could not start recording: \(error)")
         }
@@ -127,6 +132,7 @@ class AudioRecorder: NSObject, ObservableObject, AudioRecordingService {
     private func updateRecordingTime() {
         if let recorder = audioRecorder {
             recordingTime = recorder.currentTime
+            print("🕐 AudioRecorder: Timer update - recordingTime: \(String(format: "%.1f", recordingTime))s")
             
             let timeUntilLimit = maxRecordingDuration - recordingTime
             

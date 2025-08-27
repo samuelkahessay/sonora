@@ -17,6 +17,7 @@ enum AnalysisError: LocalizedError {
     case emptyTranscript
     case transcriptTooShort
     case analysisServiceError(String)
+    case systemBusy
     
     // MARK: - Repository & Cache Errors
     case cacheError(String)
@@ -50,6 +51,8 @@ enum AnalysisError: LocalizedError {
             return "Transcript is too short for meaningful analysis"
         case .analysisServiceError(let message):
             return "Analysis service error: \(message)"
+        case .systemBusy:
+            return "System is busy - analysis queue is full"
             
         // Repository & Cache Errors
         case .cacheError(let message):
@@ -88,6 +91,8 @@ enum AnalysisError: LocalizedError {
             return "Please ensure the transcript has at least 10 characters for meaningful analysis."
         case .analysisServiceError:
             return "Please try again later or check your network connection."
+        case .systemBusy:
+            return "Please try again in a few moments when the system is less busy."
             
         // Repository & Cache Errors
         case .cacheError:

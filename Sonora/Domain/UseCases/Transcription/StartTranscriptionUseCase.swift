@@ -12,12 +12,22 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     private let transcriptionRepository: TranscriptionRepository
     private let transcriptionService: TranscriptionService
     private let eventBus: EventBusProtocol
+    private let operationCoordinator: OperationCoordinator
+    private let logger: LoggerProtocol
     
     // MARK: - Initialization
-    init(transcriptionRepository: TranscriptionRepository, transcriptionService: TranscriptionService, eventBus: EventBusProtocol = EventBus.shared) {
+    init(
+        transcriptionRepository: TranscriptionRepository, 
+        transcriptionService: TranscriptionService, 
+        eventBus: EventBusProtocol = EventBus.shared,
+        operationCoordinator: OperationCoordinator = OperationCoordinator.shared,
+        logger: LoggerProtocol = Logger.shared
+    ) {
         self.transcriptionRepository = transcriptionRepository
         self.transcriptionService = transcriptionService
         self.eventBus = eventBus
+        self.operationCoordinator = operationCoordinator
+        self.logger = logger
     }
     
     // MARK: - Factory Method (for backward compatibility)
@@ -25,62 +35,100 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     static func create(transcriptionService: TranscriptionServiceProtocol) -> StartTranscriptionUseCase {
         // Use DI container to get repository
         let repository = DIContainer.shared.transcriptionRepository()
-        return StartTranscriptionUseCase(transcriptionRepository: repository, transcriptionService: TranscriptionService(), eventBus: EventBus.shared)
+        return StartTranscriptionUseCase(
+            transcriptionRepository: repository, 
+            transcriptionService: TranscriptionService(), 
+            eventBus: EventBus.shared,
+            operationCoordinator: OperationCoordinator.shared,
+            logger: Logger.shared
+        )
     }
     
     
     // MARK: - Use Case Execution
     func execute(memo: Memo) async throws {
-        print("📝 StartTranscriptionUseCase: Starting transcription for memo: \(memo.filename)")
+        let context = LogContext(additionalInfo: [
+            "memoId": memo.id.uuidString,
+            "filename": memo.filename
+        ])
         
-        // Check if transcription is already in progress
-        let currentState = await MainActor.run {
-            transcriptionRepository.getTranscriptionState(for: memo.id)
+        logger.info("Starting transcription for memo: \(memo.filename)", category: .transcription, context: context)
+        
+        // Check for operation conflicts (e.g., can't transcribe while recording same memo)
+        guard await operationCoordinator.canStartTranscription(for: memo.id) else {
+            logger.warning("Cannot start transcription - conflicting operation (recording) active", 
+                          category: .transcription, context: context, error: nil)
+            throw TranscriptionError.conflictingOperation
         }
         
-        guard !currentState.isInProgress else {
-            print("⚠️ StartTranscriptionUseCase: Transcription already in progress")
-            throw TranscriptionError.alreadyInProgress
+        // Register transcription operation
+        guard let operationId = await operationCoordinator.registerOperation(.transcription(memoId: memo.id)) else {
+            logger.warning("Transcription rejected by operation coordinator", category: .transcription, context: context, error: nil)
+            throw TranscriptionError.systemBusy
         }
         
-        // Check if file exists
-        guard FileManager.default.fileExists(atPath: memo.url.path) else {
-            print("❌ StartTranscriptionUseCase: Audio file not found")
-            throw TranscriptionError.fileNotFound
-        }
-        
-        // Set state to in-progress
-        await MainActor.run {
-            transcriptionRepository.saveTranscriptionState(.inProgress, for: memo.id)
-        }
+        logger.debug("Transcription operation registered with ID: \(operationId)", category: .transcription, context: context)
         
         do {
+            // Check if transcription is already in progress
+            let currentState = await MainActor.run {
+                transcriptionRepository.getTranscriptionState(for: memo.id)
+            }
+            
+            guard !currentState.isInProgress else {
+                await operationCoordinator.failOperation(operationId, error: TranscriptionError.alreadyInProgress)
+                throw TranscriptionError.alreadyInProgress
+            }
+            
+            // Check if file exists
+            guard FileManager.default.fileExists(atPath: memo.url.path) else {
+                await operationCoordinator.failOperation(operationId, error: TranscriptionError.fileNotFound)
+                throw TranscriptionError.fileNotFound
+            }
+            
+            // Set state to in-progress
+            await MainActor.run {
+                transcriptionRepository.saveTranscriptionState(.inProgress, for: memo.id)
+            }
+            
             // Perform transcription
+            logger.info("Starting transcription service for file: \(memo.url.lastPathComponent)", category: .transcription, context: context)
             let transcriptionText = try await transcriptionService.transcribe(url: memo.url)
-            print("✅ StartTranscriptionUseCase: Transcription completed for \(memo.filename)")
-            print("💾 StartTranscriptionUseCase: Text: \(transcriptionText.prefix(100))...")
+            
+            logger.info("Transcription completed successfully", category: .transcription, context: LogContext(
+                additionalInfo: [
+                    "memoId": memo.id.uuidString,
+                    "textLength": transcriptionText.count,
+                    "previewText": String(transcriptionText.prefix(100))
+                ]
+            ))
             
             // Save completed transcription to repository
             await MainActor.run {
                 let completedState = TranscriptionState.completed(transcriptionText)
                 transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
                 transcriptionRepository.saveTranscriptionText(transcriptionText, for: memo.id)
-                
-                print("💾 StartTranscriptionUseCase: Transcription persisted to repository")
             }
             
             // Publish transcriptionCompleted event
-            print("📡 StartTranscriptionUseCase: Publishing transcriptionCompleted event for memo \(memo.id)")
+            logger.debug("Publishing transcriptionCompleted event", category: .transcription, context: context)
             eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: transcriptionText))
             
+            // Complete the transcription operation
+            await operationCoordinator.completeOperation(operationId)
+            logger.debug("Transcription operation completed: \(operationId)", category: .transcription, context: context)
+            
         } catch {
-            print("❌ StartTranscriptionUseCase: Transcription failed for \(memo.filename): \(error)")
+            logger.error("Transcription failed", category: .transcription, context: context, error: error)
             
             // Save failed state to repository
             await MainActor.run {
                 let failedState = TranscriptionState.failed(error.localizedDescription)
                 transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
             }
+            
+            // Fail the transcription operation
+            await operationCoordinator.failOperation(operationId, error: error)
             
             throw TranscriptionError.transcriptionFailed(error.localizedDescription)
         }
@@ -97,6 +145,8 @@ enum TranscriptionError: LocalizedError {
     case networkError(String)
     case serviceUnavailable
     case transcriptionFailed(String)
+    case conflictingOperation
+    case systemBusy
     
     var errorDescription: String? {
         switch self {
@@ -116,6 +166,10 @@ enum TranscriptionError: LocalizedError {
             return "Transcription service is currently unavailable"
         case .transcriptionFailed(let message):
             return "Transcription failed: \(message)"
+        case .conflictingOperation:
+            return "Cannot start transcription while recording is in progress"
+        case .systemBusy:
+            return "System is busy - transcription queue is full"
         }
     }
 }

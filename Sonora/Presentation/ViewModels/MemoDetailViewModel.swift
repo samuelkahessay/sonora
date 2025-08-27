@@ -17,6 +17,7 @@ final class MemoDetailViewModel: ObservableObject {
     private let analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol
     private let analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol
     private let memoRepository: MemoRepository // Still needed for state updates
+    private let operationCoordinator: OperationCoordinator
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Current Memo
@@ -38,6 +39,10 @@ final class MemoDetailViewModel: ObservableObject {
     @Published var analysisError: String?
     @Published var analysisCacheStatus: String?
     @Published var analysisPerformanceInfo: String?
+    
+    // MARK: - Operation Status
+    @Published var activeOperations: [OperationSummary] = []
+    @Published var memoOperationSummaries: [OperationSummary] = []
     
     // MARK: - Computed Properties
     
@@ -67,7 +72,8 @@ final class MemoDetailViewModel: ObservableObject {
         analyzeContentUseCase: AnalyzeContentUseCaseProtocol,
         analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol,
         analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol,
-        memoRepository: MemoRepository
+        memoRepository: MemoRepository,
+        operationCoordinator: OperationCoordinator = OperationCoordinator.shared
     ) {
         self.playMemoUseCase = playMemoUseCase
         self.startTranscriptionUseCase = startTranscriptionUseCase
@@ -78,8 +84,10 @@ final class MemoDetailViewModel: ObservableObject {
         self.analyzeThemesUseCase = analyzeThemesUseCase
         self.analyzeTodosUseCase = analyzeTodosUseCase
         self.memoRepository = memoRepository
+        self.operationCoordinator = operationCoordinator
         
         setupBindings()
+        setupOperationMonitoring()
         
         print("📝 MemoDetailViewModel: Initialized with dependency injection")
     }
@@ -117,7 +125,8 @@ final class MemoDetailViewModel: ObservableObject {
             analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
             analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
             analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
-            memoRepository: memoRepository
+            memoRepository: memoRepository,
+            operationCoordinator: container.operationCoordinator()
         )
     }
     
@@ -131,6 +140,36 @@ final class MemoDetailViewModel: ObservableObject {
                 self?.updateFromRepository()
             }
             .store(in: &cancellables)
+    }
+    
+    private func setupOperationMonitoring() {
+        // Update operation summaries every 2 seconds
+        Timer.publish(every: 2.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    await self?.updateOperationStatus()
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func updateOperationStatus() async {
+        guard let currentMemo = currentMemo else { return }
+        
+        // Get operation summaries for current memo
+        memoOperationSummaries = await operationCoordinator.getOperationSummaries(
+            group: .all,
+            filter: .active,
+            for: currentMemo.id
+        )
+        
+        // Get all active operations system-wide (for debugging/monitoring)
+        activeOperations = await operationCoordinator.getOperationSummaries(
+            group: .all,
+            filter: .active,
+            for: nil
+        )
     }
     
     private func updateFromRepository() {
@@ -159,6 +198,11 @@ final class MemoDetailViewModel: ObservableObject {
         // Initial state update
         updateTranscriptionState(for: memo)
         setupPlayingState(for: memo)
+        
+        // Start monitoring operations for this memo
+        Task {
+            await updateOperationStatus()
+        }
     }
     
     /// Start transcription for the current memo
@@ -275,6 +319,25 @@ final class MemoDetailViewModel: ObservableObject {
                     print("❌ MemoDetailViewModel: Analysis failed: \(error)")
                 }
             }
+        }
+    }
+    
+    /// Cancel specific operation by ID
+    func cancelOperation(_ operationId: UUID) {
+        Task {
+            await operationCoordinator.cancelOperation(operationId)
+            await updateOperationStatus() // Refresh status after cancellation
+        }
+    }
+    
+    /// Cancel all operations for current memo
+    func cancelAllOperations() {
+        guard let memo = currentMemo else { return }
+        
+        Task {
+            let cancelledCount = await operationCoordinator.cancelAllOperations(for: memo.id)
+            print("🚫 MemoDetailViewModel: Cancelled \(cancelledCount) operations for memo: \(memo.filename)")
+            await updateOperationStatus()
         }
     }
     

@@ -13,18 +13,21 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
     private let analysisRepository: AnalysisRepository
     private let logger: LoggerProtocol
     private let eventBus: EventBusProtocol
+    private let operationCoordinator: OperationCoordinator
     
     // MARK: - Initialization
     init(
         analysisService: AnalysisServiceProtocol, 
         analysisRepository: AnalysisRepository,
         logger: LoggerProtocol = Logger.shared,
-        eventBus: EventBusProtocol = EventBus.shared
+        eventBus: EventBusProtocol = EventBus.shared,
+        operationCoordinator: OperationCoordinator = OperationCoordinator.shared
     ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository
         self.logger = logger
         self.eventBus = eventBus
+        self.operationCoordinator = operationCoordinator
     }
     
     // MARK: - Use Case Execution
@@ -34,41 +37,52 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
         
         logger.analysis("Starting TLDR analysis", context: context)
         
-        // Validate inputs
-        guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            logger.error("TLDR analysis failed: empty transcript", category: .analysis, context: context, error: AnalysisError.emptyTranscript)
-            throw AnalysisError.emptyTranscript
+        // Register analysis operation (analysis can run concurrently - no conflicts)
+        guard let operationId = await operationCoordinator.registerOperation(.analysis(memoId: memoId, analysisType: .tldr)) else {
+            logger.warning("TLDR analysis rejected by operation coordinator (system at capacity)", category: .analysis, context: context, error: nil)
+            throw AnalysisError.systemBusy
         }
         
-        guard transcript.count >= 10 else {
-            logger.error("TLDR analysis failed: transcript too short (\(transcript.count) chars)", category: .analysis, context: context, error: AnalysisError.transcriptTooShort)
-            throw AnalysisError.transcriptTooShort
-        }
-        
-        logger.debug("Transcript validated (\(transcript.count) characters)", category: .analysis, context: context)
-        
-        // CACHE FIRST: Check if analysis already exists
-        let cacheTimer = PerformanceTimer(operation: "TLDR Cache Check", category: .performance)
-        if let cachedResult = await MainActor.run(body: {
-            analysisRepository.getAnalysisResult(for: memoId, mode: .tldr, responseType: TLDRData.self)
-        }) {
-            cacheTimer.finish(additionalInfo: "Cache HIT - returning immediately")
-            logger.analysis("Found cached TLDR analysis (cache hit)", 
-                          level: .info, 
-                          context: LogContext(correlationId: correlationId, additionalInfo: [
-                              "memoId": memoId.uuidString,
-                              "cacheHit": true,
-                              "latencyMs": cachedResult.latency_ms
-                          ]))
-            return cachedResult
-        }
-        cacheTimer.finish(additionalInfo: "Cache MISS - proceeding to API call")
-        
-        logger.analysis("No cached result found, calling analysis service", 
-                      level: .warning, 
-                      context: LogContext(correlationId: correlationId, additionalInfo: ["cacheHit": false]))
+        logger.debug("TLDR analysis operation registered with ID: \(operationId)", category: .analysis, context: context)
         
         do {
+            // Validate inputs
+            guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                await operationCoordinator.failOperation(operationId, error: AnalysisError.emptyTranscript)
+                throw AnalysisError.emptyTranscript
+            }
+            
+            guard transcript.count >= 10 else {
+                await operationCoordinator.failOperation(operationId, error: AnalysisError.transcriptTooShort)
+                throw AnalysisError.transcriptTooShort
+            }
+            
+            logger.debug("Transcript validated (\(transcript.count) characters)", category: .analysis, context: context)
+        
+            // CACHE FIRST: Check if analysis already exists
+            let cacheTimer = PerformanceTimer(operation: "TLDR Cache Check", category: .performance)
+            if let cachedResult = await MainActor.run(body: {
+                analysisRepository.getAnalysisResult(for: memoId, mode: .tldr, responseType: TLDRData.self)
+            }) {
+                cacheTimer.finish(additionalInfo: "Cache HIT - returning immediately")
+                logger.analysis("Found cached TLDR analysis (cache hit)", 
+                              level: .info, 
+                              context: LogContext(correlationId: correlationId, additionalInfo: [
+                                  "memoId": memoId.uuidString,
+                                  "cacheHit": true,
+                                  "latencyMs": cachedResult.latency_ms
+                              ]))
+                
+                // Complete operation immediately for cache hit
+                await operationCoordinator.completeOperation(operationId)
+                return cachedResult
+            }
+            cacheTimer.finish(additionalInfo: "Cache MISS - proceeding to API call")
+            
+            logger.analysis("No cached result found, calling analysis service", 
+                          level: .warning, 
+                          context: LogContext(correlationId: correlationId, additionalInfo: ["cacheHit": false]))
+        
             // Call service to perform analysis
             let analysisTimer = PerformanceTimer(operation: "TLDR Analysis API Call", category: .analysis)
             let result = try await analysisService.analyzeTLDR(transcript: transcript)
@@ -93,8 +107,12 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
                           context: LogContext(correlationId: correlationId, additionalInfo: ["cached": true]))
             
             // Publish analysisCompleted event
-            print("📡 AnalyzeTLDRUseCase: Publishing analysisCompleted event for memo \(memoId)")
+            logger.debug("Publishing analysisCompleted event for TLDR analysis", category: .analysis, context: context)
             eventBus.publish(.analysisCompleted(memoId: memoId, type: .tldr, result: result.data.summary))
+            
+            // Complete the analysis operation
+            await operationCoordinator.completeOperation(operationId)
+            logger.debug("TLDR analysis operation completed: \(operationId)", category: .analysis, context: context)
             
             return result
             
@@ -103,8 +121,13 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
                        category: .analysis, 
                        context: LogContext(correlationId: correlationId, additionalInfo: ["serviceError": error.localizedDescription]), 
                        error: error)
+            
+            // Fail the analysis operation
+            await operationCoordinator.failOperation(operationId, error: error)
+            
             throw AnalysisError.analysisServiceError(error.localizedDescription)
         }
     }
-}
+    }
+
 

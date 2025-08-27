@@ -18,6 +18,7 @@ final class DIContainer: ObservableObject {
     private var _transcriptionRepository: TranscriptionRepository!
     private var _analysisRepository: AnalysisRepository!
     private var _logger: LoggerProtocol!
+    private var _operationCoordinator: OperationCoordinator!
     
     // MARK: - Initialization
     private init() {
@@ -45,6 +46,7 @@ final class DIContainer: ObservableObject {
         self._transcriptionManager = _memoStore.sharedTranscriptionManager
         self._audioRecorder = audioRecorder ?? AudioRecorder()
         self._analysisService = analysisService ?? AnalysisService()
+        self._operationCoordinator = OperationCoordinator.shared
         
         _logger.info("DIContainer: Configured with shared service instances", category: .system, context: LogContext())
         _logger.debug("DIContainer: MemoStore: \(ObjectIdentifier(self._memoStore))", category: .system, context: LogContext())
@@ -103,6 +105,12 @@ final class DIContainer: ObservableObject {
     func logger() -> LoggerProtocol {
         ensureConfigured()
         return _logger
+    }
+    
+    /// Get operation coordinator service
+    func operationCoordinator() -> OperationCoordinator {
+        ensureConfigured()
+        return _operationCoordinator
     }
     
     // MARK: - Concrete Service Access (for gradual migration)

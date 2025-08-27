@@ -5,7 +5,7 @@ import SwiftUI
 /// ViewModel for handling audio recording functionality
 /// Uses dependency injection for testability and clean architecture
 @MainActor
-final class RecordingViewModel: ObservableObject {
+final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     
     // MARK: - Dependencies
     private let startRecordingUseCase: StartRecordingUseCaseProtocol
@@ -13,6 +13,7 @@ final class RecordingViewModel: ObservableObject {
     private let requestPermissionUseCase: RequestMicrophonePermissionUseCaseProtocol
     private let handleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol
     private let audioRecordingService: AudioRecordingService // Still needed for state updates
+    private let operationCoordinator: OperationCoordinator
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Debounce Management
@@ -29,6 +30,12 @@ final class RecordingViewModel: ObservableObject {
     @Published var remainingTime: TimeInterval = 0
     @Published var showAutoStopAlert: Bool = false
     @Published var isRequestingPermission: Bool = false
+    
+    // MARK: - Operation Status Properties
+    @Published var currentRecordingOperationId: UUID?
+    @Published var recordingOperationStatus: DetailedOperationStatus?
+    @Published var queuePosition: Int?
+    @Published var systemMetrics: SystemOperationMetrics?
     
     // MARK: - Computed Properties
     
@@ -78,6 +85,53 @@ final class RecordingViewModel: ObservableObject {
         isRecording
     }
     
+    /// Enhanced status text that includes operation status
+    var enhancedStatusText: String {
+        // Show operation status if available
+        if let opStatus = recordingOperationStatus {
+            switch opStatus {
+            case .queued:
+                if let position = queuePosition {
+                    return "Queued (position \(position + 1))"
+                }
+                return "Queued for recording"
+            case .waitingForResources:
+                return "Waiting for system resources"
+            case .waitingForConflictResolution:
+                return "Waiting (another operation active)"
+            case .processing(let progress):
+                if let progress = progress {
+                    return progress.currentStep
+                }
+                return "Processing recording"
+            default:
+                break
+            }
+        }
+        
+        // Fall back to basic status
+        return recordingStatusText
+    }
+    
+    /// System load indicator for UI
+    var systemLoadText: String? {
+        guard let metrics = systemMetrics else { return nil }
+        
+        if metrics.isSystemBusy {
+            return "System busy (\(metrics.activeOperations)/\(metrics.maxConcurrentOperations) operations)"
+        } else if metrics.activeOperations > 0 {
+            return "\(metrics.activeOperations) operations running"
+        }
+        
+        return nil
+    }
+    
+    /// Whether the recording operation can be cancelled
+    var canCancelRecording: Bool {
+        guard let operationId = currentRecordingOperationId else { return false }
+        return recordingOperationStatus?.isInProgress == true
+    }
+    
     // MARK: - Initialization
     
     init(
@@ -85,17 +139,20 @@ final class RecordingViewModel: ObservableObject {
         stopRecordingUseCase: StopRecordingUseCaseProtocol,
         requestPermissionUseCase: RequestMicrophonePermissionUseCaseProtocol,
         handleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol,
-        audioRecordingService: AudioRecordingService
+        audioRecordingService: AudioRecordingService,
+        operationCoordinator: OperationCoordinator = OperationCoordinator.shared
     ) {
         self.startRecordingUseCase = startRecordingUseCase
         self.stopRecordingUseCase = stopRecordingUseCase
         self.requestPermissionUseCase = requestPermissionUseCase
         self.handleNewRecordingUseCase = handleNewRecordingUseCase
         self.audioRecordingService = audioRecordingService
+        self.operationCoordinator = operationCoordinator
         
         setupBindings()
         setupRecordingCallback()
         setupPermissionNotifications()
+        setupOperationStatusMonitoring()
         updatePermissionStatus()
         
         print("🎬 RecordingViewModel: Initialized with dependency injection")
@@ -119,7 +176,8 @@ final class RecordingViewModel: ObservableObject {
             stopRecordingUseCase: StopRecordingUseCase(audioRecordingService: audioService),
             requestPermissionUseCase: RequestMicrophonePermissionUseCase(logger: logger),
             handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository),
-            audioRecordingService: audioService
+            audioRecordingService: audioService,
+            operationCoordinator: container.operationCoordinator()
         )
     }
     
@@ -142,6 +200,9 @@ final class RecordingViewModel: ObservableObject {
     private func updateFromService() {
         isRecording = audioRecordingService.isRecording
         recordingTime = audioRecordingService.recordingTime
+        if isRecording {
+            print("🔄 RecordingViewModel: Syncing timer - recordingTime: \(String(format: "%.1f", recordingTime))s")
+        }
         hasPermission = audioRecordingService.hasPermission
         recordingStoppedAutomatically = audioRecordingService.recordingStoppedAutomatically
         autoStopMessage = audioRecordingService.autoStopMessage
@@ -150,6 +211,41 @@ final class RecordingViewModel: ObservableObject {
         
         // Update alert state
         showAutoStopAlert = recordingStoppedAutomatically
+    }
+    
+    private func setupOperationStatusMonitoring() {
+        // Set up delegation for operation status updates
+        Task {
+            await operationCoordinator.setStatusDelegate(self)
+        }
+        
+        // Periodically update system metrics and operation status
+        Timer.publish(every: 1.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    await self?.updateOperationStatus()
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func updateOperationStatus() async {
+        // Update system metrics
+        systemMetrics = await operationCoordinator.getSystemMetrics()
+        
+        // Update current recording operation status if exists
+        if let operationId = currentRecordingOperationId {
+            let operation = await operationCoordinator.getOperation(operationId)
+            queuePosition = await operationCoordinator.getQueuePosition(for: operationId)
+            
+            // Clear operation ID if operation is no longer active
+            if let op = operation, !op.status.isInProgress {
+                currentRecordingOperationId = nil
+                recordingOperationStatus = nil
+                queuePosition = nil
+            }
+        }
     }
     
     private func setupRecordingCallback() {
@@ -187,20 +283,57 @@ final class RecordingViewModel: ObservableObject {
     /// Start audio recording
     func startRecording() {
         print("▶️ RecordingViewModel: Starting recording")
-        do {
-            try startRecordingUseCase.execute()
-        } catch {
-            print("❌ RecordingViewModel: Failed to start recording: \(error)")
+        Task {
+            do {
+                let memoId = try await startRecordingUseCase.execute()
+                
+                if let validMemoId = memoId {
+                    // Get the recording operation for this memoId
+                    currentRecordingOperationId = await operationCoordinator.getActiveOperations(for: validMemoId).first?.id
+                    print("✅ RecordingViewModel: Recording started with memo ID: \(validMemoId.uuidString)")
+                } else {
+                    // Recording failed to start - no valid memoId returned
+                    currentRecordingOperationId = nil
+                    print("❌ RecordingViewModel: Recording failed to start - no memoId returned")
+                }
+            } catch {
+                currentRecordingOperationId = nil
+                print("❌ RecordingViewModel: Failed to start recording: \(error)")
+            }
         }
     }
     
     /// Stop audio recording
     func stopRecording() {
         print("🛑 RecordingViewModel: Stopping recording")
-        do {
-            try stopRecordingUseCase.execute()
-        } catch {
-            print("❌ RecordingViewModel: Failed to stop recording: \(error)")
+        guard let operationId = currentRecordingOperationId else {
+            print("⚠️ RecordingViewModel: No active recording operation to stop")
+            return
+        }
+        
+        Task {
+            do {
+                // Get memo ID from operation
+                if let operation = await operationCoordinator.getOperation(operationId) {
+                    try await stopRecordingUseCase.execute(memoId: operation.type.memoId)
+                    print("✅ RecordingViewModel: Recording stopped successfully")
+                }
+            } catch {
+                print("❌ RecordingViewModel: Failed to stop recording: \(error)")
+            }
+        }
+    }
+    
+    /// Cancel the current recording operation
+    func cancelRecording() {
+        guard let operationId = currentRecordingOperationId else { return }
+        
+        Task {
+            await operationCoordinator.cancelOperation(operationId)
+            currentRecordingOperationId = nil
+            recordingOperationStatus = nil
+            queuePosition = nil
+            print("🚫 RecordingViewModel: Recording cancelled")
         }
     }
     
@@ -365,6 +498,46 @@ extension RecordingViewModel {
     /// Get countdown text color
     var countdownTextColor: Color {
         .red
+    }
+}
+
+// MARK: - OperationStatusDelegate
+
+extension RecordingViewModel {
+    
+    func operationStatusDidUpdate(_ update: OperationStatusUpdate) {
+        // Update recording operation status if it matches our current operation
+        if update.operationId == currentRecordingOperationId {
+            recordingOperationStatus = update.currentStatus
+            
+            switch update.currentStatus {
+            case .completed, .failed, .cancelled:
+                // Clear tracking when operation finishes
+                currentRecordingOperationId = nil
+                recordingOperationStatus = nil
+                queuePosition = nil
+            default:
+                break
+            }
+        }
+    }
+    
+    func operationDidComplete(_ operationId: UUID, memoId: UUID, operationType: OperationType) {
+        if operationId == currentRecordingOperationId {
+            print("✅ RecordingViewModel: Recording operation completed successfully")
+            currentRecordingOperationId = nil
+            recordingOperationStatus = nil
+            queuePosition = nil
+        }
+    }
+    
+    func operationDidFail(_ operationId: UUID, memoId: UUID, operationType: OperationType, error: Error) {
+        if operationId == currentRecordingOperationId {
+            print("❌ RecordingViewModel: Recording operation failed: \(error.localizedDescription)")
+            currentRecordingOperationId = nil
+            recordingOperationStatus = nil
+            queuePosition = nil
+        }
     }
 }
 
