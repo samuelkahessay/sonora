@@ -10,15 +10,38 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     
     // MARK: - Dependencies
     private let memoRepository: MemoRepository
+    private let analysisRepository: AnalysisRepository
+    private let logger: LoggerProtocol
     
     // MARK: - Initialization
-    init(memoRepository: MemoRepository) {
+    init(
+        memoRepository: MemoRepository, 
+        analysisRepository: AnalysisRepository,
+        logger: LoggerProtocol = Logger.shared
+    ) {
         self.memoRepository = memoRepository
+        self.analysisRepository = analysisRepository
+        self.logger = logger
+    }
+    
+    // MARK: - Convenience Initializer (for backward compatibility)
+    convenience init(memoRepository: MemoRepository) {
+        // Create a non-isolated analysis repository instance
+        let analysisRepo = MainActor.assumeIsolated {
+            AnalysisRepositoryImpl()
+        }
+        self.init(memoRepository: memoRepository, analysisRepository: analysisRepo)
     }
     
     // MARK: - Use Case Execution
     func execute(memo: Memo) async throws {
-        print("🗑️ DeleteMemoUseCase: Starting deletion of memo: \(memo.filename)")
+        let correlationId = UUID().uuidString
+        let context = LogContext(correlationId: correlationId, additionalInfo: [
+            "memoId": memo.id.uuidString,
+            "filename": memo.filename
+        ])
+        
+        logger.useCase("Starting memo deletion with cascading cleanup", context: context)
         
         do {
             // Validate memo exists in repository
@@ -30,29 +53,52 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
             // Validate file system state before deletion
             try validateFileSystemState(memo)
             
+            // CRITICAL: Delete all analysis results first (cascading deletion)
+            await deleteAnalysisResults(for: memo, correlationId: correlationId)
+            
             // Delete memo from repository
             memoRepository.deleteMemo(memo)
+            logger.useCase("Memo deleted from repository", 
+                         context: LogContext(correlationId: correlationId, additionalInfo: ["memoId": memo.id.uuidString]))
             
             // Verify deletion was successful
             try verifyDeletion(memo)
             
-            print("✅ DeleteMemoUseCase: Successfully deleted memo: \(memo.filename)")
+            logger.useCase("Memo deletion completed successfully", 
+                         level: .info,
+                         context: LogContext(correlationId: correlationId, additionalInfo: [
+                             "memoId": memo.id.uuidString,
+                             "filename": memo.filename,
+                             "analysisCleanup": true
+                         ]))
             
         } catch let repositoryError as RepositoryError {
-            print("❌ DeleteMemoUseCase: Repository error - \(repositoryError.localizedDescription)")
+            logger.error("DeleteMemoUseCase repository error", 
+                       category: .useCase, 
+                       context: context, 
+                       error: repositoryError)
             throw repositoryError.asSonoraError
             
         } catch let serviceError as ServiceError {
-            print("❌ DeleteMemoUseCase: Service error - \(serviceError.localizedDescription)")
+            logger.error("DeleteMemoUseCase service error", 
+                       category: .useCase, 
+                       context: context, 
+                       error: serviceError)
             throw serviceError.asSonoraError
             
         } catch let error as NSError {
-            print("❌ DeleteMemoUseCase: System error - \(error.localizedDescription)")
+            logger.error("DeleteMemoUseCase system error", 
+                       category: .useCase, 
+                       context: context, 
+                       error: error)
             let mappedError = ErrorMapping.mapError(error)
             throw mappedError
             
         } catch {
-            print("❌ DeleteMemoUseCase: Unknown error - \(error.localizedDescription)")
+            logger.error("DeleteMemoUseCase unknown error", 
+                       category: .useCase, 
+                       context: context, 
+                       error: error)
             throw SonoraError.storageDeleteFailed("Failed to delete memo: \(error.localizedDescription)")
         }
     }
@@ -112,6 +158,43 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
             throw RepositoryError.fileDeletionFailed("File still exists after deletion: \(memo.url.path)")
         }
         
-        print("✅ DeleteMemoUseCase: Deletion verification completed successfully")
+        logger.useCase("Deletion verification completed successfully", 
+                     context: LogContext(additionalInfo: ["memoId": memo.id.uuidString]))
+    }
+    
+    /// Delete all analysis results for the memo (cascading deletion)
+    private func deleteAnalysisResults(for memo: Memo, correlationId: String) async {
+        let context = LogContext(correlationId: correlationId, additionalInfo: [
+            "memoId": memo.id.uuidString,
+            "operation": "cascading_analysis_deletion"
+        ])
+        
+        logger.useCase("Starting cascading analysis deletion", context: context)
+        
+        await MainActor.run {
+            let analysisResults = analysisRepository.getAllAnalysisResults(for: memo.id)
+            let analysisCount = analysisResults.count
+            
+            if analysisCount > 0 {
+                logger.useCase("Found \(analysisCount) analysis results to delete", 
+                             context: LogContext(correlationId: correlationId, additionalInfo: [
+                                 "memoId": memo.id.uuidString,
+                                 "analysisCount": analysisCount,
+                                 "modes": analysisResults.keys.map { $0.rawValue }
+                             ]))
+                
+                analysisRepository.deleteAnalysisResults(for: memo.id)
+                
+                logger.useCase("Cascading analysis deletion completed", 
+                             level: .info,
+                             context: LogContext(correlationId: correlationId, additionalInfo: [
+                                 "memoId": memo.id.uuidString,
+                                 "deletedAnalysisCount": analysisCount
+                             ]))
+            } else {
+                logger.debug("No analysis results found for memo", category: .useCase, 
+                           context: LogContext(correlationId: correlationId, additionalInfo: ["memoId": memo.id.uuidString]))
+            }
+        }
     }
 }

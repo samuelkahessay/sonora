@@ -11,11 +11,17 @@ final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
     // MARK: - Dependencies
     private let analysisService: AnalysisServiceProtocol
     private let analysisRepository: AnalysisRepository
+    private let logger: LoggerProtocol
     
     // MARK: - Initialization
-    init(analysisService: AnalysisServiceProtocol, analysisRepository: AnalysisRepository) {
+    init(
+        analysisService: AnalysisServiceProtocol, 
+        analysisRepository: AnalysisRepository,
+        logger: LoggerProtocol = Logger.shared
+    ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository
+        self.logger = logger
     }
     
     // MARK: - Use Case Execution

@@ -11,54 +11,90 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol {
     // MARK: - Dependencies
     private let analysisService: AnalysisServiceProtocol
     private let analysisRepository: AnalysisRepository
+    private let logger: LoggerProtocol
     
     // MARK: - Initialization
-    init(analysisService: AnalysisServiceProtocol, analysisRepository: AnalysisRepository) {
+    init(
+        analysisService: AnalysisServiceProtocol, 
+        analysisRepository: AnalysisRepository,
+        logger: LoggerProtocol = Logger.shared
+    ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository
+        self.logger = logger
     }
     
     // MARK: - Use Case Execution
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<AnalysisData> {
+        let correlationId = UUID().uuidString
+        let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
+        
+        logger.analysis("Starting content analysis", context: context)
+        
         // Validate inputs
         guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            logger.error("Content analysis failed: empty transcript", category: .analysis, context: context, error: AnalysisError.emptyTranscript)
             throw AnalysisError.emptyTranscript
         }
         
         guard transcript.count >= 10 else {
+            logger.error("Content analysis failed: transcript too short (\(transcript.count) chars)", category: .analysis, context: context, error: AnalysisError.transcriptTooShort)
             throw AnalysisError.transcriptTooShort
         }
         
-        print("📊 AnalyzeContentUseCase: Starting content analysis for memo \(memoId)")
+        logger.debug("Transcript validated (\(transcript.count) characters)", category: .analysis, context: context)
         
         // CACHE FIRST: Check if analysis already exists
+        let cacheTimer = PerformanceTimer(operation: "Content Analysis Cache Check", category: .performance)
         if let cachedResult = await MainActor.run(body: {
             analysisRepository.getAnalysisResult(for: memoId, mode: .analysis, responseType: AnalysisData.self)
         }) {
-            print("📊 AnalyzeContentUseCase: Found cached content analysis, returning immediately")
+            cacheTimer.finish(additionalInfo: "Cache HIT - returning immediately")
+            logger.analysis("Found cached content analysis (cache hit)", 
+                          level: .info, 
+                          context: LogContext(correlationId: correlationId, additionalInfo: [
+                              "memoId": memoId.uuidString,
+                              "cacheHit": true,
+                              "latencyMs": cachedResult.latency_ms
+                          ]))
             return cachedResult
         }
+        cacheTimer.finish(additionalInfo: "Cache MISS - proceeding to API call")
         
-        print("🌐 AnalyzeContentUseCase: No cached result, calling analysis service")
+        logger.analysis("No cached content analysis found, calling analysis service", 
+                      level: .warning, 
+                      context: LogContext(correlationId: correlationId, additionalInfo: ["cacheHit": false]))
         
         do {
             // Call service to perform analysis
+            let analysisTimer = PerformanceTimer(operation: "Content Analysis API Call", category: .analysis)
             let result = try await analysisService.analyzeAnalysis(transcript: transcript)
+            analysisTimer.finish(additionalInfo: "Service call completed successfully")
             
-            print("✅ AnalyzeContentUseCase: Content analysis completed successfully")
-            print("📊 Generated \(result.data.key_points.count) key points")
-            print("💾 AnalyzeContentUseCase: Saving result to repository cache")
+            logger.analysis("Content analysis completed successfully", 
+                          context: LogContext(correlationId: correlationId, additionalInfo: [
+                              "apiLatencyMs": result.latency_ms,
+                              "summaryLength": result.data.summary.count,
+                              "keyPointsCount": result.data.key_points.count,
+                              "model": result.model
+                          ]))
             
             // SAVE TO CACHE: Store result for future use
+            let saveTimer = PerformanceTimer(operation: "Content Analysis Cache Save", category: .performance)
             await MainActor.run {
                 analysisRepository.saveAnalysisResult(result, for: memoId, mode: .analysis)
             }
+            saveTimer.finish(additionalInfo: "Analysis cached successfully")
             
-            print("✅ AnalyzeContentUseCase: Analysis cached successfully")
+            logger.analysis("Content analysis cached successfully", 
+                          context: LogContext(correlationId: correlationId, additionalInfo: ["cached": true]))
             return result
             
         } catch {
-            print("❌ AnalyzeContentUseCase: Content analysis failed: \(error)")
+            logger.error("Content analysis service call failed", 
+                       category: .analysis, 
+                       context: LogContext(correlationId: correlationId, additionalInfo: ["serviceError": error.localizedDescription]), 
+                       error: error)
             throw AnalysisError.analysisServiceError(error.localizedDescription)
         }
     }

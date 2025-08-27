@@ -36,6 +36,8 @@ final class MemoDetailViewModel: ObservableObject {
     @Published var analysisEnvelope: Any?
     @Published var isAnalyzing: Bool = false
     @Published var analysisError: String?
+    @Published var analysisCacheStatus: String?
+    @Published var analysisPerformanceInfo: String?
     
     // MARK: - Computed Properties
     
@@ -91,6 +93,7 @@ final class MemoDetailViewModel: ObservableObject {
         let analysisRepository = container.analysisRepository()
         let transcriptionRepository = container.transcriptionRepository()
         let transcriptionService = container.transcriptionService()
+        let logger = container.logger()
         
         // Use direct repository initialization to ensure real persistence
         let startTranscriptionUseCase = StartTranscriptionUseCase(
@@ -110,10 +113,10 @@ final class MemoDetailViewModel: ObservableObject {
             startTranscriptionUseCase: startTranscriptionUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase,
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
-            analyzeTLDRUseCase: AnalyzeTLDRUseCase(analysisService: analysisService, analysisRepository: analysisRepository),
-            analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService, analysisRepository: analysisRepository),
-            analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService, analysisRepository: analysisRepository),
-            analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService, analysisRepository: analysisRepository),
+            analyzeTLDRUseCase: AnalyzeTLDRUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
+            analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
+            analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
+            analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
             memoRepository: memoRepository
         )
     }
@@ -212,17 +215,30 @@ final class MemoDetailViewModel: ObservableObject {
         selectedAnalysisMode = mode
         analysisResult = nil
         analysisEnvelope = nil
+        analysisCacheStatus = "Checking cache..."
+        analysisPerformanceInfo = nil
         
         Task {
             do {
                 switch mode {
                 case .tldr:
+                    let startTime = CFAbsoluteTimeGetCurrent()
                     let envelope = try await analyzeTLDRUseCase.execute(transcript: transcript, memoId: memo.id)
+                    let duration = CFAbsoluteTimeGetCurrent() - startTime
+                    
                     await MainActor.run {
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
                         isAnalyzing = false
-                        print("📝 MemoDetailViewModel: TLDR analysis completed (cached: \(envelope.latency_ms < 1000))")
+                        
+                        // Determine cache status based on response time and latency
+                        let wasCached = duration < 1.0 || envelope.latency_ms < 1000
+                        analysisCacheStatus = wasCached ? "✅ Loaded from cache" : "🌐 Fresh from API"
+                        analysisPerformanceInfo = wasCached ? 
+                            "Response: \(Int(duration * 1000))ms" : 
+                            "API: \(envelope.latency_ms)ms, Total: \(Int(duration * 1000))ms"
+                        
+                        print("📝 MemoDetailViewModel: TLDR analysis completed (cached: \(wasCached))")
                     }
                     
                 case .analysis:
