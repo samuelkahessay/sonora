@@ -13,7 +13,6 @@ extension Notification.Name {
 
 struct MemosView: View {
     @StateObject private var viewModel = MemoListViewModel()
-    @EnvironmentObject var memoStore: MemoStore // Keep for transition compatibility
     let popToRoot: (() -> Void)?
     
     init(popToRoot: (() -> Void)? = nil) {
@@ -76,7 +75,6 @@ struct MemosView: View {
 struct MemoRowView: View {
     let memo: Memo
     let viewModel: MemoListViewModel
-    @EnvironmentObject var memoStore: MemoStore // Keep for transition compatibility
     @State private var transcriptionState: TranscriptionState = .notStarted
     
     var body: some View {
@@ -162,5 +160,4 @@ struct MemoRowView: View {
 
 #Preview {
     MemosView(popToRoot: nil)
-        .environmentObject(MemoStore(transcriptionRepository: TranscriptionRepositoryImpl()))
 }

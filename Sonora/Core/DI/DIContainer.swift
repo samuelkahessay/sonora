@@ -137,7 +137,7 @@ final class DIContainer: ObservableObject {
     }
     
     /// Get concrete MemoStore instance
-    /// Use this during gradual migration from @StateObject/@EnvironmentObject
+    /// Used for legacy compatibility during final migration phases
     func memoStore() -> MemoStore {
         ensureConfigured()
         return _memoStore

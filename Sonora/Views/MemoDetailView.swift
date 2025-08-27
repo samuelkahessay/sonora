@@ -4,7 +4,6 @@ import UIKit
 
 struct MemoDetailView: View {
     let memo: Memo
-    @EnvironmentObject var memoStore: MemoStore
     @StateObject private var viewModel = MemoDetailViewModel()
     
     var body: some View {

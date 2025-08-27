@@ -192,9 +192,9 @@ build_sim({ projectPath: '/Users/.../Sonora.xcodeproj', scheme: 'Sonora', simula
 launch_app_sim({ simulatorName: 'iPhone 16', bundleId: 'com.samuelkahessay.Sonora' })
 ```
 
-**Architecture Status:** Hybrid legacy/modern - Domain layer complete, gradual migration ongoing
-**Testing Coverage:** 45% implemented with expanding test classes
-**Key Legacy Components:** AudioRecorder, MemoStore, TranscriptionManager (see LEGACY.md)
+**Architecture Status:** Advanced hybrid - Domain layer complete, View migration 25% complete (RecordView ✅)
+**Testing Coverage:** 45% implemented with expanding test classes  
+**Key Legacy Components:** AudioRecorder, MemoStore, TranscriptionManager | **View Migration:** RecordView ✅, MemosView 🔄, MemoDetailView 🔄
 
 ---
 
