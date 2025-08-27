@@ -2,6 +2,14 @@ import Foundation
 import AVFoundation
 import Combine
 
+final class AudioPlayerProxy: NSObject, AVAudioPlayerDelegate {
+    var onFinish: (() -> Void)?
+    
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        onFinish?()
+    }
+}
+
 @MainActor
 final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     @Published var playingMemo: Memo?

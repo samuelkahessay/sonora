@@ -450,7 +450,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
     
     /// Access to the shared TranscriptionManager for legacy compatibility
-    /// This maintains the same API surface as MemoStore during migration
+    /// This maintains consistent API access for components during architecture modernization
     var sharedTranscriptionManager: TranscriptionManager {
         return DIContainer.shared.transcriptionManager()
     }
