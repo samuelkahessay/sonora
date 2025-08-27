@@ -75,18 +75,33 @@ final class MemoListViewModel: ObservableObject {
     }
     
     /// Convenience initializer using DIContainer
+    /// CRITICAL FIX: Uses proper dependency injection following Clean Architecture
     convenience init() {
         let container = DIContainer.shared
         let memoRepository = container.memoRepository()
+        let transcriptionRepository = container.transcriptionRepository()
         let transcriptionService = container.transcriptionService()
+        
+        // Use direct repository initialization to ensure real persistence
+        let startTranscriptionUseCase = StartTranscriptionUseCase(
+            transcriptionRepository: transcriptionRepository,
+            transcriptionService: TranscriptionService()
+        )
+        let retryTranscriptionUseCase = RetryTranscriptionUseCase(
+            transcriptionRepository: transcriptionRepository,
+            transcriptionService: TranscriptionService()
+        )
+        let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(
+            transcriptionRepository: transcriptionRepository
+        )
         
         self.init(
             loadMemosUseCase: LoadMemosUseCase(memoRepository: memoRepository),
             deleteMemoUseCase: DeleteMemoUseCase(memoRepository: memoRepository),
             playMemoUseCase: PlayMemoUseCase(memoRepository: memoRepository),
-            startTranscriptionUseCase: StartTranscriptionUseCase(transcriptionService: transcriptionService),
-            retryTranscriptionUseCase: RetryTranscriptionUseCase(transcriptionService: transcriptionService),
-            getTranscriptionStateUseCase: GetTranscriptionStateUseCase(transcriptionService: transcriptionService),
+            startTranscriptionUseCase: startTranscriptionUseCase,
+            retryTranscriptionUseCase: retryTranscriptionUseCase,
+            getTranscriptionStateUseCase: getTranscriptionStateUseCase,
             memoRepository: memoRepository,
             transcriptionService: transcriptionService
         )

@@ -40,5 +40,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .environmentObject(MemoStore())
+        .environmentObject(MemoStore(transcriptionRepository: TranscriptionRepositoryImpl()))
 }

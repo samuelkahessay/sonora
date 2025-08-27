@@ -14,6 +14,9 @@ final class DIContainer: ObservableObject {
     private var _transcriptionManager: TranscriptionManager!
     private var _analysisService: AnalysisService!
     private var _memoStore: MemoStore!
+    private var _memoRepository: MemoRepositoryImpl!
+    private var _transcriptionRepository: TranscriptionRepository!
+    private var _analysisRepository: AnalysisRepository!
     
     // MARK: - Initialization
     private init() {
@@ -24,23 +27,31 @@ final class DIContainer: ObservableObject {
     /// Configure DIContainer with shared service instances
     /// This ensures all parts of the app use the same service instances
     func configure(
-        memoStore: MemoStore,
         audioRecorder: AudioRecorder? = nil,
         analysisService: AnalysisService? = nil
     ) {
-        self._memoStore = memoStore
-        self._transcriptionManager = memoStore.sharedTranscriptionManager
+        // Initialize repositories first
+        self._transcriptionRepository = TranscriptionRepositoryImpl()
+        self._analysisRepository = AnalysisRepositoryImpl()
+        self._memoRepository = MemoRepositoryImpl()
+        
+        // Create MemoStore with the transcription repository (for legacy compatibility)
+        self._memoStore = MemoStore(transcriptionRepository: _transcriptionRepository)
+        self._transcriptionManager = _memoStore.sharedTranscriptionManager
         self._audioRecorder = audioRecorder ?? AudioRecorder()
         self._analysisService = analysisService ?? AnalysisService()
         
         print("🏭 DIContainer: Configured with shared service instances")
         print("🏭 DIContainer: MemoStore: \(ObjectIdentifier(self._memoStore))")
+        print("🏭 DIContainer: MemoRepository: \(ObjectIdentifier(self._memoRepository))")
         print("🏭 DIContainer: TranscriptionManager: \(ObjectIdentifier(self._transcriptionManager))")
+        print("🏭 DIContainer: TranscriptionRepository: \(ObjectIdentifier(self._transcriptionRepository))")
+        print("🏭 DIContainer: AnalysisRepository: \(ObjectIdentifier(self._analysisRepository))")
     }
     
     /// Check if container has been properly configured
     private func ensureConfigured() {
-        guard _memoStore != nil else {
+        guard _memoStore != nil, _memoRepository != nil else {
             fatalError("DIContainer has not been configured. Call configure() before using services.")
         }
     }
@@ -68,7 +79,19 @@ final class DIContainer: ObservableObject {
     /// Get memo repository
     func memoRepository() -> MemoRepository {
         ensureConfigured()
-        return _memoStore
+        return _memoRepository
+    }
+    
+    /// Get transcription repository
+    func transcriptionRepository() -> TranscriptionRepository {
+        ensureConfigured()
+        return _transcriptionRepository
+    }
+    
+    /// Get analysis repository
+    func analysisRepository() -> AnalysisRepository {
+        ensureConfigured()
+        return _analysisRepository
     }
     
     // MARK: - Concrete Service Access (for gradual migration)

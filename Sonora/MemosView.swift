@@ -162,5 +162,5 @@ struct MemoRowView: View {
 
 #Preview {
     MemosView(popToRoot: nil)
-        .environmentObject(MemoStore())
+        .environmentObject(MemoStore(transcriptionRepository: TranscriptionRepositoryImpl()))
 }

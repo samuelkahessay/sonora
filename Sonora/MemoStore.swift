@@ -10,10 +10,28 @@ import AVFoundation
 import Combine
 
 struct Memo: Identifiable, Equatable, Hashable {
-    let id = UUID()
+    let id: UUID
     let filename: String
     let url: URL
     let createdAt: Date
+    
+    // MARK: - Initializers
+    
+    /// Create a new memo with auto-generated ID
+    init(filename: String, url: URL, createdAt: Date) {
+        self.id = UUID()
+        self.filename = filename
+        self.url = url
+        self.createdAt = createdAt
+    }
+    
+    /// Create a memo with a specific ID (used when loading from storage)
+    init(id: UUID, filename: String, url: URL, createdAt: Date) {
+        self.id = id
+        self.filename = filename
+        self.url = url
+        self.createdAt = createdAt
+    }
     
     var displayName: String {
         let formatter = DateFormatter()
@@ -53,10 +71,11 @@ class MemoStore: ObservableObject, MemoRepository {
     private var audioPlayer: AVAudioPlayer?
     private var audioPlayerProxy = AudioPlayerProxy()
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    private let transcriptionManager = TranscriptionManager()
+    private let transcriptionManager: TranscriptionManager
     private let metadataManager = MemoMetadataManager()
     
-    init() {
+    init(transcriptionRepository: TranscriptionRepository) {
+        self.transcriptionManager = TranscriptionManager(transcriptionRepository: transcriptionRepository)
         setupAudioPlayerProxy()
         loadMemos()
     }

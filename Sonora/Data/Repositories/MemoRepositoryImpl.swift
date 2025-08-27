@@ -179,17 +179,20 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 
                 let metadata = try atomicRead(MemoFileMetadata.self, from: metadataPath)
                 
+                // Create memo with the saved ID to ensure consistency
                 let memo = Memo(
+                    id: memoId,  // Use the ID from the index/filename, which matches metadata.id
                     filename: metadata.filename,
                     url: audioPath,
                     createdAt: metadata.createdAt
                 )
                 
-                // Verify memo ID matches
+                // Verify memo ID matches metadata (should always be true now)
                 if memo.id.uuidString == metadata.id {
                     loadedMemos.append(memo)
+                    print("✅ MemoRepository: Successfully loaded memo \(metadata.filename) with ID \(memoId)")
                 } else {
-                    print("⚠️ MemoRepository: ID mismatch for memo \(metadata.filename)")
+                    print("⚠️ MemoRepository: ID mismatch for memo \(metadata.filename) - This should not happen!")
                 }
                 
             } catch {
@@ -251,14 +254,16 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             
             // Update in-memory list
             if !memos.contains(where: { $0.id == memo.id }) {
-                // Create new memo with updated URL
+                // Create new memo with the same ID and updated URL
                 let savedMemo = Memo(
+                    id: memo.id,  // Preserve the original ID
                     filename: memo.filename,
                     url: audioDestination,
                     createdAt: memo.createdAt
                 )
                 memos.append(savedMemo)
                 memos.sort { $0.createdAt > $1.createdAt }
+                print("📝 MemoRepository: Added memo \(savedMemo.filename) to in-memory list with ID \(savedMemo.id)")
             }
             
             print("✅ MemoRepository: Successfully saved memo \(memo.filename)")
@@ -310,7 +315,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
     
     func handleNewRecording(at url: URL) {
-        print("📁 MemoRepository: NEW RECORDING RECEIVED")
+        print("📁 MemoRepository: 🚨 NEW RECORDING RECEIVED - STARTING AUTO-TRANSCRIPTION FLOW")
         print("📁 MemoRepository: File URL: \(url.lastPathComponent)")
         print("📁 MemoRepository: Full path: \(url.path)")
         
@@ -342,10 +347,37 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             print("💾 MemoRepository: Saving new recording as memo \(newMemo.filename)")
             saveMemo(newMemo)
             
-            print("✅ MemoRepository: Successfully processed new recording")
+            // 🚀 CRITICAL FIX: Trigger auto-transcription after saving
+            print("🚀 MemoRepository: TRIGGERING AUTO-TRANSCRIPTION for \(newMemo.filename)")
+            triggerAutoTranscription(for: newMemo)
+            
+            print("✅ MemoRepository: Successfully processed new recording with auto-transcription")
             
         } catch {
             print("❌ MemoRepository: Failed to process new recording: \(error)")
+        }
+    }
+    
+    // MARK: - Auto-transcription
+    
+    /// Triggers automatic transcription for a newly saved memo
+    /// This bridges the gap between repository pattern and transcription system
+    private func triggerAutoTranscription(for memo: Memo) {
+        Task { @MainActor in
+            do {
+                // Get the shared transcription manager from DI container
+                // This maintains the existing transcription logic while connecting to repository pattern
+                let transcriptionManager = DIContainer.shared.transcriptionManager()
+                
+                print("🎯 MemoRepository: Starting auto-transcription via TranscriptionManager for \(memo.filename)")
+                transcriptionManager.startTranscription(for: memo)
+                print("✅ MemoRepository: Auto-transcription initiated successfully for \(memo.filename)")
+                
+            } catch {
+                print("❌ MemoRepository: Auto-transcription failed for \(memo.filename): \(error)")
+                // Don't fail the entire recording process if transcription fails
+                // Just log the error and continue
+            }
         }
     }
     

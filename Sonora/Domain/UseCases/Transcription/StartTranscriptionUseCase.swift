@@ -9,31 +9,75 @@ protocol StartTranscriptionUseCaseProtocol {
 final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     
     // MARK: - Dependencies
-    private let transcriptionService: TranscriptionServiceProtocol
+    private let transcriptionRepository: TranscriptionRepository
+    private let transcriptionService: TranscriptionService
     
     // MARK: - Initialization
-    init(transcriptionService: TranscriptionServiceProtocol) {
+    init(transcriptionRepository: TranscriptionRepository, transcriptionService: TranscriptionService) {
+        self.transcriptionRepository = transcriptionRepository
         self.transcriptionService = transcriptionService
     }
     
+    // MARK: - Factory Method (for backward compatibility)
+    @MainActor
+    static func create(transcriptionService: TranscriptionServiceProtocol) -> StartTranscriptionUseCase {
+        // Use DI container to get repository
+        let repository = DIContainer.shared.transcriptionRepository()
+        return StartTranscriptionUseCase(transcriptionRepository: repository, transcriptionService: TranscriptionService())
+    }
+    
+    
     // MARK: - Use Case Execution
     func execute(memo: Memo) async throws {
+        print("📝 StartTranscriptionUseCase: Starting transcription for memo: \(memo.filename)")
+        
         // Check if transcription is already in progress
-        let currentState = transcriptionService.getTranscriptionState(for: memo)
+        let currentState = await MainActor.run {
+            transcriptionRepository.getTranscriptionState(for: memo.id)
+        }
         
         guard !currentState.isInProgress else {
+            print("⚠️ StartTranscriptionUseCase: Transcription already in progress")
             throw TranscriptionError.alreadyInProgress
         }
         
         // Check if file exists
         guard FileManager.default.fileExists(atPath: memo.url.path) else {
+            print("❌ StartTranscriptionUseCase: Audio file not found")
             throw TranscriptionError.fileNotFound
         }
         
-        // Start transcription
-        transcriptionService.startTranscription(for: memo)
+        // Set state to in-progress
+        await MainActor.run {
+            transcriptionRepository.saveTranscriptionState(.inProgress, for: memo.id)
+        }
         
-        print("📝 StartTranscriptionUseCase: Transcription started for memo: \(memo.filename)")
+        do {
+            // Perform transcription
+            let transcriptionText = try await transcriptionService.transcribe(url: memo.url)
+            print("✅ StartTranscriptionUseCase: Transcription completed for \(memo.filename)")
+            print("💾 StartTranscriptionUseCase: Text: \(transcriptionText.prefix(100))...")
+            
+            // Save completed transcription to repository
+            await MainActor.run {
+                let completedState = TranscriptionState.completed(transcriptionText)
+                transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
+                transcriptionRepository.saveTranscriptionText(transcriptionText, for: memo.id)
+                
+                print("💾 StartTranscriptionUseCase: Transcription persisted to repository")
+            }
+            
+        } catch {
+            print("❌ StartTranscriptionUseCase: Transcription failed for \(memo.filename): \(error)")
+            
+            // Save failed state to repository
+            await MainActor.run {
+                let failedState = TranscriptionState.failed(error.localizedDescription)
+                transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
+            }
+            
+            throw TranscriptionError.transcriptionFailed(error.localizedDescription)
+        }
     }
 }
 

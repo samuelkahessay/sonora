@@ -9,38 +9,84 @@ protocol RetryTranscriptionUseCaseProtocol {
 final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
     
     // MARK: - Dependencies
-    private let transcriptionService: TranscriptionServiceProtocol
+    private let transcriptionRepository: TranscriptionRepository
+    private let transcriptionService: TranscriptionService
     
     // MARK: - Initialization
-    init(transcriptionService: TranscriptionServiceProtocol) {
+    init(transcriptionRepository: TranscriptionRepository, transcriptionService: TranscriptionService) {
+        self.transcriptionRepository = transcriptionRepository
         self.transcriptionService = transcriptionService
     }
     
+    // MARK: - Factory Method (for backward compatibility)
+    @MainActor
+    static func create(transcriptionService: TranscriptionServiceProtocol) -> RetryTranscriptionUseCase {
+        // Use DI container to get repository
+        let repository = DIContainer.shared.transcriptionRepository()
+        return RetryTranscriptionUseCase(transcriptionRepository: repository, transcriptionService: TranscriptionService())
+    }
+    
+    
     // MARK: - Use Case Execution
     func execute(memo: Memo) async throws {
+        print("🔄 RetryTranscriptionUseCase: Retrying transcription for memo: \(memo.filename)")
+        
         // Check current transcription state
-        let currentState = transcriptionService.getTranscriptionState(for: memo)
+        let currentState = await MainActor.run {
+            transcriptionRepository.getTranscriptionState(for: memo.id)
+        }
         
         // Only allow retry if failed or not started
         guard currentState.isFailed || currentState.isNotStarted else {
             if currentState.isInProgress {
+                print("⚠️ RetryTranscriptionUseCase: Transcription already in progress")
                 throw TranscriptionError.alreadyInProgress
             } else if currentState.isCompleted {
+                print("⚠️ RetryTranscriptionUseCase: Transcription already completed")
                 throw TranscriptionError.alreadyCompleted
             } else {
+                print("⚠️ RetryTranscriptionUseCase: Invalid state for retry")
                 throw TranscriptionError.invalidState
             }
         }
         
         // Check if file exists
         guard FileManager.default.fileExists(atPath: memo.url.path) else {
+            print("❌ RetryTranscriptionUseCase: Audio file not found")
             throw TranscriptionError.fileNotFound
         }
         
-        // Retry transcription
-        transcriptionService.retryTranscription(for: memo)
+        // Set state to in-progress
+        await MainActor.run {
+            transcriptionRepository.saveTranscriptionState(.inProgress, for: memo.id)
+        }
         
-        print("🔄 RetryTranscriptionUseCase: Transcription retry started for memo: \(memo.filename)")
+        do {
+            // Perform transcription retry
+            let transcriptionText = try await transcriptionService.transcribe(url: memo.url)
+            print("✅ RetryTranscriptionUseCase: Transcription retry completed for \(memo.filename)")
+            print("💾 RetryTranscriptionUseCase: Text: \(transcriptionText.prefix(100))...")
+            
+            // Save completed transcription to repository
+            await MainActor.run {
+                let completedState = TranscriptionState.completed(transcriptionText)
+                transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
+                transcriptionRepository.saveTranscriptionText(transcriptionText, for: memo.id)
+                
+                print("💾 RetryTranscriptionUseCase: Transcription persisted to repository")
+            }
+            
+        } catch {
+            print("❌ RetryTranscriptionUseCase: Transcription retry failed for \(memo.filename): \(error)")
+            
+            // Save failed state to repository
+            await MainActor.run {
+                let failedState = TranscriptionState.failed(error.localizedDescription)
+                transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
+            }
+            
+            throw TranscriptionError.transcriptionFailed(error.localizedDescription)
+        }
     }
 }
 

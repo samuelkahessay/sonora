@@ -6,26 +6,31 @@ class TranscriptionManager: ObservableObject, TranscriptionServiceProtocol {
     @Published var transcriptionStates: [String: TranscriptionState] = [:]
     
     private let transcriptionService = TranscriptionService()
-    private let metadataManager = MemoMetadataManager()
+    private let transcriptionRepository: TranscriptionRepository
     
-    private func canonicalKey(for url: URL) -> String {
-        return url.resolvingSymlinksInPath().standardizedFileURL.path
+    init(transcriptionRepository: TranscriptionRepository) {
+        self.transcriptionRepository = transcriptionRepository
+    }
+    
+    // CRITICAL FIX: Use UUID-based keys to match repository system
+    private func memoKey(for memo: Memo) -> String {
+        return memo.id.uuidString
     }
     
     func getTranscriptionState(for memo: Memo) -> TranscriptionState {
-        let urlKey = canonicalKey(for: memo.url)
+        let memoKey = memoKey(for: memo)
         print("🔍 TranscriptionManager: Getting state for \(memo.filename)")
-        print("🔍 TranscriptionManager: Canonical URL key: \(urlKey)")
+        print("🔍 TranscriptionManager: Memo ID key: \(memoKey)")
         
-        if let cached = transcriptionStates[urlKey] {
+        if let cached = transcriptionStates[memoKey] {
             print("🔍 TranscriptionManager: Found cached state: \(cached.statusText)")
             return cached
         }
         
-        print("🔍 TranscriptionManager: No cached state, checking metadata...")
-        let saved = metadataManager.getTranscriptionState(for: memo.url)
-        print("🔍 TranscriptionManager: Loaded from metadata: \(saved.statusText)")
-        transcriptionStates[urlKey] = saved
+        print("🔍 TranscriptionManager: No cached state, checking repository...")
+        let saved = transcriptionRepository.getTranscriptionState(for: memo.id)
+        print("🔍 TranscriptionManager: Loaded from repository: \(saved.statusText)")
+        transcriptionStates[memoKey] = saved
         return saved
     }
     
@@ -36,8 +41,8 @@ class TranscriptionManager: ObservableObject, TranscriptionServiceProtocol {
             return 
         }
         
-        transcriptionStates[canonicalKey(for: memo.url)] = .inProgress
-        metadataManager.saveTranscriptionState(.inProgress, for: memo.url)
+        transcriptionStates[memoKey(for: memo)] = .inProgress
+        transcriptionRepository.saveTranscriptionState(.inProgress, for: memo.id)
         objectWillChange.send()
         print("📝 Saved transcription state as in-progress")
         
@@ -64,16 +69,22 @@ class TranscriptionManager: ObservableObject, TranscriptionServiceProtocol {
     }
     
     private func updateTranscriptionState(_ state: TranscriptionState, for memo: Memo) {
-        let urlKey = canonicalKey(for: memo.url)
+        let memoKey = memoKey(for: memo)
         print("📱 TranscriptionManager: Updating state for \(memo.filename)")
-        print("📱 TranscriptionManager: Canonical URL key: \(urlKey)")
+        print("📱 TranscriptionManager: Memo ID key: \(memoKey)")
         print("📱 TranscriptionManager: New state: \(state.statusText)")
         print("📱 TranscriptionManager: Is completed: \(state.isCompleted)")
         
-        transcriptionStates[urlKey] = state
-        metadataManager.saveTranscriptionState(state, for: memo.url)
+        transcriptionStates[memoKey] = state
+        transcriptionRepository.saveTranscriptionState(state, for: memo.id)
         
-        print("📱 TranscriptionManager: State saved to memory and disk")
+        // If transcription is completed, save the text
+        if case .completed(let text) = state {
+            transcriptionRepository.saveTranscriptionText(text, for: memo.id)
+            print("💾 TranscriptionManager: Saved transcription text to repository")
+        }
+        
+        print("📱 TranscriptionManager: State saved to memory and repository")
         print("📱 TranscriptionManager: Triggering UI update with objectWillChange")
         
         // Force immediate UI update by triggering @Published property change
