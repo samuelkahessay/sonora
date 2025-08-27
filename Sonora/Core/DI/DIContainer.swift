@@ -23,7 +23,6 @@ final class DIContainer: ObservableObject, Resolver {
     private var _transcriptionManager: TranscriptionManager!
     private var _transcriptionAPI: TranscriptionAPI!
     private var _analysisService: AnalysisService!
-    private var _memoStore: MemoStore!
     private var _memoRepository: MemoRepositoryImpl!
     private var _transcriptionRepository: TranscriptionRepository!
     private var _analysisRepository: AnalysisRepository!
@@ -98,16 +97,14 @@ final class DIContainer: ObservableObject, Resolver {
         self._audioRepository = resolve(AudioRepository.self)!
         self._startRecordingUseCase = resolve(StartRecordingUseCase.self)!
         
-        // Create MemoStore with the transcription repository (for legacy compatibility)
-        self._memoStore = MemoStore(transcriptionRepository: _transcriptionRepository)
-        self._transcriptionManager = _memoStore.sharedTranscriptionManager
+        // Create TranscriptionManager directly from repository
+        self._transcriptionManager = TranscriptionManager(transcriptionRepository: _transcriptionRepository)
         self._transcriptionAPI = TranscriptionService()
         self._audioRecorder = audioRecorder ?? AudioRecorder()
         self._analysisService = analysisService ?? AnalysisService()
         self._operationCoordinator = OperationCoordinator.shared
         
         _logger.info("DIContainer: Configured with shared service instances", category: .system, context: LogContext())
-        _logger.debug("DIContainer: MemoStore: \(ObjectIdentifier(self._memoStore))", category: .system, context: LogContext())
         _logger.debug("DIContainer: MemoRepository: \(ObjectIdentifier(self._memoRepository))", category: .system, context: LogContext())
         _logger.debug("DIContainer: TranscriptionManager: \(ObjectIdentifier(self._transcriptionManager))", category: .system, context: LogContext())
         _logger.debug("DIContainer: TranscriptionRepository: \(ObjectIdentifier(self._transcriptionRepository))", category: .system, context: LogContext())
@@ -116,7 +113,7 @@ final class DIContainer: ObservableObject, Resolver {
     
     /// Check if container has been properly configured
     private func ensureConfigured() {
-        guard _memoStore != nil, _memoRepository != nil, _audioRepository != nil, _startRecordingUseCase != nil else {
+        guard _memoRepository != nil, _audioRepository != nil, _startRecordingUseCase != nil else {
             fatalError("DIContainer has not been configured. Call configure() before using services.")
         }
     }
@@ -218,12 +215,6 @@ final class DIContainer: ObservableObject, Resolver {
         return _analysisService
     }
     
-    /// Get concrete MemoStore instance
-    /// Used for legacy compatibility during final migration phases
-    func memoStore() -> MemoStore {
-        ensureConfigured()
-        return _memoStore
-    }
     
     // MARK: - Service Lifecycle Management
     
@@ -233,8 +224,8 @@ final class DIContainer: ObservableObject, Resolver {
         _audioRecorder.onRecordingFinished = callback
     }
     
-    /// Get the shared transcription manager used by MemoStore
-    /// This maintains the existing relationship between MemoStore and TranscriptionManager
+    /// Get the shared transcription manager
+    /// This provides access to the configured TranscriptionManager instance
     var sharedTranscriptionManager: TranscriptionManager {
         return _transcriptionManager
     }
@@ -253,7 +244,7 @@ final class DIContainer: ObservableObject, Resolver {
         - AudioRecorder: ✅ Initialized
         - TranscriptionManager: ✅ Initialized  
         - AnalysisService: ✅ Initialized
-        - MemoStore: ✅ Initialized
+        - MemoRepository: ✅ Initialized
         """
     }
 }
