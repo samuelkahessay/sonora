@@ -11,11 +11,13 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     // MARK: - Dependencies
     private let transcriptionRepository: TranscriptionRepository
     private let transcriptionService: TranscriptionService
+    private let eventBus: EventBusProtocol
     
     // MARK: - Initialization
-    init(transcriptionRepository: TranscriptionRepository, transcriptionService: TranscriptionService) {
+    init(transcriptionRepository: TranscriptionRepository, transcriptionService: TranscriptionService, eventBus: EventBusProtocol = EventBus.shared) {
         self.transcriptionRepository = transcriptionRepository
         self.transcriptionService = transcriptionService
+        self.eventBus = eventBus
     }
     
     // MARK: - Factory Method (for backward compatibility)
@@ -23,7 +25,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     static func create(transcriptionService: TranscriptionServiceProtocol) -> StartTranscriptionUseCase {
         // Use DI container to get repository
         let repository = DIContainer.shared.transcriptionRepository()
-        return StartTranscriptionUseCase(transcriptionRepository: repository, transcriptionService: TranscriptionService())
+        return StartTranscriptionUseCase(transcriptionRepository: repository, transcriptionService: TranscriptionService(), eventBus: EventBus.shared)
     }
     
     
@@ -66,6 +68,10 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 
                 print("💾 StartTranscriptionUseCase: Transcription persisted to repository")
             }
+            
+            // Publish transcriptionCompleted event
+            print("📡 StartTranscriptionUseCase: Publishing transcriptionCompleted event for memo \(memo.id)")
+            eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: transcriptionText))
             
         } catch {
             print("❌ StartTranscriptionUseCase: Transcription failed for \(memo.filename): \(error)")

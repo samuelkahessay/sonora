@@ -12,16 +12,19 @@ final class AnalyzeTodosUseCase: AnalyzeTodosUseCaseProtocol {
     private let analysisService: AnalysisServiceProtocol
     private let analysisRepository: AnalysisRepository
     private let logger: LoggerProtocol
+    private let eventBus: EventBusProtocol
     
     // MARK: - Initialization
     init(
         analysisService: AnalysisServiceProtocol, 
         analysisRepository: AnalysisRepository,
-        logger: LoggerProtocol = Logger.shared
+        logger: LoggerProtocol = Logger.shared,
+        eventBus: EventBusProtocol = EventBus.shared
     ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository
         self.logger = logger
+        self.eventBus = eventBus
     }
     
     // MARK: - Use Case Execution
@@ -61,6 +64,12 @@ final class AnalyzeTodosUseCase: AnalyzeTodosUseCaseProtocol {
             }
             
             print("✅ AnalyzeTodosUseCase: Analysis cached successfully")
+            
+            // Publish analysisCompleted event
+            print("📡 AnalyzeTodosUseCase: Publishing analysisCompleted event for memo \(memoId)")
+            let resultSummary = "\(result.data.todos.count) todos identified"
+            eventBus.publish(.analysisCompleted(memoId: memoId, type: .todos, result: resultSummary))
+            
             return result
             
         } catch {

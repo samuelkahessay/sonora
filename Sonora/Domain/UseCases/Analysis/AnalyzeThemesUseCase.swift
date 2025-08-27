@@ -12,16 +12,19 @@ final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
     private let analysisService: AnalysisServiceProtocol
     private let analysisRepository: AnalysisRepository
     private let logger: LoggerProtocol
+    private let eventBus: EventBusProtocol
     
     // MARK: - Initialization
     init(
         analysisService: AnalysisServiceProtocol, 
         analysisRepository: AnalysisRepository,
-        logger: LoggerProtocol = Logger.shared
+        logger: LoggerProtocol = Logger.shared,
+        eventBus: EventBusProtocol = EventBus.shared
     ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository
         self.logger = logger
+        self.eventBus = eventBus
     }
     
     // MARK: - Use Case Execution
@@ -61,6 +64,12 @@ final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
             }
             
             print("✅ AnalyzeThemesUseCase: Analysis cached successfully")
+            
+            // Publish analysisCompleted event
+            print("📡 AnalyzeThemesUseCase: Publishing analysisCompleted event for memo \(memoId)")
+            let resultSummary = "\(result.data.themes.count) themes, sentiment: \(result.data.sentiment)"
+            eventBus.publish(.analysisCompleted(memoId: memoId, type: .themes, result: resultSummary))
+            
             return result
             
         } catch {

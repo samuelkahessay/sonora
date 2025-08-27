@@ -11,14 +11,16 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
     
     // MARK: - Dependencies
     private let memoRepository: MemoRepository
+    private let eventBus: EventBusProtocol
     
     // MARK: - Configuration
     private let maxFileSizeBytes: Int64 = 100 * 1024 * 1024 // 100MB
     private let supportedFormats: Set<String> = ["m4a", "mp3", "wav", "aiff"]
     
     // MARK: - Initialization
-    init(memoRepository: MemoRepository) {
+    init(memoRepository: MemoRepository, eventBus: EventBusProtocol = EventBus.shared) {
         self.memoRepository = memoRepository
+        self.eventBus = eventBus
     }
     
     // MARK: - Use Case Execution
@@ -37,6 +39,11 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
             
             // Verify processing was successful
             try verifyRecordingProcessed(memo)
+            
+            // Publish memoCreated event
+            print("📡 HandleNewRecordingUseCase: Publishing memoCreated event for memo \(memo.id)")
+            let domainMemo = memo.toDomain()
+            eventBus.publish(.memoCreated(domainMemo))
             
             print("✅ HandleNewRecordingUseCase: Successfully processed new recording: \(memo.filename)")
             return memo

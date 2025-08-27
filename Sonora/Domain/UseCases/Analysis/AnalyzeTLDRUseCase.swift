@@ -12,16 +12,19 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
     private let analysisService: AnalysisServiceProtocol
     private let analysisRepository: AnalysisRepository
     private let logger: LoggerProtocol
+    private let eventBus: EventBusProtocol
     
     // MARK: - Initialization
     init(
         analysisService: AnalysisServiceProtocol, 
         analysisRepository: AnalysisRepository,
-        logger: LoggerProtocol = Logger.shared
+        logger: LoggerProtocol = Logger.shared,
+        eventBus: EventBusProtocol = EventBus.shared
     ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository
         self.logger = logger
+        self.eventBus = eventBus
     }
     
     // MARK: - Use Case Execution
@@ -88,6 +91,11 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
             
             logger.analysis("TLDR analysis cached successfully", 
                           context: LogContext(correlationId: correlationId, additionalInfo: ["cached": true]))
+            
+            // Publish analysisCompleted event
+            print("📡 AnalyzeTLDRUseCase: Publishing analysisCompleted event for memo \(memoId)")
+            eventBus.publish(.analysisCompleted(memoId: memoId, type: .tldr, result: result.data.summary))
+            
             return result
             
         } catch {
