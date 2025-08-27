@@ -33,12 +33,24 @@ struct MemoIndex: Codable {
 }
 
 @MainActor
-final class MemoRepositoryImpl: ObservableObject, MemoRepository {
+final class MemoRepositoryImpl: ObservableObject, MemoRepository, TranscriptionServiceProtocol {
     @Published var memos: [Memo] = []
     
     // Playback state
     @Published private(set) var playingMemo: Memo?
     @Published private(set) var isPlaying: Bool = false
+    
+    // TranscriptionServiceProtocol requirement - delegate to repository
+    var transcriptionStates: [String: TranscriptionState] {
+        get {
+            let container = DIContainer.shared
+            return container.transcriptionRepository().transcriptionStates
+        }
+        set {
+            let container = DIContainer.shared
+            container.transcriptionRepository().transcriptionStates = newValue
+        }
+    }
     
     private var player: AVAudioPlayer?
     
@@ -47,8 +59,31 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     private let indexPath: URL
     private let metadataManager = MemoMetadataManager()
     
+    // MARK: - Transcription Use Cases
+    private let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
+    private let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
+    private let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
+    
     // MARK: - Initialization
-    init() {
+    init(
+        startTranscriptionUseCase: StartTranscriptionUseCaseProtocol? = nil,
+        getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol? = nil,
+        retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol? = nil
+    ) {
+        // Initialize Use Cases with DI Container defaults if not provided
+        let container = DIContainer.shared
+        self.startTranscriptionUseCase = startTranscriptionUseCase ?? StartTranscriptionUseCase(
+            transcriptionRepository: container.transcriptionRepository(),
+            transcriptionAPI: container.transcriptionAPI()
+        )
+        self.getTranscriptionStateUseCase = getTranscriptionStateUseCase ?? GetTranscriptionStateUseCase(
+            transcriptionRepository: container.transcriptionRepository()
+        )
+        self.retryTranscriptionUseCase = retryTranscriptionUseCase ?? RetryTranscriptionUseCase(
+            transcriptionRepository: container.transcriptionRepository(),
+            transcriptionAPI: container.transcriptionAPI()
+        )
+        
         self.memosDirectoryPath = documentsPath.appendingPathComponent("Memos")
         self.indexPath = memosDirectoryPath.appendingPathComponent("index.json")
         createDirectoriesIfNeeded()
@@ -381,16 +416,12 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     // MARK: - Auto-transcription
     
     /// Triggers automatic transcription for a newly saved memo
-    /// This bridges the gap between repository pattern and transcription system
+    /// This uses modern Use Case architecture for clean separation of concerns
     private func triggerAutoTranscription(for memo: Memo) {
         Task { @MainActor in
             do {
-                // Get the shared transcription manager from DI container
-                // This maintains the existing transcription logic while connecting to repository pattern
-                let transcriptionManager = DIContainer.shared.transcriptionManager()
-                
-                print("🎯 MemoRepository: Starting auto-transcription via TranscriptionManager for \(memo.filename)")
-                transcriptionManager.startTranscription(for: memo)
+                print("🎯 MemoRepository: Starting auto-transcription via StartTranscriptionUseCase for \(memo.filename)")
+                try await startTranscriptionUseCase.execute(memo: memo)
                 print("✅ MemoRepository: Auto-transcription initiated successfully for \(memo.filename)")
                 
             } catch {
@@ -431,28 +462,41 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     // MARK: - Transcription Integration
     
     /// Get transcription state for a memo
-    /// Bridges to the existing TranscriptionManager for compatibility
+    /// Uses modern GetTranscriptionStateUseCase for clean architecture
     func getTranscriptionState(for memo: Memo) -> TranscriptionState {
-        let transcriptionManager = DIContainer.shared.transcriptionManager()
-        let state = transcriptionManager.getTranscriptionState(for: memo)
+        let state = getTranscriptionStateUseCase.execute(memo: memo)
         print("🏪 MemoRepository: Getting transcription state for \(memo.filename)")
-        print("🏪 MemoRepository: State from TranscriptionManager: \(state.statusText)")
+        print("🏪 MemoRepository: State from GetTranscriptionStateUseCase: \(state.statusText)")
         print("🏪 MemoRepository: State is completed: \(state.isCompleted)")
         return state
     }
     
-    /// Retry transcription for a failed memo
-    /// Bridges to the existing TranscriptionManager for compatibility
-    func retryTranscription(for memo: Memo) {
-        let transcriptionManager = DIContainer.shared.transcriptionManager()
-        transcriptionManager.retryTranscription(for: memo)
-        print("🔄 MemoRepository: Retrying transcription for \(memo.filename)")
+    /// Start transcription for a memo (TranscriptionServiceProtocol requirement)
+    /// Uses modern StartTranscriptionUseCase for clean architecture
+    func startTranscription(for memo: Memo) {
+        Task { @MainActor in
+            do {
+                print("🚀 MemoRepository: Starting transcription for \(memo.filename) via StartTranscriptionUseCase")
+                try await startTranscriptionUseCase.execute(memo: memo)
+                print("✅ MemoRepository: Transcription started successfully for \(memo.filename)")
+            } catch {
+                print("❌ MemoRepository: Transcription start failed for \(memo.filename): \(error)")
+            }
+        }
     }
     
-    /// Access to the shared TranscriptionManager for legacy compatibility
-    /// This maintains consistent API access for components during architecture modernization
-    var sharedTranscriptionManager: TranscriptionManager {
-        return DIContainer.shared.transcriptionManager()
+    /// Retry transcription for a failed memo
+    /// Uses modern RetryTranscriptionUseCase for clean architecture
+    func retryTranscription(for memo: Memo) {
+        Task { @MainActor in
+            do {
+                print("🔄 MemoRepository: Retrying transcription for \(memo.filename) via RetryTranscriptionUseCase")
+                try await retryTranscriptionUseCase.execute(memo: memo)
+                print("✅ MemoRepository: Transcription retry initiated successfully for \(memo.filename)")
+            } catch {
+                print("❌ MemoRepository: Transcription retry failed for \(memo.filename): \(error)")
+            }
+        }
     }
 }
 

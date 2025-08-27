@@ -20,7 +20,6 @@ final class DIContainer: ObservableObject, Resolver {
     
     // MARK: - Private Service Instances
     private var _audioRecorder: AudioRecorder!
-    private var _transcriptionManager: TranscriptionManager!
     private var _transcriptionAPI: TranscriptionAPI!
     private var _analysisService: AnalysisService!
     private var _memoRepository: MemoRepositoryImpl!
@@ -90,23 +89,39 @@ final class DIContainer: ObservableObject, Resolver {
         // Initialize repositories first
         self._transcriptionRepository = TranscriptionRepositoryImpl()
         self._analysisRepository = AnalysisRepositoryImpl()
-        self._memoRepository = MemoRepositoryImpl()
         
         // Initialize new services from registrations
         self._backgroundAudioService = resolve(BackgroundAudioService.self)!
         self._audioRepository = resolve(AudioRepository.self)!
         self._startRecordingUseCase = resolve(StartRecordingUseCase.self)!
         
-        // Create TranscriptionManager directly from repository
-        self._transcriptionManager = TranscriptionManager(transcriptionRepository: _transcriptionRepository)
+        // Initialize transcription services
         self._transcriptionAPI = TranscriptionService()
+        
+        // Initialize MemoRepository with Use Case dependencies
+        let startTranscriptionUseCase = StartTranscriptionUseCase(
+            transcriptionRepository: _transcriptionRepository,
+            transcriptionAPI: _transcriptionAPI
+        )
+        let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(
+            transcriptionRepository: _transcriptionRepository
+        )
+        let retryTranscriptionUseCase = RetryTranscriptionUseCase(
+            transcriptionRepository: _transcriptionRepository,
+            transcriptionAPI: _transcriptionAPI
+        )
+        
+        self._memoRepository = MemoRepositoryImpl(
+            startTranscriptionUseCase: startTranscriptionUseCase,
+            getTranscriptionStateUseCase: getTranscriptionStateUseCase,
+            retryTranscriptionUseCase: retryTranscriptionUseCase
+        )
         self._audioRecorder = audioRecorder ?? AudioRecorder()
         self._analysisService = analysisService ?? AnalysisService()
         self._operationCoordinator = OperationCoordinator.shared
         
         _logger.info("DIContainer: Configured with shared service instances", category: .system, context: LogContext())
         _logger.debug("DIContainer: MemoRepository: \(ObjectIdentifier(self._memoRepository))", category: .system, context: LogContext())
-        _logger.debug("DIContainer: TranscriptionManager: \(ObjectIdentifier(self._transcriptionManager))", category: .system, context: LogContext())
         _logger.debug("DIContainer: TranscriptionRepository: \(ObjectIdentifier(self._transcriptionRepository))", category: .system, context: LogContext())
         _logger.debug("DIContainer: AnalysisRepository: \(ObjectIdentifier(self._analysisRepository))", category: .system, context: LogContext())
     }
@@ -127,9 +142,10 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get transcription service
+    /// Returns the MemoRepository which provides the same TranscriptionServiceProtocol interface
     func transcriptionService() -> TranscriptionServiceProtocol {
         ensureConfigured()
-        return _transcriptionManager
+        return _memoRepository
     }
     
     /// Get transcription API service
@@ -201,13 +217,6 @@ final class DIContainer: ObservableObject, Resolver {
         return _audioRecorder
     }
     
-    /// Get concrete TranscriptionManager instance
-    /// Use this during gradual migration from direct instantiation
-    func transcriptionManager() -> TranscriptionManager {
-        ensureConfigured()
-        return _transcriptionManager
-    }
-    
     /// Get concrete AnalysisService instance
     /// Use this during gradual migration from @StateObject
     func concreteAnalysisService() -> AnalysisService {
@@ -224,12 +233,6 @@ final class DIContainer: ObservableObject, Resolver {
         _audioRecorder.onRecordingFinished = callback
     }
     
-    /// Get the shared transcription manager
-    /// This provides access to the configured TranscriptionManager instance
-    var sharedTranscriptionManager: TranscriptionManager {
-        return _transcriptionManager
-    }
-    
     // MARK: - Container Information
     
     /// Check if container is properly initialized
@@ -242,9 +245,9 @@ final class DIContainer: ObservableObject, Resolver {
         return """
         DIContainer Status:
         - AudioRecorder: ✅ Initialized
-        - TranscriptionManager: ✅ Initialized  
         - AnalysisService: ✅ Initialized
         - MemoRepository: ✅ Initialized
+        - TranscriptionRepository: ✅ Initialized
         """
     }
 }
