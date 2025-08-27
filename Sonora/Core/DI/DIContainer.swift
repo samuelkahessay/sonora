@@ -83,20 +83,21 @@ final class DIContainer: ObservableObject, Resolver {
         // Setup repositories first
         setupRepositories()
         
-        // Initialize logger first
+        // Initialize core infrastructure
         self._logger = logger ?? Logger.shared
-        
-        // Initialize repositories first
         self._transcriptionRepository = TranscriptionRepositoryImpl()
         self._analysisRepository = AnalysisRepositoryImpl()
         
-        // Initialize new services from registrations
+        // Initialize services from registrations
         self._backgroundAudioService = resolve(BackgroundAudioService.self)!
         self._audioRepository = resolve(AudioRepository.self)!
         self._startRecordingUseCase = resolve(StartRecordingUseCase.self)!
         
-        // Initialize transcription services
+        // Initialize external API services  
         self._transcriptionAPI = TranscriptionService()
+        self._audioRecorder = audioRecorder ?? AudioRecorder()
+        self._analysisService = analysisService ?? AnalysisService()
+        self._operationCoordinator = OperationCoordinator.shared
         
         // Initialize MemoRepository with Use Case dependencies
         let startTranscriptionUseCase = StartTranscriptionUseCase(
@@ -116,9 +117,6 @@ final class DIContainer: ObservableObject, Resolver {
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase
         )
-        self._audioRecorder = audioRecorder ?? AudioRecorder()
-        self._analysisService = analysisService ?? AnalysisService()
-        self._operationCoordinator = OperationCoordinator.shared
         
         _logger.info("DIContainer: Configured with shared service instances", category: .system, context: LogContext())
         _logger.debug("DIContainer: MemoRepository: \(ObjectIdentifier(self._memoRepository))", category: .system, context: LogContext())
@@ -208,48 +206,6 @@ final class DIContainer: ObservableObject, Resolver {
         return _operationCoordinator
     }
     
-    // MARK: - Concrete Service Access (for gradual migration)
-    
-    /// Get concrete AudioRecorder instance
-    /// Use this during gradual migration from @StateObject
-    func audioRecorder() -> AudioRecorder {
-        ensureConfigured()
-        return _audioRecorder
-    }
-    
-    /// Get concrete AnalysisService instance
-    /// Use this during gradual migration from @StateObject
-    func concreteAnalysisService() -> AnalysisService {
-        ensureConfigured()
-        return _analysisService
-    }
-    
-    
-    // MARK: - Service Lifecycle Management
-    
-    /// Configure audio recorder callback
-    /// This maintains the existing pattern used in RecordView
-    func configureAudioRecorderCallback(_ callback: @escaping (URL) -> Void) {
-        _audioRecorder.onRecordingFinished = callback
-    }
-    
-    // MARK: - Container Information
-    
-    /// Check if container is properly initialized
-    var isInitialized: Bool {
-        return true // Always true since init() completes all setup
-    }
-    
-    /// Get container status for debugging
-    var containerStatus: String {
-        return """
-        DIContainer Status:
-        - AudioRecorder: ✅ Initialized
-        - AnalysisService: ✅ Initialized
-        - MemoRepository: ✅ Initialized
-        - TranscriptionRepository: ✅ Initialized
-        """
-    }
 }
 
 // MARK: - SwiftUI Environment Support
