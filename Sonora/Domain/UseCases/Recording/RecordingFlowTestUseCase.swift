@@ -22,7 +22,7 @@ final class RecordingFlowTestUseCase {
         self.audioRepository = audioRepository
         self.startRecordingUseCase = StartRecordingUseCase(audioRepository: audioRepository)
         self.stopRecordingUseCase = StopRecordingUseCase(audioRepository: audioRepository)
-        self.permissionUseCase = RequestMicrophonePermissionUseCase(audioRepository: audioRepository)
+        self.permissionUseCase = RequestMicrophonePermissionUseCase()
     }
     
     // MARK: - Factory Method
@@ -41,9 +41,9 @@ final class RecordingFlowTestUseCase {
         do {
             // Phase 1: Permission Check
             print("🧪 Phase 1: Checking microphone permissions...")
-            let hasPermission = permissionUseCase.execute()
+            let hasPermission = await permissionUseCase.execute()
             
-            guard hasPermission else {
+            guard hasPermission.allowsRecording else {
                 print("❌ RecordingFlowTestUseCase: Test failed - no microphone permission")
                 return
             }
@@ -132,8 +132,8 @@ final class RecordingFlowTestUseCase {
         
         do {
             // Check permissions first
-            let hasPermission = permissionUseCase.execute()
-            guard hasPermission else {
+            let hasPermission = await permissionUseCase.execute()
+            guard hasPermission.allowsRecording else {
                 print("❌ RecordingFlowTestUseCase: No permission for rapid operations test")
                 return
             }
@@ -177,8 +177,8 @@ final class RecordingFlowTestUseCase {
         
         // Test 3: Try to start twice
         do {
-            let hasPermission = permissionUseCase.execute()
-            if hasPermission {
+            let hasPermission = await permissionUseCase.execute()
+            if hasPermission.allowsRecording {
                 try startRecordingUseCase.execute()
                 
                 // Try to start again while recording

@@ -6,5 +6,7 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sonora needs microphone access to record voice memos for transcription and analysis.</string>
 </dict>
 </plist>

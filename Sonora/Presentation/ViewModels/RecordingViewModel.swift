@@ -22,26 +22,39 @@ final class RecordingViewModel: ObservableObject {
     @Published var isRecording: Bool = false
     @Published var recordingTime: TimeInterval = 0
     @Published var hasPermission: Bool = false
+    @Published var permissionStatus: MicrophonePermissionStatus = .notDetermined
     @Published var recordingStoppedAutomatically: Bool = false
     @Published var autoStopMessage: String?
     @Published var isInCountdown: Bool = false
     @Published var remainingTime: TimeInterval = 0
     @Published var showAutoStopAlert: Bool = false
+    @Published var isRequestingPermission: Bool = false
     
     // MARK: - Computed Properties
     
     /// Status text for the current recording state
     var recordingStatusText: String {
-        if !hasPermission {
-            return "Microphone Permission Required"
-        } else if isRecording {
-            if isInCountdown {
-                return "Recording ends in"
+        if isRequestingPermission {
+            return "Requesting Permission..."
+        }
+        
+        switch permissionStatus {
+        case .notDetermined:
+            return "Microphone Access Needed"
+        case .denied:
+            return "Microphone Permission Denied"
+        case .restricted:
+            return "Microphone Access Restricted"
+        case .granted:
+            if isRecording {
+                if isInCountdown {
+                    return "Recording ends in"
+                } else {
+                    return "Recording..."
+                }
             } else {
-                return "Recording..."
+                return "Ready to Record"
             }
-        } else {
-            return "Ready to Record"
         }
     }
     
@@ -82,6 +95,8 @@ final class RecordingViewModel: ObservableObject {
         
         setupBindings()
         setupRecordingCallback()
+        setupPermissionNotifications()
+        updatePermissionStatus()
         
         print("🎬 RecordingViewModel: Initialized with dependency injection")
     }
@@ -97,11 +112,12 @@ final class RecordingViewModel: ObservableObject {
         let container = DIContainer.shared
         let audioService = container.audioRecordingService()
         let memoRepository = container.memoRepository()
+        let logger = container.logger()
         
         self.init(
             startRecordingUseCase: StartRecordingUseCase(audioRecordingService: audioService),
             stopRecordingUseCase: StopRecordingUseCase(audioRecordingService: audioService),
-            requestPermissionUseCase: RequestMicrophonePermissionUseCase(audioRecordingService: audioService),
+            requestPermissionUseCase: RequestMicrophonePermissionUseCase(logger: logger),
             handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository),
             audioRecordingService: audioService
         )
@@ -145,6 +161,25 @@ final class RecordingViewModel: ObservableObject {
             }
         }
         print("🔧 RecordingViewModel: Callback function set successfully")
+    }
+    
+    private func setupPermissionNotifications() {
+        NotificationCenter.default.addObserver(
+            forName: .microphonePermissionStatusChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            if let status = notification.userInfo?[MicrophonePermissionStatus.notificationUserInfoKey] as? MicrophonePermissionStatus {
+                self?.permissionStatus = status
+                self?.hasPermission = status.allowsRecording
+            }
+        }
+    }
+    
+    private func updatePermissionStatus() {
+        let status = requestPermissionUseCase.getCurrentStatus()
+        permissionStatus = status
+        hasPermission = status.allowsRecording
     }
     
     // MARK: - Public Methods
@@ -209,11 +244,42 @@ final class RecordingViewModel: ObservableObject {
         }
     }
     
-    /// Request microphone permission
+    /// Request microphone permission asynchronously
     func requestPermission() {
+        guard !isRequestingPermission else { return }
+        
         print("🎤 RecordingViewModel: Requesting microphone permission")
-        let hasPermission = requestPermissionUseCase.execute()
-        print("🎤 RecordingViewModel: Permission result: \(hasPermission)")
+        isRequestingPermission = true
+        
+        Task {
+            do {
+                let status = await requestPermissionUseCase.execute()
+                await MainActor.run {
+                    isRequestingPermission = false
+                    permissionStatus = status
+                    hasPermission = status.allowsRecording
+                    print("🎤 RecordingViewModel: Permission result: \(status.displayName)")
+                }
+            } catch {
+                await MainActor.run {
+                    isRequestingPermission = false
+                    print("❌ RecordingViewModel: Permission request failed: \(error)")
+                }
+            }
+        }
+    }
+    
+    /// Open iOS Settings for permission management
+    func openSettings() {
+        print("⚙️ RecordingViewModel: Opening Settings for permission management")
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
+            print("❌ RecordingViewModel: Failed to create Settings URL")
+            return
+        }
+        
+        UIApplication.shared.open(settingsURL) { success in
+            print("⚙️ RecordingViewModel: Settings opened successfully: \(success)")
+        }
     }
     
     /// Dismiss auto-stop alert
@@ -248,6 +314,7 @@ final class RecordingViewModel: ObservableObject {
     func onViewAppear() {
         print("🎬 RecordingViewModel: View appeared, ensuring callback is set")
         setupRecordingCallback()
+        updatePermissionStatus() // Refresh permission status when view appears
     }
     
     func onViewDisappear() {

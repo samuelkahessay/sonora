@@ -19,23 +19,25 @@ struct RecordView: View {
                 
                 if !viewModel.hasPermission {
                     VStack(spacing: 16) {
-                        Image(systemName: "mic.slash.circle")
+                        Image(systemName: viewModel.permissionStatus.iconName)
                             .font(.system(size: 80))
-                            .foregroundColor(.red)
+                            .foregroundColor(viewModel.permissionStatus == .restricted ? .orange : .red)
                         
-                        Text("Microphone Permission Required")
+                        Text(viewModel.permissionStatus.displayName)
                             .font(.title2)
                             .fontWeight(.semibold)
                         
-                        Text("Please allow microphone access to record audio memos")
+                        Text(getPermissionDescription())
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                         
-                        Button("Request Permission") {
-                            viewModel.requestPermission()
+                        if viewModel.isRequestingPermission {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                        } else {
+                            getPermissionButton()
                         }
-                        .buttonStyle(.borderedProminent)
                     }
                 } else {
                     VStack(spacing: 30) {
@@ -127,6 +129,48 @@ struct RecordView: View {
             } message: {
                 Text(viewModel.autoStopMessage ?? "")
             }
+        }
+    }
+    
+    // MARK: - Permission UI Helpers
+    
+    private func getPermissionDescription() -> String {
+        switch viewModel.permissionStatus {
+        case .notDetermined:
+            return "Sonora needs microphone access to record voice memos for transcription and analysis."
+        case .denied:
+            return "Microphone access was denied. Please enable it in Settings to record voice memos."
+        case .restricted:
+            return "Microphone access is restricted on this device. Check your device restrictions in Settings."
+        case .granted:
+            return "Microphone access is enabled"
+        }
+    }
+    
+    @ViewBuilder
+    private func getPermissionButton() -> some View {
+        switch viewModel.permissionStatus {
+        case .notDetermined:
+            Button("Allow Microphone Access") {
+                viewModel.requestPermission()
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(viewModel.isRequestingPermission)
+            
+        case .denied:
+            Button("Open Settings") {
+                viewModel.openSettings()
+            }
+            .buttonStyle(.borderedProminent)
+            
+        case .restricted:
+            Button("Check Device Settings") {
+                viewModel.openSettings()
+            }
+            .buttonStyle(.bordered)
+            
+        case .granted:
+            EmptyView()
         }
     }
 }

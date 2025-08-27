@@ -17,6 +17,7 @@ final class DIContainer: ObservableObject {
     private var _memoRepository: MemoRepositoryImpl!
     private var _transcriptionRepository: TranscriptionRepository!
     private var _analysisRepository: AnalysisRepository!
+    private var _logger: LoggerProtocol!
     
     // MARK: - Initialization
     private init() {
@@ -28,8 +29,12 @@ final class DIContainer: ObservableObject {
     /// This ensures all parts of the app use the same service instances
     func configure(
         audioRecorder: AudioRecorder? = nil,
-        analysisService: AnalysisService? = nil
+        analysisService: AnalysisService? = nil,
+        logger: LoggerProtocol? = nil
     ) {
+        // Initialize logger first
+        self._logger = logger ?? Logger.shared
+        
         // Initialize repositories first
         self._transcriptionRepository = TranscriptionRepositoryImpl()
         self._analysisRepository = AnalysisRepositoryImpl()
@@ -41,12 +46,12 @@ final class DIContainer: ObservableObject {
         self._audioRecorder = audioRecorder ?? AudioRecorder()
         self._analysisService = analysisService ?? AnalysisService()
         
-        print("🏭 DIContainer: Configured with shared service instances")
-        print("🏭 DIContainer: MemoStore: \(ObjectIdentifier(self._memoStore))")
-        print("🏭 DIContainer: MemoRepository: \(ObjectIdentifier(self._memoRepository))")
-        print("🏭 DIContainer: TranscriptionManager: \(ObjectIdentifier(self._transcriptionManager))")
-        print("🏭 DIContainer: TranscriptionRepository: \(ObjectIdentifier(self._transcriptionRepository))")
-        print("🏭 DIContainer: AnalysisRepository: \(ObjectIdentifier(self._analysisRepository))")
+        _logger.info("DIContainer: Configured with shared service instances", category: .system, context: LogContext())
+        _logger.debug("DIContainer: MemoStore: \(ObjectIdentifier(self._memoStore))", category: .system, context: LogContext())
+        _logger.debug("DIContainer: MemoRepository: \(ObjectIdentifier(self._memoRepository))", category: .system, context: LogContext())
+        _logger.debug("DIContainer: TranscriptionManager: \(ObjectIdentifier(self._transcriptionManager))", category: .system, context: LogContext())
+        _logger.debug("DIContainer: TranscriptionRepository: \(ObjectIdentifier(self._transcriptionRepository))", category: .system, context: LogContext())
+        _logger.debug("DIContainer: AnalysisRepository: \(ObjectIdentifier(self._analysisRepository))", category: .system, context: LogContext())
     }
     
     /// Check if container has been properly configured
@@ -92,6 +97,12 @@ final class DIContainer: ObservableObject {
     func analysisRepository() -> AnalysisRepository {
         ensureConfigured()
         return _analysisRepository
+    }
+    
+    /// Get logger service
+    func logger() -> LoggerProtocol {
+        ensureConfigured()
+        return _logger
     }
     
     // MARK: - Concrete Service Access (for gradual migration)
