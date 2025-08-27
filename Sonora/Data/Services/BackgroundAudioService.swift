@@ -30,13 +30,25 @@ final class BackgroundAudioService: NSObject, ObservableObject {
     private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     
-    // MARK: - Configuration Constants
+    // MARK: - Configuration
+    private let config = AppConfiguration.shared
     private struct AudioConfiguration {
-        static let sampleRate: Double = 44100
-        static let numberOfChannels: Int = 2
         static let audioQuality: AVAudioQuality = .high
         static let audioFormat: AudioFormatID = kAudioFormatMPEG4AAC
         static let timerInterval: TimeInterval = 0.1
+    }
+    
+    // MARK: - Dynamic Configuration Properties
+    private var sampleRate: Double {
+        return config.audioSampleRate
+    }
+    
+    private var numberOfChannels: Int {
+        return config.audioChannels
+    }
+    
+    private var recordingQuality: Float {
+        return config.recordingQuality
     }
     
     // MARK: - Callbacks
@@ -97,7 +109,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             )
             
             // Set preferred sample rate and I/O buffer duration for optimal performance
-            try audioSession.setPreferredSampleRate(AudioConfiguration.sampleRate)
+            try audioSession.setPreferredSampleRate(sampleRate)
             try audioSession.setPreferredIOBufferDuration(0.005) // 5ms for low latency
             
             // Activate the session
@@ -110,7 +122,9 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             print("🎵 BackgroundAudioService: Audio session configured successfully")
             print("   - Category: .playAndRecord")
             print("   - Options: .defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP")
-            print("   - Sample Rate: \(AudioConfiguration.sampleRate) Hz")
+            print("   - Sample Rate: \(sampleRate) Hz")
+            print("   - Channels: \(numberOfChannels)")
+            print("   - Quality: \(recordingQuality)")
             
         } catch {
             DispatchQueue.main.async {
@@ -277,8 +291,8 @@ final class BackgroundAudioService: NSObject, ObservableObject {
     private func createAudioRecorder(url: URL) throws -> AVAudioRecorder {
         let settings: [String: Any] = [
             AVFormatIDKey: Int(AudioConfiguration.audioFormat),
-            AVSampleRateKey: AudioConfiguration.sampleRate,
-            AVNumberOfChannelsKey: AudioConfiguration.numberOfChannels,
+            AVSampleRateKey: sampleRate,
+            AVNumberOfChannelsKey: numberOfChannels,
             AVEncoderAudioQualityKey: AudioConfiguration.audioQuality.rawValue,
             AVEncoderBitRateKey: 320000, // 320 kbps for high quality
             AVSampleRateConverterAudioQualityKey: AVAudioQuality.max.rawValue

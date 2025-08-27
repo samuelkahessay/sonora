@@ -21,8 +21,13 @@ class AudioRecorder: NSObject, ObservableObject, AudioRecordingService {
     private var audioRecorder: AVAudioRecorder?
     private var recordingTimer: Timer?
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    private let maxRecordingDuration: TimeInterval = 60.0
+    private let config = AppConfiguration.shared
     private let countdownThreshold: TimeInterval = 10.0
+    
+    /// Get maximum recording duration from configuration
+    private var maxRecordingDuration: TimeInterval {
+        return config.maxRecordingDuration
+    }
     
     var onRecordingFinished: ((URL) -> Void)?
     
@@ -30,6 +35,9 @@ class AudioRecorder: NSObject, ObservableObject, AudioRecordingService {
         super.init()
         checkPermissions()
         print("🎬 AudioRecorder: Initialized")
+        print("🔧 AudioRecorder: Max recording duration: \(config.formattedMaxDuration)")
+        print("🔧 AudioRecorder: Max file size: \(config.formattedMaxFileSize)")
+        print("🔧 AudioRecorder: Recording quality: \(config.recordingQuality)")
     }
     
     private func requestMicPermission(_ completion: @escaping (Bool) -> Void) {

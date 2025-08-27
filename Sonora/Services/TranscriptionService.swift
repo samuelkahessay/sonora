@@ -1,6 +1,8 @@
 import Foundation
 
 final class TranscriptionService {
+    private let config = AppConfiguration.shared
+    
     struct APIError: LocalizedError { 
         let message: String
         var errorDescription: String? { message }
@@ -13,14 +15,16 @@ final class TranscriptionService {
         try form.addFileField(name: "file", filename: url.lastPathComponent, mimeType: "audio/m4a", fileURL: url)
         let body = form.finalize()
 
-        var req = URLRequest(url: AppConfig.apiBaseURL.appendingPathComponent("transcribe"))
+        let transcribeURL = config.apiBaseURL.appendingPathComponent("transcribe")
+        var req = URLRequest(url: transcribeURL)
         req.httpMethod = "POST"
         req.setValue("multipart/form-data; boundary=\(form.boundary)", forHTTPHeaderField: "Content-Type")
         req.httpBody = body
-        req.timeoutInterval = 120
+        req.timeoutInterval = config.transcriptionTimeoutInterval
         
+        print("🔧 TranscriptionService: Using API URL: \(transcribeURL.absoluteString)")
+        print("🔧 TranscriptionService: Using timeout: \(req.timeoutInterval)s")
         print("🌐 Making request to: \(req.url?.absoluteString ?? "unknown")")
-        print("📡 Using fly.dev endpoint: \(AppConfig.apiBaseURL)")
 
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else { 

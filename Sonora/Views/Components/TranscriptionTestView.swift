@@ -10,7 +10,7 @@ struct TranscriptionTestView: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            Text("Endpoint: \(AppConfig.apiBaseURL.absoluteString)")
+            Text("Endpoint: \(AppConfiguration.shared.apiBaseURL.absoluteString)")
                 .font(.caption)
                 .foregroundColor(.secondary)
             
@@ -50,8 +50,9 @@ struct TranscriptionTestView: View {
         
         Task {
             do {
-                var request = URLRequest(url: AppConfig.apiBaseURL.appendingPathComponent("health"))
-                request.timeoutInterval = 10
+                let config = AppConfiguration.shared
+                var request = URLRequest(url: config.apiBaseURL.appendingPathComponent("health"))
+                request.timeoutInterval = config.healthCheckTimeoutInterval
                 
                 let (data, response) = try await URLSession.shared.data(for: request)
                 let result = String(data: data, encoding: .utf8) ?? "No data"
@@ -79,8 +80,9 @@ struct TranscriptionTestView: View {
         
         Task {
             do {
-                var request = URLRequest(url: AppConfig.apiBaseURL.appendingPathComponent("keycheck"))
-                request.timeoutInterval = 10
+                let config = AppConfiguration.shared
+                var request = URLRequest(url: config.apiBaseURL.appendingPathComponent("keycheck"))
+                request.timeoutInterval = config.healthCheckTimeoutInterval
                 
                 let (data, response) = try await URLSession.shared.data(for: request)
                 let result = String(data: data, encoding: .utf8) ?? "No data"

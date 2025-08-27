@@ -2,22 +2,24 @@ import Foundation
 
 @MainActor
 class AnalysisService: ObservableObject, AnalysisServiceProtocol {
-    private let baseURL = "https://sonora.fly.dev"
+    private let config = AppConfiguration.shared
     
     func analyze<T: Codable>(mode: AnalysisMode, transcript: String, responseType: T.Type) async throws -> AnalyzeEnvelope<T> {
-        guard let url = URL(string: "\(baseURL)/analyze") else {
-            throw AnalysisError.invalidURL
-        }
+        let analyzeURL = config.apiBaseURL.appendingPathComponent("analyze")
+        print("🔧 AnalysisService: Using API URL: \(analyzeURL.absoluteString)")
         
         let requestBody = [
             "mode": mode.rawValue,
             "transcript": transcript
         ]
         
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: analyzeURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 12.0
+        request.timeoutInterval = config.timeoutInterval(for: mode)
+        
+        print("🔧 AnalysisService: Using timeout: \(request.timeoutInterval)s for \(mode.displayName)")
+        print("🔧 AnalysisService: Transcript length: \(transcript.count) characters")
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
