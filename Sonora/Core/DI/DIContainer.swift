@@ -1,13 +1,22 @@
 import Foundation
 import Combine
 
+// Simple dependency registration container
+typealias ResolverType = DIContainer
+protocol Resolver {
+    func resolve<T>(_ type: T.Type) -> T?
+}
+
 /// Simple dependency injection container for Sonora services
 /// Provides protocol-based access to existing service instances
 @MainActor
-final class DIContainer: ObservableObject {
+final class DIContainer: ObservableObject, Resolver {
     
     // MARK: - Singleton
     static let shared = DIContainer()
+    
+    // MARK: - Registration Container
+    private var registrations: [ObjectIdentifier: Any] = [:]
     
     // MARK: - Private Service Instances
     private var _audioRecorder: AudioRecorder!
@@ -20,11 +29,43 @@ final class DIContainer: ObservableObject {
     private var _analysisRepository: AnalysisRepository!
     private var _logger: LoggerProtocol!
     private var _operationCoordinator: OperationCoordinator!
+    private var _backgroundAudioService: BackgroundAudioService!
+    private var _audioRepository: AudioRepository!
     
     // MARK: - Initialization
     private init() {
         // Services will be injected after initialization
         print("🏭 DIContainer: Initialized, waiting for service injection")
+    }
+    
+    // MARK: - Registration Methods
+    
+    /// Register a service with a factory closure
+    func register<T>(_ type: T.Type, factory: @escaping (Resolver) -> T) {
+        let key = ObjectIdentifier(type)
+        registrations[key] = factory
+    }
+    
+    /// Resolve a service from registrations
+    func resolve<T>(_ type: T.Type) -> T? {
+        let key = ObjectIdentifier(type)
+        guard let factory = registrations[key] as? (Resolver) -> T else {
+            return nil
+        }
+        return factory(self)
+    }
+    
+    /// Setup repository registrations
+    private func setupRepositories() {
+        // Register BackgroundAudioService
+        register(BackgroundAudioService.self) { resolver in
+            return BackgroundAudioService()
+        }
+        
+        // Register AudioRepository 
+        register(AudioRepository.self) { resolver in
+            return AudioRepositoryImpl()
+        }
     }
     
     /// Configure DIContainer with shared service instances
@@ -34,6 +75,9 @@ final class DIContainer: ObservableObject {
         analysisService: AnalysisService? = nil,
         logger: LoggerProtocol? = nil
     ) {
+        // Setup repositories first
+        setupRepositories()
+        
         // Initialize logger first
         self._logger = logger ?? Logger.shared
         
@@ -41,6 +85,10 @@ final class DIContainer: ObservableObject {
         self._transcriptionRepository = TranscriptionRepositoryImpl()
         self._analysisRepository = AnalysisRepositoryImpl()
         self._memoRepository = MemoRepositoryImpl()
+        
+        // Initialize new services from registrations
+        self._backgroundAudioService = resolve(BackgroundAudioService.self)!
+        self._audioRepository = resolve(AudioRepository.self)!
         
         // Create MemoStore with the transcription repository (for legacy compatibility)
         self._memoStore = MemoStore(transcriptionRepository: _transcriptionRepository)
@@ -60,7 +108,7 @@ final class DIContainer: ObservableObject {
     
     /// Check if container has been properly configured
     private func ensureConfigured() {
-        guard _memoStore != nil, _memoRepository != nil else {
+        guard _memoStore != nil, _memoRepository != nil, _audioRepository != nil else {
             fatalError("DIContainer has not been configured. Call configure() before using services.")
         }
     }
@@ -107,6 +155,18 @@ final class DIContainer: ObservableObject {
     func analysisRepository() -> AnalysisRepository {
         ensureConfigured()
         return _analysisRepository
+    }
+    
+    /// Get audio repository
+    func audioRepository() -> AudioRepository {
+        ensureConfigured()
+        return _audioRepository
+    }
+    
+    /// Get background audio service
+    func backgroundAudioService() -> BackgroundAudioService {
+        ensureConfigured()
+        return _backgroundAudioService
     }
     
     /// Get logger service

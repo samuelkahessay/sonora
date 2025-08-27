@@ -209,7 +209,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         
         Task {
             do {
-                try await backgroundAudioService.startRecording()
+                try backgroundAudioService.startRecording()
                 print("🎵 AudioRepositoryImpl: Background recording started successfully (sync)")
             } catch {
                 print("❌ AudioRepositoryImpl: Failed to start recording (sync): \(error)")
