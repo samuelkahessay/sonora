@@ -3,18 +3,35 @@ import AVFoundation
 import Combine
 
 protocol AudioRepository: ObservableObject {
+    // MARK: - Playback Properties
     var playingMemo: Memo? { get set }
     var isPlaying: Bool { get set }
     
+    // MARK: - Recording State Properties
+    var isRecording: Bool { get }
+    var recordingTime: TimeInterval { get }
+    var hasMicrophonePermission: Bool { get }
+    var isBackgroundTaskActive: Bool { get }
+    
+    // MARK: - File Management
     func loadAudioFiles() -> [Memo]
     func deleteAudioFile(at url: URL) throws
     func saveAudioFile(from sourceURL: URL, to destinationURL: URL) throws
     func getAudioMetadata(for url: URL) throws -> (duration: TimeInterval, creationDate: Date)
+    func getDocumentsDirectory() -> URL
     
+    // MARK: - Playback Control
     func playAudio(at url: URL) throws
     func pauseAudio()
     func stopAudio()
     func isAudioPlaying(for memo: Memo) -> Bool
     
-    func getDocumentsDirectory() -> URL
+    // MARK: - Recording Control
+    func startRecording() async throws -> UUID
+    func stopRecording()
+    func checkMicrophonePermissions()
+    
+    // MARK: - Recording Callbacks
+    func setRecordingFinishedHandler(_ handler: @escaping (URL) -> Void)
+    func setRecordingFailedHandler(_ handler: @escaping (Error) -> Void)
 }

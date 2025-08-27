@@ -21,7 +21,38 @@ final class AudioRecordingServiceWrapper: AudioRepository {
         self.service = service
     }
     
-    // AudioRepository methods - minimal implementation for compatibility
+    // MARK: - Recording State Properties (delegate to wrapped service)
+    var isRecording: Bool { service.isRecording }
+    var recordingTime: TimeInterval { service.recordingTime }
+    var hasMicrophonePermission: Bool { service.hasPermission }
+    var isBackgroundTaskActive: Bool { false } // Not available in legacy service
+    
+    // MARK: - Recording Control Methods
+    func startRecording() async throws -> UUID {
+        let memoId = UUID()
+        service.startRecording()
+        return memoId
+    }
+    
+    func stopRecording() {
+        service.stopRecording()
+    }
+    
+    func checkMicrophonePermissions() {
+        service.checkPermissions()
+    }
+    
+    // MARK: - Recording Callbacks
+    func setRecordingFinishedHandler(_ handler: @escaping (URL) -> Void) {
+        service.onRecordingFinished = handler
+    }
+    
+    func setRecordingFailedHandler(_ handler: @escaping (Error) -> Void) {
+        // Legacy AudioRecordingService doesn't support failure callbacks - stub implementation
+        // This is acceptable during the transition period
+    }
+    
+    // MARK: - AudioRepository methods - minimal implementation for compatibility
     func loadAudioFiles() -> [Memo] { return [] }
     func deleteAudioFile(at url: URL) throws {}
     func saveAudioFile(from sourceURL: URL, to destinationURL: URL) throws {}

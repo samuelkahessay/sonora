@@ -182,15 +182,20 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     
     // MARK: - Recording Functionality (BackgroundAudioService Integration)
     
-    /// Start recording with proper background support (async version)
-    func startRecording() async throws {
+    /// Start recording with proper background support and return memo ID
+    func startRecording() async throws -> UUID {
+        // Generate memo ID for this recording session
+        let memoId = UUID()
+        
         // Stop any playing audio before recording
         if isPlaying {
             stopAudio()
         }
         
-        print("🎵 AudioRepositoryImpl: Starting background recording")
-        try await backgroundAudioService.startRecording()
+        print("🎵 AudioRepositoryImpl: Starting background recording for memo: \(memoId)")
+        try backgroundAudioService.startRecording()
+        
+        return memoId
     }
     
     /// Start recording synchronously (for use case compatibility)
@@ -241,6 +246,18 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     /// Check if background task is active
     var isBackgroundTaskActive: Bool {
         return backgroundAudioService.backgroundTaskActive
+    }
+    
+    // MARK: - Recording Callbacks
+    
+    /// Set handler for when recording finishes successfully
+    func setRecordingFinishedHandler(_ handler: @escaping (URL) -> Void) {
+        backgroundAudioService.onRecordingFinished = handler
+    }
+    
+    /// Set handler for when recording fails
+    func setRecordingFailedHandler(_ handler: @escaping (Error) -> Void) {
+        backgroundAudioService.onRecordingFailed = handler
     }
     
     // MARK: - Audio Session Management
