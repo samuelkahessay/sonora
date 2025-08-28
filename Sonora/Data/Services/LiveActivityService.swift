@@ -7,108 +7,14 @@
 
 import Foundation
 import Combine
+#if canImport(ActivityKit)
+import ActivityKit
+#endif
 
-// MARK: - Live Activity Protocol
+// Protocol and supporting types are defined in Domain/Protocols/LiveActivityServiceProtocol.swift
 
-/// Protocol defining the interface for Live Activity management
-/// This provides a clean abstraction for implementing Live Activities
-/// that can show recording progress on the Lock Screen and Dynamic Island
-protocol LiveActivityServiceProtocol {
-    
-    /// Current state of the Live Activity
-    var isActivityActive: Bool { get }
-    
-    /// Current activity identifier (nil if no activity is active)
-    var currentActivityId: String? { get }
-    
-    /// Publisher for activity state changes
-    var activityStatePublisher: AnyPublisher<LiveActivityState, Never> { get }
-    
-    /// Starts a new recording Live Activity
-    /// - Parameters:
-    ///   - memoTitle: Title for the memo being recorded
-    ///   - startTime: When the recording started
-    /// - Throws: LiveActivityError if the activity cannot be started
-    func startRecordingActivity(memoTitle: String, startTime: Date) async throws
-    
-    /// Updates the current Live Activity with new recording information
-    /// - Parameters:
-    ///   - duration: Current recording duration
-    ///   - isCountdown: Whether the recording is in countdown mode
-    ///   - remainingTime: Time remaining if in countdown
-    /// - Throws: LiveActivityError if no activity is active or update fails
-    func updateActivity(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?) async throws
-    
-    /// Ends the current Live Activity
-    /// - Parameter dismissalPolicy: How the activity should be dismissed
-    /// - Throws: LiveActivityError if no activity is active
-    func endCurrentActivity(dismissalPolicy: ActivityDismissalPolicy) async throws
-    
-    /// Ends any existing activity and starts a new one (single-owner pattern)
-    /// - Parameters:
-    ///   - memoTitle: Title for the new memo being recorded
-    ///   - startTime: When the new recording started
-    /// - Throws: LiveActivityError if the new activity cannot be started
-    func restartActivity(memoTitle: String, startTime: Date) async throws
-}
+// MARK: - ActivityKit-backed Implementation
 
-// MARK: - Supporting Types
-
-/// Represents the current state of Live Activity management
-enum LiveActivityState {
-    case inactive
-    case starting
-    case active(id: String)
-    case updating
-    case ending
-    case error(LiveActivityError)
-}
-
-/// Policy for how Live Activities should be dismissed
-enum ActivityDismissalPolicy {
-    case immediate          // Dismiss immediately
-    case afterDelay(TimeInterval)  // Dismiss after specified seconds
-    case userDismissal      // Let user dismiss manually
-}
-
-/// Errors that can occur during Live Activity operations
-enum LiveActivityError: LocalizedError {
-    case notSupported
-    case alreadyActive
-    case notActive
-    case startFailed(String)
-    case updateFailed(String)
-    case endFailed(String)
-    case permissionDenied
-    case systemUnavailable
-    
-    var errorDescription: String? {
-        switch self {
-        case .notSupported:
-            return "Live Activities are not supported on this device or iOS version"
-        case .alreadyActive:
-            return "A Live Activity is already active"
-        case .notActive:
-            return "No Live Activity is currently active"
-        case .startFailed(let message):
-            return "Failed to start Live Activity: \(message)"
-        case .updateFailed(let message):
-            return "Failed to update Live Activity: \(message)"
-        case .endFailed(let message):
-            return "Failed to end Live Activity: \(message)"
-        case .permissionDenied:
-            return "Live Activity permission denied"
-        case .systemUnavailable:
-            return "Live Activity system is currently unavailable"
-        }
-    }
-}
-
-// MARK: - Stub Implementation
-
-/// Stub implementation of LiveActivityService for preparation and testing
-/// This implementation logs all operations without actually creating Live Activities
-/// Will be replaced with real ActivityKit implementation later
 final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
     
     // MARK: - Published Properties
@@ -118,6 +24,10 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
     // MARK: - Private Properties
     private let activityStateSubject = CurrentValueSubject<LiveActivityState, Never>(.inactive)
     private var cancellables = Set<AnyCancellable>()
+    #if canImport(ActivityKit)
+    @available(iOS 16.1, *)
+    private var lastContentState: SonoraLiveActivityAttributes.ContentState?
+    #endif
     
     // MARK: - Protocol Properties
     var activityStatePublisher: AnyPublisher<LiveActivityState, Never> {
@@ -127,8 +37,7 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
     // MARK: - Initialization
     init() {
         setupStateObservation()
-        print("📱 LiveActivityService: Initialized (Stub Implementation)")
-        print("📱 Note: This is a stub implementation that logs operations for preparation")
+        print("📱 LiveActivityService: Initialized (ActivityKit-capable)")
     }
     
     deinit {
@@ -170,80 +79,124 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
     // MARK: - Protocol Implementation
     
     func startRecordingActivity(memoTitle: String, startTime: Date) async throws {
-        print("📱 LiveActivityService: Starting recording activity")
-        print("   - Memo Title: '\(memoTitle)'")
-        print("   - Start Time: \(formatTime(startTime))")
-        
-        // Single-owner pattern: end any existing activity first
         if isActivityActive {
-            print("📱 LiveActivityService: Ending existing activity before starting new one")
             try await endCurrentActivity(dismissalPolicy: .immediate)
         }
-        
         activityStateSubject.send(.starting)
         
-        // Simulate async operation delay
-        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-        
-        // Generate unique activity ID
-        let activityId = "recording_\(UUID().uuidString.prefix(8))"
-        
-        // Simulate successful start
-        print("📱 LiveActivityService: ✅ Recording activity started successfully")
-        print("   - Activity ID: \(activityId)")
-        print("   - Will show: Recording '\(memoTitle)' started at \(formatTime(startTime))")
-        
-        activityStateSubject.send(.active(id: activityId))
+        #if canImport(ActivityKit)
+        if #available(iOS 16.1, *) {
+            let authInfo = ActivityAuthorizationInfo()
+            guard authInfo.areActivitiesEnabled else {
+                activityStateSubject.send(.error(.permissionDenied))
+                throw LiveActivityError.permissionDenied
+            }
+            
+            let attributes = SonoraLiveActivityAttributes(memoId: UUID().uuidString)
+            let initialState = SonoraLiveActivityAttributes.ContentState(
+                memoTitle: memoTitle,
+                startTime: startTime,
+                duration: 0,
+                isCountdown: false,
+                remainingTime: nil,
+                emoji: "🎤"
+            )
+            do {
+                let activity = try Activity<SonoraLiveActivityAttributes>.request(
+                    attributes: attributes,
+                    contentState: initialState,
+                    pushType: nil
+                )
+                self.lastContentState = initialState
+                activityStateSubject.send(.active(id: activity.id))
+            } catch {
+                activityStateSubject.send(.error(.startFailed(error.localizedDescription)))
+                throw LiveActivityError.startFailed(error.localizedDescription)
+            }
+        } else {
+            activityStateSubject.send(.error(.notSupported))
+            throw LiveActivityError.notSupported
+        }
+        #else
+        activityStateSubject.send(.error(.notSupported))
+        throw LiveActivityError.notSupported
+        #endif
     }
     
     func updateActivity(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?) async throws {
         guard isActivityActive, let activityId = currentActivityId else {
-            print("❌ LiveActivityService: Cannot update - no active activity")
             throw LiveActivityError.notActive
         }
-        
-        print("📱 LiveActivityService: Updating activity \(activityId)")
-        print("   - Duration: \(formatDuration(duration))")
-        print("   - Is Countdown: \(isCountdown)")
-        if let remaining = remainingTime {
-            print("   - Remaining Time: \(formatDuration(remaining))")
-        }
-        
         activityStateSubject.send(.updating)
         
-        // Simulate async operation delay
-        try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-        
-        // Simulate successful update
-        print("📱 LiveActivityService: ✅ Activity updated successfully")
-        if isCountdown, let remaining = remainingTime {
-            print("   - Will show: Recording ending in \(Int(ceil(remaining))) seconds")
+        #if canImport(ActivityKit)
+        if #available(iOS 16.1, *) {
+            // Locate the activity and update state
+            let activities = Activity<SonoraLiveActivityAttributes>.activities
+            guard let activity = activities.first(where: { $0.id == activityId }) else {
+                activityStateSubject.send(.error(.notActive))
+                throw LiveActivityError.notActive
+            }
+            let base = self.lastContentState ?? SonoraLiveActivityAttributes.ContentState(
+                memoTitle: "Recording",
+                startTime: Date(),
+                duration: 0,
+                isCountdown: false,
+                remainingTime: nil,
+                emoji: isCountdown ? "⏳" : "🎤"
+            )
+            let newState = SonoraLiveActivityAttributes.ContentState(
+                memoTitle: base.memoTitle,
+                startTime: base.startTime,
+                duration: duration,
+                isCountdown: isCountdown,
+                remainingTime: remainingTime,
+                emoji: isCountdown ? "⏳" : "🎤"
+            )
+            await activity.update(using: newState)
+            self.lastContentState = newState
+            activityStateSubject.send(.active(id: activityId))
         } else {
-            print("   - Will show: Recording for \(formatDuration(duration))")
+            activityStateSubject.send(.error(.notSupported))
+            throw LiveActivityError.notSupported
         }
-        
-        activityStateSubject.send(.active(id: activityId))
+        #else
+        activityStateSubject.send(.error(.notSupported))
+        throw LiveActivityError.notSupported
+        #endif
     }
     
     func endCurrentActivity(dismissalPolicy: ActivityDismissalPolicy = .afterDelay(4.0)) async throws {
-        guard isActivityActive, let activityId = currentActivityId else {
-            print("📱 LiveActivityService: No active activity to end")
-            return
-        }
-        
-        print("📱 LiveActivityService: Ending activity \(activityId)")
-        print("   - Dismissal Policy: \(dismissalPolicyDescription(dismissalPolicy))")
-        
+        guard isActivityActive, let activityId = currentActivityId else { return }
         activityStateSubject.send(.ending)
         
-        // Simulate async operation delay
-        try await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
-        
-        // Simulate successful end
-        print("📱 LiveActivityService: ✅ Activity ended successfully")
-        print("   - Activity will be dismissed: \(dismissalPolicyDescription(dismissalPolicy))")
-        
-        activityStateSubject.send(.inactive)
+        #if canImport(ActivityKit)
+        if #available(iOS 16.1, *) {
+            let activities = Activity<SonoraLiveActivityAttributes>.activities
+            guard let activity = activities.first(where: { $0.id == activityId }) else {
+                activityStateSubject.send(.inactive)
+                return
+            }
+            let policy: ActivityUIDismissalPolicy
+            switch dismissalPolicy {
+            case .immediate:
+                policy = .immediate
+            case .afterDelay(let seconds):
+                policy = .after(Date().addingTimeInterval(seconds))
+            case .userDismissal:
+                policy = .default
+            }
+            await activity.end(dismissalPolicy: policy)
+            activityStateSubject.send(.inactive)
+            self.lastContentState = nil
+        } else {
+            activityStateSubject.send(.error(.notSupported))
+            throw LiveActivityError.notSupported
+        }
+        #else
+        activityStateSubject.send(.error(.notSupported))
+        throw LiveActivityError.notSupported
+        #endif
     }
     
     func restartActivity(memoTitle: String, startTime: Date) async throws {

@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0A875D9D2E600B7100245D4A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9C2E600B7100245D4A /* WidgetKit.framework */; };
+		0A875D9F2E600B7100245D4A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9E2E600B7100245D4A /* SwiftUI.framework */; };
+		0A875DAC2E600B7300245D4A /* SonoraLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0A875D9A2E600B7100245D4A /* SonoraLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		0A3974182E5A6CA600F27D16 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,12 +27,37 @@
 			remoteGlobalIDString = 0A3974092E5A6CA400F27D16;
 			remoteInfo = Sonora;
 		};
+		0A875DAA2E600B7300245D4A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0A3974022E5A6CA400F27D16 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0A875D992E600B7100245D4A;
+			remoteInfo = SonoraLiveActivityExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		0A875DB12E600B7300245D4A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				0A875DAC2E600B7300245D4A /* SonoraLiveActivityExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0A39740A2E5A6CA400F27D16 /* Sonora.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sonora.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A3974172E5A6CA600F27D16 /* SonoraTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SonoraTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A3974212E5A6CA600F27D16 /* SonoraUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SonoraUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A875D9A2E600B7100245D4A /* SonoraLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SonoraLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A875D9C2E600B7100245D4A /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		0A875D9E2E600B7100245D4A /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		0A875DB32E600BB900245D4A /* SonoraLiveActivityExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SonoraLiveActivityExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -37,6 +68,20 @@
 			);
 			target = 0A3974092E5A6CA400F27D16 /* Sonora */;
 		};
+		0A875DB02E600B7300245D4A /* Exceptions for "SonoraLiveActivity" folder in "SonoraLiveActivityExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 0A875D992E600B7100245D4A /* SonoraLiveActivityExtension */;
+		};
+		0A875DBA2E600F3800245D4A /* Exceptions for "Sonora" folder in "SonoraLiveActivityExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				LiveActivity/SonoraLiveActivityAttributes.swift,
+			);
+			target = 0A875D992E600B7100245D4A /* SonoraLiveActivityExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -44,6 +89,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				0A7F22DA2E5C0DB0003D9787 /* Exceptions for "Sonora" folder in "Sonora" target */,
+				0A875DBA2E600F3800245D4A /* Exceptions for "Sonora" folder in "SonoraLiveActivityExtension" target */,
 			);
 			path = Sonora;
 			sourceTree = "<group>";
@@ -56,6 +102,14 @@
 		0A3974242E5A6CA600F27D16 /* SonoraUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SonoraUITests;
+			sourceTree = "<group>";
+		};
+		0A875DA02E600B7100245D4A /* SonoraLiveActivity */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0A875DB02E600B7300245D4A /* Exceptions for "SonoraLiveActivity" folder in "SonoraLiveActivityExtension" target */,
+			);
+			path = SonoraLiveActivity;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -82,15 +136,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0A875D972E600B7100245D4A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0A875D9F2E600B7100245D4A /* SwiftUI.framework in Frameworks */,
+				0A875D9D2E600B7100245D4A /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0A3974012E5A6CA400F27D16 = {
 			isa = PBXGroup;
 			children = (
+				0A875DB32E600BB900245D4A /* SonoraLiveActivityExtension.entitlements */,
 				0A39740C2E5A6CA400F27D16 /* Sonora */,
 				0A39741A2E5A6CA600F27D16 /* SonoraTests */,
 				0A3974242E5A6CA600F27D16 /* SonoraUITests */,
+				0A875DA02E600B7100245D4A /* SonoraLiveActivity */,
+				0A875D9B2E600B7100245D4A /* Frameworks */,
 				0A39740B2E5A6CA400F27D16 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -101,8 +167,18 @@
 				0A39740A2E5A6CA400F27D16 /* Sonora.app */,
 				0A3974172E5A6CA600F27D16 /* SonoraTests.xctest */,
 				0A3974212E5A6CA600F27D16 /* SonoraUITests.xctest */,
+				0A875D9A2E600B7100245D4A /* SonoraLiveActivityExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		0A875D9B2E600B7100245D4A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0A875D9C2E600B7100245D4A /* WidgetKit.framework */,
+				0A875D9E2E600B7100245D4A /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -115,10 +191,12 @@
 				0A3974062E5A6CA400F27D16 /* Sources */,
 				0A3974072E5A6CA400F27D16 /* Frameworks */,
 				0A3974082E5A6CA400F27D16 /* Resources */,
+				0A875DB12E600B7300245D4A /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				0A875DAB2E600B7300245D4A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				0A39740C2E5A6CA400F27D16 /* Sonora */,
@@ -176,6 +254,28 @@
 			productReference = 0A3974212E5A6CA600F27D16 /* SonoraUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		0A875D992E600B7100245D4A /* SonoraLiveActivityExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0A875DAD2E600B7300245D4A /* Build configuration list for PBXNativeTarget "SonoraLiveActivityExtension" */;
+			buildPhases = (
+				0A875D962E600B7100245D4A /* Sources */,
+				0A875D972E600B7100245D4A /* Frameworks */,
+				0A875D982E600B7100245D4A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				0A875DA02E600B7100245D4A /* SonoraLiveActivity */,
+			);
+			name = SonoraLiveActivityExtension;
+			packageProductDependencies = (
+			);
+			productName = SonoraLiveActivityExtension;
+			productReference = 0A875D9A2E600B7100245D4A /* SonoraLiveActivityExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -197,6 +297,9 @@
 						CreatedOnToolsVersion = 16.4;
 						TestTargetID = 0A3974092E5A6CA400F27D16;
 					};
+					0A875D992E600B7100245D4A = {
+						CreatedOnToolsVersion = 16.4;
+					};
 				};
 			};
 			buildConfigurationList = 0A3974052E5A6CA400F27D16 /* Build configuration list for PBXProject "Sonora" */;
@@ -216,6 +319,7 @@
 				0A3974092E5A6CA400F27D16 /* Sonora */,
 				0A3974162E5A6CA600F27D16 /* SonoraTests */,
 				0A3974202E5A6CA600F27D16 /* SonoraUITests */,
+				0A875D992E600B7100245D4A /* SonoraLiveActivityExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -236,6 +340,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		0A39741F2E5A6CA600F27D16 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0A875D982E600B7100245D4A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -266,6 +377,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0A875D962E600B7100245D4A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -278,6 +396,11 @@
 			isa = PBXTargetDependency;
 			target = 0A3974092E5A6CA400F27D16 /* Sonora */;
 			targetProxy = 0A3974222E5A6CA600F27D16 /* PBXContainerItemProxy */;
+		};
+		0A875DAB2E600B7300245D4A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0A875D992E600B7100245D4A /* SonoraLiveActivityExtension */;
+			targetProxy = 0A875DAA2E600B7300245D4A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -337,7 +460,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -397,7 +520,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -412,6 +535,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Sonora/Sonora.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 9XWM5T8A87;
@@ -426,7 +550,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -449,6 +573,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Sonora/Sonora.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 9XWM5T8A87;
@@ -463,7 +588,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -489,7 +614,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 9XWM5T8A87;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelkahessay.SonoraTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -508,7 +633,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 9XWM5T8A87;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelkahessay.SonoraTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -553,6 +678,64 @@
 			};
 			name = Release;
 		};
+		0A875DAE2E600B7300245D4A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SonoraLiveActivityExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9XWM5T8A87;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SonoraLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SonoraLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.samuelkahessay.Sonora.SonoraLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		0A875DAF2E600B7300245D4A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SonoraLiveActivityExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9XWM5T8A87;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SonoraLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SonoraLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.samuelkahessay.Sonora.SonoraLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -588,6 +771,15 @@
 			buildConfigurations = (
 				0A3974322E5A6CA600F27D16 /* Debug */,
 				0A3974332E5A6CA600F27D16 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0A875DAD2E600B7300245D4A /* Build configuration list for PBXNativeTarget "SonoraLiveActivityExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0A875DAE2E600B7300245D4A /* Debug */,
+				0A875DAF2E600B7300245D4A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -20,12 +20,14 @@ public final class EventHandlerRegistry {
     private var memoEventHandler: MemoEventHandler?
     private var calendarEventHandler: CalendarEventHandler?
     private var remindersEventHandler: RemindersEventHandler?
+    private var liveActivityEventHandler: LiveActivityEventHandler?
     
     // MARK: - Configuration
     private let enabledHandlers: Set<String> = [
         "MemoEventHandler",    // Always enabled for cross-cutting concerns
         "CalendarEventHandler", // Placeholder - disabled by default
-        "RemindersEventHandler" // Placeholder - disabled by default
+        "RemindersEventHandler", // Placeholder - disabled by default
+        "LiveActivityEventHandler" // Live Activities for recording
     ]
     
     // MARK: - Initialization
@@ -55,6 +57,7 @@ public final class EventHandlerRegistry {
         // Register placeholder handlers for future features
         registerCalendarEventHandler()
         registerRemindersEventHandler()
+        registerLiveActivityEventHandler()
         
         // Log registration summary
         let activeCount = handlerStatus.values.filter { $0 }.count
@@ -116,6 +119,26 @@ public final class EventHandlerRegistry {
         logger.debug("Registered RemindersEventHandler (placeholder - disabled)", 
                     category: .system, 
                     context: LogContext())
+    }
+    
+    /// Register the Live Activity event handler
+    private func registerLiveActivityEventHandler() {
+        let handlerName = "LiveActivityEventHandler"
+        let isEnabled = enabledHandlers.contains(handlerName)
+        
+        if isEnabled {
+            liveActivityEventHandler = LiveActivityEventHandler(logger: logger, eventBus: eventBus)
+            registeredHandlers[handlerName] = liveActivityEventHandler
+            handlerStatus[handlerName] = true
+            logger.info("Registered and activated LiveActivityEventHandler",
+                        category: .system,
+                        context: LogContext())
+        } else {
+            handlerStatus[handlerName] = false
+            logger.debug("LiveActivityEventHandler disabled in configuration",
+                        category: .system,
+                        context: LogContext())
+        }
     }
     
     // MARK: - Handler Management
