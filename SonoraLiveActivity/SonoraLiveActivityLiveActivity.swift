@@ -34,28 +34,26 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     
                     Spacer()
                     
-                    // Open the host app via deep link to stop recording
-                    if let url = URL(string: "sonora://stopRecording") {
-                        Link(destination: url) {
-                            HStack(alignment: .center, spacing: 8) {
-                                Image(systemName: "stop.circle.fill")
-                                    .font(.system(size: 18, weight: .bold))
-                                Text("Stop")
-                                    .font(.system(size: 16, weight: .bold))
-                            }
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 24)
-                                    .fill(.red.gradient)
-                                    .shadow(color: .red.opacity(0.4), radius: 4, x: 0, y: 2)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 24)
-                                    .stroke(.white.opacity(0.2), lineWidth: 1)
-                            )
+                    // Invoke the stop-recording App Intent
+                    Button(intent: StopRecordingIntent()) {
+                        HStack(alignment: .center, spacing: 8) {
+                            Image(systemName: "stop.circle.fill")
+                                .font(.system(size: 18, weight: .bold))
+                            Text("Stop")
+                                .font(.system(size: 16, weight: .bold))
                         }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 24)
+                                .fill(.red.gradient)
+                                .shadow(color: .red.opacity(0.4), radius: 4, x: 0, y: 2)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 24)
+                                .stroke(.white.opacity(0.2), lineWidth: 1)
+                        )
                     }
                 }
                 
