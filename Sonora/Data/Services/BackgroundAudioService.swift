@@ -23,6 +23,10 @@ final class BackgroundAudioService: NSObject, ObservableObject {
     @Published var hasPermission = false
     @Published var isSessionActive = false
     @Published var backgroundTaskActive = false
+    @Published var recordingStoppedAutomatically = false
+    @Published var autoStopMessage: String?
+    @Published var isInCountdown = false
+    @Published var remainingTime: TimeInterval = 0
     
     // MARK: - Private Properties
     private var audioRecorder: AVAudioRecorder?
@@ -105,7 +109,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             try audioSession.setCategory(
                 .playAndRecord,
                 mode: .default,
-                options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP]
+                options: [.defaultToSpeaker, .allowBluetooth]
             )
             
             // Set preferred sample rate and I/O buffer duration for optimal performance
@@ -121,10 +125,11 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             
             print("🎵 BackgroundAudioService: Audio session configured successfully")
             print("   - Category: .playAndRecord")
-            print("   - Options: .defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP")
+            print("   - Options: .defaultToSpeaker, .allowBluetooth")
             print("   - Sample Rate: \(sampleRate) Hz")
             print("   - Channels: \(numberOfChannels)")
             print("   - Quality: \(recordingQuality)")
+            logAudioSessionRoute("post-config")
             
         } catch {
             DispatchQueue.main.async {
@@ -133,6 +138,23 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             print("❌ BackgroundAudioService: Failed to configure audio session: \(error)")
             throw AudioServiceError.sessionConfigurationFailed(error)
         }
+    }
+
+    /// Logs detailed audio session routing information for diagnostics
+    private func logAudioSessionRoute(_ prefix: String = "") {
+        let session = AVAudioSession.sharedInstance()
+        let permission = session.recordPermission
+        let isInputAvailable = session.isInputAvailable
+        let route = session.currentRoute
+        let inputs = route.inputs.map { "\($0.portType.rawValue) [\($0.portName)]" }.joined(separator: ", ")
+        let outputs = route.outputs.map { "\($0.portType.rawValue) [\($0.portName)]" }.joined(separator: ", ")
+        let availableInputs = (session.availableInputs ?? []).map { "\($0.portType.rawValue) [\($0.portName)]" }.joined(separator: ", ")
+        let preferred = session.preferredInput?.portType.rawValue ?? "nil"
+        print("🔎 AudioSession Route \(prefix): permission=\(permission.rawValue), inputAvailable=\(isInputAvailable)")
+        print("🔎 Inputs: \(inputs)")
+        print("🔎 Outputs: \(outputs)")
+        print("🔎 AvailableInputs: \(availableInputs)")
+        print("🔎 PreferredInput: \(preferred)")
     }
     
     /// Deactivates the audio session
@@ -169,13 +191,62 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             
             // Create recording URL
             let recordingURL = generateRecordingURL()
-            
+
             // Configure audio recorder
             let audioRecorder = try createAudioRecorder(url: recordingURL)
             self.audioRecorder = audioRecorder
             
-            // Start recording
-            guard audioRecorder.record() else {
+            // Prepare and start recording
+            audioRecorder.prepareToRecord()
+            var started = audioRecorder.record()
+            
+            if !started {
+                // Log current route and try a fallback configuration without A2DP and with voiceChat mode
+                logAudioSessionRoute("initial")
+                print("⚠️ BackgroundAudioService: record() returned false, attempting fallback reconfiguration")
+                
+                let session = AVAudioSession.sharedInstance()
+                try session.setActive(false)
+                try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .defaultToSpeaker])
+                try session.setActive(true)
+                
+                // Prefer built-in mic if available
+                if let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
+                    try? session.setPreferredInput(builtIn)
+                }
+                
+                logAudioSessionRoute("fallback")
+                
+                // Recreate recorder under new session configuration
+                let fallbackRecorder = try createAudioRecorder(url: recordingURL)
+                self.audioRecorder = fallbackRecorder
+                fallbackRecorder.prepareToRecord()
+                started = fallbackRecorder.record()
+            }
+
+            // Final fallback: try .record category with default mode and no options
+            if !started {
+                let session = AVAudioSession.sharedInstance()
+                print("⚠️ BackgroundAudioService: voiceChat fallback failed, attempting .record category")
+                try session.setActive(false)
+                try session.setCategory(.record, mode: .default, options: [])
+                try session.setActive(true)
+                
+                // Prefer built-in mic if available
+                if let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
+                    try? session.setPreferredInput(builtIn)
+                }
+                
+                logAudioSessionRoute("record-category")
+                
+                let finalRecorder = try createAudioRecorder(url: recordingURL)
+                self.audioRecorder = finalRecorder
+                finalRecorder.prepareToRecord()
+                started = finalRecorder.record()
+            }
+            
+            guard started else {
+                logAudioSessionRoute("final-fail")
                 throw AudioServiceError.recordingStartFailed
             }
             
@@ -289,14 +360,16 @@ final class BackgroundAudioService: NSObject, ObservableObject {
     
     /// Creates and configures a new AVAudioRecorder instance
     private func createAudioRecorder(url: URL) throws -> AVAudioRecorder {
-        let settings: [String: Any] = [
+        var settings: [String: Any] = [
             AVFormatIDKey: Int(AudioConfiguration.audioFormat),
             AVSampleRateKey: sampleRate,
             AVNumberOfChannelsKey: numberOfChannels,
             AVEncoderAudioQualityKey: AudioConfiguration.audioQuality.rawValue,
-            AVEncoderBitRateKey: 320000, // 320 kbps for high quality
             AVSampleRateConverterAudioQualityKey: AVAudioQuality.max.rawValue
         ]
+        
+        // Leave bit rate unspecified to let the system choose a compatible value.
+        // Some device/route combinations reject certain explicit bitrates and cause record() to fail.
         
         let recorder = try AVAudioRecorder(url: url, settings: settings)
         recorder.delegate = self
@@ -337,8 +410,32 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             return
         }
         
+        let elapsed = recorder.currentTime
+        let remaining = max(0, config.maxRecordingDuration - elapsed)
+        
         DispatchQueue.main.async {
-            self.recordingTime = recorder.currentTime
+            // Update elapsed time
+            self.recordingTime = elapsed
+            
+            // Countdown behavior: show when < 10s remaining
+            if remaining > 0 && remaining < 10.0 {
+                self.isInCountdown = true
+                self.remainingTime = remaining
+            } else {
+                self.isInCountdown = false
+                self.remainingTime = 0
+            }
+            
+            // Auto-stop when exceeding max duration
+            if elapsed >= self.config.maxRecordingDuration {
+                self.recordingStoppedAutomatically = true
+                self.autoStopMessage = "Recording stopped automatically after \(self.config.formattedMaxDuration)"
+                self.isInCountdown = false
+                self.remainingTime = 0
+                
+                // Stop recording to trigger delegate callbacks
+                self.stopRecording()
+            }
         }
     }
     

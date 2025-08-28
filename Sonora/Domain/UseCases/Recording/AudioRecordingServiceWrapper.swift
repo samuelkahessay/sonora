@@ -26,6 +26,10 @@ final class AudioRecordingServiceWrapper: AudioRepository {
     var recordingTime: TimeInterval { service.recordingTime }
     var hasMicrophonePermission: Bool { service.hasPermission }
     var isBackgroundTaskActive: Bool { false } // Not available in legacy service
+    var recordingStoppedAutomatically: Bool { service.recordingStoppedAutomatically }
+    var autoStopMessage: String? { service.autoStopMessage }
+    var isInCountdown: Bool { service.isInCountdown }
+    var remainingTime: TimeInterval { service.remainingTime }
     
     // MARK: - Recording Control Methods
     func startRecording() async throws -> UUID {

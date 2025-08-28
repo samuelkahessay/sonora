@@ -207,7 +207,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     }
     
     /// Start recording synchronously (for use case compatibility)
-    func startRecordingSync() {
+    func startRecordingSync() throws {
         // Stop any playing audio before recording
         if isPlaying {
             stopAudio()
@@ -215,13 +215,12 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         
         print("🎵 AudioRepositoryImpl: Starting background recording (sync)")
         
-        Task {
-            do {
-                try backgroundAudioService.startRecording()
-                print("🎵 AudioRepositoryImpl: Background recording started successfully (sync)")
-            } catch {
-                print("❌ AudioRepositoryImpl: Failed to start recording (sync): \(error)")
-            }
+        do {
+            try backgroundAudioService.startRecording()
+            print("🎵 AudioRepositoryImpl: Background recording started successfully (sync)")
+        } catch {
+            print("❌ AudioRepositoryImpl: Failed to start recording (sync): \(error)")
+            throw error
         }
     }
     
@@ -254,6 +253,26 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     /// Check if background task is active
     var isBackgroundTaskActive: Bool {
         return backgroundAudioService.backgroundTaskActive
+    }
+    
+    /// Whether the recording was stopped automatically (e.g., by a limit)
+    var recordingStoppedAutomatically: Bool {
+        return backgroundAudioService.recordingStoppedAutomatically
+    }
+    
+    /// Message describing why the recording stopped automatically
+    var autoStopMessage: String? {
+        return backgroundAudioService.autoStopMessage
+    }
+    
+    /// Whether a countdown is active before auto-stop
+    var isInCountdown: Bool {
+        return backgroundAudioService.isInCountdown
+    }
+    
+    /// Remaining time in countdown (if any)
+    var remainingTime: TimeInterval {
+        return backgroundAudioService.remainingTime
     }
     
     // MARK: - Recording Callbacks

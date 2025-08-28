@@ -24,16 +24,7 @@ final class StartRecordingUseCase: StartRecordingUseCaseProtocol {
         self.logger = logger
     }
     
-    // MARK: - Convenience Initializer (for backward compatibility)
-    convenience init(audioRecordingService: AudioRecordingService) {
-        // Create a wrapper that implements AudioRepository protocol
-        // This is a temporary solution for backward compatibility
-        self.init(
-            audioRepository: AudioRecordingServiceWrapper(service: audioRecordingService),
-            operationCoordinator: OperationCoordinator.shared,
-            logger: Logger.shared
-        )
-    }
+    
     
     // MARK: - Use Case Execution
     func execute() async throws -> UUID? {
@@ -55,7 +46,7 @@ final class StartRecordingUseCase: StartRecordingUseCaseProtocol {
         do {
             // Check if already recording
             if let audioRepoImpl = audioRepository as? AudioRepositoryImpl {
-                await MainActor.run {
+                try await MainActor.run {
                     guard !audioRepoImpl.isRecording else {
                         Task {
                             await operationCoordinator.failOperation(operationId, error: RecordingError.alreadyRecording)
@@ -77,7 +68,7 @@ final class StartRecordingUseCase: StartRecordingUseCaseProtocol {
                     // TODO: Pass memoId to BackgroundAudioService
                     
                     // Start background recording synchronously
-                    audioRepoImpl.startRecordingSync()
+                    try audioRepoImpl.startRecordingSync()
                     
                     logger.info("Background recording started successfully", category: .audio, context: context)
                 }

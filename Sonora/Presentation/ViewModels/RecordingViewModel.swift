@@ -12,7 +12,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     private let stopRecordingUseCase: StopRecordingUseCaseProtocol
     private let requestPermissionUseCase: RequestMicrophonePermissionUseCaseProtocol
     private let handleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol
-    private let audioRecordingService: AudioRecordingService // Still needed for state updates
+    private let audioRepository: AudioRepository
     private let operationCoordinator: OperationCoordinator
     private var cancellables = Set<AnyCancellable>()
     
@@ -139,14 +139,14 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         stopRecordingUseCase: StopRecordingUseCaseProtocol,
         requestPermissionUseCase: RequestMicrophonePermissionUseCaseProtocol,
         handleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol,
-        audioRecordingService: AudioRecordingService,
+        audioRepository: AudioRepository,
         operationCoordinator: OperationCoordinator = OperationCoordinator.shared
     ) {
         self.startRecordingUseCase = startRecordingUseCase
         self.stopRecordingUseCase = stopRecordingUseCase
         self.requestPermissionUseCase = requestPermissionUseCase
         self.handleNewRecordingUseCase = handleNewRecordingUseCase
-        self.audioRecordingService = audioRecordingService
+        self.audioRepository = audioRepository
         self.operationCoordinator = operationCoordinator
         
         setupBindings()
@@ -167,16 +167,16 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     /// Convenience initializer using DIContainer
     convenience init() {
         let container = DIContainer.shared
-        let audioService = container.audioRecordingService()
+        let audioRepository = container.audioRepository()
         let memoRepository = container.memoRepository()
         let logger = container.logger()
         
         self.init(
-            startRecordingUseCase: StartRecordingUseCase(audioRecordingService: audioService),
-            stopRecordingUseCase: StopRecordingUseCase(audioRecordingService: audioService),
+            startRecordingUseCase: StartRecordingUseCase(audioRepository: audioRepository),
+            stopRecordingUseCase: StopRecordingUseCase(audioRepository: audioRepository),
             requestPermissionUseCase: RequestMicrophonePermissionUseCase(logger: logger),
             handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository),
-            audioRecordingService: audioService,
+            audioRepository: audioRepository,
             operationCoordinator: container.operationCoordinator()
         )
     }
@@ -198,16 +198,17 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     }
     
     private func updateFromService() {
-        isRecording = audioRecordingService.isRecording
-        recordingTime = audioRecordingService.recordingTime
+        isRecording = audioRepository.isRecording
+        recordingTime = audioRepository.recordingTime
         if isRecording {
             print("🔄 RecordingViewModel: Syncing timer - recordingTime: \(String(format: "%.1f", recordingTime))s")
         }
-        hasPermission = audioRecordingService.hasPermission
-        recordingStoppedAutomatically = audioRecordingService.recordingStoppedAutomatically
-        autoStopMessage = audioRecordingService.autoStopMessage
-        isInCountdown = audioRecordingService.isInCountdown
-        remainingTime = audioRecordingService.remainingTime
+        hasPermission = audioRepository.hasMicrophonePermission
+        // Consume countdown and auto-stop state from AudioRepository
+        isInCountdown = audioRepository.isInCountdown
+        remainingTime = audioRepository.remainingTime
+        recordingStoppedAutomatically = audioRepository.recordingStoppedAutomatically
+        autoStopMessage = audioRepository.autoStopMessage
         
         // Update alert state
         showAutoStopAlert = recordingStoppedAutomatically
@@ -250,7 +251,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     
     private func setupRecordingCallback() {
         print("🔧 RecordingViewModel: Setting up callback function")
-        audioRecordingService.onRecordingFinished = { [weak self] url in
+        audioRepository.setRecordingFinishedHandler { [weak self] url in
             Task { @MainActor in
                 print("🎤 RecordingViewModel: Recording finished callback triggered for \(url.lastPathComponent)")
                 self?.handleRecordingFinished(at: url)

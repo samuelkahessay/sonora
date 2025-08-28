@@ -12,6 +12,10 @@ protocol AudioRepository: ObservableObject {
     var recordingTime: TimeInterval { get }
     var hasMicrophonePermission: Bool { get }
     var isBackgroundTaskActive: Bool { get }
+    var recordingStoppedAutomatically: Bool { get }
+    var autoStopMessage: String? { get }
+    var isInCountdown: Bool { get }
+    var remainingTime: TimeInterval { get }
     
     // MARK: - File Management
     func loadAudioFiles() -> [Memo]

@@ -24,15 +24,7 @@ final class StopRecordingUseCase: StopRecordingUseCaseProtocol {
         self.logger = logger
     }
     
-    // MARK: - Convenience Initializer (for backward compatibility)
-    convenience init(audioRecordingService: AudioRecordingService) {
-        // Create a wrapper that implements AudioRepository protocol
-        self.init(
-            audioRepository: AudioRecordingServiceWrapper(service: audioRecordingService),
-            operationCoordinator: OperationCoordinator.shared,
-            logger: Logger.shared
-        )
-    }
+    
     
     // MARK: - Use Case Execution
     func execute(memoId: UUID) async throws {
@@ -94,4 +86,3 @@ final class StopRecordingUseCase: StopRecordingUseCaseProtocol {
         }
     }
 }
-
