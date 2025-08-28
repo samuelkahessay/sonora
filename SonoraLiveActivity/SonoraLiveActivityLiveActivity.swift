@@ -32,7 +32,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                             
-                            Text(context.state.isCountdown ? "Auto-stop countdown" : "Recording in progress")
+                            Text(context.state.isCountdown ? "Auto-stop countdown" : "Live")
                                 .font(.caption)
                                 .fontWeight(.medium)
                                 .foregroundStyle(.white.opacity(0.8))
@@ -266,7 +266,7 @@ private func countdownString(_ remaining: TimeInterval) -> String {
 private func shortCountdown(_ remaining: TimeInterval) -> String { countdownString(remaining) }
 private func timerString(from start: Date, isCountdown: Bool, remaining: TimeInterval?) -> String {
     if isCountdown, let rem = remaining { return "Ends in " + countdownString(rem) }
-    return "Recording " + elapsedString(from: start)
+    return elapsedString(from: start)
 }
 
 // Previews omitted for simplicity
