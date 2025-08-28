@@ -32,6 +32,8 @@ final class DIContainer: ObservableObject, Resolver {
     private var _startRecordingUseCase: StartRecordingUseCase!
     private var _systemNavigator: (any SystemNavigator)?
     private var _liveActivityService: (any LiveActivityServiceProtocol)?
+    private var _eventBus: (any EventBusProtocol)?
+    private var _eventHandlerRegistry: (any EventHandlerRegistryProtocol)?
     
     // MARK: - Initialization
     private init() {
@@ -106,6 +108,7 @@ final class DIContainer: ObservableObject, Resolver {
         
         // Initialize core infrastructure
         self._logger = logger ?? Logger.shared
+        self._eventBus = EventBus.shared
         self._transcriptionRepository = TranscriptionRepositoryImpl()
         self._analysisRepository = AnalysisRepositoryImpl()
         
@@ -120,6 +123,8 @@ final class DIContainer: ObservableObject, Resolver {
         self._transcriptionAPI = TranscriptionService()
         self._analysisService = analysisService ?? AnalysisService()
         // Coordinator already initialized above
+        // Initialize Event Handler Registry with shared EventBus (via protocol)
+        self._eventHandlerRegistry = EventHandlerRegistry.shared
         
         // Initialize MemoRepository with Use Case dependencies
         guard let trRepo = _transcriptionRepository, let trAPI = _transcriptionAPI else {
@@ -243,6 +248,20 @@ final class DIContainer: ObservableObject, Resolver {
         ensureConfigured()
         guard let service = _liveActivityService else { fatalError("DIContainer not configured: liveActivityService") }
         return service
+    }
+    
+    /// Get event bus (protocol)
+    func eventBus() -> any EventBusProtocol {
+        ensureConfigured()
+        guard let bus = _eventBus else { fatalError("DIContainer not configured: eventBus") }
+        return bus
+    }
+    
+    /// Get event handler registry (protocol)
+    func eventHandlerRegistry() -> any EventHandlerRegistryProtocol {
+        ensureConfigured()
+        guard let reg = _eventHandlerRegistry else { fatalError("DIContainer not configured: eventHandlerRegistry") }
+        return reg
     }
     
 }

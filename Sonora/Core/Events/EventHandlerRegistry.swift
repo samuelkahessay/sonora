@@ -314,3 +314,15 @@ public final class EventHandlerRegistry {
                     context: LogContext())
     }
 }
+
+// MARK: - Protocol for DI
+
+@MainActor
+public protocol EventHandlerRegistryProtocol {
+    func registerAllHandlers()
+    func testEventFlow()
+    var detailedStatus: String { get }
+    func getHandler<T>(_ handlerName: String, as type: T.Type) -> T?
+}
+
+extension EventHandlerRegistry: EventHandlerRegistryProtocol {}

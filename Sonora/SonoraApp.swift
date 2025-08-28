@@ -14,7 +14,7 @@ struct SonoraApp: App {
         // Configure DI and register event handlers before any views initialize
         DIContainer.shared.configure()
         print("🚀 SonoraApp: DIContainer configured with shared services (App init)")
-        EventHandlerRegistry.shared.registerAllHandlers()
+        DIContainer.shared.eventHandlerRegistry().registerAllHandlers()
         print("🎯 SonoraApp: Event handlers registered (App init)")
     }
     var body: some Scene {
@@ -26,11 +26,11 @@ struct SonoraApp: App {
                 #if DEBUG
                 .onAppear {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        EventHandlerRegistry.shared.testEventFlow()
+                        DIContainer.shared.eventHandlerRegistry().testEventFlow()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             print("🔍 Event Handler Status:")
-                            print(EventHandlerRegistry.shared.detailedStatus)
-                            if let memoHandler = EventHandlerRegistry.shared.getHandler("MemoEventHandler", as: MemoEventHandler.self) {
+                            print(DIContainer.shared.eventHandlerRegistry().detailedStatus)
+                            if let memoHandler = DIContainer.shared.eventHandlerRegistry().getHandler("MemoEventHandler", as: MemoEventHandler.self) {
                                 print("📊 MemoEventHandler Statistics:")
                                 print(memoHandler.handlerStatistics)
                             }
