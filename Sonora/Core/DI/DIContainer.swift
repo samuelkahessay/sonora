@@ -129,6 +129,7 @@ final class DIContainer: ObservableObject, Resolver {
         )
         
         self._memoRepository = MemoRepositoryImpl(
+            transcriptionRepository: trRepo,
             startTranscriptionUseCase: startTranscriptionUseCase,
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase

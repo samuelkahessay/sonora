@@ -40,16 +40,11 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository, TranscriptionS
     @Published private(set) var playingMemo: Memo?
     @Published private(set) var isPlaying: Bool = false
     
-    // TranscriptionServiceProtocol requirement - delegate to repository
+    // TranscriptionServiceProtocol requirement - delegate to injected repository
+    private let transcriptionRepository: any TranscriptionRepository
     var transcriptionStates: [String: TranscriptionState] {
-        get {
-            let container = DIContainer.shared
-            return container.transcriptionRepository().transcriptionStates
-        }
-        set {
-            let container = DIContainer.shared
-            container.transcriptionRepository().transcriptionStates = newValue
-        }
+        get { transcriptionRepository.transcriptionStates }
+        set { transcriptionRepository.transcriptionStates = newValue }
     }
     
     private var player: AVAudioPlayer?
@@ -66,28 +61,35 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository, TranscriptionS
     
     // MARK: - Initialization
     init(
-        startTranscriptionUseCase: StartTranscriptionUseCaseProtocol? = nil,
-        getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol? = nil,
-        retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol? = nil
+        transcriptionRepository: any TranscriptionRepository,
+        startTranscriptionUseCase: StartTranscriptionUseCaseProtocol,
+        getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
+        retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
     ) {
-        // Initialize Use Cases with DI Container defaults if not provided
-        let container = DIContainer.shared
-        self.startTranscriptionUseCase = startTranscriptionUseCase ?? StartTranscriptionUseCase(
-            transcriptionRepository: container.transcriptionRepository(),
-            transcriptionAPI: container.transcriptionAPI()
-        )
-        self.getTranscriptionStateUseCase = getTranscriptionStateUseCase ?? GetTranscriptionStateUseCase(
-            transcriptionRepository: container.transcriptionRepository()
-        )
-        self.retryTranscriptionUseCase = retryTranscriptionUseCase ?? RetryTranscriptionUseCase(
-            transcriptionRepository: container.transcriptionRepository(),
-            transcriptionAPI: container.transcriptionAPI()
-        )
-        
+        self.transcriptionRepository = transcriptionRepository
+        self.startTranscriptionUseCase = startTranscriptionUseCase
+        self.getTranscriptionStateUseCase = getTranscriptionStateUseCase
+        self.retryTranscriptionUseCase = retryTranscriptionUseCase
+
         self.memosDirectoryPath = documentsPath.appendingPathComponent("Memos")
         self.indexPath = memosDirectoryPath.appendingPathComponent("index.json")
         createDirectoriesIfNeeded()
         loadMemos()
+    }
+
+    /// Convenience initializer for tests or simple composition (no DIContainer usage)
+    convenience init() {
+        let trRepo = TranscriptionRepositoryImpl()
+        let api = TranscriptionService()
+        let start = StartTranscriptionUseCase(transcriptionRepository: trRepo, transcriptionAPI: api)
+        let get = GetTranscriptionStateUseCase(transcriptionRepository: trRepo)
+        let retry = RetryTranscriptionUseCase(transcriptionRepository: trRepo, transcriptionAPI: api)
+        self.init(
+            transcriptionRepository: trRepo,
+            startTranscriptionUseCase: start,
+            getTranscriptionStateUseCase: get,
+            retryTranscriptionUseCase: retry
+        )
     }
     
     // MARK: - Directory Management
