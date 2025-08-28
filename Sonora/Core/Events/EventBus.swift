@@ -186,6 +186,7 @@ public final class EventBus: ObservableObject {
 // MARK: - EventBus Protocol
 
 /// Protocol for dependency injection and testing
+@MainActor
 public protocol EventBusProtocol {
     func publish(_ event: AppEvent)
     func subscribe(to eventType: AppEvent.Type, handler: @escaping (AppEvent) -> Void) -> UUID
@@ -198,6 +199,7 @@ extension EventBus: EventBusProtocol {}
 // MARK: - Subscription Management Helper
 
 /// Helper class for managing event bus subscriptions with automatic cleanup
+@MainActor
 public final class EventSubscriptionManager {
     private var subscriptionIds: Set<UUID> = []
     private let eventBus: EventBusProtocol
@@ -216,11 +218,13 @@ public final class EventSubscriptionManager {
     }
     
     /// Clean up all managed subscriptions
-    public func cleanup() {
-        for subscriptionId in subscriptionIds {
-            eventBus.unsubscribe(subscriptionId)
+    nonisolated public func cleanup() {
+        Task { @MainActor in
+            for subscriptionId in self.subscriptionIds {
+                self.eventBus.unsubscribe(subscriptionId)
+            }
+            self.subscriptionIds.removeAll()
         }
-        subscriptionIds.removeAll()
     }
     
     deinit {

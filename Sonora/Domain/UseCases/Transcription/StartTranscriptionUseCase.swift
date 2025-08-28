@@ -110,9 +110,11 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 transcriptionRepository.saveTranscriptionText(transcriptionText, for: memo.id)
             }
             
-            // Publish transcriptionCompleted event
+            // Publish transcriptionCompleted event on main actor
             logger.debug("Publishing transcriptionCompleted event", category: .transcription, context: context)
-            eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: transcriptionText))
+            await MainActor.run { [eventBus] in
+                eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: transcriptionText))
+            }
             
             // Complete the transcription operation
             await operationCoordinator.completeOperation(operationId)

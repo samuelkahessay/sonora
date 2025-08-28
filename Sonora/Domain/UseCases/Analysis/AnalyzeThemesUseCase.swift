@@ -65,10 +65,12 @@ final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
             
             print("✅ AnalyzeThemesUseCase: Analysis cached successfully")
             
-            // Publish analysisCompleted event
+            // Publish analysisCompleted event on main actor
             print("📡 AnalyzeThemesUseCase: Publishing analysisCompleted event for memo \(memoId)")
             let resultSummary = "\(result.data.themes.count) themes, sentiment: \(result.data.sentiment)"
-            eventBus.publish(.analysisCompleted(memoId: memoId, type: .themes, result: resultSummary))
+            await MainActor.run { [eventBus] in
+                eventBus.publish(.analysisCompleted(memoId: memoId, type: .themes, result: resultSummary))
+            }
             
             return result
             

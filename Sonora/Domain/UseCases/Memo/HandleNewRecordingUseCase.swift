@@ -40,10 +40,12 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
             // Verify processing was successful
             try verifyRecordingProcessed(memo)
             
-            // Publish memoCreated event
+            // Publish memoCreated event on main actor
             print("📡 HandleNewRecordingUseCase: Publishing memoCreated event for memo \(memo.id)")
             let domainMemo = memo.toDomain()
-            eventBus.publish(.memoCreated(domainMemo))
+            await MainActor.run { [eventBus] in
+                eventBus.publish(.memoCreated(domainMemo))
+            }
             
             print("✅ HandleNewRecordingUseCase: Successfully processed new recording: \(memo.filename)")
             return memo

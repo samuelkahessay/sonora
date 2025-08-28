@@ -92,9 +92,11 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol {
             logger.analysis("Content analysis cached successfully", 
                           context: LogContext(correlationId: correlationId, additionalInfo: ["cached": true]))
             
-            // Publish analysisCompleted event
+            // Publish analysisCompleted event on main actor
             print("📡 AnalyzeContentUseCase: Publishing analysisCompleted event for memo \(memoId)")
-            eventBus.publish(.analysisCompleted(memoId: memoId, type: .analysis, result: result.data.summary))
+            await MainActor.run { [eventBus] in
+                eventBus.publish(.analysisCompleted(memoId: memoId, type: .analysis, result: result.data.summary))
+            }
             
             return result
             

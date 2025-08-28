@@ -65,10 +65,12 @@ final class AnalyzeTodosUseCase: AnalyzeTodosUseCaseProtocol {
             
             print("✅ AnalyzeTodosUseCase: Analysis cached successfully")
             
-            // Publish analysisCompleted event
+            // Publish analysisCompleted event on main actor
             print("📡 AnalyzeTodosUseCase: Publishing analysisCompleted event for memo \(memoId)")
             let resultSummary = "\(result.data.todos.count) todos identified"
-            eventBus.publish(.analysisCompleted(memoId: memoId, type: .todos, result: resultSummary))
+            await MainActor.run { [eventBus] in
+                eventBus.publish(.analysisCompleted(memoId: memoId, type: .todos, result: resultSummary))
+            }
             
             return result
             

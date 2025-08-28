@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 protocol AnalysisRepository: ObservableObject {
     func saveAnalysisResult<T: Codable>(_ result: AnalyzeEnvelope<T>, for memoId: UUID, mode: AnalysisMode)
     func getAnalysisResult<T: Codable>(for memoId: UUID, mode: AnalysisMode, responseType: T.Type) -> AnalyzeEnvelope<T>?

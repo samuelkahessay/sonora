@@ -106,9 +106,11 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
             logger.analysis("TLDR analysis cached successfully", 
                           context: LogContext(correlationId: correlationId, additionalInfo: ["cached": true]))
             
-            // Publish analysisCompleted event
+            // Publish analysisCompleted event on main actor
             logger.debug("Publishing analysisCompleted event for TLDR analysis", category: .analysis, context: context)
-            eventBus.publish(.analysisCompleted(memoId: memoId, type: .tldr, result: result.data.summary))
+            await MainActor.run { [eventBus] in
+                eventBus.publish(.analysisCompleted(memoId: memoId, type: .tldr, result: result.data.summary))
+            }
             
             // Complete the analysis operation
             await operationCoordinator.completeOperation(operationId)
@@ -129,5 +131,4 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
         }
     }
     }
-
 

@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 protocol TranscriptionRepository: ObservableObject {
     var transcriptionStates: [String: TranscriptionState] { get set }
     
