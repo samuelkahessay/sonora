@@ -54,7 +54,7 @@ Sonora/
 │   └── Protocols/             # 🔌 Repository contracts
 ├── Presentation/ViewModels/   # 🎬 UI coordinators (hybrid patterns)
 ├── Data/Repositories/         # 💾 Modern data access
-└── [Root Services]            # External services
+└── Data/Services/             # External services
 ```
 
 ## 🚀 Development Patterns
@@ -262,33 +262,20 @@ launch_app_sim({ simulatorName: 'iPhone 16', bundleId: 'com.samuelkahessay.Sonor
 - ✅ **Convenience constructors**: 18 lines removed from Use Cases
 - ✅ **Empty Services/ directory**: Removed after service reorganization
 
-#### **Modern Architecture Components**
-**Domain Layer (31 files):**
-```
-Domain/
-├── UseCases/ - 16 Use Cases organized by business domain
-├── Models/ - 3 pure domain entities  
-└── Protocols/ - 8 repository and service contracts
-```
+#### **Modern Architecture Components (Current)**
 
-Note: The memo model is unified as `Memo` across layers.
+- Domain
+  - Use Cases: Recording, Transcription, Analysis, Memo, Live Activity
+  - Models: `Memo`, `DomainAnalysisResult` (+ types/status)
+  - Protocols: repositories/services (e.g., `MemoRepository`, `TranscriptionAPI`)
 
-**Data Layer (10 files):**
-```
-Data/
-├── Repositories/ - 4 repositories implementing Domain protocols
-└── Services/ - 6 services handling external dependencies
-    ├── TranscriptionService.swift, AnalysisService.swift
-    ├── AudioRecorder.swift, BackgroundAudioService.swift  
-    ├── MemoMetadataManager.swift, LiveActivityService.swift
-```
+- Data
+  - Repositories: `MemoRepositoryImpl`, `TranscriptionRepositoryImpl`, `AnalysisRepositoryImpl`, `AudioRepositoryImpl`
+  - Services: `TranscriptionService`, `AnalysisService`, `BackgroundAudioService`, `LiveActivityService`, `SystemNavigatorImpl`, `MemoMetadataManager`
 
-**Presentation Layer (4 ViewModels):**
-```
-Presentation/ViewModels/ - Protocol-based dependency injection
-├── RecordingViewModel, MemoListViewModel
-├── MemoDetailViewModel, OperationStatusViewModel  
-```
+- Presentation
+  - ViewModels: `RecordingViewModel`, `MemoListViewModel`, `MemoDetailViewModel`, `OperationStatusViewModel`
+  - Views/Components: `MemosView`, `MemoDetailView`, `TranscriptionStatusView`, `AnalysisResultsView`
 
 #### **Dependency Injection Excellence**
 - ✅ **Protocol-First**: All service access returns abstractions
@@ -296,16 +283,11 @@ Presentation/ViewModels/ - Protocol-based dependency injection
 - ✅ **SwiftUI Integration**: Environment support with proper lifecycle
 - ✅ **Constructor Injection**: Consistent patterns throughout
 
-### **REMAINING WORK** ⚠️
+### **REMAINING WORK** ⚠️ (Polish)
 
-#### **Phase 6: Recording System Polish** (8% remaining)
-**Technical Debt Items:**
-1. **StartRecordingUseCase**: Simplify dual-path logic 
-2. **RecordingViewModel**: Modernize to use AudioRepository constructor
-3. **AudioRecordingServiceWrapper**: Remove backward compatibility layer
-4. **Integration Testing**: Comprehensive recording flow validation
-
-**Impact**: Functional system with minor architectural inconsistencies
+1. Prefer constructor injection everywhere; avoid `.shared` where feasible.
+2. Continue shifting ViewModel polling to publisher-driven state from repositories.
+3. Expand tests for operation metrics and event flows.
 
 ### **MIGRATION SUCCESS METRICS** 📊
 
@@ -320,6 +302,5 @@ Presentation/ViewModels/ - Protocol-based dependency injection
 
 ---
 
-For comprehensive architecture details, see README.md  
-For testing procedures, see docs/testing/  
-For migration status, see ARCHITECTURE_MIGRATION.md
+For architecture details, see README.md and ARCHITECTURE.md  
+For testing procedures, see docs/testing/

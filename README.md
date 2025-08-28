@@ -5,19 +5,19 @@ An iOS app for recording voice memos with transcription and AI analysis. The cod
 ## 🚀 Project Overview
 
 Sonora combines:
-- **Voice Recording** with background support and Live Activities
-- **Real-time Transcription** using Whisper API
-- **AI Analysis** for summaries, themes, todos, and insights
-- **Operation Management** with thread-safe concurrency coordination
-- **Event-Driven Architecture** for reactive feature interactions
+- Voice recording with background support and Live Activities
+- Real-time transcription via a `TranscriptionAPI` implementation
+- AI analysis for summaries, themes, todos, and content
+- Operation management with thread-safe coordination and progress
+- Event-driven architecture for decoupled cross-feature reactions
 
 ### Key Features
-- Global 60-second recording limit with 10-second countdown
-- Background audio recording with Live Activity hooks
-- Automatic transcription with progress tracking
-- Multiple AI analysis modes (TLDR, Themes, Todos, Content Analysis)
-- Real-time operation status and cancellation
-- Structured logging and robust error handling
+- Global 60s recording limit with 10s auto-stop countdown
+- Background audio recording (with Live Activity hooks)
+- Auto-transcription with retry and status persistence
+- Multiple AI analysis modes (TLDR, Themes, Todos, Content)
+- Operation tracking (queue position, progress, cancellation)
+- Structured logging and unified error mapping
 - Protocol-first dependency injection
 
 ## 📐 Architecture Overview
@@ -89,13 +89,13 @@ Sonora/
 │   │       ├── LoadMemosUseCase.swift
 │   │       └── PlayMemoUseCase.swift
 │   ├── Models/
-│   │   ├── Memo.swift                  # 📄 Rich domain entity
+│   │   ├── Memo.swift                  # 📄 Domain entity (single model)
 │   │   └── DomainAnalysisResult.swift  # 🧠 Analysis domain model
 │   ├── Protocols/                      # 🔌 Repository & service contracts
 │   │   ├── MemoRepository.swift
 │   │   ├── AnalysisServiceProtocol.swift
-│   │   └── TranscriptionServiceProtocol.swift
-│   
+│   │   └── TranscriptionAPI.swift
+│
 ├── Presentation/                   # UI & View Logic
 │   └── ViewModels/                 # 🎬 Presentation logic coordinators
 │       ├── RecordingViewModel.swift        # 🎤 Recording state & operations
@@ -109,7 +109,10 @@ Sonora/
 │   │   └── TranscriptionRepositoryImpl.swift
 │   └── Services/                  # 🌐 External API & system integrations
 │       ├── BackgroundAudioService.swift
-│       └── LiveActivityService.swift
+│       ├── LiveActivityService.swift
+│       ├── TranscriptionService.swift
+│       ├── AnalysisService.swift
+│       └── MemoMetadataManager.swift
 ├── Views/                         # 🎨 SwiftUI view components
 │   ├── Components/
 │   │   ├── AnalysisResultsView.swift
@@ -139,8 +142,21 @@ Sonora is designed for clear, iterative development with strong boundaries betwe
 
 ### Memo Model
 - Single model: `Memo` is used across Domain, Data, and Presentation layers.
-- Key fields: `id`, `filename`, `fileURL`, `creationDate`, `transcriptionStatus`, `analysisResults`.
-- Helpers: audio `duration` and `durationString` are provided via an extension on `Memo` in the Data layer.
+- Fields: `id`, `filename`, `fileURL`, `creationDate`, `transcriptionStatus`, `analysisResults`.
+- Helpers: audio `duration` and `durationString` via `Memo+AudioMetadata` (Data layer extension).
+
+### Operations & Events
+- All long-running work (recording, transcription, analysis) registers with `OperationCoordinator`.
+- `OperationStatus` and delegate updates power UI (queue position, progress, metrics).
+- `EventBus` publishes `AppEvent` (e.g., `memoCreated`, `transcriptionCompleted`). Handlers (e.g., `LiveActivityEventHandler`, `MemoEventHandler`) react without tight coupling.
+
+### Dependency Injection
+- Composition root: `Core/DI/DIContainer.swift`.
+- Prefer constructor injection of protocols. Convenience initializers may resolve from `DIContainer` only at the app edge.
+
+### Error Handling & Logging
+- Map system/IO/service errors to domain errors via `ErrorMapping` and `SonoraError`.
+- Use `Logger` with `LogContext` for structured logs and correlation IDs in use cases.
 
 ### 1. **Follow the Flow**: Domain → Use Case → ViewModel → View
 ```swift
@@ -167,6 +183,22 @@ final class MemoDetailViewModel: ObservableObject {
         }
     }
 }
+
+## 🧭 How Things Work Together
+
+- Recording: `RecordingViewModel` → `StartRecordingUseCase`/`StopRecordingUseCase` → `AudioRepository` (uses `BackgroundAudioService`).
+- Memo Creation: `MemoRepositoryImpl.handleNewRecording(at:)` persists files/metadata and triggers transcription.
+- Transcription: `StartTranscriptionUseCase` uses `TranscriptionAPI` and `TranscriptionRepository` for state + text persistence.
+- Analysis: `Analyze*UseCase` uses `AnalysisService` and `AnalysisRepository` to cache and serve results.
+- Event Flow: `AppEvent.memoCreated` → `MemoEventHandler` for analytics/logging; Live Activity handlers update the UI.
+
+## 🧪 Testing
+
+- See `docs/testing/` for guides:
+  - `background-recording.md`
+  - `enhanced-recording-flow.md`
+  - `transcription-integration.md`
+  - `docs/testing/README.md`
 
 // 4. View: Present to user
 Button("Analyze") { viewModel.analyzeCurrentMemo() }

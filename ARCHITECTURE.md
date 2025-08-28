@@ -16,16 +16,16 @@ Core (DI, Concurrency/Operations, Events, Logging, Config)
 ```
 
 Key systems:
-- Recording: `BackgroundAudioService` (AV + background tasks) via `AudioRepositoryImpl`
-- Transcription: `TranscriptionService` (network) + `TranscriptionRepository`
-- Analysis: `AnalysisService` (network) + `AnalysisRepository`
-- Operation Coordination: `OperationCoordinator` with conflict control and metrics
+- Recording: `BackgroundAudioService` (AV + background tasks) via `AudioRepositoryImpl` and `AudioRepository` protocol
+- Transcription: `TranscriptionService` (conforms to `TranscriptionAPI`) + `TranscriptionRepository`
+- Analysis: `AnalysisService` + `AnalysisRepository`
+- Operation Coordination: `OperationCoordinator` with conflict control, queueing, and metrics
 - Event Bus: App-wide event publication/subscription for decoupled features
 - DI: `DIContainer` composes dependencies at the app edge
 
 UI defaults:
-- Native SwiftUI styling, no custom “glass” modifiers
-- Global recording limit: 60 seconds with a 10-second countdown
+- Native SwiftUI styling
+- Global recording limit: 60 seconds, 10-second countdown
 - Override for testing: set `SONORA_MAX_RECORDING_DURATION` (seconds) in scheme
 
 ## Layer Details
@@ -37,12 +37,14 @@ Presentation (MVVM)
 Domain
 - Use cases encapsulate business logic: Recording, Transcription, Analysis, Memo management, Live Activity updates.
 - Protocols define contracts for repositories and services.
+- Models: Single memo model `Memo` (no adapters). Analysis domain models provide result structure.
 
 Data
 - Repositories isolate persistence and external dependencies (filesystem, AV, network) from domain logic:
   - `AudioRepositoryImpl` → Recording via `BackgroundAudioService`
-  - `TranscriptionRepositoryImpl`, `AnalysisRepositoryImpl`, `MemoRepositoryImpl`
-- Services encapsulate transport logic (e.g., `TranscriptionService`).
+  - `MemoRepositoryImpl` → Filesystem persistence and memo lifecycle
+  - `TranscriptionRepositoryImpl`, `AnalysisRepositoryImpl`
+- Services encapsulate transport logic: `TranscriptionService`, `AnalysisService`, `LiveActivityService`, `SystemNavigatorImpl`.
 
 Core
 - `DIContainer`: composition root; provides protocol-based access to shared instances.
@@ -54,44 +56,42 @@ Core
 
 - DI occurs at the app edge via `DIContainer`.
 - ViewModels use protocol-based dependencies. Convenience inits can resolve from the container, but core initializers accept protocols for testability.
-- Goal: move remaining DI lookups out of repositories and into top-level composition.
+- Repositories are composed in `DIContainer`; goal is constructor injection everywhere (minimize `.shared` calls).
 
 ## Concurrency & Operations
 
 - Long-running work (recording, transcription, analysis) is tracked by `OperationCoordinator` with conflict detection.
 - Delegates provide status updates; consumers can display progress, queue position, and metrics.
-- Use structured logging for traceability.
+- Use structured logging for traceability and correlation across flows.
 
 ## Events
 
 - `EventBus` publishes `AppEvent` (memo created, recording started/completed, transcription/analysis completed).
-- Handlers (e.g., `LiveActivityEventHandler`) subscribe to events to update Live Activities without coupling to feature code.
+- Handlers (e.g., `LiveActivityEventHandler`, `MemoEventHandler`, `CalendarEventHandler`, `RemindersEventHandler`) react without coupling to feature code.
 
 ## Current Status & Metrics
 
-- Clean Architecture: ~65–70%
-  - Strong separation and layering
-  - Remaining: DI lookups in data layer; repository/service boundary cleanup; singleton usage
-- MVVM: ~80–90%
-  - All primary screens use ViewModels; some polling timers remain
-- Overall: ~70–75%
+- Clean Architecture: High compliance (Memo model unified; adapters removed)
+  - Remaining: DI lookups in data layer convenience initializers; continue minimizing singletons
+- MVVM: High compliance (primary screens use ViewModels, direct UI work kept minimal)
+- Operations: OperationCoordinator in place with summaries/metrics APIs
 
 ## Gaps & Targeted Improvements
 
 1) Constructor injection in Data layer
-- Replace `DIContainer.shared` calls inside repositories with init-injected dependencies.
+- Continue to replace `.shared` calls and container lookups inside repositories with injected dependencies.
 
 2) Replace singletons with protocols
-- Introduce `OperationCoordinatorProtocol` and inject instead of using `.shared`.
+- `OperationCoordinatorProtocol` exists; prefer injection of protocol over direct `.shared`.
 
 3) Reduce polling
-- Replace `Timer.publish` in VMs with Combine publishers from repositories (memos, transcription state, recording time) where feasible.
+- Replace `Timer.publish` in VMs with Combine publishers surfaced by repositories/services where feasible.
 
 4) Orchestration boundaries
-- Remove repository conformance to service protocols (e.g., transcription service). Move orchestration to use cases or dedicated event handlers.
+- Keep orchestration in use cases or event handlers; repositories should remain thin data sources.
 
 5) Test surface
-- Move test harness use cases into the test target or guard with `#if DEBUG`.
+- Keep test harness use cases in test target or behind `#if DEBUG`.
 
 ## Best Practices
 
@@ -100,6 +100,7 @@ Core
 - Inject dependencies: prefer protocol-based initializer injection.
 - Track operations: register work with `OperationCoordinator` for consistent UX.
 - Log meaningfully: use structured logs with correlation when helpful.
+- Name entities simply: the domain entity is `Memo`; reserve suffixes for DTOs or persistence (e.g., `MemoDTO`, `MemoRecord`).
 
 ## Testing Notes
 
@@ -112,4 +113,3 @@ Core
 - Domain: `Sonora/Domain/UseCases/*`, `Sonora/Domain/Protocols/*`, `Sonora/Domain/Models/*`
 - Data: `Sonora/Data/Repositories/*`, `Sonora/Data/Services/*`
 - Presentation: `Sonora/Presentation/ViewModels/*`, `Sonora/Views/*`
-
