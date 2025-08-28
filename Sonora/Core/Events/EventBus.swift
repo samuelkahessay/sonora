@@ -9,7 +9,8 @@ public final class EventBus: ObservableObject {
     // MARK: - Singleton
     
     /// Shared instance for app-wide event distribution
-    public static let shared = EventBus()
+    private static let _shared = EventBus()
+    nonisolated(unsafe) public static var shared: EventBus { MainActor.assumeIsolated { _shared } }
     
     // MARK: - Private Properties
     

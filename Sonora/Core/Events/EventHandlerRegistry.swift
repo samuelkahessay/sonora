@@ -6,7 +6,8 @@ import Foundation
 public final class EventHandlerRegistry {
     
     // MARK: - Singleton
-    public static let shared = EventHandlerRegistry()
+    private static let _shared = EventHandlerRegistry()
+    nonisolated(unsafe) public static var shared: EventHandlerRegistry { MainActor.assumeIsolated { _shared } }
     
     // MARK: - Dependencies
     private let logger: any LoggerProtocol
