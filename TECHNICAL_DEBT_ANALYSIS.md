@@ -64,15 +64,7 @@ await MainActor.run {
 
 **Initial Assessment:** Timer-based polling is inefficient, concrete service dependency
 
-**Reality Check:**
-```swift
-// Timer polling (lines 187-194)
-Timer.publish(every: 0.1, on: .main, in: .common)
-    .autoconnect()
-    .sink { [weak self] _ in
-        self?.updateFromService()
-    }
-```
+**Reality Check:** (timer-based polling currently used for elapsed-time updates; can be reduced by exposing publishers)
 
 iOS Audio Recording State Management Requirements:
 - AVAudioRecorder doesn't provide reactive state updates
@@ -103,17 +95,6 @@ iOS Audio Recording State Management Requirements:
 
 **Initial Assessment:** Creates tight coupling, violates single initialization principle
 
-**Reality Check:**
-```swift
-convenience init(audioRecordingService: AudioRecordingService) {
-    self.init(
-        audioRepository: AudioRecordingServiceWrapper(service: audioRecordingService),
-        operationCoordinator: OperationCoordinator.shared,
-        logger: Logger.shared
-    )
-}
-```
-
 These constructors:
 - Enable gradual migration without breaking existing code
 - Provide clear deprecation path
@@ -124,7 +105,7 @@ These constructors:
 These CAN be safely removed IF:
 1. All ViewModels updated to use AudioRepository ✅
 2. All tests updated
-3. No other code depends on AudioRecordingService initialization
+3. No other code depends on legacy initializers
 
 **Current Status:** Safe to remove after ViewModel updates complete
 

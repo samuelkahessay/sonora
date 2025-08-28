@@ -98,12 +98,8 @@ This file contains a phased set of small, copy‑paste prompts you can give to y
 - Action: In `Data/Repositories/AudioRepositoryImpl.swift`, implement the added protocol members by delegating to `BackgroundAudioService`.
 - Acceptance: Compiles; start/stop still function via Background service.
 
-11) Update AudioRecordingServiceWrapper to forward
-- Action: In `Domain/UseCases/Recording/AudioRecordingServiceWrapper.swift`, implement new AudioRepository recording APIs by forwarding to `AudioRecordingService` (map names: `checkPermissions()` -> `checkMicrophonePermissions()`, `hasPermission` -> `hasMicrophonePermission`, etc.).
-- Acceptance: Compiles with expanded protocol.
-
-12) Use only AudioRepository in Start/Stop use cases
-- Action: In `StartRecordingUseCase` and `StopRecordingUseCase`, remove all `as? AudioRepositoryImpl`/`AudioRecordingServiceWrapper` branches and call only the new `AudioRepository` APIs. Delete the legacy convenience inits that take `AudioRecordingService`.
+11) Use only AudioRepository in Start/Stop use cases
+- Action: In `StartRecordingUseCase` and `StopRecordingUseCase`, remove all branches for legacy adapters and call only the `AudioRepository` APIs. Delete legacy convenience initializers.
 - Acceptance: No concrete casts; use cases compile.
 
 13) Provide AudioRepository via DI
@@ -158,8 +154,8 @@ This file contains a phased set of small, copy‑paste prompts you can give to y
 - Acceptance: Build compiles without test-only UI.
 - **Status**: ✅ TranscriptionTestView.swift and other test artifacts removed
 
-24) Remove `AudioRecorder.swift` and `AudioRecordingService` protocol if unused
-- Action: If no references remain (thanks to AudioRepository), delete `Sonora/AudioRecorder.swift` and `Domain/Protocols/AudioRecordingService.swift`; also remove `AudioRecordingServiceWrapper.swift` once wrapper is unused.
+24) Remove legacy recording artifacts if unused
+- Action: If no references remain, delete deprecated recording artifacts and adapters. Ensure only `AudioRepository` powers recording.
 - Acceptance: Project compiles with only `AudioRepository` used for recording.
 
 25) Update LEGACY.md and README

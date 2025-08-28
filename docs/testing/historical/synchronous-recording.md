@@ -61,15 +61,8 @@ do {
 }
 ```
 
-### Test 2: Legacy Compatibility
-```swift
-// Existing code with AudioRecordingService still works
-let audioRecorder = AudioRecorder()
-let legacyStartUseCase = StartRecordingUseCase(audioRecordingService: audioRecorder)
-
-// Same synchronous interface
-try legacyStartUseCase.execute()
-```
+### Test 2: Legacy Compatibility (Removed)
+Legacy recording adapters have been removed. Use `AudioRepositoryImpl` with `StartRecordingUseCase(audioRepository:)`.
 
 ### Test 3: Background Recording Verification
 ```swift
@@ -103,8 +96,7 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
 - Enhanced audio session configuration
 
 ### ✅ **Backward Compatibility**
-- Existing `AudioRecordingService` code works unchanged
-- Gradual migration path to enhanced repository
+- Repository-backed flow maintains compatibility at the use case layer
 - No disruption to current functionality
 
 ### ✅ **Clean Error Handling**

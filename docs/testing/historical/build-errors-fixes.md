@@ -26,11 +26,8 @@ final class AudioRecordingServiceWrapper: AudioRepository { ... }
 
 **After:**
 ```swift
-// Single shared file: AudioRecordingServiceWrapper.swift
-// Used in convenience initializers:
-convenience init(audioRecordingService: AudioRecordingService) {
-    self.init(audioRepository: AudioRecordingServiceWrapper(service: audioRecordingService))
-}
+// Single shared wrapper file used by legacy paths (now removed)
+// Modern code uses AudioRepository directly via DI
 ```
 
 ### **2. RecordingFlowTestUseCase Async/Await Issues**
@@ -117,12 +114,7 @@ try startUseCase.execute()  // Returns immediately
 ```
 
 ### ✅ **Backward Compatibility**
-```swift
-// Existing AudioRecordingService code works unchanged
-let audioRecorder = AudioRecorder()
-let legacyUseCase = StartRecordingUseCase(audioRecordingService: audioRecorder)
-try legacyUseCase.execute()  // Works exactly as before
-```
+Legacy adapters have since been removed; current flow uses repository-backed use cases.
 
 ### ✅ **Proper Error Handling**
 ```swift
@@ -166,13 +158,11 @@ try stopUseCase.execute()
 print("Recording stopped")
 ```
 
-## 📋 **Files Modified:**
+## 📋 **Files Modified (Historical):**
 
-1. **Created**: `AudioRecordingServiceWrapper.swift` - Shared wrapper class
-2. **Updated**: `StartRecordingUseCase.swift` - Removed duplicate wrapper, fixed initializer
-3. **Updated**: `StopRecordingUseCase.swift` - Removed duplicate wrapper, fixed initializer
-4. **Updated**: `RequestMicrophonePermissionUseCase.swift` - Removed duplicate wrapper, fixed initializer
-5. **Updated**: `RecordingFlowTestUseCase.swift` - Fixed async issues, added main actor contexts
+1. Created a shared legacy wrapper (since removed)
+2. Updated use cases to prefer repository-backed flow
+3. Fixed async issues and main actor contexts in tests
 
 ## ✅ **Verification:**
 
