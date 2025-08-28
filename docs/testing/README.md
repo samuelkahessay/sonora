@@ -13,10 +13,8 @@
 
 ## Historical Documentation
 
-The `historical/` directory contains documentation for resolved issues:
-- **[Build Errors Fixes](historical/build-errors-fixes.md)** - Recording use cases compilation fixes (RESOLVED)
-- **[Synchronous Recording](historical/synchronous-recording.md)** - Interface preservation during background implementation (RESOLVED)  
-- **[Transcription Actor Fixes](historical/transcription-actor-fixes.md)** - Main actor isolation solutions (RESOLVED)
+Historical notes have been consolidated into a single archive for brevity:
+- **[ARCHIVE.md](../../ARCHIVE.md)** — compact summaries of past fixes (RESOLVED)
 
 ## Quick Testing Commands
 
