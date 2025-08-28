@@ -41,7 +41,8 @@ public final class AppConfiguration {
     
     /// Maximum recording duration in seconds
     /// Can be overridden with SONORA_MAX_RECORDING_DURATION environment variable
-    public private(set) var maxRecordingDuration: TimeInterval = 3600.0 // 1 hour
+    /// Default is 60 seconds globally across all build types
+    public private(set) var maxRecordingDuration: TimeInterval = 60.0
     
     /// Maximum file size for recordings in bytes (50MB default)
     /// Can be overridden with SONORA_MAX_FILE_SIZE environment variable
@@ -183,15 +184,13 @@ public final class AppConfiguration {
             healthCheckTimeoutInterval = 5.0
         }
         
-        // Recording Configuration - Build-specific limits
+        // Recording Configuration - Global limit
+        // Enforce 60-second maximum duration across all build types
+        maxRecordingDuration = 60.0
         if buildConfig.isDebug {
-            // Debug builds get more generous limits for testing
-            maxRecordingDuration = 7200.0 // 2 hours
             maxRecordingFileSize = 100 * 1024 * 1024 // 100MB
             recordingQuality = 1.0 // Highest quality for development
         } else {
-            // Release builds use production limits
-            maxRecordingDuration = 3600.0 // 1 hour
             maxRecordingFileSize = 50 * 1024 * 1024 // 50MB
             recordingQuality = 0.8 // Balanced quality
         }
