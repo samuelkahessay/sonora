@@ -49,7 +49,7 @@ Sonora follows **Clean Architecture** principles with **MVVM** presentation patt
 │  ┌─────────────────┐ ┌─────────────────┐│
 │  │  Repositories   │ │    Services     ││
 │  │ (Implementations)│ │(External APIs)  ││
-│  │ + Adapters      │ │ + File System   ││
+│  │                 │ │ + File System   ││
 │  └─────────────────┘ └─────────────────┘│
 └─────────────────────────────────────────┘
 ```
@@ -95,9 +95,7 @@ Sonora/
 │   │   ├── MemoRepository.swift
 │   │   ├── AnalysisServiceProtocol.swift
 │   │   └── TranscriptionServiceProtocol.swift
-│   └── Adapters/                      # 🔄 Data transformation layer
-│       ├── MemoAdapter.swift
-│       └── AnalysisAdapter.swift
+│   └── Adapters/                      # (legacy; not used for memos)
 ├── Presentation/                   # UI & View Logic
 │   └── ViewModels/                 # 🎬 Presentation logic coordinators
 │       ├── RecordingViewModel.swift        # 🎤 Recording state & operations
@@ -138,6 +136,12 @@ Sonora/
 ## 🎯 Development Philosophy
 
 Sonora is designed for clear, iterative development with strong boundaries between layers:
+
+### Memo Model
+- Single model: `DomainMemo` is used across Domain, Data, and Presentation layers.
+- No adapters: previous `MemoAdapter` is removed; there is no DTO vs domain split for memos.
+- Key fields: `id`, `filename`, `fileURL`, `creationDate`, `transcriptionStatus`, `analysisResults`.
+- Helpers: audio `duration` and `durationString` are provided via an extension on `DomainMemo` in the Data layer.
 
 ### 1. **Follow the Flow**: Domain → Use Case → ViewModel → View
 ```swift

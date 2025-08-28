@@ -268,9 +268,10 @@ launch_app_sim({ simulatorName: 'iPhone 16', bundleId: 'com.samuelkahessay.Sonor
 Domain/
 ├── UseCases/ - 16 Use Cases organized by business domain
 ├── Models/ - 3 pure domain entities  
-├── Protocols/ - 8 repository and service contracts
-└── Adapters/ - 3 data transformation utilities
+└── Protocols/ - 8 repository and service contracts
 ```
+
+Note: The memo model is unified as `DomainMemo` across layers; legacy adapters (e.g., `MemoAdapter`) are removed.
 
 **Data Layer (10 files):**
 ```
