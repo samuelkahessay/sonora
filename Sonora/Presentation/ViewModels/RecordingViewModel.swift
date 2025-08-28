@@ -479,7 +479,7 @@ extension RecordingViewModel {
 
 extension RecordingViewModel {
     
-    func operationStatusDidUpdate(_ update: OperationStatusUpdate) {
+    func operationStatusDidUpdate(_ update: OperationStatusUpdate) async {
         // Update recording operation status if it matches our current operation
         if update.operationId == currentRecordingOperationId {
             recordingOperationStatus = update.currentStatus
@@ -496,7 +496,7 @@ extension RecordingViewModel {
         }
     }
     
-    func operationDidComplete(_ operationId: UUID, memoId: UUID, operationType: OperationType) {
+    func operationDidComplete(_ operationId: UUID, memoId: UUID, operationType: OperationType) async {
         if operationId == currentRecordingOperationId {
             print("✅ RecordingViewModel: Recording operation completed successfully")
             currentRecordingOperationId = nil
@@ -505,7 +505,7 @@ extension RecordingViewModel {
         }
     }
     
-    func operationDidFail(_ operationId: UUID, memoId: UUID, operationType: OperationType, error: Error) {
+    func operationDidFail(_ operationId: UUID, memoId: UUID, operationType: OperationType, error: Error) async {
         if operationId == currentRecordingOperationId {
             print("❌ RecordingViewModel: Recording operation failed: \(error.localizedDescription)")
             currentRecordingOperationId = nil

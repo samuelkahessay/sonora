@@ -263,7 +263,7 @@ final class OperationStatusViewModel: ObservableObject, OperationStatusDelegate 
 
 extension OperationStatusViewModel {
     
-    func operationStatusDidUpdate(_ update: OperationStatusUpdate) {
+    func operationStatusDidUpdate(_ update: OperationStatusUpdate) async {
         // Add to recent updates (keep last 20)
         recentUpdates.insert(update, at: 0)
         if recentUpdates.count > 20 {
@@ -276,7 +276,7 @@ extension OperationStatusViewModel {
         }
     }
     
-    func operationDidComplete(_ operationId: UUID, memoId: UUID, operationType: OperationType) {
+    func operationDidComplete(_ operationId: UUID, memoId: UUID, operationType: OperationType) async {
         logger.info("Operation completed: \(operationType.description)", 
                    category: .system, 
                    context: LogContext(additionalInfo: [
@@ -285,7 +285,7 @@ extension OperationStatusViewModel {
                    ]))
     }
     
-    func operationDidFail(_ operationId: UUID, memoId: UUID, operationType: OperationType, error: Error) {
+    func operationDidFail(_ operationId: UUID, memoId: UUID, operationType: OperationType, error: Error) async {
         logger.error("Operation failed: \(operationType.description)", 
                     category: .system, 
                     context: LogContext(additionalInfo: [

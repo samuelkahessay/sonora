@@ -371,19 +371,17 @@ public actor OperationCoordinator {
             currentStatus: detailedCurrent
         )
         
-        // Notify on main thread for UI updates
-        await MainActor.run {
-            delegate.operationStatusDidUpdate(update)
-            
-            switch operation.status {
-            case .completed:
-                delegate.operationDidComplete(operation.id, memoId: operation.type.memoId, operationType: operation.type)
-            case .failed:
-                let error = operation.error ?? NSError(domain: "OperationError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"])
-                delegate.operationDidFail(operation.id, memoId: operation.type.memoId, operationType: operation.type, error: error)
-            default:
-                break
-            }
+        // Async delegate callbacks on main actor (delegate is @MainActor)
+        await delegate.operationStatusDidUpdate(update)
+        
+        switch operation.status {
+        case .completed:
+            await delegate.operationDidComplete(operation.id, memoId: operation.type.memoId, operationType: operation.type)
+        case .failed:
+            let error = operation.error ?? NSError(domain: "OperationError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"])
+            await delegate.operationDidFail(operation.id, memoId: operation.type.memoId, operationType: operation.type, error: error)
+        default:
+            break
         }
     }
     

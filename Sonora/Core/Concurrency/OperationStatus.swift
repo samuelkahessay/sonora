@@ -236,9 +236,9 @@ public struct OperationStatusUpdate {
 /// Protocol for receiving operation status updates
 @MainActor
 public protocol OperationStatusDelegate: AnyObject {
-    func operationStatusDidUpdate(_ update: OperationStatusUpdate)
-    func operationDidComplete(_ operationId: UUID, memoId: UUID, operationType: OperationType)
-    func operationDidFail(_ operationId: UUID, memoId: UUID, operationType: OperationType, error: Error)
+    func operationStatusDidUpdate(_ update: OperationStatusUpdate) async
+    func operationDidComplete(_ operationId: UUID, memoId: UUID, operationType: OperationType) async
+    func operationDidFail(_ operationId: UUID, memoId: UUID, operationType: OperationType, error: Error) async
 }
 
 // MARK: - Operation Grouping and Filtering
