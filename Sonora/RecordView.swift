@@ -8,237 +8,94 @@
 import SwiftUI
 
 struct RecordView: View {
-    @EnvironmentObject private var theme: ThemeManager
     @StateObject private var viewModel = RecordingViewModel()
     
     var body: some View {
         NavigationView {
-            ZStack {
-                // Beautiful glass background with gradient
-                LinearGradient(
-                    colors: [
-                        Color.blue.opacity(0.1),
-                        Color.purple.opacity(0.1),
-                        Color.teal.opacity(0.1)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+            VStack(spacing: 32) {
+                Spacer()
                 
-                VStack(spacing: 40) {
-                    Spacer()
-                    
-                    if !viewModel.hasPermission {
-                        VStack(spacing: 20) {
-                            // Glass icon container with shimmer
-                            ZStack {
-                                Circle()
-                                    .fill(.ultraThinMaterial)
-                                    .overlay {
-                                        Circle()
-                                            .fill(theme.activeTheme.palette.backgroundGlass)
-                                    }
-                                    .overlay {
-                                        Circle()
-                                            .strokeBorder(theme.activeTheme.palette.glassBorder, lineWidth: 1)
-                                    }
-                                    .frame(width: 120, height: 120)
-                                    .shadow(color: theme.activeTheme.palette.glassShadow, radius: 20, x: 0, y: 10)
-                                
-                                Image(systemName: viewModel.permissionStatus.iconName)
-                                    .font(.system(size: 50, weight: .medium))
-                                    .foregroundStyle(
-                                        LinearGradient(
-                                            colors: viewModel.permissionStatus == .restricted ? 
-                                                [.orange, .yellow] : [.red, .pink],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
-                            }
-                            .shimmerEffect(palette: theme.activeTheme.palette)
-                            
-                            VStack(spacing: 12) {
-                                Text(viewModel.permissionStatus.displayName)
-                                    .glassTextStyle(.title2, palette: theme.activeTheme.palette)
-                                    .foregroundStyle(theme.activeTheme.palette.textOnGlass)
-                                
-                                Text(getPermissionDescription())
-                                    .glassTextStyle(.body, palette: theme.activeTheme.palette)
-                                    .foregroundColor(theme.activeTheme.palette.textSecondary)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 8)
-                            }
-                            
-                            if viewModel.isRequestingPermission {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: theme.activeTheme.palette.primary))
-                                    .scaleEffect(1.2)
-                            } else {
-                                getPermissionButton()
-                            }
-                        }
-                        .frostedGlassCard(palette: theme.activeTheme.palette, elevation: .high)
-                } else {
-                    VStack(spacing: 35) {
-                        // Status display with glass styling
-                        VStack(spacing: 16) {
-                            if viewModel.isRecording {
-                                if viewModel.isInCountdown {
-                                    Text("Recording ends in")
-                                        .glassTextStyle(.title2, typography: theme.effectiveTypography, palette: theme.activeTheme.palette)
-                                        .foregroundStyle(
-                                            LinearGradient(
-                                                colors: [.orange, .yellow],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
-                                    
-                                    Text(viewModel.formattedRemainingTime)
-                                        .glassTextStyle(.monospaceLarge, typography: theme.effectiveTypography, palette: theme.activeTheme.palette)
-                                        .font(.system(size: 56, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(
-                                            LinearGradient(
-                                                colors: [.red, .orange],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                        )
-                                        .scaleEffect(viewModel.countdownScale)
-                                        .animation(.easeInOut(duration: 0.5), value: Int(viewModel.remainingTime))
-                                        .shadow(color: .red.opacity(0.3), radius: 10, x: 0, y: 5)
-                                } else {
-                                    Text("Recording...")
-                                        .glassTextStyle(.title2, typography: theme.effectiveTypography, palette: theme.activeTheme.palette)
-                                        .foregroundStyle(
-                                            LinearGradient(
-                                                colors: [.red, .pink],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
-                                    
-                                    Text(viewModel.formattedRecordingTime)
-                                        .glassTextStyle(.monospaceLarge, typography: theme.effectiveTypography, palette: theme.activeTheme.palette)
-                                        .font(.system(size: 48, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(theme.activeTheme.palette.textOnGlass)
-                                }
-                            } else {
-                                Text("Ready to Record")
-                                    .glassTextStyle(.title2, typography: theme.effectiveTypography, palette: theme.activeTheme.palette)
-                                    .foregroundStyle(theme.activeTheme.palette.primary)
-                            }
-                        }
-                        .frostedGlassCard(palette: theme.activeTheme.palette, elevation: .low)
+                if !viewModel.hasPermission {
+                    VStack(spacing: 16) {
+                        Image(systemName: viewModel.permissionStatus.iconName)
+                            .font(.system(size: 60, weight: .medium))
+                            .foregroundColor(.red)
                         
-                        // Glass recording button with advanced effects
-                        Button(action: {
-                            viewModel.toggleRecording()
-                        }) {
-                            ZStack {
-                                // Outer glow ring
-                                Circle()
-                                    .fill(.ultraThinMaterial)
-                                    .overlay {
-                                        Circle()
-                                            .fill(theme.activeTheme.palette.backgroundGlass)
-                                    }
-                                    .frame(width: 140, height: 140)
-                                    .overlay {
-                                        Circle()
-                                            .strokeBorder(
-                                                LinearGradient(
-                                                    colors: viewModel.isRecording ? 
-                                                        [.red, .pink, .orange] : 
-                                                        [theme.activeTheme.palette.primary, theme.activeTheme.palette.secondary],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                ),
-                                                lineWidth: 3
-                                            )
-                                    }
-                                    .shadow(color: theme.activeTheme.palette.glassShadow, radius: 25, x: 0, y: 12)
-                                
-                                // Inner button
-                                ZStack {
-                                    Circle()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: viewModel.isRecording ? 
-                                                    [.red, .red.opacity(0.8)] : 
-                                                    [theme.activeTheme.palette.primary, theme.activeTheme.palette.primary.opacity(0.8)],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                        .frame(width: 110, height: 110)
-                                        .overlay {
-                                            Circle()
-                                                .fill(theme.activeTheme.palette.glassHighlight.opacity(0.2))
-                                                .frame(width: 110, height: 110)
-                                        }
-                                    
-                                    if viewModel.isRecording {
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(.white)
-                                            .frame(width: 45, height: 45)
-                                            .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 2)
-                                    } else {
-                                        Image(systemName: "mic.fill")
-                                            .font(.system(size: 45, weight: .medium))
-                                            .foregroundStyle(.white)
-                                            .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 2)
-                                    }
-                                }
-                            }
-                            .scaleEffect(viewModel.recordingButtonScale)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.isRecording)
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                        Text(viewModel.permissionStatus.displayName)
+                            .font(.title2)
+                            .fontWeight(.semibold)
                         
-                        // Recording indicator with glass styling
-                        if viewModel.shouldShowRecordingIndicator {
-                            HStack(spacing: 12) {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [.red, .pink],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
-                                    .frame(width: 10, height: 10)
-                                    .scaleEffect(1.2)
-                                    .animation(.easeInOut(duration: 0.8).repeatForever(), value: viewModel.isRecording)
-                                    .shadow(color: .red.opacity(0.5), radius: 8, x: 0, y: 2)
-                                
-                                Text("Recording in progress")
-                                    .glassTextStyle(.caption, typography: theme.effectiveTypography, palette: theme.activeTheme.palette)
-                                    .foregroundColor(theme.activeTheme.palette.textSecondary)
-                            }
-                            .frostedGlassCard(palette: theme.activeTheme.palette, elevation: .low)
+                        Text(getPermissionDescription())
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                        
+                        if viewModel.isRequestingPermission {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                        } else {
+                            getPermissionButton()
                         }
                     }
+                    .padding()
+                } else {
+                    VStack(spacing: 24) {
+                        // Status and timers
+                        VStack(spacing: 8) {
+                            Text(viewModel.recordingStatusText)
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(viewModel.isRecording ? .red : .primary)
+                            
+                            Text(viewModel.formattedRecordingTime)
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .monospacedDigit()
+                            
+                            if viewModel.isInCountdown {
+                                Text("Recording ends in")
+                                    .font(.headline)
+                                    .foregroundColor(.orange)
+                                Text("\(Int(ceil(viewModel.remainingTime)))")
+                                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                                    .foregroundColor(.red)
+                                    .monospacedDigit()
+                            }
+                        }
+                        
+                        // Record/Stop button
+                        Button(action: { viewModel.toggleRecording() }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: viewModel.isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                                Text(viewModel.isRecording ? "Stop" : "Record")
+                            }
+                            .font(.title2)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(viewModel.isRecording ? .red : .blue)
+                        
+                        if viewModel.shouldShowRecordingIndicator {
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 8, height: 8)
+                                Text("Recording in progress")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
                 }
                 
                 Spacer()
-                }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 20)
             }
+            .padding()
             .navigationTitle("Sonora")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .onAppear {
-                viewModel.onViewAppear()
-            }
+            .onAppear { viewModel.onViewAppear() }
             .alert("Recording Stopped", isPresented: $viewModel.showAutoStopAlert) {
-                Button("OK") {
-                    viewModel.dismissAutoStopAlert()
-                }
+                Button("OK") { viewModel.dismissAutoStopAlert() }
             } message: {
                 Text(viewModel.autoStopMessage ?? "")
             }
@@ -264,26 +121,21 @@ struct RecordView: View {
     private func getPermissionButton() -> some View {
         switch viewModel.permissionStatus {
         case .notDetermined:
-            Button("Allow Microphone Access") {
-                viewModel.requestPermission()
-            }
-            .glassButton(palette: theme.activeTheme.palette)
-            .disabled(viewModel.isRequestingPermission)
+            Button("Allow Microphone Access") { viewModel.requestPermission() }
+                .buttonStyle(.borderedProminent)
+                .disabled(viewModel.isRequestingPermission)
             
         case .denied:
-            Button("Open Settings") {
-                viewModel.openSettings()
-            }
-            .glassButton(palette: theme.activeTheme.palette)
+            Button("Open Settings") { viewModel.openSettings() }
+                .buttonStyle(.bordered)
             
         case .restricted:
-            Button("Check Device Settings") {
-                viewModel.openSettings()
-            }
-            .glassButton(palette: theme.activeTheme.palette)
+            Button("Check Device Settings") { viewModel.openSettings() }
+                .buttonStyle(.bordered)
             
         case .granted:
             EmptyView()
         }
     }
 }
+

@@ -94,7 +94,7 @@ final class ThemeManager: ObservableObject {
     func resetToDefaults() {
         mode = .system
         glassIntensity = .moderate
-        useGlassEffects = true
+        useGlassEffects = false
         reducedMotion = false
         accentColor = Color.blue
     }
@@ -135,7 +135,7 @@ private extension ThemeManager {
     static func loadSettings() -> (mode: ThemeMode, glassIntensity: GlassIntensity, useGlassEffects: Bool, reducedMotion: Bool, accentColor: Color) {
         guard let data = UserDefaults.standard.data(forKey: "app.theme.settings"),
               let settings = try? JSONDecoder().decode(StoredSettings.self, from: data) else {
-            return (.system, .moderate, true, false, .blue)
+            return (.system, .moderate, false, false, .blue)
         }
         
         let accentColor = Color(hex: settings.accentColorHex) ?? .blue
