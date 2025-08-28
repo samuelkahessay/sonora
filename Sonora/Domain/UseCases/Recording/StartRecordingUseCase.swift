@@ -28,78 +28,33 @@ final class StartRecordingUseCase: StartRecordingUseCaseProtocol {
     
     // MARK: - Use Case Execution
     func execute() async throws -> UUID? {
-        // Generate memo ID for this recording session
-        let memoId = UUID()
-        let context = LogContext(additionalInfo: ["memoId": memoId.uuidString])
-        
-        logger.info("Starting recording for memo: \(memoId)", category: .audio, context: context)
-        
-        // Register recording operation with coordinator
-        guard let operationId = await operationCoordinator.registerOperation(.recording(memoId: memoId)) else {
-            logger.warning("Recording rejected by operation coordinator (at capacity or conflicting operation)", 
-                          category: .audio, context: context, error: nil)
-            throw RecordingError.recordingFailed("Unable to start recording - system busy or conflicting operation")
-        }
-        
-        logger.debug("Recording operation registered with ID: \(operationId)", category: .audio, context: context)
-        
-        do {
-            // Check if already recording
-            if let audioRepoImpl = audioRepository as? AudioRepositoryImpl {
-                try await MainActor.run {
-                    guard !audioRepoImpl.isRecording else {
-                        Task {
-                            await operationCoordinator.failOperation(operationId, error: RecordingError.alreadyRecording)
-                        }
-                        return
-                    }
-                    
-                    // Check permissions first
-                    guard audioRepoImpl.hasMicrophonePermission else {
-                        // Try to refresh permissions
-                        audioRepoImpl.checkMicrophonePermissions()
-                        Task {
-                            await operationCoordinator.failOperation(operationId, error: RecordingError.permissionDenied)
-                        }
-                        return
-                    }
-                    
-                    // Store memo ID for later use when recording completes
-                    // TODO: Pass memoId to BackgroundAudioService
-                    
-                    // Start background recording synchronously
-                    try audioRepoImpl.startRecordingSync()
-                    
-                    logger.info("Background recording started successfully", category: .audio, context: context)
-                }
-            } else if let wrapper = audioRepository as? AudioRecordingServiceWrapper {
-                // Use legacy AudioRecordingService
-                let service = wrapper.service
-                
-                guard !service.isRecording else {
-                    await operationCoordinator.failOperation(operationId, error: RecordingError.alreadyRecording)
-                    throw RecordingError.alreadyRecording
-                }
-                
-                guard service.hasPermission else {
-                    await operationCoordinator.failOperation(operationId, error: RecordingError.permissionDenied)
-                    throw RecordingError.permissionDenied
-                }
-                
-                service.startRecording()
-                logger.info("Legacy recording started successfully", category: .audio, context: context)
-            } else {
-                let error = RecordingError.recordingFailed("Audio repository does not support recording")
-                await operationCoordinator.failOperation(operationId, error: error)
-                throw error
+        // Pre-checks on main actor (iOS requirement)
+        try await MainActor.run {
+            guard !audioRepository.isRecording else {
+                throw RecordingError.alreadyRecording
             }
-            
+            guard audioRepository.hasMicrophonePermission else {
+                audioRepository.checkMicrophonePermissions()
+                throw RecordingError.permissionDenied
+            }
+        }
+
+        // Start recording via repository; repository returns the actual memoId
+        let memoId = try await audioRepository.startRecording()
+        let context = LogContext(additionalInfo: ["memoId": memoId.uuidString])
+        logger.info("Background recording started successfully", category: .audio, context: context)
+
+        // Register the operation after successful start; rollback if registration fails
+        if let operationId = await operationCoordinator.registerOperation(.recording(memoId: memoId)) {
+            logger.debug("Recording operation registered with ID: \(operationId)", category: .audio, context: context)
             return memoId
-            
-        } catch {
-            // Ensure operation is failed if any error occurs
-            await operationCoordinator.failOperation(operationId, error: error)
-            throw error
+        } else {
+            await MainActor.run {
+                self.audioRepository.stopRecording()
+            }
+            logger.warning("Recording rejected by operation coordinator (at capacity or conflicting operation)",
+                           category: .audio, context: context, error: nil)
+            throw RecordingError.recordingFailed("Unable to start recording - system busy or conflicting operation")
         }
     }
 }
