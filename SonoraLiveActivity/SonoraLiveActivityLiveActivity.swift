@@ -12,62 +12,201 @@ import SwiftUI
 struct SonoraLiveActivityLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: SonoraLiveActivityAttributes.self) { context in
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(context.state.emoji)
-                    Text(context.state.memoTitle)
-                        .font(.subheadline)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    Spacer(minLength: 8)
-                    // Deep link to stop recording in the app
-                    if let url = URL(string: "sonora://stopRecording") {
-                        Link(destination: url) {
-                            Text("Stop")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                        }
-                        .tint(.red)
-                        .buttonStyle(.bordered)
-                        .controlSize(.mini)
+            // Lock Screen and Notification Display
+            HStack(alignment: .center, spacing: 12) {
+                // Recording indicator with animation
+                HStack(alignment: .center, spacing: 8) {
+                    Image(systemName: context.state.isCountdown ? "hourglass" : "mic.fill")
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                        .symbolEffect(.pulse, options: .repeating, value: !context.state.isCountdown)
+                        .frame(width: 20, height: 20)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(context.state.memoTitle)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        
+                        Text(timerString(from: context.state.startTime, isCountdown: context.state.isCountdown, remaining: context.state.remainingTime))
+                            .font(.caption)
+                            .fontWeight(.regular)
+                            .foregroundStyle(.white.opacity(0.8))
+                            .monospacedDigit()
                     }
                 }
-                Text(timerString(from: context.state.startTime, isCountdown: context.state.isCountdown, remaining: context.state.remainingTime))
-                    .font(.caption).monospacedDigit()
-                    .foregroundColor(.secondary)
+                
+                Spacer(minLength: 8)
+                
+                // Native-style stop button
+                if let url = URL(string: "sonora://stopRecording") {
+                    Link(destination: url) {
+                        HStack(alignment: .center, spacing: 6) {
+                            Image(systemName: "stop.circle.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Stop")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(.red.gradient)
+                                .shadow(color: .red.opacity(0.3), radius: 2, x: 0, y: 1)
+                        )
+                        .scaleEffect(1.0)
+                        .animation(.easeInOut(duration: 0.1), value: false)
+                    }
+                }
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.2, green: 0.4, blue: 0.8),
+                                Color(red: 0.1, green: 0.3, blue: 0.7)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 2)
+            )
             .widgetURL(URL(string: "sonora://stopRecording"))
-            .padding(.vertical, 4)
-            .activityBackgroundTint(Color.cyan.opacity(0.2))
-            .activitySystemActionForegroundColor(Color.primary)
+            .activityBackgroundTint(.clear)
+            .activitySystemActionForegroundColor(.white)
 
         } dynamicIsland: { context in
             DynamicIsland {
+                // Expanded view - full recording interface
                 DynamicIslandExpandedRegion(.leading) {
-                    Text(context.state.emoji)
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    if context.state.isCountdown, let rem = context.state.remainingTime {
-                        Text(countdownString(rem)).monospacedDigit()
-                    } else {
-                        Text(elapsedString(from: context.state.startTime)).monospacedDigit()
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .center, spacing: 6) {
+                            Image(systemName: context.state.isCountdown ? "hourglass.circle.fill" : "mic.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(context.state.isCountdown ? .orange : .red)
+                                .symbolEffect(.pulse, options: .repeating, value: !context.state.isCountdown)
+                            
+                            Text("Recording")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.primary)
+                        }
                     }
                 }
+                
+                DynamicIslandExpandedRegion(.trailing) {
+                    VStack(alignment: .trailing, spacing: 4) {
+                        if context.state.isCountdown, let rem = context.state.remainingTime {
+                            HStack(alignment: .center, spacing: 4) {
+                                Image(systemName: "clock.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                                Text(countdownString(rem))
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .monospacedDigit()
+                                    .foregroundStyle(.primary)
+                            }
+                        } else {
+                            HStack(alignment: .center, spacing: 4) {
+                                Circle()
+                                    .fill(.red)
+                                    .frame(width: 6, height: 6)
+                                    .opacity(0.8)
+                                    .animation(.easeInOut(duration: 1.0).repeatForever(), value: true)
+                                
+                                Text(elapsedString(from: context.state.startTime))
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .monospacedDigit()
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                    }
+                }
+                
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text(context.state.memoTitle)
-                        .font(.footnote)
-                        .lineLimit(1)
+                    HStack(alignment: .center, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(context.state.memoTitle)
+                                .font(.footnote)
+                                .fontWeight(.medium)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .foregroundStyle(.primary)
+                            
+                            if context.state.isCountdown {
+                                Text("Auto-stop countdown")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Tap to stop recording")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        // Waveform-like animation
+                        HStack(alignment: .center, spacing: 2) {
+                            ForEach(0..<4, id: \.self) { index in
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(.blue.gradient)
+                                    .frame(width: 3, height: CGFloat.random(in: 4...12))
+                                    .animation(
+                                        .easeInOut(duration: 0.6)
+                                        .repeatForever()
+                                        .delay(Double(index) * 0.1),
+                                        value: true
+                                    )
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 8)
                 }
+                
             } compactLeading: {
-                Text(context.state.emoji)
+                // Compact leading - just the icon with animation
+                Image(systemName: context.state.isCountdown ? "hourglass.circle.fill" : "mic.circle.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(context.state.isCountdown ? .orange : .red)
+                    .symbolEffect(.pulse, options: .repeating, value: !context.state.isCountdown)
+                    
             } compactTrailing: {
-                if context.state.isCountdown, let rem = context.state.remainingTime {
-                    Text(shortCountdown(rem)).monospacedDigit()
-                } else {
-                    Text(shortElapsed(from: context.state.startTime)).monospacedDigit()
+                // Compact trailing - timer with visual indicator
+                HStack(alignment: .center, spacing: 3) {
+                    if !context.state.isCountdown {
+                        Circle()
+                            .fill(.red)
+                            .frame(width: 4, height: 4)
+                            .opacity(0.8)
+                    }
+                    
+                    if context.state.isCountdown, let rem = context.state.remainingTime {
+                        Text(shortCountdown(rem))
+                            .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.primary)
+                    } else {
+                        Text(shortElapsed(from: context.state.startTime))
+                            .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.primary)
+                    }
                 }
+                
             } minimal: {
-                Text(context.state.emoji)
+                // Minimal view - animated recording indicator
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.red)
+                    .symbolEffect(.pulse, options: .repeating, value: true)
             }
             .widgetURL(URL(string: "sonora://stopRecording"))
         }

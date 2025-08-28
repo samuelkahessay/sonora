@@ -49,7 +49,7 @@ final class LiveActivityEventHandler {
         let container = DIContainer.shared
         let memoRepo = container.memoRepository()
         let audioRepo = container.audioRepository()
-        let service: any LiveActivityServiceProtocol = LiveActivityService()
+        let service = container.liveActivityService()
         let start = StartLiveActivityUseCase(liveActivityService: service)
         let update = UpdateLiveActivityUseCase(liveActivityService: service)
         let end = EndLiveActivityUseCase(liveActivityService: service)

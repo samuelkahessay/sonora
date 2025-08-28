@@ -58,7 +58,7 @@ struct SonoraApp: App {
                                 }
                             }
                             // End the live activity immediately so it disappears right away
-                            let liveService: any LiveActivityServiceProtocol = LiveActivityService()
+                            let liveService = DIContainer.shared.liveActivityService()
                             let endUseCase = EndLiveActivityUseCase(liveActivityService: liveService)
                             do {
                                 try await endUseCase.execute(dismissalPolicy: .immediate)

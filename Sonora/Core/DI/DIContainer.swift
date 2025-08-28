@@ -31,6 +31,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _audioRepository: (any AudioRepository)?
     private var _startRecordingUseCase: StartRecordingUseCase!
     private var _systemNavigator: (any SystemNavigator)?
+    private var _liveActivityService: (any LiveActivityServiceProtocol)?
     
     // MARK: - Initialization
     private init() {
@@ -78,6 +79,11 @@ final class DIContainer: ObservableObject, Resolver {
             let audioRepository = resolver.resolve((any AudioRepository).self)!
             return StartRecordingUseCase(audioRepository: audioRepository)
         }
+        
+        // Register LiveActivityService
+        register((any LiveActivityServiceProtocol).self) { _ in
+            return LiveActivityService() as any LiveActivityServiceProtocol
+        }
     }
     
     /// Configure DIContainer with shared service instances
@@ -99,6 +105,7 @@ final class DIContainer: ObservableObject, Resolver {
         self._audioRepository = resolve((any AudioRepository).self)!
         self._startRecordingUseCase = resolve(StartRecordingUseCase.self)!
         self._systemNavigator = resolve((any SystemNavigator).self)!
+        self._liveActivityService = resolve((any LiveActivityServiceProtocol).self)!
         
         // Initialize external API services  
         self._transcriptionAPI = TranscriptionService()
@@ -146,7 +153,8 @@ final class DIContainer: ObservableObject, Resolver {
               _analysisRepository != nil,
               _transcriptionAPI != nil,
               _logger != nil,
-              _systemNavigator != nil else {
+              _systemNavigator != nil,
+              _liveActivityService != nil else {
             fatalError("DIContainer has not been configured. Call configure() before using services.")
         }
     }
@@ -231,6 +239,13 @@ final class DIContainer: ObservableObject, Resolver {
     func operationCoordinator() -> OperationCoordinator {
         ensureConfigured()
         return _operationCoordinator
+    }
+    
+    /// Get live activity service
+    func liveActivityService() -> any LiveActivityServiceProtocol {
+        ensureConfigured()
+        guard let service = _liveActivityService else { fatalError("DIContainer not configured: liveActivityService") }
+        return service
     }
     
 }
