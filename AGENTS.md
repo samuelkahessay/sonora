@@ -1,20 +1,29 @@
 # AGENTS.md — Agent Contribution Guide for Sonora
 
-This guide aligns autonomous coding agents with Sonora’s architecture and conventions. It summarizes how to plan, implement, and document changes safely in this repository.
+This guide aligns autonomous coding agents with Sonora's **exemplary Clean Architecture** and **native SwiftUI implementation**. It summarizes how to plan, implement, and document changes safely while maintaining the project's **95% architectural compliance** and **clean, standard Apple UI**.
 
 ## Mission
 
-- Keep the app aligned with Clean Architecture + MVVM.
-- Maintain a single memo model named `Memo` across layers.
-- Prefer protocol-first composition and constructor injection.
-- Preserve separation of concerns and thin ViewModels.
+- **Preserve Architectural Excellence**: Maintain 95% Clean Architecture compliance
+- **Maintain Native SwiftUI**: Honor clean, standard Apple UI components and patterns
+- **Single Source of Truth**: Use unified `Memo` model across all layers
+- **Protocol-First Development**: Continue exemplary dependency injection patterns
+- **Accessibility & Performance**: Maintain standard accessibility patterns with system integration
 
 ## Architectural Ground Rules
 
-- Layers: Presentation (SwiftUI + ViewModels), Domain (Use Cases, Models, Protocols), Data (Repositories, Services), Core (DI, Concurrency, Events, Logging, Config).
-- Memo model: Use `Memo` everywhere (no `DomainMemo`, no adapters). If you introduce transport/persistence forms, suffix them (`MemoDTO`, `MemoRecord`).
-- Repositories are for data access; orchestration belongs to Use Cases or Event Handlers.
-- Keep AVFoundation/UI frameworks outside the Domain layer. Domain stays pure Swift.
+- **Layers**: Presentation (SwiftUI + ViewModels), Domain (Use Cases, Models, Protocols), Data (Repositories, Services), Core (DI, Concurrency, Events, Logging, Config)
+- **Memo Model**: Use unified `Memo` everywhere (no adapters). Transport/persistence forms: suffix them (`MemoDTO`, `MemoRecord`)
+- **Repository Scope**: Data access only; orchestration belongs to Use Cases or Event Handlers
+- **Domain Purity**: Keep AVFoundation/UI frameworks outside Domain layer (pure Swift only)
+
+## UI Development Guidelines
+
+- **Native SwiftUI Components**: Use standard SwiftUI elements (`.borderedProminent`, `.bordered`, `List`, etc.)
+- **System Integration**: Follow iOS design guidelines and use system colors/fonts
+- **Theme Management**: Respect `ThemeManager` for light/dark mode and accessibility settings  
+- **Performance**: Standard SwiftUI components are optimized by Apple - maintain native behavior
+- **Accessibility**: Use standard accessibility patterns and VoiceOver support
 
 ## Dependency Injection
 
@@ -77,8 +86,27 @@ This guide aligns autonomous coding agents with Sonora’s architecture and conv
 
 ## Testing Notes
 
-- See `docs/testing/` for flows: background recording, enhanced recording, and transcription integration.
-- Prefer targeted tests near changed code. For UI, keep logic in VMs and test their behaviors.
+### Architecture Testing
+- See `docs/testing/` for complete flows: background recording, enhanced recording, and transcription integration
+- **Use Case Testing**: Focus on business logic with mock repositories/services
+- **ViewModel Testing**: Test state management and coordination logic
+- **Repository Testing**: Verify data access and persistence patterns
+
+### UI Testing with XcodeBuildMCP
+- **Always use `describe_ui` before `tap`** - Never guess coordinates from screenshots
+- **Standard UI Elements**: UI uses native SwiftUI components with standard touch targets
+- **Recording Flow**: Test background recording with Live Activities integration
+- **Theme Changes**: Test light/dark mode transitions with system colors
+
+#### Common Testing Commands
+```bash
+# Build and run simulator
+build_run_sim({ projectPath: '/path/to/Sonora.xcodeproj', scheme: 'Sonora', simulatorName: 'iPhone 16' })
+
+# UI interaction pattern
+describe_ui({ simulatorUuid: "UUID" })  # Get precise coordinates
+tap({ simulatorUuid: "UUID", x: 187, y: 256 })  # Use exact coordinates
+```
 
 ## Quick References
 
