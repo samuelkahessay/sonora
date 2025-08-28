@@ -57,6 +57,14 @@ struct SonoraApp: App {
                                     print("❌ SonoraApp: Failed to stop recording via deep link: \(error)")
                                 }
                             }
+                            // End the live activity immediately so it disappears right away
+                            let liveService: any LiveActivityServiceProtocol = LiveActivityService()
+                            let endUseCase = EndLiveActivityUseCase(liveActivityService: liveService)
+                            do {
+                                try await endUseCase.execute(dismissalPolicy: .immediate)
+                            } catch {
+                                print("❌ SonoraApp: Failed to end Live Activity: \(error)")
+                            }
                         }
                     }
                 }

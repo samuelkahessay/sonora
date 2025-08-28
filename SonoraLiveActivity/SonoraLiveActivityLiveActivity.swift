@@ -36,6 +36,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     .font(.caption).monospacedDigit()
                     .foregroundColor(.secondary)
             }
+            .widgetURL(URL(string: "sonora://stopRecording"))
             .padding(.vertical, 4)
             .activityBackgroundTint(Color.cyan.opacity(0.2))
             .activitySystemActionForegroundColor(Color.primary)
@@ -68,6 +69,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
             } minimal: {
                 Text(context.state.emoji)
             }
+            .widgetURL(URL(string: "sonora://stopRecording"))
         }
     }
 }
