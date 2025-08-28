@@ -287,9 +287,18 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             let fileAttributes = try FileManager.default.attributesOfItem(atPath: audioDestination.path)
             let fileSize = fileAttributes[.size] as? Int64
             
-            // Get duration
-            let asset = AVURLAsset(url: audioDestination)
-            let duration = CMTimeGetSeconds(asset.duration)
+            // Get duration using AVAudioFile (avoids deprecated AVAsset.duration)
+            let duration: TimeInterval = {
+                do {
+                    let audioFile = try AVAudioFile(forReading: audioDestination)
+                    let frames = Double(audioFile.length)
+                    let rate = audioFile.fileFormat.sampleRate
+                    let secs = frames / rate
+                    return secs
+                } catch {
+                    return 0
+                }
+            }()
             
             // Create metadata
             let metadata = MemoFileMetadata(

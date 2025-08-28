@@ -162,8 +162,10 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     
     func getAudioMetadata(for url: URL) throws -> (duration: TimeInterval, creationDate: Date) {
         do {
-            let asset = AVURLAsset(url: url)
-            let duration = CMTimeGetSeconds(asset.duration)
+            let audioFile = try AVAudioFile(forReading: url)
+            let frames = Double(audioFile.length)
+            let sampleRate = audioFile.fileFormat.sampleRate
+            let duration = frames / sampleRate
             let resourceValues = try url.resourceValues(forKeys: [.creationDateKey])
             let creationDate = resourceValues.creationDate ?? Date()
             return (duration: duration, creationDate: creationDate)

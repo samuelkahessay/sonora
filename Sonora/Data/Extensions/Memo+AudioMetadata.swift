@@ -4,8 +4,15 @@ import AVFoundation
 extension Memo {
     /// Duration of the memo's audio file in seconds.
     var duration: TimeInterval {
-        let asset = AVURLAsset(url: fileURL)
-        return CMTimeGetSeconds(asset.duration)
+        do {
+            let audioFile = try AVAudioFile(forReading: fileURL)
+            let frames = Double(audioFile.length)
+            let sampleRate = audioFile.fileFormat.sampleRate
+            let seconds = frames / sampleRate
+            return seconds.isFinite ? seconds : 0
+        } catch {
+            return 0
+        }
     }
 
     /// Human-readable duration string in mm:ss format.
