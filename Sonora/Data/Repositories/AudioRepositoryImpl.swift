@@ -142,25 +142,34 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     }
     
     func deleteAudioFile(at url: URL) throws {
-        try FileManager.default.removeItem(at: url)
-        
-        if playingMemo?.url == url {
-            stopAudio()
+        do {
+            try FileManager.default.removeItem(at: url)
+            if playingMemo?.url == url {
+                stopAudio()
+            }
+        } catch {
+            throw SonoraError.storageDeleteFailed(error.localizedDescription)
         }
     }
     
     func saveAudioFile(from sourceURL: URL, to destinationURL: URL) throws {
-        try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+        do {
+            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+        } catch {
+            throw SonoraError.storageWriteFailed(error.localizedDescription)
+        }
     }
     
     func getAudioMetadata(for url: URL) throws -> (duration: TimeInterval, creationDate: Date) {
-        let asset = AVURLAsset(url: url)
-        let duration = CMTimeGetSeconds(asset.duration)
-        
-        let resourceValues = try url.resourceValues(forKeys: [.creationDateKey])
-        let creationDate = resourceValues.creationDate ?? Date()
-        
-        return (duration: duration, creationDate: creationDate)
+        do {
+            let asset = AVURLAsset(url: url)
+            let duration = CMTimeGetSeconds(asset.duration)
+            let resourceValues = try url.resourceValues(forKeys: [.creationDateKey])
+            let creationDate = resourceValues.creationDate ?? Date()
+            return (duration: duration, creationDate: creationDate)
+        } catch {
+            throw SonoraError.storageReadFailed(error.localizedDescription)
+        }
     }
     
     func playAudio(at url: URL) throws {
@@ -177,10 +186,18 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         }
         
         // Configure audio session for playback
-        try configureAudioSessionForPlayback()
+        do {
+            try configureAudioSessionForPlayback()
+        } catch {
+            throw mapToRecordingError(error)
+        }
         
         // Create and configure audio player
-        audioPlayer = try AVAudioPlayer(contentsOf: url)
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: url)
+        } catch {
+            throw SonoraError.audioRecordingFailed(error.localizedDescription)
+        }
         audioPlayer?.delegate = audioPlayerProxy
         audioPlayer?.play()
         
@@ -237,7 +254,11 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         }
         
         print("🎵 AudioRepositoryImpl: Starting background recording for memo: \(memoId)")
-        try backgroundAudioService.startRecording()
+        do {
+            try backgroundAudioService.startRecording()
+        } catch {
+            throw mapToRecordingError(error)
+        }
         
         return memoId
     }
@@ -256,7 +277,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
             print("🎵 AudioRepositoryImpl: Background recording started successfully (sync)")
         } catch {
             print("❌ AudioRepositoryImpl: Failed to start recording (sync): \(error)")
-            throw error
+            throw mapToRecordingError(error)
         }
     }
     
@@ -344,8 +365,34 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
             
         } catch {
             print("❌ AudioRepositoryImpl: Failed to configure audio session for playback: \(error)")
-            throw error
+            throw RecordingError.audioSessionFailed(error.localizedDescription)
         }
+    }
+
+    // MARK: - Error Mapping
+
+    private func mapToRecordingError(_ error: Error) -> RecordingError {
+        if let svc = error as? AudioServiceError {
+            switch svc {
+            case .permissionDenied:
+                return .permissionDenied
+            case .alreadyRecording:
+                return .alreadyRecording
+            case .notRecording:
+                return .notRecording
+            case .sessionConfigurationFailed(let underlying):
+                return .audioSessionFailed(underlying.localizedDescription)
+            case .recordingStartFailed:
+                return .recordingFailed("Failed to start recording")
+            case .recordingFailed(let message):
+                return .recordingFailed(message)
+            case .encodingError(let underlying):
+                return .recordingFailed("Encoding error: \(underlying?.localizedDescription ?? "Unknown")")
+            case .backgroundTaskFailed:
+                return .backgroundTaskFailed
+            }
+        }
+        return .recordingFailed(error.localizedDescription)
     }
     
     // MARK: - BackgroundAudioService Callbacks
