@@ -153,11 +153,11 @@ final class DIContainer: ObservableObject, Resolver {
         
         _logger?.info("DIContainer: Configured with shared service instances", category: .system, context: LogContext())
         _logger?.debug("DIContainer: MemoRepository: \(ObjectIdentifier(self._memoRepository))", category: .system, context: LogContext())
-        if let repoObj = self._transcriptionRepository as? AnyObject {
-            _logger?.debug("DIContainer: TranscriptionRepository: \(ObjectIdentifier(repoObj))", category: .system, context: LogContext())
+        if let repoObj = self._transcriptionRepository {
+            _logger?.debug("DIContainer: TranscriptionRepository: \(ObjectIdentifier(repoObj as AnyObject))", category: .system, context: LogContext())
         }
-        if let analysisRepoObj = self._analysisRepository as? AnyObject {
-            _logger?.debug("DIContainer: AnalysisRepository: \(ObjectIdentifier(analysisRepoObj))", category: .system, context: LogContext())
+        if let analysisRepoObj = self._analysisRepository {
+            _logger?.debug("DIContainer: AnalysisRepository: \(ObjectIdentifier(analysisRepoObj as AnyObject))", category: .system, context: LogContext())
         }
     }
     
