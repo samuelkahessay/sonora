@@ -4,7 +4,7 @@ import Combine
 @MainActor
 protocol AudioRepository: ObservableObject {
     // MARK: - Playback Properties
-    var playingMemo: DomainMemo? { get set }
+    var playingMemo: Memo? { get set }
     var isPlaying: Bool { get set }
     
     // MARK: - Recording State Properties
@@ -25,7 +25,7 @@ protocol AudioRepository: ObservableObject {
     var countdownPublisher: AnyPublisher<(Bool, TimeInterval), Never> { get }
     
     // MARK: - File Management
-    func loadAudioFiles() -> [DomainMemo]
+    func loadAudioFiles() -> [Memo]
     func deleteAudioFile(at url: URL) throws
     func saveAudioFile(from sourceURL: URL, to destinationURL: URL) throws
     func getAudioMetadata(for url: URL) throws -> (duration: TimeInterval, creationDate: Date)
@@ -35,7 +35,7 @@ protocol AudioRepository: ObservableObject {
     func playAudio(at url: URL) throws
     func pauseAudio()
     func stopAudio()
-    func isAudioPlaying(for memo: DomainMemo) -> Bool
+    func isAudioPlaying(for memo: Memo) -> Bool
     
     // MARK: - Recording Control
     func startRecording() async throws -> UUID

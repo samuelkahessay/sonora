@@ -271,7 +271,7 @@ Domain/
 └── Protocols/ - 8 repository and service contracts
 ```
 
-Note: The memo model is unified as `DomainMemo` across layers; legacy adapters (e.g., `MemoAdapter`) are removed.
+Note: The memo model is unified as `Memo` across layers.
 
 **Data Layer (10 files):**
 ```

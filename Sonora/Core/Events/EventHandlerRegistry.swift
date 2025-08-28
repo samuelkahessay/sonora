@@ -265,7 +265,7 @@ public final class EventHandlerRegistry {
                    context: LogContext())
         
         // Create a test memo for event flow testing
-        let testMemo = DomainMemo(
+        let testMemo = Memo(
             filename: "Test Memo for Event Flow",
             fileURL: URL(fileURLWithPath: "/tmp/test.m4a"),
             creationDate: Date()

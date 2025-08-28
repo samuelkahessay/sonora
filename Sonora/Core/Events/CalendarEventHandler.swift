@@ -79,7 +79,7 @@ public final class CalendarEventHandler {
     
     // MARK: - Event Handlers (Placeholder Implementations)
     
-    private func handleMemoCreated(_ domainMemo: DomainMemo) async {
+    private func handleMemoCreated(_ domainMemo: Memo) async {
         logger.debug("CalendarEventHandler: Would process memo creation for potential calendar events", 
                     category: .system, 
                     context: LogContext(additionalInfo: [
@@ -139,7 +139,7 @@ public final class CalendarEventHandler {
     
     // MARK: - Placeholder Implementation Methods
     
-    private func placeholderCreateCalendarEvent(title: String, memo: DomainMemo) async {
+    private func placeholderCreateCalendarEvent(title: String, memo: Memo) async {
         logger.info("TODO: Create calendar event '\(title)' for memo \(memo.id)", 
                    category: .system, 
                    context: LogContext())

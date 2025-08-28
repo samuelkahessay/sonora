@@ -9,20 +9,20 @@ Your Clean Architecture + MVVM setup is perfect for rapid development. Here's ho
 ```swift
 // 1. DOMAIN MODEL (if needed)
 struct DomainShareMemo {
-    let memo: DomainMemo
+    let memo: Memo
     let format: ShareFormat
     let destination: ShareDestination
 }
 
 // 2. USE CASE
 protocol ShareMemoUseCaseProtocol {
-    func execute(memo: DomainMemo, format: ShareFormat) async throws -> URL
+    func execute(memo: Memo, format: ShareFormat) async throws -> URL
 }
 
 final class ShareMemoUseCase: ShareMemoUseCaseProtocol {
     private let fileRepository: FileRepositoryProtocol
     
-    func execute(memo: DomainMemo, format: ShareFormat) async throws -> URL {
+    func execute(memo: Memo, format: ShareFormat) async throws -> URL {
         // Business logic here
         return try await fileRepository.createShareableFile(memo, format)
     }
@@ -34,7 +34,7 @@ class MemoDetailViewModel: ObservableObject {
     
     @Published var isSharing = false
     
-    func shareMemo(_ memo: DomainMemo, format: ShareFormat) {
+    func shareMemo(_ memo: Memo, format: ShareFormat) {
         Task {
             isSharing = true
             defer { isSharing = false }
@@ -70,12 +70,12 @@ struct MemoDetailView: View {
 ```swift
 // Domain
 protocol SearchMemosUseCaseProtocol {
-    func execute(query: String, filters: MemoFilters) async throws -> [DomainMemo]
+    func execute(query: String, filters: MemoFilters) async throws -> [Memo]
 }
 
 // Quick Implementation
 final class SearchMemosUseCase: SearchMemosUseCaseProtocol {
-    func execute(query: String, filters: MemoFilters) async throws -> [DomainMemo] {
+    func execute(query: String, filters: MemoFilters) async throws -> [Memo] {
         // Use your existing LoadMemosUseCase + filtering logic
         let allMemos = try await loadMemosUseCase.execute()
         return allMemos.filter { memo in
@@ -121,7 +121,7 @@ protocol ProcessVoiceCommandUseCaseProtocol {
 
 ### ✅ What's Working Perfectly
 1. **Use Case Pattern**: Single responsibility, easy to test, clear business logic
-2. **Domain Models**: Rich `DomainMemo` with computed properties 
+2. **Domain Models**: Rich `Memo` with computed properties 
 3. **Repository Pattern**: Clean data access abstraction
 4. **DI Container**: Flexible injection supporting both legacy and modern patterns
 5. **Error Handling**: Comprehensive domain-specific errors
@@ -140,7 +140,7 @@ The current UI uses native SwiftUI controls and standard Apple styling. The prev
 ### Compound Use Cases (for complex flows)
 ```swift
 protocol RecordAndAnalyzeUseCaseProtocol {
-    func execute() async throws -> (DomainMemo, DomainAnalysisResult)
+    func execute() async throws -> (Memo, DomainAnalysisResult)
 }
 
 final class RecordAndAnalyzeUseCase: RecordAndAnalyzeUseCaseProtocol {
@@ -149,7 +149,7 @@ final class RecordAndAnalyzeUseCase: RecordAndAnalyzeUseCaseProtocol {
     private let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
     private let analyzeContentUseCase: AnalyzeContentUseCaseProtocol
     
-    func execute() async throws -> (DomainMemo, DomainAnalysisResult) {
+    func execute() async throws -> (Memo, DomainAnalysisResult) {
         try await startRecordingUseCase.execute()
         let memo = try await stopRecordingUseCase.execute()
         try await startTranscriptionUseCase.execute(for: memo.id)
@@ -163,7 +163,7 @@ final class RecordAndAnalyzeUseCase: RecordAndAnalyzeUseCaseProtocol {
 ```swift
 enum MemoDetailState {
     case loading
-    case ready(memo: DomainMemo)
+    case ready(memo: Memo)
     case transcribing(progress: Float)
     case analyzing
     case error(Error)
@@ -250,8 +250,8 @@ struct AnalysisView: View {
 ### Memory Management
 ```swift
 // Lazy loading for large memo collections
-@Published private(set) var memos: [DomainMemo] = []
-private var memoCache: [UUID: DomainMemo] = [:]
+@Published private(set) var memos: [Memo] = []
+private var memoCache: [UUID: Memo] = [:]
 
 func loadMemo(_ id: UUID) async {
     if let cached = memoCache[id] {

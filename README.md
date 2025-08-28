@@ -89,13 +89,13 @@ Sonora/
 │   │       ├── LoadMemosUseCase.swift
 │   │       └── PlayMemoUseCase.swift
 │   ├── Models/
-│   │   ├── DomainMemo.swift            # 📄 Rich domain entity
+│   │   ├── Memo.swift                  # 📄 Rich domain entity
 │   │   └── DomainAnalysisResult.swift  # 🧠 Analysis domain model
 │   ├── Protocols/                      # 🔌 Repository & service contracts
 │   │   ├── MemoRepository.swift
 │   │   ├── AnalysisServiceProtocol.swift
 │   │   └── TranscriptionServiceProtocol.swift
-│   └── Adapters/                      # (legacy; not used for memos)
+│   
 ├── Presentation/                   # UI & View Logic
 │   └── ViewModels/                 # 🎬 Presentation logic coordinators
 │       ├── RecordingViewModel.swift        # 🎤 Recording state & operations
@@ -138,10 +138,9 @@ Sonora/
 Sonora is designed for clear, iterative development with strong boundaries between layers:
 
 ### Memo Model
-- Single model: `DomainMemo` is used across Domain, Data, and Presentation layers.
-- No adapters: previous `MemoAdapter` is removed; there is no DTO vs domain split for memos.
+- Single model: `Memo` is used across Domain, Data, and Presentation layers.
 - Key fields: `id`, `filename`, `fileURL`, `creationDate`, `transcriptionStatus`, `analysisResults`.
-- Helpers: audio `duration` and `durationString` are provided via an extension on `DomainMemo` in the Data layer.
+- Helpers: audio `duration` and `durationString` are provided via an extension on `Memo` in the Data layer.
 
 ### 1. **Follow the Flow**: Domain → Use Case → ViewModel → View
 ```swift

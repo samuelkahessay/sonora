@@ -19,8 +19,8 @@ final class MemoListViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Published Properties
-    @Published var memos: [DomainMemo] = []
-    @Published var playingMemo: DomainMemo?
+    @Published var memos: [Memo] = []
+    @Published var playingMemo: Memo?
     @Published var isPlaying: Bool = false
     @Published var navigationPath = NavigationPath()
     @Published var transcriptionStates: [String: TranscriptionState] = [:]
@@ -199,7 +199,7 @@ final class MemoListViewModel: ObservableObject {
     }
     
     /// Play or pause a memo
-    func playMemo(_ memo: DomainMemo) {
+    func playMemo(_ memo: Memo) {
         print("📱 MemoListViewModel: Playing memo: \(memo.filename)")
         Task {
             do {
@@ -211,7 +211,7 @@ final class MemoListViewModel: ObservableObject {
     }
     
     /// Start transcription for a memo
-    func startTranscription(for memo: DomainMemo) {
+    func startTranscription(for memo: Memo) {
         print("📱 MemoListViewModel: Starting transcription for: \(memo.filename)")
         Task {
             do {
@@ -223,7 +223,7 @@ final class MemoListViewModel: ObservableObject {
     }
     
     /// Retry transcription for a memo
-    func retryTranscription(for memo: DomainMemo) {
+    func retryTranscription(for memo: Memo) {
         print("📱 MemoListViewModel: Retrying transcription for: \(memo.filename)")
         Task {
             do {
@@ -235,7 +235,7 @@ final class MemoListViewModel: ObservableObject {
     }
     
     /// Get transcription state for a memo
-    func getTranscriptionState(for memo: DomainMemo) -> TranscriptionState {
+    func getTranscriptionState(for memo: Memo) -> TranscriptionState {
         return getTranscriptionStateUseCase.execute(memo: memo)
     }
     
@@ -250,7 +250,7 @@ final class MemoListViewModel: ObservableObject {
     // MARK: - View Helper Methods
     
     /// Get play button icon for a memo
-    func playButtonIcon(for memo: DomainMemo) -> String {
+    func playButtonIcon(for memo: Memo) -> String {
         if playingMemo?.id == memo.id && isPlaying {
             return "pause.circle.fill"
         } else {
@@ -259,12 +259,12 @@ final class MemoListViewModel: ObservableObject {
     }
     
     /// Check if memo is currently playing
-    func isMemoPaying(_ memo: DomainMemo) -> Bool {
+    func isMemoPaying(_ memo: Memo) -> Bool {
         return playingMemo?.id == memo.id && isPlaying
     }
     
     /// Get transcription action button text for a memo
-    func transcriptionActionText(for memo: DomainMemo) -> String? {
+    func transcriptionActionText(for memo: Memo) -> String? {
         let state = getTranscriptionState(for: memo)
         if state.isFailed {
             return "Retry"
@@ -277,7 +277,7 @@ final class MemoListViewModel: ObservableObject {
     }
     
     /// Get transcription action button color for a memo
-    func transcriptionActionColor(for memo: DomainMemo) -> Color {
+    func transcriptionActionColor(for memo: Memo) -> Color {
         let state = getTranscriptionState(for: memo)
         if state.isFailed {
             return .orange
@@ -289,13 +289,13 @@ final class MemoListViewModel: ObservableObject {
     }
     
     /// Check if transcription action is available for a memo
-    func canPerformTranscriptionAction(for memo: DomainMemo) -> Bool {
+    func canPerformTranscriptionAction(for memo: Memo) -> Bool {
         let state = getTranscriptionState(for: memo)
         return state.isFailed || state.isNotStarted
     }
     
     /// Perform transcription action for a memo
-    func performTranscriptionAction(for memo: DomainMemo) {
+    func performTranscriptionAction(for memo: Memo) {
         let state = getTranscriptionState(for: memo)
         if state.isFailed {
             retryTranscription(for: memo)
@@ -321,7 +321,7 @@ final class MemoListViewModel: ObservableObject {
 extension MemoListViewModel {
     
     /// Create memo row state for a specific memo
-    func memoRowState(for memo: DomainMemo) -> MemoRowState {
+    func memoRowState(for memo: Memo) -> MemoRowState {
         MemoRowState(
             memo: memo,
             transcriptionState: getTranscriptionState(for: memo),
@@ -335,7 +335,7 @@ extension MemoListViewModel {
 
 /// State object for individual memo rows
 struct MemoRowState {
-    let memo: DomainMemo
+    let memo: Memo
     let transcriptionState: TranscriptionState
     let isPlaying: Bool
     let playButtonIcon: String

@@ -93,7 +93,7 @@ public final class MemoEventHandler {
     
     // MARK: - Specific Event Handlers
     
-    private func handleMemoCreated(_ domainMemo: DomainMemo, correlationId: String) async {
+    private func handleMemoCreated(_ domainMemo: Memo, correlationId: String) async {
         let context = LogContext(
             correlationId: correlationId,
             additionalInfo: [

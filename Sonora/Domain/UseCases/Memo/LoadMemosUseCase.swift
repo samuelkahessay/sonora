@@ -3,7 +3,7 @@ import Foundation
 /// Use case for loading memos from storage
 /// Encapsulates the business logic for memo retrieval
 protocol LoadMemosUseCaseProtocol {
-    func execute() async throws -> [DomainMemo]
+    func execute() async throws -> [Memo]
 }
 
 final class LoadMemosUseCase: LoadMemosUseCaseProtocol {
@@ -17,7 +17,7 @@ final class LoadMemosUseCase: LoadMemosUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
-    func execute() async throws -> [DomainMemo] {
+    func execute() async throws -> [Memo] {
         print("📂 LoadMemosUseCase: Starting memo loading operation")
         
         do {
@@ -50,7 +50,7 @@ final class LoadMemosUseCase: LoadMemosUseCaseProtocol {
     // MARK: - Private Methods
     
     /// Validates the loaded memos for consistency and integrity
-    private func validateLoadedMemos(_ memos: [DomainMemo]) throws {
+    private func validateLoadedMemos(_ memos: [Memo]) throws {
         print("🔍 LoadMemosUseCase: Validating \(memos.count) loaded memos")
         
         // Check for duplicate IDs

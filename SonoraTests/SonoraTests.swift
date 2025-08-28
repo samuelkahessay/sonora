@@ -26,7 +26,7 @@ struct SonoraTests {
         let testData = Data("test audio content".utf8)
         try testData.write(to: testURL)
         
-        let testMemo = DomainMemo(
+        let testMemo = Memo(
             filename: "test_audio.m4a",
             fileURL: testURL,
             creationDate: Date()

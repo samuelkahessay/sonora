@@ -3,7 +3,7 @@ import Foundation
 /// Use case for handling a new recording
 /// Encapsulates the business logic for processing new recordings
 protocol HandleNewRecordingUseCaseProtocol {
-    func execute(at url: URL) async throws -> DomainMemo
+    func execute(at url: URL) async throws -> Memo
 }
 
 final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
@@ -23,7 +23,7 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
-    func execute(at url: URL) async throws -> DomainMemo {
+    func execute(at url: URL) async throws -> Memo {
         print("💾 HandleNewRecordingUseCase: Processing new recording at: \(url.lastPathComponent)")
         
         do {
@@ -121,8 +121,8 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
     // Audio integrity validation moved to Data layer.
     
     /// Creates a memo object from the validated recording
-    private func createMemoFromRecording(url: URL, metadata: FileMetadata) throws -> DomainMemo {
-        let memo = DomainMemo(
+    private func createMemoFromRecording(url: URL, metadata: FileMetadata) throws -> Memo {
+        let memo = Memo(
             filename: url.lastPathComponent,
             fileURL: url,
             creationDate: metadata.creationDate
@@ -133,7 +133,7 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
     }
     
     /// Verifies that the recording was processed successfully by the repository
-    private func verifyRecordingProcessed(_ memo: DomainMemo) throws {
+    private func verifyRecordingProcessed(_ memo: Memo) throws {
         // Give the repository a moment to process
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             // Check if memo appears in repository

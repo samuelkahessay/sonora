@@ -50,7 +50,7 @@ struct MemosView: View {
                 }
             }
             .navigationTitle("Memos")
-            .navigationDestination(for: DomainMemo.self) { memo in
+            .navigationDestination(for: Memo.self) { memo in
                 MemoDetailView(memo: memo)
             }
             .toolbar {
@@ -63,7 +63,7 @@ struct MemosView: View {
 }
 
 struct MemoRowView: View {
-    let memo: DomainMemo
+    let memo: Memo
     let viewModel: MemoListViewModel
     @State private var transcriptionState: TranscriptionState = .notStarted
     

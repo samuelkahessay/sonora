@@ -3,7 +3,7 @@ import Foundation
 /// Use case for starting transcription of a memo
 /// Encapsulates the business logic for initiating transcription
 protocol StartTranscriptionUseCaseProtocol {
-    func execute(memo: DomainMemo) async throws
+    func execute(memo: Memo) async throws
 }
 
 final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
@@ -31,7 +31,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
-    func execute(memo: DomainMemo) async throws {
+    func execute(memo: Memo) async throws {
         let context = LogContext(additionalInfo: [
             "memoId": memo.id.uuidString,
             "filename": memo.filename

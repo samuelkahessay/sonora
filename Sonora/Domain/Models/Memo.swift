@@ -1,7 +1,7 @@
 import Foundation
 
 /// Domain model representing a voice memo with enhanced business logic
-public struct DomainMemo: Identifiable, Equatable, Hashable {
+public struct Memo: Identifiable, Equatable, Hashable {
     public let id: UUID
     public let filename: String
     public let fileURL: URL
@@ -79,8 +79,8 @@ public struct DomainMemo: Identifiable, Equatable, Hashable {
     // MARK: - Business Logic Methods
     
     /// Creates a copy with updated transcription status
-    public func withTranscriptionStatus(_ status: DomainTranscriptionStatus) -> DomainMemo {
-        DomainMemo(
+    public func withTranscriptionStatus(_ status: DomainTranscriptionStatus) -> Memo {
+        Memo(
             id: id,
             filename: filename,
             fileURL: fileURL,
@@ -91,11 +91,11 @@ public struct DomainMemo: Identifiable, Equatable, Hashable {
     }
     
     /// Creates a copy with added analysis result
-    public func withAnalysisResult(_ result: DomainAnalysisResult) -> DomainMemo {
+    public func withAnalysisResult(_ result: DomainAnalysisResult) -> Memo {
         var updatedResults = analysisResults
         updatedResults.append(result)
         
-        return DomainMemo(
+        return Memo(
             id: id,
             filename: filename,
             fileURL: fileURL,

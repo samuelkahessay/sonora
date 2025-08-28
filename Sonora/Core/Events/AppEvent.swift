@@ -7,7 +7,7 @@ public enum AppEvent: Equatable {
     // MARK: - Memo Lifecycle Events
     
     /// Published when a new memo is created and saved
-    case memoCreated(DomainMemo)
+    case memoCreated(Memo)
     
     // MARK: - Recording Events
     

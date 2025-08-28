@@ -3,7 +3,7 @@ import Foundation
 /// Use case for playing a memo
 /// Encapsulates the business logic for memo playback
 protocol PlayMemoUseCaseProtocol {
-    func execute(memo: DomainMemo) async throws
+    func execute(memo: Memo) async throws
 }
 
 final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
@@ -17,7 +17,7 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
-    func execute(memo: DomainMemo) async throws {
+    func execute(memo: Memo) async throws {
         print("▶️ PlayMemoUseCase: Starting playback for memo: \(memo.filename)")
         
         do {
@@ -57,7 +57,7 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
     // MARK: - Private Methods
     
     /// Validates that the memo exists in the repository
-    private func validateMemoExists(_ memo: DomainMemo) throws {
+    private func validateMemoExists(_ memo: Memo) throws {
         guard memoRepository.memos.contains(where: { $0.id == memo.id }) else {
             print("⚠️ PlayMemoUseCase: Memo not found in repository: \(memo.filename)")
             throw RepositoryError.resourceNotFound("Memo with ID \(memo.id) not found")
@@ -67,7 +67,7 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
     }
     
     /// Validates file system state before attempting playback
-    private func validateFileSystemState(_ memo: DomainMemo) throws {
+    private func validateFileSystemState(_ memo: Memo) throws {
         // Check if file exists
         guard FileManager.default.fileExists(atPath: memo.fileURL.path) else {
             print("⚠️ PlayMemoUseCase: Audio file not found: \(memo.fileURL.path)")
@@ -101,7 +101,7 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
     // to avoid AVFoundation dependency in the Domain layer.
     
     /// Verifies that playback started successfully
-    private func verifyPlaybackStarted(_ memo: DomainMemo) throws {
+    private func verifyPlaybackStarted(_ memo: Memo) throws {
         // Give a brief moment for playback to initialize
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             if self.memoRepository.playingMemo?.id == memo.id && self.memoRepository.isPlaying {

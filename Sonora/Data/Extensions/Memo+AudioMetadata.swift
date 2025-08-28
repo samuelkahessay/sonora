@@ -1,7 +1,7 @@
 import Foundation
 import AVFoundation
 
-extension DomainMemo {
+extension Memo {
     /// Duration of the memo's audio file in seconds.
     var duration: TimeInterval {
         let asset = AVURLAsset(url: fileURL)

@@ -12,7 +12,7 @@ final class AudioPlayerProxy: NSObject, AVAudioPlayerDelegate {
 
 @MainActor
 final class AudioRepositoryImpl: ObservableObject, AudioRepository {
-    @Published var playingMemo: DomainMemo?
+    @Published var playingMemo: Memo?
     @Published var isPlaying = false
     
     // MARK: - Audio Services
@@ -111,7 +111,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         countdownSubject.send((backgroundAudioService.isInCountdown, backgroundAudioService.remainingTime))
     }
     
-    func loadAudioFiles() -> [DomainMemo] {
+    func loadAudioFiles() -> [Memo] {
         do {
             let files = try FileManager.default.contentsOfDirectory(
                 at: documentsPath, 
@@ -120,13 +120,13 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
             )
             
             let audioFiles = files.filter { $0.pathExtension == "m4a" }
-            var loadedMemos: [DomainMemo] = []
+            var loadedMemos: [Memo] = []
             
             for file in audioFiles {
                 let resourceValues = try file.resourceValues(forKeys: [.creationDateKey])
                 let creationDate = resourceValues.creationDate ?? Date()
                 
-                let memo = DomainMemo(
+                let memo = Memo(
                     filename: file.lastPathComponent,
                     fileURL: file,
                     creationDate: creationDate
@@ -201,7 +201,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         audioPlayer?.delegate = audioPlayerProxy
         audioPlayer?.play()
         
-        let playingMemoForURL = DomainMemo(
+        let playingMemoForURL = Memo(
             filename: url.lastPathComponent,
             fileURL: url,
             creationDate: Date()
@@ -233,7 +233,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         print("🎵 AudioRepositoryImpl: Stopped audio playback")
     }
     
-    func isAudioPlaying(for memo: DomainMemo) -> Bool {
+    func isAudioPlaying(for memo: Memo) -> Bool {
         return playingMemo?.id == memo.id && isPlaying
     }
     
