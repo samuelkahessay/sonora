@@ -221,12 +221,8 @@ final class RecordingFlowTestUseCase {
             print("✅ Error handling test 2 passed: Properly caught 'already recording' error")
             
             // Cleanup - we need to find the active memoId or use a reasonable approach
-            do {
-                // Since we can't easily get the memoId here, we'll let the operation coordinator handle cleanup
-                print("ℹ️ Cleanup will be handled by operation coordinator timeout")
-            } catch {
-                print("⚠️ Cleanup after double start test failed: \(error)")
-            }
+            // Since we can't easily get the memoId here, we'll let the operation coordinator handle cleanup
+            print("ℹ️ Cleanup will be handled by operation coordinator timeout")
         } catch {
             print("⚠️ Error handling test 2 partial: Caught unexpected error: \(error)")
         }

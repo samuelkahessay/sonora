@@ -43,30 +43,20 @@ final class StopRecordingUseCase: StopRecordingUseCaseProtocol {
         let activeOperations = await operationCoordinator.getActiveOperations(for: memoId)
         let recordingOperation = activeOperations.first { $0.type.category == .recording }
         
-        do {
-            // Stop via repository on main actor for thread safety
-            await MainActor.run {
-                guard self.audioRepository.isRecording else {
-                    logger.warning("Audio repository shows no recording in progress", category: .audio, context: context, error: nil)
-                    return
-                }
-                self.audioRepository.stopRecording()
-                logger.info("Background recording stopped successfully", category: .audio, context: context)
+        // Stop via repository on main actor for thread safety
+        await MainActor.run {
+            guard self.audioRepository.isRecording else {
+                logger.warning("Audio repository shows no recording in progress", category: .audio, context: context, error: nil)
+                return
             }
-            
-            // Complete the recording operation
-            if let recordingOp = recordingOperation {
-                await operationCoordinator.completeOperation(recordingOp.id)
-                logger.debug("Recording operation completed: \(recordingOp.id)", category: .audio, context: context)
-            }
-            
-        } catch {
-            // Fail the recording operation if something went wrong
-            if let recordingOp = recordingOperation {
-                await operationCoordinator.failOperation(recordingOp.id, error: error)
-                logger.error("Recording operation failed: \(recordingOp.id)", category: .audio, context: context, error: error)
-            }
-            throw error
+            self.audioRepository.stopRecording()
+            logger.info("Background recording stopped successfully", category: .audio, context: context)
+        }
+        
+        // Complete the recording operation
+        if let recordingOp = recordingOperation {
+            await operationCoordinator.completeOperation(recordingOp.id)
+            logger.debug("Recording operation completed: \(recordingOp.id)", category: .audio, context: context)
         }
     }
 }

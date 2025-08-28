@@ -122,12 +122,8 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
         if memoRepository.playingMemo?.id == memo.id && memoRepository.isPlaying {
             print("⏸️ DeleteMemoUseCase: Stopping playback before deletion")
             
-            do {
-                memoRepository.stopPlaying()
-                print("✅ DeleteMemoUseCase: Playback stopped successfully")
-            } catch {
-                throw ServiceError.audioPlaybackFailed("Failed to stop playback before deletion")
-            }
+            memoRepository.stopPlaying()
+            print("✅ DeleteMemoUseCase: Playback stopped successfully")
         }
     }
     

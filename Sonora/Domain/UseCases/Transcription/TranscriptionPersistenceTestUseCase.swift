@@ -45,8 +45,7 @@ final class TranscriptionPersistenceTestUseCase {
         let testMemoId = UUID()
         let testMemo = createTestMemo(id: testMemoId)
         
-        do {
-            // Phase 1: Save transcription states
+        // Phase 1: Save transcription states
             print("🧪 Phase 1: Saving various transcription states...")
             
             await MainActor.run {
@@ -130,10 +129,6 @@ final class TranscriptionPersistenceTestUseCase {
             }
             
             print("🧪 TranscriptionPersistenceTestUseCase: Test completed successfully")
-            
-        } catch {
-            print("❌ TranscriptionPersistenceTestUseCase: Test failed with error: \(error)")
-        }
     }
     
     /// Test real transcription workflow with persistence

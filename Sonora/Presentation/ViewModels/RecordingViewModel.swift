@@ -358,25 +358,18 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     func requestPermission() {
         guard !isRequestingPermission else { return }
         
-        print("🎤 RecordingViewModel: Requesting microphone permission")
-        isRequestingPermission = true
-        
-        Task {
-            do {
-                let status = await requestPermissionUseCase.execute()
-                await MainActor.run {
-                    isRequestingPermission = false
-                    permissionStatus = status
-                    hasPermission = status.allowsRecording
-                    print("🎤 RecordingViewModel: Permission result: \(status.displayName)")
-                }
-            } catch {
-                await MainActor.run {
-                    isRequestingPermission = false
-                    print("❌ RecordingViewModel: Permission request failed: \(error)")
-                }
-            }
+    print("🎤 RecordingViewModel: Requesting microphone permission")
+    isRequestingPermission = true
+    
+    Task {
+        let status = await requestPermissionUseCase.execute()
+        await MainActor.run {
+            isRequestingPermission = false
+            permissionStatus = status
+            hasPermission = status.allowsRecording
+            print("🎤 RecordingViewModel: Permission result: \(status.displayName)")
         }
+    }
     }
     
     /// Open iOS Settings for permission management

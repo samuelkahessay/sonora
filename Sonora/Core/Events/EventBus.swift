@@ -63,12 +63,8 @@ public final class EventBus: ObservableObject {
                 continue
             }
             
-            // Execute handler with proper error handling
-            do {
-                handler(event)
-            } catch {
-                print("⚠️ EventBus: Handler execution failed for subscription \(subscriptionId): \(error)")
-            }
+            // Execute handler (non-throwing)
+            handler(event)
         }
     }
     
@@ -151,7 +147,7 @@ public final class EventBus: ObservableObject {
         return Future<AppEvent, Never> { [weak self] promise in
             guard let self = self else { return }
             
-            let subscriptionId = self.subscribe(to: eventType) { event in
+            _ = self.subscribe(to: eventType) { event in
                 promise(.success(event))
             }
             
