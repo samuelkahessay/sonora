@@ -14,6 +14,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     private let handleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol
     private let audioRepository: AudioRepository
     private let operationCoordinator: OperationCoordinator
+    private let systemNavigator: SystemNavigator
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Debounce Management
@@ -140,7 +141,8 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         requestPermissionUseCase: RequestMicrophonePermissionUseCaseProtocol,
         handleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol,
         audioRepository: AudioRepository,
-        operationCoordinator: OperationCoordinator = OperationCoordinator.shared
+        operationCoordinator: OperationCoordinator = OperationCoordinator.shared,
+        systemNavigator: SystemNavigator
     ) {
         self.startRecordingUseCase = startRecordingUseCase
         self.stopRecordingUseCase = stopRecordingUseCase
@@ -148,6 +150,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         self.handleNewRecordingUseCase = handleNewRecordingUseCase
         self.audioRepository = audioRepository
         self.operationCoordinator = operationCoordinator
+        self.systemNavigator = systemNavigator
         
         setupBindings()
         setupRecordingCallback()
@@ -177,7 +180,8 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
             requestPermissionUseCase: RequestMicrophonePermissionUseCase(logger: logger),
             handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository),
             audioRepository: audioRepository,
-            operationCoordinator: container.operationCoordinator()
+            operationCoordinator: container.operationCoordinator(),
+            systemNavigator: container.systemNavigator()
         )
     }
     
@@ -400,12 +404,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     /// Open iOS Settings for permission management
     func openSettings() {
         print("⚙️ RecordingViewModel: Opening Settings for permission management")
-        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
-            print("❌ RecordingViewModel: Failed to create Settings URL")
-            return
-        }
-        
-        UIApplication.shared.open(settingsURL) { success in
+        systemNavigator.openSettings { success in
             print("⚙️ RecordingViewModel: Settings opened successfully: \(success)")
         }
     }

@@ -30,6 +30,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _backgroundAudioService: BackgroundAudioService!
     private var _audioRepository: AudioRepository!
     private var _startRecordingUseCase: StartRecordingUseCase!
+    private var _systemNavigator: SystemNavigator!
     
     // MARK: - Initialization
     private init() {
@@ -59,6 +60,11 @@ final class DIContainer: ObservableObject, Resolver {
         // Register BackgroundAudioService
         register(BackgroundAudioService.self) { resolver in
             return BackgroundAudioService()
+        }
+        
+        // Register SystemNavigator
+        register(SystemNavigator.self) { _ in
+            return SystemNavigatorImpl()
         }
         
         // Register AudioRepository 
@@ -92,6 +98,7 @@ final class DIContainer: ObservableObject, Resolver {
         self._backgroundAudioService = resolve(BackgroundAudioService.self)!
         self._audioRepository = resolve(AudioRepository.self)!
         self._startRecordingUseCase = resolve(StartRecordingUseCase.self)!
+        self._systemNavigator = resolve(SystemNavigator.self)!
         
         // Initialize external API services  
         self._transcriptionAPI = TranscriptionService()
@@ -186,6 +193,12 @@ final class DIContainer: ObservableObject, Resolver {
     func startRecordingUseCase() -> StartRecordingUseCase {
         ensureConfigured()
         return _startRecordingUseCase
+    }
+    
+    /// Get system navigator
+    func systemNavigator() -> SystemNavigator {
+        ensureConfigured()
+        return _systemNavigator
     }
     
     /// Get logger service
