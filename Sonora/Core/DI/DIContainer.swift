@@ -20,7 +20,6 @@ final class DIContainer: ObservableObject, Resolver {
     private var registrations: [ObjectIdentifier: Any] = [:]
     
     // MARK: - Private Service Instances
-    private var _audioRecorder: AudioRecorder!
     private var _transcriptionAPI: TranscriptionAPI!
     private var _analysisService: AnalysisService!
     private var _memoRepository: MemoRepositoryImpl!
@@ -78,7 +77,6 @@ final class DIContainer: ObservableObject, Resolver {
     /// Configure DIContainer with shared service instances
     /// This ensures all parts of the app use the same service instances
     func configure(
-        audioRecorder: AudioRecorder? = nil,
         analysisService: AnalysisService? = nil,
         logger: LoggerProtocol? = nil
     ) {
@@ -97,7 +95,6 @@ final class DIContainer: ObservableObject, Resolver {
         
         // Initialize external API services  
         self._transcriptionAPI = TranscriptionService()
-        self._audioRecorder = audioRecorder ?? AudioRecorder()
         self._analysisService = analysisService ?? AnalysisService()
         self._operationCoordinator = OperationCoordinator.shared
         
@@ -135,11 +132,6 @@ final class DIContainer: ObservableObject, Resolver {
     
     // MARK: - Protocol-Based Service Access
     
-    /// Get audio recording service
-    func audioRecordingService() -> AudioRecordingService {
-        ensureConfigured()
-        return _audioRecorder
-    }
     
     /// Get transcription service
     /// Returns the MemoRepository which provides the same TranscriptionServiceProtocol interface
