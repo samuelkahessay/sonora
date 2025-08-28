@@ -40,32 +40,51 @@ struct SonoraApp: App {
                     #endif
                 }
                 .onOpenURL { url in
-                    guard url.scheme == "sonora" else { return }
+                    print("🔗 SonoraApp: Deep link received: \(url)")
+                    guard url.scheme == "sonora" else { 
+                        print("❌ SonoraApp: Invalid scheme: \(url.scheme ?? "nil")")
+                        return 
+                    }
+                    
                     if url.host == "stopRecording" {
+                        print("🎯 SonoraApp: Processing stop recording deep link")
                         Task { @MainActor in
-                            // Attempt to stop the current recording operation gracefully
-                            let coordinator = OperationCoordinator.shared
-                            // Find any active recording operation and stop via use case
-                            let activeOps = await coordinator.getAllActiveOperations()
-                            if let recordingOp = activeOps.first(where: { $0.type.category == .recording }) {
-                                let memoId = recordingOp.type.memoId
-                                let audioRepo = DIContainer.shared.audioRepository()
-                                let stopUseCase = StopRecordingUseCase(audioRepository: audioRepo)
-                                do {
-                                    try await stopUseCase.execute(memoId: memoId)
-                                } catch {
-                                    print("❌ SonoraApp: Failed to stop recording via deep link: \(error)")
-                                }
-                            }
-                            // End the live activity immediately so it disappears right away
-                            let liveService = DIContainer.shared.liveActivityService()
-                            let endUseCase = EndLiveActivityUseCase(liveActivityService: liveService)
                             do {
+                                // Attempt to stop the current recording operation gracefully
+                                let coordinator = OperationCoordinator.shared
+                                let activeOps = await coordinator.getAllActiveOperations()
+                                print("📊 SonoraApp: Found \(activeOps.count) active operations")
+                                
+                                if let recordingOp = activeOps.first(where: { $0.type.category == .recording }) {
+                                    print("🎤 SonoraApp: Found active recording operation for memo: \(recordingOp.type.memoId)")
+                                    let memoId = recordingOp.type.memoId
+                                    let audioRepo = DIContainer.shared.audioRepository()
+                                    let stopUseCase = StopRecordingUseCase(audioRepository: audioRepo)
+                                    
+                                    do {
+                                        try await stopUseCase.execute(memoId: memoId)
+                                        print("✅ SonoraApp: Successfully stopped recording via deep link")
+                                    } catch {
+                                        print("❌ SonoraApp: Failed to stop recording via deep link: \(error)")
+                                    }
+                                } else {
+                                    print("⚠️ SonoraApp: No active recording operation found")
+                                }
+                                
+                                // End the live activity immediately so it disappears right away
+                                print("🔄 SonoraApp: Ending Live Activity...")
+                                let liveService = DIContainer.shared.liveActivityService()
+                                let endUseCase = EndLiveActivityUseCase(liveActivityService: liveService)
+                                
                                 try await endUseCase.execute(dismissalPolicy: .immediate)
+                                print("✅ SonoraApp: Successfully ended Live Activity")
+                                
                             } catch {
-                                print("❌ SonoraApp: Failed to end Live Activity: \(error)")
+                                print("❌ SonoraApp: Deep link handling failed: \(error)")
                             }
                         }
+                    } else {
+                        print("❌ SonoraApp: Unknown deep link host: \(url.host ?? "nil")")
                     }
                 }
         }
