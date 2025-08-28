@@ -9,18 +9,18 @@ protocol AnalyzeTLDRUseCaseProtocol {
 final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
     
     // MARK: - Dependencies
-    private let analysisService: AnalysisServiceProtocol
-    private let analysisRepository: AnalysisRepository
-    private let logger: LoggerProtocol
-    private let eventBus: EventBusProtocol
+    private let analysisService: any AnalysisServiceProtocol
+    private let analysisRepository: any AnalysisRepository
+    private let logger: any LoggerProtocol
+    private let eventBus: any EventBusProtocol
     private let operationCoordinator: OperationCoordinator
     
     // MARK: - Initialization
     init(
-        analysisService: AnalysisServiceProtocol, 
-        analysisRepository: AnalysisRepository,
-        logger: LoggerProtocol = Logger.shared,
-        eventBus: EventBusProtocol = EventBus.shared,
+        analysisService: any AnalysisServiceProtocol, 
+        analysisRepository: any AnalysisRepository,
+        logger: any LoggerProtocol = Logger.shared,
+        eventBus: any EventBusProtocol = EventBus.shared,
         operationCoordinator: OperationCoordinator = OperationCoordinator.shared
     ) {
         self.analysisService = analysisService
@@ -131,4 +131,3 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
         }
     }
     }
-

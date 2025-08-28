@@ -11,10 +11,10 @@ protocol RequestMicrophonePermissionUseCaseProtocol {
 final class RequestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCaseProtocol {
     
     // MARK: - Dependencies
-    private let logger: LoggerProtocol
+    private let logger: any LoggerProtocol
     
     // MARK: - Initialization
-    init(logger: LoggerProtocol = Logger.shared) {
+    init(logger: any LoggerProtocol = Logger.shared) {
         self.logger = logger
     }
     

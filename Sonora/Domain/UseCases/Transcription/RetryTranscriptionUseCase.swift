@@ -9,11 +9,11 @@ protocol RetryTranscriptionUseCaseProtocol {
 final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
     
     // MARK: - Dependencies
-    private let transcriptionRepository: TranscriptionRepository
-    private let transcriptionAPI: TranscriptionAPI
+    private let transcriptionRepository: any TranscriptionRepository
+    private let transcriptionAPI: any TranscriptionAPI
     
     // MARK: - Initialization
-    init(transcriptionRepository: TranscriptionRepository, transcriptionAPI: TranscriptionAPI) {
+    init(transcriptionRepository: any TranscriptionRepository, transcriptionAPI: any TranscriptionAPI) {
         self.transcriptionRepository = transcriptionRepository
         self.transcriptionAPI = transcriptionAPI
     }

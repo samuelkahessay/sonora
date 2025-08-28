@@ -16,7 +16,7 @@ final class MemoDetailViewModel: ObservableObject {
     private let analyzeContentUseCase: AnalyzeContentUseCaseProtocol
     private let analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol
     private let analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol
-    private let memoRepository: MemoRepository // Still needed for state updates
+    private let memoRepository: any MemoRepository // Still needed for state updates
     private let operationCoordinator: OperationCoordinator
     private var cancellables = Set<AnyCancellable>()
     
@@ -72,7 +72,7 @@ final class MemoDetailViewModel: ObservableObject {
         analyzeContentUseCase: AnalyzeContentUseCaseProtocol,
         analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol,
         analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol,
-        memoRepository: MemoRepository,
+        memoRepository: any MemoRepository,
         operationCoordinator: OperationCoordinator = OperationCoordinator.shared
     ) {
         self.playMemoUseCase = playMemoUseCase

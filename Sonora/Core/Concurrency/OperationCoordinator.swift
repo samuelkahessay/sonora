@@ -22,23 +22,23 @@ public actor OperationCoordinator {
     private let maxConcurrentOperations = 10
     
     /// Event bus for operation state notifications
-    private let eventBus: EventBusProtocol
+    private let eventBus: any EventBusProtocol
     
     /// Logger for debugging and monitoring
-    private let logger: LoggerProtocol
+    private let logger: any LoggerProtocol
     
     /// Delegate for operation status updates
-    public weak var statusDelegate: OperationStatusDelegate?
+    public weak var statusDelegate: (any OperationStatusDelegate)?
     
     /// Set the status delegate (thread-safe method)
-    public func setStatusDelegate(_ delegate: OperationStatusDelegate?) {
+    public func setStatusDelegate(_ delegate: (any OperationStatusDelegate)?) {
         statusDelegate = delegate
     }
     
     // MARK: - Initialization
     private init(
-        eventBus: EventBusProtocol = EventBus.shared,
-        logger: LoggerProtocol = Logger.shared
+        eventBus: any EventBusProtocol = EventBus.shared,
+        logger: any LoggerProtocol = Logger.shared
     ) {
         self.eventBus = eventBus
         self.logger = logger

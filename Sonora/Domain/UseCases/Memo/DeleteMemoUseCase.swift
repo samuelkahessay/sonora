@@ -9,15 +9,15 @@ protocol DeleteMemoUseCaseProtocol {
 final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     
     // MARK: - Dependencies
-    private let memoRepository: MemoRepository
-    private let analysisRepository: AnalysisRepository
-    private let logger: LoggerProtocol
+    private let memoRepository: any MemoRepository
+    private let analysisRepository: any AnalysisRepository
+    private let logger: any LoggerProtocol
     
     // MARK: - Initialization
     init(
-        memoRepository: MemoRepository, 
-        analysisRepository: AnalysisRepository,
-        logger: LoggerProtocol = Logger.shared
+        memoRepository: any MemoRepository, 
+        analysisRepository: any AnalysisRepository,
+        logger: any LoggerProtocol = Logger.shared
     ) {
         self.memoRepository = memoRepository
         self.analysisRepository = analysisRepository
@@ -25,7 +25,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     }
     
     // MARK: - Convenience Initializer (for backward compatibility)
-    convenience init(memoRepository: MemoRepository) {
+    convenience init(memoRepository: any MemoRepository) {
         // Create a non-isolated analysis repository instance
         let analysisRepo = MainActor.assumeIsolated {
             AnalysisRepositoryImpl()

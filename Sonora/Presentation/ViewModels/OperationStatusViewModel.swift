@@ -9,7 +9,7 @@ final class OperationStatusViewModel: ObservableObject, OperationStatusDelegate 
     
     // MARK: - Dependencies
     private let operationCoordinator: OperationCoordinator
-    private let logger: LoggerProtocol
+    private let logger: any LoggerProtocol
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Published Properties
@@ -50,7 +50,7 @@ final class OperationStatusViewModel: ObservableObject, OperationStatusDelegate 
     
     init(
         operationCoordinator: OperationCoordinator = OperationCoordinator.shared,
-        logger: LoggerProtocol = Logger.shared
+        logger: any LoggerProtocol = Logger.shared
     ) {
         self.operationCoordinator = operationCoordinator
         self.logger = logger

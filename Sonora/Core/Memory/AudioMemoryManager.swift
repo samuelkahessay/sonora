@@ -32,7 +32,7 @@ public final class AudioMemoryManager: ObservableObject, AudioMemoryManagerProto
     
     // MARK: - Dependencies
     
-    private let logger: LoggerProtocol
+    private let logger: any LoggerProtocol
     private let configuration: AppConfiguration
     private let fileManager: FileManager
     private let documentsDirectory: URL
@@ -68,7 +68,7 @@ public final class AudioMemoryManager: ObservableObject, AudioMemoryManagerProto
     // MARK: - Initialization
     
     public init(
-        logger: LoggerProtocol = Logger.shared,
+        logger: any LoggerProtocol = Logger.shared,
         configuration: AppConfiguration = AppConfiguration.shared,
         fileManager: FileManager = .default
     ) {

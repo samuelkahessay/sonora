@@ -10,15 +10,15 @@ protocol HandleNewRecordingUseCaseProtocol {
 final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
     
     // MARK: - Dependencies
-    private let memoRepository: MemoRepository
-    private let eventBus: EventBusProtocol
+    private let memoRepository: any MemoRepository
+    private let eventBus: any EventBusProtocol
     
     // MARK: - Configuration
     private let maxFileSizeBytes: Int64 = 100 * 1024 * 1024 // 100MB
     private let supportedFormats: Set<String> = ["m4a", "mp3", "wav", "aiff"]
     
     // MARK: - Initialization
-    init(memoRepository: MemoRepository, eventBus: EventBusProtocol = EventBus.shared) {
+    init(memoRepository: any MemoRepository, eventBus: any EventBusProtocol = EventBus.shared) {
         self.memoRepository = memoRepository
         self.eventBus = eventBus
     }

@@ -9,19 +9,19 @@ protocol StartTranscriptionUseCaseProtocol {
 final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     
     // MARK: - Dependencies
-    private let transcriptionRepository: TranscriptionRepository
-    private let transcriptionAPI: TranscriptionAPI
-    private let eventBus: EventBusProtocol
+    private let transcriptionRepository: any TranscriptionRepository
+    private let transcriptionAPI: any TranscriptionAPI
+    private let eventBus: any EventBusProtocol
     private let operationCoordinator: OperationCoordinator
-    private let logger: LoggerProtocol
+    private let logger: any LoggerProtocol
     
     // MARK: - Initialization
     init(
-        transcriptionRepository: TranscriptionRepository, 
-        transcriptionAPI: TranscriptionAPI, 
-        eventBus: EventBusProtocol = EventBus.shared,
+        transcriptionRepository: any TranscriptionRepository, 
+        transcriptionAPI: any TranscriptionAPI, 
+        eventBus: any EventBusProtocol = EventBus.shared,
         operationCoordinator: OperationCoordinator = OperationCoordinator.shared,
-        logger: LoggerProtocol = Logger.shared
+        logger: any LoggerProtocol = Logger.shared
     ) {
         self.transcriptionRepository = transcriptionRepository
         self.transcriptionAPI = transcriptionAPI

@@ -8,13 +8,13 @@ import SwiftUI
 final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     
     // MARK: - Dependencies
-    private let startRecordingUseCase: StartRecordingUseCaseProtocol
-    private let stopRecordingUseCase: StopRecordingUseCaseProtocol
-    private let requestPermissionUseCase: RequestMicrophonePermissionUseCaseProtocol
-    private let handleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol
-    private let audioRepository: AudioRepository
+    private let startRecordingUseCase: any StartRecordingUseCaseProtocol
+    private let stopRecordingUseCase: any StopRecordingUseCaseProtocol
+    private let requestPermissionUseCase: any RequestMicrophonePermissionUseCaseProtocol
+    private let handleNewRecordingUseCase: any HandleNewRecordingUseCaseProtocol
+    private let audioRepository: any AudioRepository
     private let operationCoordinator: OperationCoordinator
-    private let systemNavigator: SystemNavigator
+    private let systemNavigator: any SystemNavigator
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Debounce Management
@@ -136,13 +136,13 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     // MARK: - Initialization
     
     init(
-        startRecordingUseCase: StartRecordingUseCaseProtocol,
-        stopRecordingUseCase: StopRecordingUseCaseProtocol,
-        requestPermissionUseCase: RequestMicrophonePermissionUseCaseProtocol,
-        handleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol,
-        audioRepository: AudioRepository,
+        startRecordingUseCase: any StartRecordingUseCaseProtocol,
+        stopRecordingUseCase: any StopRecordingUseCaseProtocol,
+        requestPermissionUseCase: any RequestMicrophonePermissionUseCaseProtocol,
+        handleNewRecordingUseCase: any HandleNewRecordingUseCaseProtocol,
+        audioRepository: any AudioRepository,
         operationCoordinator: OperationCoordinator = OperationCoordinator.shared,
-        systemNavigator: SystemNavigator
+        systemNavigator: any SystemNavigator
     ) {
         self.startRecordingUseCase = startRecordingUseCase
         self.stopRecordingUseCase = stopRecordingUseCase

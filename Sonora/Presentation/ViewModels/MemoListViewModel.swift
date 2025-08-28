@@ -14,8 +14,8 @@ final class MemoListViewModel: ObservableObject {
     private let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
     private let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
     private let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
-    private let memoRepository: MemoRepository // Still needed for state updates
-    private let transcriptionService: TranscriptionServiceProtocol // Still needed for state updates
+    private let memoRepository: any MemoRepository // Still needed for state updates
+    private let transcriptionService: any TranscriptionServiceProtocol // Still needed for state updates
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Published Properties
@@ -56,8 +56,8 @@ final class MemoListViewModel: ObservableObject {
         startTranscriptionUseCase: StartTranscriptionUseCaseProtocol,
         retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol,
         getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
-        memoRepository: MemoRepository,
-        transcriptionService: TranscriptionServiceProtocol
+        memoRepository: any MemoRepository,
+        transcriptionService: any TranscriptionServiceProtocol
     ) {
         self.loadMemosUseCase = loadMemosUseCase
         self.deleteMemoUseCase = deleteMemoUseCase

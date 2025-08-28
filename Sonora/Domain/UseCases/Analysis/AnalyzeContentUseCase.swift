@@ -9,17 +9,17 @@ protocol AnalyzeContentUseCaseProtocol {
 final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol {
     
     // MARK: - Dependencies
-    private let analysisService: AnalysisServiceProtocol
-    private let analysisRepository: AnalysisRepository
-    private let logger: LoggerProtocol
-    private let eventBus: EventBusProtocol
+    private let analysisService: any AnalysisServiceProtocol
+    private let analysisRepository: any AnalysisRepository
+    private let logger: any LoggerProtocol
+    private let eventBus: any EventBusProtocol
     
     // MARK: - Initialization
     init(
-        analysisService: AnalysisServiceProtocol, 
-        analysisRepository: AnalysisRepository,
-        logger: LoggerProtocol = Logger.shared,
-        eventBus: EventBusProtocol = EventBus.shared
+        analysisService: any AnalysisServiceProtocol, 
+        analysisRepository: any AnalysisRepository,
+        logger: any LoggerProtocol = Logger.shared,
+        eventBus: any EventBusProtocol = EventBus.shared
     ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository

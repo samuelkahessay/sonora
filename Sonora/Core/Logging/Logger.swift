@@ -378,12 +378,12 @@ public final class PerformanceTimer {
     private let startTime: CFAbsoluteTime
     private let operation: String
     private let category: LogCategory
-    private let logger: LoggerProtocol
+    private let logger: any LoggerProtocol
     
     public init(
         operation: String,
         category: LogCategory = .performance,
-        logger: LoggerProtocol = Logger.shared
+        logger: any LoggerProtocol = Logger.shared
     ) {
         self.operation = operation
         self.category = category

@@ -9,10 +9,10 @@ protocol LoadMemosUseCaseProtocol {
 final class LoadMemosUseCase: LoadMemosUseCaseProtocol {
     
     // MARK: - Dependencies
-    private let memoRepository: MemoRepository
+    private let memoRepository: any MemoRepository
     
     // MARK: - Initialization
-    init(memoRepository: MemoRepository) {
+    init(memoRepository: any MemoRepository) {
         self.memoRepository = memoRepository
     }
     

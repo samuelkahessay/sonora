@@ -12,12 +12,12 @@ import Foundation
 final class TranscriptionPersistenceTestUseCase {
     
     // MARK: - Dependencies
-    private let transcriptionRepository: TranscriptionRepository
+    private let transcriptionRepository: any TranscriptionRepository
     private let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
     private let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
     
     // MARK: - Initialization
-    init(transcriptionRepository: TranscriptionRepository) {
+    init(transcriptionRepository: any TranscriptionRepository) {
         self.transcriptionRepository = transcriptionRepository
         self.startTranscriptionUseCase = StartTranscriptionUseCase(transcriptionRepository: transcriptionRepository, transcriptionAPI: TranscriptionService())
         self.getTranscriptionStateUseCase = GetTranscriptionStateUseCase(transcriptionRepository: transcriptionRepository)
@@ -277,4 +277,3 @@ final class TranscriptionPersistenceTestUseCase {
         """
     }
 }
-

@@ -6,9 +6,9 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private var analysisCache: [String: Any] = [:]
     private var analysisHistory: [UUID: [(mode: AnalysisMode, timestamp: Date)]] = [:]
-    private let logger: LoggerProtocol
+    private let logger: any LoggerProtocol
     
-    init(logger: LoggerProtocol = Logger.shared) {
+    init(logger: any LoggerProtocol = Logger.shared) {
         self.logger = logger
         logger.repository("AnalysisRepository initialized", 
                         context: LogContext(additionalInfo: ["documentsPath": documentsPath.path]))

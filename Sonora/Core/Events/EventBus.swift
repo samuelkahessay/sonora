@@ -202,9 +202,9 @@ extension EventBus: EventBusProtocol {}
 @MainActor
 public final class EventSubscriptionManager {
     private var subscriptionIds: Set<UUID> = []
-    private let eventBus: EventBusProtocol
+    private let eventBus: any EventBusProtocol
     
-    public init(eventBus: EventBusProtocol = EventBus.shared) {
+    public init(eventBus: any EventBusProtocol = EventBus.shared) {
         self.eventBus = eventBus
     }
     

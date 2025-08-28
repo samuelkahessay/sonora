@@ -12,7 +12,7 @@ import Foundation
 final class RecordingFlowTestUseCase {
     
     // MARK: - Dependencies
-    private let audioRepository: AudioRepository
+    private let audioRepository: any AudioRepository
     private let startRecordingUseCase: StartRecordingUseCaseProtocol
     private let stopRecordingUseCase: StopRecordingUseCaseProtocol
     private let permissionUseCase: RequestMicrophonePermissionUseCaseProtocol
@@ -21,7 +21,7 @@ final class RecordingFlowTestUseCase {
     private var currentMemoId: UUID?
     
     // MARK: - Initialization
-    init(audioRepository: AudioRepository) {
+    init(audioRepository: any AudioRepository) {
         self.audioRepository = audioRepository
         self.startRecordingUseCase = StartRecordingUseCase(audioRepository: audioRepository)
         self.stopRecordingUseCase = StopRecordingUseCase(audioRepository: audioRepository)

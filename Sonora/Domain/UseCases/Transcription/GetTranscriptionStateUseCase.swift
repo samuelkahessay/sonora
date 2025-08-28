@@ -9,10 +9,10 @@ protocol GetTranscriptionStateUseCaseProtocol {
 final class GetTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol {
     
     // MARK: - Dependencies
-    private let transcriptionRepository: TranscriptionRepository
+    private let transcriptionRepository: any TranscriptionRepository
     
     // MARK: - Initialization
-    init(transcriptionRepository: TranscriptionRepository) {
+    init(transcriptionRepository: any TranscriptionRepository) {
         self.transcriptionRepository = transcriptionRepository
     }
     

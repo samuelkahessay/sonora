@@ -9,8 +9,8 @@ public final class EventHandlerRegistry {
     public static let shared = EventHandlerRegistry()
     
     // MARK: - Dependencies
-    private let logger: LoggerProtocol
-    private let eventBus: EventBusProtocol
+    private let logger: any LoggerProtocol
+    private let eventBus: any EventBusProtocol
     
     // MARK: - Handler Management
     private var registeredHandlers: [String: Any] = [:]
@@ -30,8 +30,8 @@ public final class EventHandlerRegistry {
     
     // MARK: - Initialization
     private init(
-        logger: LoggerProtocol = Logger.shared,
-        eventBus: EventBusProtocol = EventBus.shared
+        logger: any LoggerProtocol = Logger.shared,
+        eventBus: any EventBusProtocol = EventBus.shared
     ) {
         self.logger = logger
         self.eventBus = eventBus

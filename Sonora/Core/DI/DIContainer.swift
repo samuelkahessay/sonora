@@ -20,17 +20,17 @@ final class DIContainer: ObservableObject, Resolver {
     private var registrations: [ObjectIdentifier: Any] = [:]
     
     // MARK: - Private Service Instances
-    private var _transcriptionAPI: TranscriptionAPI!
+    private var _transcriptionAPI: (any TranscriptionAPI)?
     private var _analysisService: AnalysisService!
     private var _memoRepository: MemoRepositoryImpl!
-    private var _transcriptionRepository: TranscriptionRepository!
-    private var _analysisRepository: AnalysisRepository!
-    private var _logger: LoggerProtocol!
+    private var _transcriptionRepository: (any TranscriptionRepository)?
+    private var _analysisRepository: (any AnalysisRepository)?
+    private var _logger: (any LoggerProtocol)?
     private var _operationCoordinator: OperationCoordinator!
     private var _backgroundAudioService: BackgroundAudioService!
-    private var _audioRepository: AudioRepository!
+    private var _audioRepository: (any AudioRepository)?
     private var _startRecordingUseCase: StartRecordingUseCase!
-    private var _systemNavigator: SystemNavigator!
+    private var _systemNavigator: (any SystemNavigator)?
     
     // MARK: - Initialization
     private init() {
@@ -41,7 +41,7 @@ final class DIContainer: ObservableObject, Resolver {
     // MARK: - Registration Methods
     
     /// Register a service with a factory closure
-    func register<T>(_ type: T.Type, factory: @escaping (Resolver) -> T) {
+    func register<T>(_ type: T.Type, factory: @escaping (any Resolver) -> T) {
         let key = ObjectIdentifier(type)
         registrations[key] = factory
     }
@@ -49,7 +49,7 @@ final class DIContainer: ObservableObject, Resolver {
     /// Resolve a service from registrations
     func resolve<T>(_ type: T.Type) -> T? {
         let key = ObjectIdentifier(type)
-        guard let factory = registrations[key] as? (Resolver) -> T else {
+        guard let factory = registrations[key] as? (any Resolver) -> T else {
             return nil
         }
         return factory(self)
@@ -63,19 +63,19 @@ final class DIContainer: ObservableObject, Resolver {
         }
         
         // Register SystemNavigator
-        register(SystemNavigator.self) { _ in
-            return SystemNavigatorImpl()
+        register((any SystemNavigator).self) { _ in
+            return SystemNavigatorImpl() as any SystemNavigator
         }
         
         // Register AudioRepository 
-        register(AudioRepository.self) { resolver in
+        register((any AudioRepository).self) { resolver in
             let backgroundService = resolver.resolve(BackgroundAudioService.self)!
-            return AudioRepositoryImpl(backgroundAudioService: backgroundService)
+            return AudioRepositoryImpl(backgroundAudioService: backgroundService) as any AudioRepository
         }
         
         // Register StartRecordingUseCase 
         register(StartRecordingUseCase.self) { resolver in
-            let audioRepository = resolver.resolve(AudioRepository.self)!
+            let audioRepository = resolver.resolve((any AudioRepository).self)!
             return StartRecordingUseCase(audioRepository: audioRepository)
         }
     }
@@ -84,7 +84,7 @@ final class DIContainer: ObservableObject, Resolver {
     /// This ensures all parts of the app use the same service instances
     func configure(
         analysisService: AnalysisService? = nil,
-        logger: LoggerProtocol? = nil
+        logger: (any LoggerProtocol)? = nil
     ) {
         // Setup repositories first
         setupRepositories()
@@ -96,9 +96,9 @@ final class DIContainer: ObservableObject, Resolver {
         
         // Initialize services from registrations
         self._backgroundAudioService = resolve(BackgroundAudioService.self)!
-        self._audioRepository = resolve(AudioRepository.self)!
+        self._audioRepository = resolve((any AudioRepository).self)!
         self._startRecordingUseCase = resolve(StartRecordingUseCase.self)!
-        self._systemNavigator = resolve(SystemNavigator.self)!
+        self._systemNavigator = resolve((any SystemNavigator).self)!
         
         // Initialize external API services  
         self._transcriptionAPI = TranscriptionService()
@@ -106,16 +106,19 @@ final class DIContainer: ObservableObject, Resolver {
         self._operationCoordinator = OperationCoordinator.shared
         
         // Initialize MemoRepository with Use Case dependencies
+        guard let trRepo = _transcriptionRepository, let trAPI = _transcriptionAPI else {
+            fatalError("DIContainer not fully configured: missing transcription dependencies")
+        }
         let startTranscriptionUseCase = StartTranscriptionUseCase(
-            transcriptionRepository: _transcriptionRepository,
-            transcriptionAPI: _transcriptionAPI
+            transcriptionRepository: trRepo,
+            transcriptionAPI: trAPI
         )
         let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(
-            transcriptionRepository: _transcriptionRepository
+            transcriptionRepository: trRepo
         )
         let retryTranscriptionUseCase = RetryTranscriptionUseCase(
-            transcriptionRepository: _transcriptionRepository,
-            transcriptionAPI: _transcriptionAPI
+            transcriptionRepository: trRepo,
+            transcriptionAPI: trAPI
         )
         
         self._memoRepository = MemoRepositoryImpl(
@@ -124,15 +127,26 @@ final class DIContainer: ObservableObject, Resolver {
             retryTranscriptionUseCase: retryTranscriptionUseCase
         )
         
-        _logger.info("DIContainer: Configured with shared service instances", category: .system, context: LogContext())
-        _logger.debug("DIContainer: MemoRepository: \(ObjectIdentifier(self._memoRepository))", category: .system, context: LogContext())
-        _logger.debug("DIContainer: TranscriptionRepository: \(ObjectIdentifier(self._transcriptionRepository))", category: .system, context: LogContext())
-        _logger.debug("DIContainer: AnalysisRepository: \(ObjectIdentifier(self._analysisRepository))", category: .system, context: LogContext())
+        _logger?.info("DIContainer: Configured with shared service instances", category: .system, context: LogContext())
+        _logger?.debug("DIContainer: MemoRepository: \(ObjectIdentifier(self._memoRepository))", category: .system, context: LogContext())
+        if let repoObj = self._transcriptionRepository as? AnyObject {
+            _logger?.debug("DIContainer: TranscriptionRepository: \(ObjectIdentifier(repoObj))", category: .system, context: LogContext())
+        }
+        if let analysisRepoObj = self._analysisRepository as? AnyObject {
+            _logger?.debug("DIContainer: AnalysisRepository: \(ObjectIdentifier(analysisRepoObj))", category: .system, context: LogContext())
+        }
     }
     
     /// Check if container has been properly configured
     private func ensureConfigured() {
-        guard _memoRepository != nil, _audioRepository != nil, _startRecordingUseCase != nil else {
+        guard _memoRepository != nil,
+              _audioRepository != nil,
+              _startRecordingUseCase != nil,
+              _transcriptionRepository != nil,
+              _analysisRepository != nil,
+              _transcriptionAPI != nil,
+              _logger != nil,
+              _systemNavigator != nil else {
             fatalError("DIContainer has not been configured. Call configure() before using services.")
         }
     }
@@ -142,45 +156,49 @@ final class DIContainer: ObservableObject, Resolver {
     
     /// Get transcription service
     /// Returns the MemoRepository which provides the same TranscriptionServiceProtocol interface
-    func transcriptionService() -> TranscriptionServiceProtocol {
+    func transcriptionService() -> any TranscriptionServiceProtocol {
         ensureConfigured()
         return _memoRepository
     }
     
     /// Get transcription API service
-    func transcriptionAPI() -> TranscriptionAPI {
+    func transcriptionAPI() -> any TranscriptionAPI {
         ensureConfigured()
-        return _transcriptionAPI
+        guard let api = _transcriptionAPI else { fatalError("DIContainer not configured: transcriptionAPI") }
+        return api
     }
     
     /// Get analysis service
-    func analysisService() -> AnalysisServiceProtocol {
+    func analysisService() -> any AnalysisServiceProtocol {
         ensureConfigured()
         return _analysisService
     }
     
     /// Get memo repository
-    func memoRepository() -> MemoRepository {
+    func memoRepository() -> any MemoRepository {
         ensureConfigured()
         return _memoRepository
     }
     
     /// Get transcription repository
-    func transcriptionRepository() -> TranscriptionRepository {
+    func transcriptionRepository() -> any TranscriptionRepository {
         ensureConfigured()
-        return _transcriptionRepository
+        guard let repo = _transcriptionRepository else { fatalError("DIContainer not configured: transcriptionRepository") }
+        return repo
     }
     
     /// Get analysis repository
-    func analysisRepository() -> AnalysisRepository {
+    func analysisRepository() -> any AnalysisRepository {
         ensureConfigured()
-        return _analysisRepository
+        guard let repo = _analysisRepository else { fatalError("DIContainer not configured: analysisRepository") }
+        return repo
     }
     
     /// Get audio repository
-    func audioRepository() -> AudioRepository {
+    func audioRepository() -> any AudioRepository {
         ensureConfigured()
-        return _audioRepository
+        guard let repo = _audioRepository else { fatalError("DIContainer not configured: audioRepository") }
+        return repo
     }
     
     /// Get background audio service
@@ -196,15 +214,17 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get system navigator
-    func systemNavigator() -> SystemNavigator {
+    func systemNavigator() -> any SystemNavigator {
         ensureConfigured()
-        return _systemNavigator
+        guard let nav = _systemNavigator else { fatalError("DIContainer not configured: systemNavigator") }
+        return nav
     }
     
     /// Get logger service
-    func logger() -> LoggerProtocol {
+    func logger() -> any LoggerProtocol {
         ensureConfigured()
-        return _logger
+        guard let logger = _logger else { fatalError("DIContainer not configured: logger") }
+        return logger
     }
     
     /// Get operation coordinator service
@@ -235,7 +255,8 @@ extension EnvironmentValues {
 extension View {
     /// Inject DIContainer into SwiftUI environment
     @MainActor
-    func withDIContainer(_ container: DIContainer = .shared) -> some View {
-        environment(\.diContainer, container)
+    func withDIContainer(_ container: DIContainer? = nil) -> some View {
+        let resolved = container ?? DIContainer.shared
+        return environment(\.diContainer, resolved)
     }
 }

@@ -7,8 +7,8 @@ import EventKit
 public final class CalendarEventHandler {
     
     // MARK: - Dependencies
-    private let logger: LoggerProtocol
-    private let eventBus: EventBusProtocol
+    private let logger: any LoggerProtocol
+    private let eventBus: any EventBusProtocol
     private let subscriptionManager: EventSubscriptionManager
     
     // MARK: - Future Dependencies (TODO)
@@ -20,8 +20,8 @@ public final class CalendarEventHandler {
     
     // MARK: - Initialization
     public init(
-        logger: LoggerProtocol = Logger.shared,
-        eventBus: EventBusProtocol = EventBus.shared
+        logger: any LoggerProtocol = Logger.shared,
+        eventBus: any EventBusProtocol = EventBus.shared
     ) {
         self.logger = logger
         self.eventBus = eventBus
