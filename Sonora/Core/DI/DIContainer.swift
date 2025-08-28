@@ -63,7 +63,8 @@ final class DIContainer: ObservableObject, Resolver {
         
         // Register AudioRepository 
         register(AudioRepository.self) { resolver in
-            return AudioRepositoryImpl()
+            let backgroundService = resolver.resolve(BackgroundAudioService.self)!
+            return AudioRepositoryImpl(backgroundAudioService: backgroundService)
         }
         
         // Register StartRecordingUseCase 

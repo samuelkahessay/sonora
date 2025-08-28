@@ -31,7 +31,8 @@ final class RecordingFlowTestUseCase {
     // MARK: - Factory Method
     @MainActor
     static func create() -> RecordingFlowTestUseCase {
-        let audioRepo = AudioRepositoryImpl()
+        let backgroundService = BackgroundAudioService()
+        let audioRepo = AudioRepositoryImpl(backgroundAudioService: backgroundService)
         return RecordingFlowTestUseCase(audioRepository: audioRepo)
     }
     

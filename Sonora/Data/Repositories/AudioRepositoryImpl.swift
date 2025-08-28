@@ -18,13 +18,14 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     // MARK: - Audio Services
     private var audioPlayer: AVAudioPlayer?
     private var audioPlayerProxy = AudioPlayerProxy()
-    private let backgroundAudioService = BackgroundAudioService()
+    private let backgroundAudioService: BackgroundAudioService
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     
     // MARK: - Combine
     private var cancellables = Set<AnyCancellable>()
     
-    init() {
+    init(backgroundAudioService: BackgroundAudioService) {
+        self.backgroundAudioService = backgroundAudioService
         setupAudioPlayerProxy()
         setupBackgroundAudioService()
         print("🎵 AudioRepositoryImpl: Initialized with BackgroundAudioService integration")
