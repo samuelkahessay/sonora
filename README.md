@@ -1,10 +1,10 @@
 # Sonora - Voice Memo App with AI Analysis
 
-A Swift iOS application for recording voice memos with real-time transcription and AI-powered analysis. Built with **Clean Architecture + MVVM** patterns for rapid feature development and maintainability.
+An iOS app for recording voice memos with transcription and AI analysis. The codebase follows a pragmatic Clean Architecture + MVVM approach focused on reliability, testability, and clear separation of concerns.
 
 ## 🚀 Project Overview
 
-Sonora is a sophisticated voice memo application that combines:
+Sonora combines:
 - **Voice Recording** with background support and Live Activities
 - **Real-time Transcription** using Whisper API
 - **AI Analysis** for summaries, themes, todos, and insights
@@ -12,16 +12,17 @@ Sonora is a sophisticated voice memo application that combines:
 - **Event-Driven Architecture** for reactive feature interactions
 
 ### Key Features
-- Background audio recording with Dynamic Island integration
+- Global 60-second recording limit with 10-second countdown
+- Background audio recording with Live Activity hooks
 - Automatic transcription with progress tracking
 - Multiple AI analysis modes (TLDR, Themes, Todos, Content Analysis)
 - Real-time operation status and cancellation
-- Comprehensive error handling and logging
-- Protocol-based dependency injection
+- Structured logging and robust error handling
+- Protocol-first dependency injection
 
 ## 📐 Architecture Overview
 
-Sonora follows **Clean Architecture** principles with **MVVM** presentation patterns, designed for "vibe coding" - rapid, intuitive feature development.
+Sonora follows **Clean Architecture** principles with **MVVM** presentation patterns.
 
 ```
 ┌─────────────────────────────────────────┐
@@ -60,7 +61,7 @@ Sonora follows **Clean Architecture** principles with **MVVM** presentation patt
 Sonora/
 ├── Core/                           # Infrastructure & Cross-cutting concerns
 │   ├── DI/
-│   │   └── DIContainer.swift       # 🏭 Dependency injection container
+│   │   └── DIContainer.swift       # 🏭 Dependency injection container (composition root)
 │   ├── Concurrency/
 │   │   ├── OperationCoordinator.swift   # 🔄 Thread-safe operation management  
 │   │   ├── OperationStatus.swift        # 📊 Operation status & progress tracking
@@ -133,9 +134,9 @@ Sonora/
 | **Event System** | `Core/Events/` | Reactive architecture components |
 | **Testing Documentation** | `docs/testing/` | Test guides & procedures |
 
-## 🎯 Development Philosophy: "Vibe Coding"
+## 🎯 Development Philosophy
 
-Sonora is designed for **intuitive, rapid development** following these principles:
+Sonora is designed for clear, iterative development with strong boundaries between layers:
 
 ### 1. **Follow the Flow**: Domain → Use Case → ViewModel → View
 ```swift
@@ -173,13 +174,10 @@ Button("Analyze") { viewModel.analyzeCurrentMemo() }
 
 ### 4. **Code with Confidence**: Clear separation = less debugging
 
-### **🎉 PHASE 6 MIGRATION COMPLETED** ✅
+### UI Styling & Recording Defaults
 
-**Architecture Excellence Achieved:**
-- **AudioRecordingServiceWrapper**: ✅ **ELIMINATED** (70 lines of technical debt removed)
-- **Dual-path logic**: ✅ **SIMPLIFIED** (pure protocol-based dependency injection)
-- **Convenience constructors**: ✅ **REMOVED** (clean single-initialization patterns)
-- **Total technical debt eliminated**: **570+ lines** while preserving iOS platform requirements
+- UI uses native SwiftUI controls and standard Apple styling. The previous “liquid glass” design system and modifiers were removed; the theme skeleton remains for future use.
+- Recording auto-stops at 60 seconds across all build types; the last 10 seconds show a countdown. You can override the limit for testing using the `SONORA_MAX_RECORDING_DURATION` environment variable (seconds).
 
 ### 5. **Iterate Quickly**: Easy to modify individual layers
 
@@ -187,7 +185,7 @@ Button("Analyze") { viewModel.analyzeCurrentMemo() }
 
 ### Dependency Injection Container
 
-The **DIContainer** provides centralized service management:
+The **DIContainer** provides centralized service management and is used at the app edge to compose concrete implementations. Some cross-layer usages remain and are being reduced.
 
 ```swift
 // Usage in ViewModels
@@ -650,28 +648,27 @@ do {
 6. **Add operation tracking**: If long-running, integrate with OperationCoordinator
 7. **Test the use case**: Write unit tests for the business logic
 
-## 📊 Architecture Metrics
+## 📊 Architecture Metrics (Current)
 
-**Current Status:**
-- ✅ **Clean Architecture**: 100% implemented (complete domain layer, pure protocol-based dependency injection)
-- ✅ **MVVM Pattern**: 100% implemented (RecordView migrated to pure MVVM)
-- ✅ **Dependency Injection**: 100% implemented (pure protocol-based access achieved)
-- ✅ **Use Case Pattern**: 100% implemented
-- ✅ **Operation Management**: 100% implemented
-- ✅ **Error Handling**: 100% implemented
-- ✅ **Event-Driven Architecture**: 100% implemented
-- 🔄 **Testing Infrastructure**: 75% implemented (comprehensive test classes, expanding coverage)
-- ✅ **Documentation Coverage**: 100% implemented
+- Clean Architecture: ~65–70%
+  - Strong layering (Domain UseCases, Data Repositories/Services, Presentation VMs), but a few cross‑layer couplings remain (e.g., repositories using `DIContainer.shared`, repo conforming to service protocol, global singletons).
+- MVVM: ~80–90%
+  - Primary screens use ViewModels; UIs are not directly hitting services. Some timer-based polling in VMs can be moved to reactive streams.
+- Overall: ~70–75%
 
-**Ready for Production**: ✅ **Production Excellence Achieved**  
-**Architecture Score**: 95/100 (**Clean Architecture Mastery** - Phase 6 migration completed)  
-**Maintainability**: Excellent  
-**Testability**: Excellent (comprehensive test infrastructure)  
-**Scalability**: Excellent
+Focus areas to reach higher adherence:
+- Invert remaining cross-layer dependencies (constructor injection in repos; remove DI lookups from data).
+- Introduce `OperationCoordinatorProtocol` and inject instead of using `.shared`.
+- Replace VM polling (`Timer.publish`) with Combine publishers where feasible.
+- Move auto‑transcription trigger out of `MemoRepositoryImpl` into a use case or event handler.
+
+Testing: Foundational test helpers exist; expand use case and integration coverage.
 
 ---
 
-## 🎉 Welcome to Vibe Coding!
+---
+
+## 🎉 Welcome!
 
 This README provides everything needed to understand and contribute to Sonora. The architecture is designed to be intuitive and productive - trust the patterns, follow the flow, and build amazing features! 
 

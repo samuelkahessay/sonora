@@ -1,12 +1,12 @@
 # Architecture Migration Guide
 
-## Current Status: 🎆 Clean Architecture + MVVM Implementation - **COMPLETE EXCELLENCE ACHIEVED**
+## Current Status: Strong Foundation, Migration In Progress
 
-This document outlines the **ongoing** migration to Clean Architecture patterns and provides comprehensive guidelines for future development in the Sonora iOS application. The migration has established core architectural foundations with both modern and legacy patterns coexisting during the transition phase.
+This document outlines the ongoing migration to a pragmatic Clean Architecture + MVVM structure. The codebase has a solid foundation (use cases, repositories, view models, operation coordination), with a few targeted areas left to reach higher adherence.
 
 ## 🎉 Completed Migration Steps
 
-### 1. ✅ Domain Layer Implementation (100% Complete)
+### 1. ✅ Domain Layer Implementation (Implemented)
 - **Domain Models**: Comprehensive domain models implemented:
   - `DomainMemo`: Rich domain entity with business logic and computed properties
   - `DomainAnalysisResult`: Complete analysis result domain model
@@ -23,25 +23,25 @@ This document outlines the **ongoing** migration to Clean Architecture patterns 
 - **MemoDetailViewModel**: Complete Use Case composition for transcription and analysis
 - **Dependency Injection**: ViewModels use DIContainer with protocol-based access (legacy support maintained for gradual migration)
 
-### 3. ✅ Adapter Pattern Implementation (100% Complete)
+### 3. ✅ Adapter Pattern Implementation (Where Needed)
 - **MemoAdapter**: Converts between `Memo` (data) and `DomainMemo` (domain)
 - **AnalysisAdapter**: Handles conversion between analysis models and domain models
 - **TranscriptionAdapter**: Manages transcription state conversions
 - **Backward Compatibility**: Ensures smooth transition without breaking existing functionality
 
-### 4. ✅ Repository Pattern Implementation (100% Complete)
+### 4. ✅ Repository Pattern Implementation (Implemented)
 - **Repository Interfaces**: All repository protocols defined in Domain layer
 - **Repository Implementations**: Concrete implementations in Data layer:
   - `MemoRepositoryImpl`, `TranscriptionRepositoryImpl`, `AnalysisRepositoryImpl`, `AudioRepositoryImpl`
 - **Protocol-Based Access**: ViewModels access data through repository protocols
 
-### 5. ✅ Dependency Injection Container (Modern Implementation)
+### 5. ✅ Dependency Injection Container (Composition Root)
 - **DIContainer**: Centralized dependency management with **protocol-first** design and transitional concrete access
 - **SwiftUI Integration**: Environment-based injection support fully implemented
 - **Service Lifecycle**: Complete service initialization and configuration
 - **Migration Support**: **Strategic dual-pattern support** - legacy services properly wrapped with modern protocol interfaces
 
-### 6. ✅ Error Handling (100% Complete)
+### 6. ✅ Error Handling (Implemented)
 - **Domain Errors**: Comprehensive error types for each domain area
 - **Use Case Error Handling**: Proper error propagation and handling
 - **User-Friendly Messages**: Localized error descriptions
@@ -50,7 +50,7 @@ This document outlines the **ongoing** migration to Clean Architecture patterns 
 
 ```
 ┌─────────────────────────────────────────┐
-│               Presentation              │ ✅ CLEAN ARCHITECTURE
+│               Presentation              │ ✅ CLEAN BOUNDARIES
 │  ┌─────────────────┐ ┌─────────────────┐│
 │  │      Views      │ │   ViewModels    ││
 │  │   (SwiftUI)     │ │ (Use Case Based)││
@@ -67,7 +67,7 @@ This document outlines the **ongoing** migration to Clean Architecture patterns 
 └─────────────────────────────────────────┘
                     │
 ┌─────────────────────────────────────────┐
-│                 Data                    │ 🔄 MODERN + LEGACY
+│                 Data                    │ 🔄 MODERN + REMAINING COUPLINGS
 │  ┌─────────────────┐ ┌─────────────────┐│
 │  │  Repositories   │ │ Legacy Services ││
 │  │ (Protocol-Based)│ │ (DI Wrapped)    ││
@@ -200,14 +200,14 @@ func performSomeAction() {
 }
 ```
 
-## 📋 Migration Status: ADVANCED CLEAN ARCHITECTURE - STRATEGIC LEGACY MANAGEMENT ✅
+## 📋 Migration Status: Solid Progress, Targeted Follow-ups
 
 ### Phase 1: Service Layer Refinement ✅ COMPLETE
 - [x] Create repository interfaces for all data operations
 - [x] Implement repository pattern for file system operations
 - [x] Add error handling protocols and standardize error types
 
-### Phase 2: Advanced Domain Features ❌ NOT IMPLEMENTED
+### Phase 2: Advanced Domain Features 🔄 PARTIAL / FUTURE
 - [ ] Implement domain events for cross-feature communication
 - [x] Add domain validation rules
 - [ ] Create aggregate root patterns for complex entities
@@ -244,7 +244,7 @@ func performSomeAction() {
 ❌ **Don't mix UI concerns with business logic**  
 ❌ **Don't forget error handling in use cases**  
 
-## 🎪 "Vibe Coding" Philosophy
+## 🎯 Development Philosophy
 
 The architecture is designed to support rapid, intuitive development:
 
@@ -274,7 +274,7 @@ The architecture is designed to support rapid, intuitive development:
 
 ## 🚀 Next Steps & Future Enhancements
 
-### 🧪 Testing Infrastructure (PRIORITY 1)
+### 🧪 Testing Infrastructure (Priority)
 - [ ] **Integration Test Patterns**: Create comprehensive integration test suite
 - [ ] **Mock Factories**: Implement mock implementations for all protocols
 - [ ] **Use Case Testing**: Add unit tests for all use cases
@@ -305,19 +305,15 @@ The architecture is designed to support rapid, intuitive development:
 - [ ] Add performance monitoring
 - [ ] Create developer dashboard
 
-## 🎯 Architecture Success Metrics
+## 🎯 Architecture Snapshot (Current)
 
-### ✅ **Completed Goals**
-- **Separation of Concerns**: 100% achieved
-- **Dependency Injection**: 100% implemented
-- **Testability**: 100% enabled
-- **Maintainability**: 100% improved
-- **Scalability**: 100% foundation established
+- Clean Architecture: ~65–70%
+  - Outstanding: data-layer DI lookups; repository ↔ use case direction in a few spots; singletons (`OperationCoordinator.shared`) used directly.
+- MVVM: ~80–90%
+  - Outstanding: timer-based polling in VMs can shift to publishers.
+- UI: Native SwiftUI styling; glass modifiers removed, theme skeleton retained.
 
-### 📊 **Current Architecture Score: 96/100** (**EXCELLENCE ACHIEVED** - Phase 6 Complete)
-- **Domain Layer**: 100/100 ✅
-- **Use Cases**: 100/100 ✅
-- **ViewModels**: 100/100 ✅ (Pure Clean MVVM with Protocol-based Use Case composition)
+Recording defaults: Global 60s limit with 10s countdown; override via `SONORA_MAX_RECORDING_DURATION` (seconds) for testing.
 - **Repository Pattern**: 100/100 ✅ (Complete protocol-based implementation)
 - **Dependency Injection**: 100/100 ✅ (Pure protocol-based design achieved)
 - **Error Handling**: 100/100 ✅

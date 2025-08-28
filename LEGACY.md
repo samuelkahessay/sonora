@@ -1,37 +1,22 @@
-# Legacy Components
+# Legacy and Transitional Notes
 
-This document lists files and APIs considered legacy or transitional in the Sonora iOS project. They exist for backward compatibility during the migration to the Clean Architecture structure described in README. Prefer new flows via Use Cases → ViewModels → Views and DI-managed services. Prioritize refactoring or removal once replacements are fully adopted.
+This document tracks legacy artifacts and transitional patterns. Several historical components have been removed; remaining items reflect current cleanup targets rather than old files.
 
-## Legacy UI (Old Flow)
-- `Sonora/RecordView.swift`: Legacy SwiftUI entry using `MemoStore` directly; superseded by Presentation/ViewModels + Views.
-- `Sonora/MemosView.swift`: Legacy list UI bound to `MemoStore` via `@EnvironmentObject` (comments: “Keep for transition compatibility”).
-- `Sonora/Views/Components/TranscriptionTestView.swift`: Prototype/test UI for transcription, not part of production flow.
+## Removed Legacy Components
+- Old `AudioRecorder` UI flow and wrapper adapter (migrated to `BackgroundAudioService` + `AudioRepositoryImpl`).
+- Liquid glass UI modifiers and theme effects (reverted to native SwiftUI; theme skeleton retained).
+- `@EnvironmentObject MemoStore` patterns (no current references).
 
-## Legacy Services and Stores
-- `Sonora/AudioRecorder.swift`: Concrete recorder used directly and through legacy pathways; Clean Architecture favors `AudioRepository` and `BackgroundAudioService` abstractions.
-- `Sonora/MemoStore.swift`: App-wide observable store implementing repository-like behavior; DI notes it exists for legacy compatibility.
-- `Sonora/Services/TranscriptionManager.swift`: Implements `TranscriptionServiceProtocol`; migration docs indicate intent to remove dependency in favor of repository-driven flow.
+## Transitional Patterns (Current Cleanup Targets)
+- Data layer usage of `DIContainer.shared` inside repository constructors. Prefer constructor injection from the composition root.
+- Repository conforming to service protocols (e.g., `TranscriptionServiceProtocol`) that blur boundaries. Prefer use cases or event handlers to orchestrate workflows.
+- Global singletons (e.g., `OperationCoordinator.shared`) referenced directly. Introduce protocols and inject.
+- Timer-based polling in ViewModels where repository publishers can be exposed.
 
-## Compatibility Bridges (Transitional)
-- `Sonora/Domain/UseCases/Recording/AudioRecordingServiceWrapper.swift`: Temporary adapter to make `AudioRecordingService` usable via the `AudioRepository` interface. Marked as backward compatibility.
-- `Sonora/Domain/Adapters/MemoAdapter.swift`: Backward-compat adapter between data `Memo` and domain `DomainMemo`.
-- `Sonora/Domain/Adapters/TranscriptionAdapter.swift`: Backward-compat adapter bridging transcription data and domain models.
-- `Sonora/Domain/Adapters/AnalysisAdapter.swift`: Backward-compat adapter bridging analysis data and domain models.
-
-## Deprecated or Legacy APIs (in active files)
-- `Sonora/Domain/UseCases/Recording/RequestMicrophonePermissionUseCase.swift`:
-  - `executeLegacy() -> Bool` is marked `@available(*, deprecated, message: "Use async execute() method instead")`. Remove once all callers use the async `execute()`.
-
-## DI Exposing Legacy for Migration
-- `Sonora/Core/DI/DIContainer.swift`: Exposes concrete `AudioRecorder`, `TranscriptionManager`, and `MemoStore` “for legacy compatibility/gradual migration.” Treat as transitional access points rather than final architecture.
-
-## Migration/Exploratory Docs (Indicators)
-- `ARCHITECTURE_MIGRATION.md`: Describes migration to Clean Architecture.
-- `TranscriptionRepositoryIntegration.md`: Calls out “Phase 3: Remove TranscriptionManager dependency.”
-- `BuildErrorsFixes.md`, `SynchronousRecordingTest.md`, `EnhancedRecordingFlowTest.md`, `BackgroundRecordingTest.md`: Notes and experiments referencing legacy classes like `AudioRecordingServiceWrapper` and `AudioRecorder`.
+## Active Migration References
+- See `ARCHITECTURE_MIGRATION.md` and `ARCHITECTURE_ADHERENCE_PROMPTS.md` for step-by-step prompts and current status.
 
 ## Rationale
-- Explicit code comments include “temporary,” “backward compatibility,” or “deprecated.”
-- Some files live outside the new Domain/Data/Presentation/Core flow or bypass Use Case → ViewModel → View patterns.
-- New architecture relies on protocol-driven repositories/services and DI, superseding these legacy pathways.
-
+- Keep orchestration at the edges (use cases, event handlers), not inside repositories.
+- Maintain clean dependency direction: Presentation → Use Cases → Repositories/Services.
+- Use DI only at composition time; avoid container lookups in domain/data layers.

@@ -126,6 +126,10 @@ protocol ProcessVoiceCommandUseCaseProtocol {
 4. **DI Container**: Flexible injection supporting both legacy and modern patterns
 5. **Error Handling**: Comprehensive domain-specific errors
 
+## 🎨 UI Styling Note
+
+The current UI uses native SwiftUI controls and standard Apple styling. The previous “liquid glass” effects and modifiers were removed to simplify maintenance; the theme skeleton remains if you want to reintroduce custom styling later.
+
 ### 🔄 Managed Technical Debt
 - **Legacy Services**: Properly wrapped in DI container - this is smart!
 - **Hybrid Approach**: Allows gradual migration without breaking changes

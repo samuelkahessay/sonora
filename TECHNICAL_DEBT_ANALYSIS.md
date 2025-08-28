@@ -9,12 +9,7 @@
 
 ## 🎯 Executive Summary
 
-**✅ UPDATE: RECORDING SYSTEM MIGRATION COMPLETED (January 2025)**
-
-After comprehensive analysis and successful refactoring, the Sonora recording system has achieved **100% Clean Architecture compliance** while preserving iOS platform requirements.
-
-### Final Results
-**All true technical debt eliminated**: 188+ lines of architectural debt removed while preserving necessary iOS audio domain patterns.
+Status: Solid foundation with targeted areas for improvement. Recording is stable with a global 60s limit and 10s countdown; UI uses native SwiftUI styling; the theme skeleton remains for future use.
 
 ### Migration Completed
 The recording system now uses:
@@ -51,33 +46,15 @@ await MainActor.run {
 
 ---
 
-### 2. Dual-Path Logic (Type Checking) 🔄 **MIGRATION STRATEGY**
+### 2. Cross-Layer Coupling in Data Layer 🔧 **TRUE DEBT**
 
-**Location:** StartRecordingUseCase (lines 47-94), StopRecordingUseCase (lines 47-70)
+**Location:** `MemoRepositoryImpl` (constructor using `DIContainer.shared`); repository conforms to `TranscriptionServiceProtocol`.
 
-**Initial Assessment:** Runtime type checking violates dependency inversion
+**Assessment:** Data layer reaches into composition root and orchestrates use cases; repositories should be depended on by use cases, not vice versa.
 
-**Reality Check:**
-The app is transitioning between two audio recording systems:
-1. **Legacy Path:** AudioRecorder → AudioRecordingServiceWrapper
-2. **Modern Path:** BackgroundAudioService → AudioRepositoryImpl
-
-Both systems are **actively used** and serve different purposes:
-- AudioRecorder: Simple, UI-bound recording (still functional)
-- BackgroundAudioService: Background-capable, more robust
-
-**Verdict:** **TRANSITIONAL NECESSITY - NOT PURE DEBT**
-
-The dual paths exist because:
-- Both recording systems are operational
-- Gradual migration prevents breaking existing functionality
-- Each path handles different iOS capabilities
-
-**Safe Refactor Timeline:**
-1. Complete BackgroundAudioService feature parity ✅
-2. Migrate all UI to use BackgroundAudioService
-3. THEN remove dual-path logic
-4. Current removal would break recording for legacy code paths
+**Remediation:**
+- Inject collaborators directly via initializers (constructor injection), avoid `DIContainer.shared` in data/domain.
+- Move orchestration (e.g., auto‑transcription triggers) to use cases or event handlers.
 
 ---
 
@@ -106,8 +83,7 @@ iOS Audio Recording State Management Requirements:
 **Verdict:** **PARTIAL DEBT + DOMAIN REQUIREMENT**
 
 **True Debt Components:**
-- Using concrete `AudioRecordingService` instead of protocol (line 15)
-- Missing properties in AudioRepository protocol (countdown, auto-stop)
+- Prefer repository publishers over timer polling where feasible
 
 **Domain Requirements:**
 - Timer for recording time updates (no native reactive API)
@@ -154,26 +130,9 @@ These CAN be safely removed IF:
 
 ---
 
-### 5. AudioRecordingServiceWrapper 📦 **ADAPTER PATTERN**
+### 5. Removed Adapter Layer (Historical)
 
-**Location:** AudioRecordingServiceWrapper.swift (70 lines)
-
-**Initial Assessment:** Unnecessary abstraction layer
-
-**Reality Check:**
-This is a textbook **Adapter Pattern** implementation that:
-- Bridges incompatible interfaces during migration
-- Maintains backward compatibility
-- Enables incremental refactoring
-
-**Verdict:** **MIGRATION TOOL - REMOVE WHEN MIGRATION COMPLETE**
-
-The wrapper is NECESSARY until:
-1. All code uses AudioRepository interface
-2. AudioRecorder is fully replaced by BackgroundAudioService
-3. All tests are updated
-
-**Current Status:** Can be removed after fixing ViewModels
+`AudioRecordingServiceWrapper` and `AudioRecorder` legacy paths have been removed from the app UI. The recording stack is `BackgroundAudioService` → `AudioRepositoryImpl`.
 
 ---
 
@@ -234,13 +193,11 @@ try audioSession.setCategory(.playAndRecord,
 
 ## 📊 Categorization Summary
 
-### TRUE TECHNICAL DEBT (Safe to Remove):
-1. ✅ Convenience constructors in Use Cases (18 lines)
-2. ✅ AudioRecordingServiceWrapper when migration complete (70 lines)
-3. ✅ Concrete AudioRecordingService reference in ViewModel (1 line)
-4. ✅ Missing protocol properties causing workarounds
-
-**Total Removable Debt: ~89 lines**
+### TRUE TECHNICAL DEBT (Prioritized)
+1. Repositories using `DIContainer.shared` (constructor injection instead)
+2. Repository conforming to service protocols (decouple orchestration from data layer)
+3. Global singletons used directly (introduce protocols and inject)
+4. Timer polling in VMs where publishers could be used
 
 ### DOMAIN REQUIREMENTS (Must Keep):
 1. ❌ MainActor.run blocks for @MainActor types
@@ -249,10 +206,10 @@ try audioSession.setCategory(.playAndRecord,
 4. ❌ Audio session configuration
 5. ❌ Permission handling patterns
 
-### TRANSITIONAL PATTERNS (Remove After Migration):
-1. ⏳ Dual-path logic (after full BackgroundAudioService adoption)
-2. ⏳ Legacy AudioRecorder support
-3. ⏳ Service synchronization code
+### TRANSITIONAL PATTERNS (Cleanup Work)
+1. DI at edges only; remove container lookups in data
+2. Move auto‑transcription triggers to event handlers/use cases
+3. Normalize reactive streams to reduce polling
 
 ---
 
@@ -274,10 +231,13 @@ protocol AudioRepository {
 - Remove concrete service dependencies
 - Maintain timer for iOS requirements
 
-### Phase 3: Complete BackgroundAudioService Migration
-- Ensure feature parity with AudioRecorder
-- Test all recording scenarios
-- Validate background recording
+### Phase 3: Composition & Reactivity
+- Shift DI usage to edges (App/DIContainer only)
+- Introduce `OperationCoordinatorProtocol` and inject
+- Replace polling with repository publishers where feasible
+
+### Note on Recording Defaults
+The app enforces a global 60-second recording limit with a 10-second countdown. Override for tests using `SONORA_MAX_RECORDING_DURATION` (seconds).
 
 ### Phase 4: Remove Transitional Code (ONLY AFTER PHASE 3)
 - Remove dual-path logic

@@ -14,6 +14,14 @@
 4. **Ensured single recorder instance** managed by BackgroundAudioService
 5. **Added comprehensive error handling** and state management
 
+### Recording Duration Defaults
+
+- The app enforces a global 60-second recording limit with a 10-second countdown. For longer tests, set an environment variable in the Xcode scheme:
+
+```
+SONORA_MAX_RECORDING_DURATION=120   # 2 minutes
+```
+
 ### How to Test Background Recording:
 
 #### Method 1: Using the Test Function

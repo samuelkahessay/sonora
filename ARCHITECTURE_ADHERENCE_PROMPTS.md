@@ -2,35 +2,27 @@
 
 This file contains a phased set of small, copy‑paste prompts you can give to your coding agent (one at a time) to reach full MVVM + Clean Architecture adherence. Each prompt is scoped, incremental, and includes clear acceptance criteria.
 
-## 📊 **MIGRATION PROGRESS: 🎆 CLEAN ARCHITECTURE EXCELLENCE ACHIEVED (96% COMPLETE)**
+## 📊 Migration Progress: Solid Foundation (~70% overall)
 
-### 🎉 **ARCHITECTURAL SUCCESS SUMMARY**
-- **Clean Architecture Score**: 96/100 (**Excellent**)
-- **Technical Debt Eliminated**: 570+ lines removed
-- **Protocol-Based Dependency Injection**: 100% achieved
-- **Domain Layer**: Complete with comprehensive Use Cases
-- **Repository Pattern**: Full implementation with protocol abstractions
-- **MVVM Excellence**: Pure presentation layer separation
+### Summary
+- Clean Architecture: ~65–70% (data-layer DI lookups remain; some cross-layer couplings)
+- MVVM: ~80–90% (primary views backed by ViewModels; a few timer-based streams)
+- Remaining work: reduce singletons, move polling to publishers, shift orchestration out of repositories.
 
-### ✅ **COMPLETED MAJOR PHASES**
+### ✅ Completed Phases
 - **Phase 1**: Transcription Pipeline - **COMPLETE** (Protocol-based TranscriptionAPI)
-- **Phase 6**: Recording System Modernization - **🎆 PHASE 6 COMPLETED**
-  - AudioRecordingServiceWrapper eliminated (70 lines)
-  - Dual-path logic simplified to pure protocol usage
-  - Convenience constructors removed (18 lines)
-  - Pure protocol-based dependency injection achieved
-- **Phase 15**: Remove @EnvironmentObject MemoStore usage - **COMPLETE**
-- **Phase 16**: ViewModels provide all needed state - **COMPLETE** 
-- **Phase 21**: Remove legacy DI accessors - **COMPLETE**
-- **Phase 23**: Delete legacy views and test-only UIs - **COMPLETE**
-- **Legacy Artifact Cleanup**: All legacy coordinators eliminated
+- **Phase 6**: Recording system: BackgroundAudioService + AudioRepositoryImpl adopted; old glass UI removed; global 60s limit + 10s countdown in place
+- **Phase 15**: Remove @EnvironmentObject MemoStore usage - **COMPLETE** (no current references)
+- **Phase 23**: Delete legacy views/test UIs - **COMPLETE**
 
-### 🔄 **REMAINING OPPORTUNITIES (4% Enhancement Potential)**
-- Advanced Domain Features: Domain events, aggregate roots
-- Testing Infrastructure: Expanded mock factories
-- Performance Optimizations: Caching strategies
+### 🔄 Remaining Opportunities
+- Replace Timer polling in VMs with Combine publishers from repositories
+- Introduce `OperationCoordinatorProtocol` and inject (remove `.shared` usage)
+- Remove DI lookups from repositories; use constructor injection
+- Move auto‑transcription trigger out of `MemoRepositoryImpl` into a use case or event handler
+- Expand test coverage with mocks and integration tests
 
-## 🎆 **PHASE 6: RECORDING SYSTEM MODERNIZATION - COMPLETED**
+## 🎆 Phase 6: Recording System Modernization (Status: Adopted; follow-ups below)
 
 ### ✅ **COMPLETED TASKS**
 
@@ -49,10 +41,8 @@ This file contains a phased set of small, copy‑paste prompts you can give to y
 - **Result**: Single-initialization path with dependency injection
 - **Status**: Clean constructor patterns **ACHIEVED**
 
-4) **Pure Protocol-Based Dependency Injection** ✅ **COMPLETE**
-- **Action**: Updated RecordingViewModel to use modern AudioRepository constructor
-- **Result**: 100% protocol-based dependencies throughout recording system
-- **Status**: Dependency inversion principle **PERFECTLY IMPLEMENTED**
+4) **Protocol-Based DI** 🔄 **MOSTLY COMPLETE**
+- **Status**: ViewModels use protocol-based DI; some repositories still pull from `DIContainer.shared` and should be constructor-injected.
 
 ## 🎯 **TRANSCRIPTION PIPELINE - COMPLETED**
 
@@ -173,7 +163,7 @@ This file contains a phased set of small, copy‑paste prompts you can give to y
 - Acceptance: Project compiles with only `AudioRepository` used for recording.
 
 25) Update LEGACY.md and README
-- Action: Reflect removals and new architecture boundaries; mark migration complete.
+- Action: Reflect removals and current boundaries; document remaining work.
 - Acceptance: Docs match code; no references to removed artifacts.
 
 ## Optional Enhancements
@@ -185,4 +175,3 @@ This file contains a phased set of small, copy‑paste prompts you can give to y
 27) Tests for use cases
 - Action: Add unit tests for `StartRecordingUseCase`, `StopRecordingUseCase`, `StartTranscriptionUseCase`, and `RetryTranscriptionUseCase` with mock protocols (`AudioRepository`, `TranscriptionAPI`, `TranscriptionRepository`).
 - Acceptance: Tests compile and pass locally.
-

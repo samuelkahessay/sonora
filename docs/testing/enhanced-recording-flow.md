@@ -7,6 +7,8 @@
 ## Overview
 The recording use cases have been successfully updated to use the enhanced AudioRepository with BackgroundAudioService integration. This provides robust background recording capabilities with comprehensive error handling.
 
+Note: The app enforces a global 60-second recording limit with a 10-second countdown. You can override this for local testing via the `SONORA_MAX_RECORDING_DURATION` environment variable (seconds).
+
 ## Updated Use Cases
 
 ### 1. StartRecordingUseCase

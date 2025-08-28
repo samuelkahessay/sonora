@@ -6,7 +6,7 @@
 
 ```
 ┌─────────────────────────────────────────┐
-│            Presentation Layer           │ 🔄 HYBRID
+│            Presentation Layer           │ ✅ MVVM
 │  ┌─────────────────┐ ┌─────────────────┐│
 │  │      Views      │ │   ViewModels    ││
 │  │   (SwiftUI)     │ │ + Use Cases     ││
@@ -22,7 +22,7 @@
 └─────────────────────────────────────────┘
                     │
 ┌─────────────────────────────────────────┐
-│              Data Layer                 │ 🔄 HYBRID
+│              Data Layer                 │ 🔄 MODERN + CLEANUP
 │  ┌─────────────────┐ ┌─────────────────┐│
 │  │  Repositories   │ │ Legacy Services ││
 │  │   (Protocols)   │ │ + New Services  ││
@@ -44,7 +44,7 @@
 ```
 Sonora/
 ├── Core/                      # Infrastructure
-│   ├── DI/DIContainer.swift   # 🏭 Dependency injection (hybrid legacy/modern)
+│   ├── DI/DIContainer.swift   # 🏭 Dependency injection (composition root)
 │   ├── Concurrency/           # 🔄 Operation coordination
 │   ├── Events/                # 📡 Event-driven architecture
 │   └── Logging/Logger.swift   # 📝 Structured logging
@@ -54,7 +54,7 @@ Sonora/
 │   └── Protocols/             # 🔌 Repository contracts
 ├── Presentation/ViewModels/   # 🎬 UI coordinators (hybrid patterns)
 ├── Data/Repositories/         # 💾 Modern data access
-└── [Root Services]            # ⚠️ Legacy services (gradual migration)
+└── [Root Services]            # External services
 ```
 
 ## 🚀 Development Patterns
@@ -112,21 +112,19 @@ final class FeatureViewModel: ObservableObject {
 Button("Execute Feature") { viewModel.performFeature() }
 ```
 
-## 🏗️ Dependency Injection (Hybrid State)
+## 🏗️ Dependency Injection (Composition)
 
-**DIContainer provides both legacy and modern access:**
+**DIContainer provides protocol-based access at the app edge:**
 
 ```swift
 let container = DIContainer.shared
-
-// Modern Protocol-Based (Preferred)
-let repository = container.memoRepository()           // MemoRepository protocol
+let audioRepo = container.audioRepository()
+let memoRepo = container.memoRepository()
 let transcriptionRepo = container.transcriptionRepository()
-
-// Legacy Concrete Access (Transitional)
-let audioRecorder = container.audioRecorder()        // Concrete AudioRecorder
-let memoStore = container.memoStore()                 // Concrete MemoStore
+let analysisService = container.analysisService()
 ```
+
+Note: Avoid container lookups inside domain/data layers; prefer constructor injection from the composition root.
 
 ## ⚡ Async/Await Patterns
 
@@ -194,9 +192,8 @@ launch_app_sim({ simulatorName: 'iPhone 16', bundleId: 'com.samuelkahessay.Sonor
 
 ## 📋 Architecture Migration Status (January 2025)
 
-### **🎉 MIGRATION SUCCESS: 5/6 PHASES COMPLETE**
-
-**Overall Progress: 92% Complete** | **Grade: A+ Architecture Achievement** 
+**Overall Progress:** ~70–75%  
+**Next Focus:** reduce singletons, constructor-inject repos, replace VM polling with publishers, move orchestration out of repositories.
 
 ---
 
