@@ -184,34 +184,28 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     // MARK: - Setup Methods
     
     private func setupBindings() {
-        // Use a timer to periodically sync with the service
-        // This avoids the objectWillChange type compatibility issue
-        Timer.publish(every: 0.1, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                self?.updateFromService()
+        // Bind to AudioRepository publishers (repository manages its own polling)
+        audioRepository.isRecordingPublisher
+            .sink { [weak self] value in self?.isRecording = value }
+            .store(in: &cancellables)
+        
+        audioRepository.recordingTimePublisher
+            .sink { [weak self] value in self?.recordingTime = value }
+            .store(in: &cancellables)
+        
+        audioRepository.permissionStatusPublisher
+            .sink { [weak self] status in
+                self?.permissionStatus = status
+                self?.hasPermission = status.allowsRecording
             }
             .store(in: &cancellables)
         
-        // Initial update
-        updateFromService()
-    }
-    
-    private func updateFromService() {
-        isRecording = audioRepository.isRecording
-        recordingTime = audioRepository.recordingTime
-        if isRecording {
-            print("🔄 RecordingViewModel: Syncing timer - recordingTime: \(String(format: "%.1f", recordingTime))s")
-        }
-        hasPermission = audioRepository.hasMicrophonePermission
-        // Consume countdown and auto-stop state from AudioRepository
-        isInCountdown = audioRepository.isInCountdown
-        remainingTime = audioRepository.remainingTime
-        recordingStoppedAutomatically = audioRepository.recordingStoppedAutomatically
-        autoStopMessage = audioRepository.autoStopMessage
-        
-        // Update alert state
-        showAutoStopAlert = recordingStoppedAutomatically
+        audioRepository.countdownPublisher
+            .sink { [weak self] isCountdown, remaining in
+                self?.isInCountdown = isCountdown
+                self?.remainingTime = remaining
+            }
+            .store(in: &cancellables)
     }
     
     private func setupOperationStatusMonitoring() {
