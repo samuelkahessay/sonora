@@ -347,8 +347,7 @@ public final class ErrorMapping {
             return .audioRecordingFailed("No data captured")
         case AVError.sessionNotRunning.rawValue:
             return .audioSessionSetupFailed("Session not running")
-        case AVError.deviceIsNotAvailableInBackground.rawValue:
-            return .audioRecordingFailed("Device not available in background")
+        // Deprecated in iOS 9.0: AVError.deviceIsNotAvailableInBackground no longer produced
         case AVError.sessionConfigurationChanged.rawValue:
             return .audioSessionSetupFailed("Session configuration changed")
         case AVError.diskFull.rawValue:
