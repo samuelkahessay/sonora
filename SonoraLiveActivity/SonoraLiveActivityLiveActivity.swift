@@ -1,6 +1,7 @@
 import ActivityKit
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 struct SonoraLiveActivityLiveActivity: Widget {
     var body: some WidgetConfiguration {
@@ -34,7 +35,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     
                     Spacer()
                     
-                    // Open the host app via deep link to stop recording
+                    // Use a deep link to open the host app and stop recording
                     if let url = URL(string: "sonora://stopRecording") {
                         Link(destination: url) {
                             HStack(alignment: .center, spacing: 8) {

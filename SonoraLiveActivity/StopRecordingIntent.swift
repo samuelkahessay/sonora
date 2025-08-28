@@ -7,12 +7,12 @@ import AppIntents
 @available(iOS 17.0, *)
 struct StopRecordingIntent: AppIntent {
     static var title: LocalizedStringResource { "Stop Recording" }
-    static var description = IntentDescription("Opens Sonora to manage recording")
+    static var description = IntentDescription("Stops the current recording in Sonora")
     static var openAppWhenRun: Bool { true }
 
     func perform() async throws -> some IntentResult {
-        // The deep link button in the Live Activity drives the stop action.
-        // Opening the app provides additional fallback UX.
+        // Opening the app is handled by openAppWhenRun.
+        // The deep link for stopping is driven by the Link in the widget UI.
         return .result()
     }
 }
