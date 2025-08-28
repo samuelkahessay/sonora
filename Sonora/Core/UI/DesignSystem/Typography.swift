@@ -73,64 +73,10 @@ extension Typography {
 }
 
 // MARK: - Text Style Modifiers
-struct GlassTextStyle: ViewModifier {
-    let typography: Typography
-    let palette: ColorPalette
-    let style: TextStyle
-    
-    enum TextStyle {
-        case largeTitle, title, title2, title3
-        case headline, subheadline, body, callout
-        case footnote, caption, caption2
-        case monospace, monospaceLarge
-        case glassHeader, glassBody
-    }
-    
-    private var font: Font {
-        switch style {
-        case .largeTitle: return typography.largeTitle
-        case .title: return typography.title
-        case .title2: return typography.title2
-        case .title3: return typography.title3
-        case .headline: return typography.headline
-        case .subheadline: return typography.subheadline
-        case .body: return typography.body
-        case .callout: return typography.callout
-        case .footnote: return typography.footnote
-        case .caption: return typography.caption
-        case .caption2: return typography.caption2
-        case .monospace: return typography.monospace
-        case .monospaceLarge: return typography.monospaceLarge
-        case .glassHeader: return typography.glassHeader
-        case .glassBody: return typography.glassBody
-        }
-    }
-    
-    func body(content: Content) -> some View {
-        content
-            .font(font)
-            .tracking(typography.letterSpacing)
-            .if(typography.hasTextShadow) { view in
-                view.shadow(
-                    color: palette.glassShadow,
-                    radius: typography.textShadowRadius,
-                    x: 0,
-                    y: 1
-                )
-            }
-    }
-}
+// Removed glass-specific text style modifier as part of reverting to native styling
 
-// MARK: - View Extensions
+// MARK: - Conditional helper (retained for general use)
 extension View {
-    func glassTextStyle(
-        _ style: GlassTextStyle.TextStyle,
-        typography: Typography = .glass,
-        palette: ColorPalette = .light
-    ) -> some View {
-        modifier(GlassTextStyle(typography: typography, palette: palette, style: style))
-    }
-    
     /// Conditional view modifier helper
     @ViewBuilder
     func `if`<Content: View>(
@@ -144,4 +90,3 @@ extension View {
         }
     }
 }
-
