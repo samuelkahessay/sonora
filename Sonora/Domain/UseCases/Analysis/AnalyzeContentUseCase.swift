@@ -52,7 +52,7 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol {
         if let cachedResult = await MainActor.run(body: {
             analysisRepository.getAnalysisResult(for: memoId, mode: .analysis, responseType: AnalysisData.self)
         }) {
-            cacheTimer.finish(additionalInfo: "Cache HIT - returning immediately")
+            _ = cacheTimer.finish(additionalInfo: "Cache HIT - returning immediately")
             logger.analysis("Found cached content analysis (cache hit)", 
                           level: .info, 
                           context: LogContext(correlationId: correlationId, additionalInfo: [
@@ -62,7 +62,7 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol {
                           ]))
             return cachedResult
         }
-        cacheTimer.finish(additionalInfo: "Cache MISS - proceeding to API call")
+        _ = cacheTimer.finish(additionalInfo: "Cache MISS - proceeding to API call")
         
         logger.analysis("No cached content analysis found, calling analysis service", 
                       level: .warning, 
@@ -72,7 +72,7 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol {
             // Call service to perform analysis
             let analysisTimer = PerformanceTimer(operation: "Content Analysis API Call", category: .analysis)
             let result = try await analysisService.analyzeAnalysis(transcript: transcript)
-            analysisTimer.finish(additionalInfo: "Service call completed successfully")
+            _ = analysisTimer.finish(additionalInfo: "Service call completed successfully")
             
             logger.analysis("Content analysis completed successfully", 
                           context: LogContext(correlationId: correlationId, additionalInfo: [
@@ -87,7 +87,7 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol {
             await MainActor.run {
                 analysisRepository.saveAnalysisResult(result, for: memoId, mode: .analysis)
             }
-            saveTimer.finish(additionalInfo: "Analysis cached successfully")
+            _ = saveTimer.finish(additionalInfo: "Analysis cached successfully")
             
             logger.analysis("Content analysis cached successfully", 
                           context: LogContext(correlationId: correlationId, additionalInfo: ["cached": true]))

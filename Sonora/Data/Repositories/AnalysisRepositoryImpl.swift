@@ -80,7 +80,7 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             history.append((mode: mode, timestamp: Date()))
             analysisHistory[memoId] = history
             
-            saveTimer.finish(additionalInfo: "Save completed successfully")
+            _ = saveTimer.finish(additionalInfo: "Save completed successfully")
             logger.repository("Analysis saved successfully", 
                             level: .info,
                             context: LogContext(correlationId: correlationId, additionalInfo: [
@@ -92,7 +92,7 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
                             ]))
             
         } catch {
-            saveTimer.finish(additionalInfo: "Save failed with error")
+            _ = saveTimer.finish(additionalInfo: "Save failed with error")
             logger.error("Failed to save analysis result", 
                        category: .repository, 
                        context: context, 
@@ -117,7 +117,7 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
         
         // Check memory cache first
         if let cached = analysisCache[key] as? AnalyzeEnvelope<T> {
-            loadTimer.finish(additionalInfo: "Memory cache HIT")
+            _ = loadTimer.finish(additionalInfo: "Memory cache HIT")
             logger.repository("Analysis found in memory cache", 
                             level: .info,
                             context: LogContext(correlationId: correlationId, additionalInfo: [
@@ -136,7 +136,7 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
         let fileExists = FileManager.default.fileExists(atPath: url.path)
         
         guard fileExists else {
-            loadTimer.finish(additionalInfo: "File does not exist")
+            _ = loadTimer.finish(additionalInfo: "File does not exist")
             logger.repository("No analysis file found on disk", 
                             context: LogContext(correlationId: correlationId, additionalInfo: [
                                 "filePath": url.path,
@@ -155,7 +155,7 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             // Cache in memory for future access
             analysisCache[key] = result
             
-            loadTimer.finish(additionalInfo: "Disk load successful, cached in memory")
+            _ = loadTimer.finish(additionalInfo: "Disk load successful, cached in memory")
             logger.repository("Analysis loaded from disk and cached in memory", 
                             level: .info,
                             context: LogContext(correlationId: correlationId, additionalInfo: [
@@ -169,7 +169,7 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             return result
             
         } catch {
-            loadTimer.finish(additionalInfo: "Disk load failed - decode error")
+            _ = loadTimer.finish(additionalInfo: "Disk load failed - decode error")
             logger.error("Failed to load or decode analysis from disk", 
                        category: .repository, 
                        context: LogContext(correlationId: correlationId, additionalInfo: [

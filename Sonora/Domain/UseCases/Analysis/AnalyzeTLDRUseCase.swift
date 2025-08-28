@@ -64,7 +64,7 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
             if let cachedResult = await MainActor.run(body: {
                 analysisRepository.getAnalysisResult(for: memoId, mode: .tldr, responseType: TLDRData.self)
             }) {
-                cacheTimer.finish(additionalInfo: "Cache HIT - returning immediately")
+                _ = cacheTimer.finish(additionalInfo: "Cache HIT - returning immediately")
                 logger.analysis("Found cached TLDR analysis (cache hit)", 
                               level: .info, 
                               context: LogContext(correlationId: correlationId, additionalInfo: [
@@ -77,7 +77,7 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
                 await operationCoordinator.completeOperation(operationId)
                 return cachedResult
             }
-            cacheTimer.finish(additionalInfo: "Cache MISS - proceeding to API call")
+            _ = cacheTimer.finish(additionalInfo: "Cache MISS - proceeding to API call")
             
             logger.analysis("No cached result found, calling analysis service", 
                           level: .warning, 
@@ -86,7 +86,7 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
             // Call service to perform analysis
             let analysisTimer = PerformanceTimer(operation: "TLDR Analysis API Call", category: .analysis)
             let result = try await analysisService.analyzeTLDR(transcript: transcript)
-            analysisTimer.finish(additionalInfo: "Service call completed successfully")
+            _ = analysisTimer.finish(additionalInfo: "Service call completed successfully")
             
             logger.analysis("TLDR analysis completed successfully", 
                           context: LogContext(correlationId: correlationId, additionalInfo: [
@@ -101,7 +101,7 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
             await MainActor.run {
                 analysisRepository.saveAnalysisResult(result, for: memoId, mode: .tldr)
             }
-            saveTimer.finish(additionalInfo: "Analysis cached successfully")
+            _ = saveTimer.finish(additionalInfo: "Analysis cached successfully")
             
             logger.analysis("TLDR analysis cached successfully", 
                           context: LogContext(correlationId: correlationId, additionalInfo: ["cached": true]))
