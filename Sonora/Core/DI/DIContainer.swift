@@ -163,12 +163,6 @@ final class DIContainer: ObservableObject, Resolver {
     // MARK: - Protocol-Based Service Access
     
     
-    /// Get transcription service
-    /// Returns the MemoRepository which provides the same TranscriptionServiceProtocol interface
-    func transcriptionService() -> any TranscriptionServiceProtocol {
-        ensureConfigured()
-        return _memoRepository
-    }
     
     /// Get transcription API service
     func transcriptionAPI() -> any TranscriptionAPI {

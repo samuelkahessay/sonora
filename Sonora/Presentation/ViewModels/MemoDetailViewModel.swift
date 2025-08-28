@@ -100,7 +100,6 @@ final class MemoDetailViewModel: ObservableObject {
         let analysisService = container.analysisService()
         let analysisRepository = container.analysisRepository()
         let transcriptionRepository = container.transcriptionRepository()
-        let transcriptionService = container.transcriptionService()
         let transcriptionAPI = container.transcriptionAPI()
         let logger = container.logger()
         

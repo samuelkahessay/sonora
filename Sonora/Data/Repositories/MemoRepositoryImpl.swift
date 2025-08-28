@@ -33,19 +33,15 @@ struct MemoIndex: Codable {
 }
 
 @MainActor
-final class MemoRepositoryImpl: ObservableObject, MemoRepository, TranscriptionServiceProtocol {
+final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     @Published var memos: [Memo] = []
     
     // Playback state
     @Published private(set) var playingMemo: Memo?
     @Published private(set) var isPlaying: Bool = false
     
-    // TranscriptionServiceProtocol requirement - delegate to injected repository
+    // Transcription is handled via dedicated repository and use cases
     private let transcriptionRepository: any TranscriptionRepository
-    var transcriptionStates: [String: TranscriptionState] {
-        get { transcriptionRepository.transcriptionStates }
-        set { transcriptionRepository.transcriptionStates = newValue }
-    }
     
     private var player: AVAudioPlayer?
     
@@ -461,45 +457,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository, TranscriptionS
         }
     }
     
-    // MARK: - Transcription Integration
-    
-    /// Get transcription state for a memo
-    /// Uses modern GetTranscriptionStateUseCase for clean architecture
-    func getTranscriptionState(for memo: Memo) -> TranscriptionState {
-        let state = getTranscriptionStateUseCase.execute(memo: memo)
-        print("🏪 MemoRepository: Getting transcription state for \(memo.filename)")
-        print("🏪 MemoRepository: State from GetTranscriptionStateUseCase: \(state.statusText)")
-        print("🏪 MemoRepository: State is completed: \(state.isCompleted)")
-        return state
-    }
-    
-    /// Start transcription for a memo (TranscriptionServiceProtocol requirement)
-    /// Uses modern StartTranscriptionUseCase for clean architecture
-    func startTranscription(for memo: Memo) {
-        Task { @MainActor in
-            do {
-                print("🚀 MemoRepository: Starting transcription for \(memo.filename) via StartTranscriptionUseCase")
-                try await startTranscriptionUseCase.execute(memo: memo)
-                print("✅ MemoRepository: Transcription started successfully for \(memo.filename)")
-            } catch {
-                print("❌ MemoRepository: Transcription start failed for \(memo.filename): \(error)")
-            }
-        }
-    }
-    
-    /// Retry transcription for a failed memo
-    /// Uses modern RetryTranscriptionUseCase for clean architecture
-    func retryTranscription(for memo: Memo) {
-        Task { @MainActor in
-            do {
-                print("🔄 MemoRepository: Retrying transcription for \(memo.filename) via RetryTranscriptionUseCase")
-                try await retryTranscriptionUseCase.execute(memo: memo)
-                print("✅ MemoRepository: Transcription retry initiated successfully for \(memo.filename)")
-            } catch {
-                print("❌ MemoRepository: Transcription retry failed for \(memo.filename): \(error)")
-            }
-        }
-    }
+    // MARK: - Transcription Integration (via use cases)
 }
 
 // MARK: - Error Types

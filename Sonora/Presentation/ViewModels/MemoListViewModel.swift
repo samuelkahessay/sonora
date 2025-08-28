@@ -15,7 +15,7 @@ final class MemoListViewModel: ObservableObject {
     private let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
     private let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
     private let memoRepository: any MemoRepository // Still needed for state updates
-    private let transcriptionService: any TranscriptionServiceProtocol // Still needed for state updates
+    private let transcriptionRepository: any TranscriptionRepository // For transcription states
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Published Properties
@@ -57,7 +57,7 @@ final class MemoListViewModel: ObservableObject {
         retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol,
         getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
         memoRepository: any MemoRepository,
-        transcriptionService: any TranscriptionServiceProtocol
+        transcriptionRepository: any TranscriptionRepository
     ) {
         self.loadMemosUseCase = loadMemosUseCase
         self.deleteMemoUseCase = deleteMemoUseCase
@@ -66,7 +66,7 @@ final class MemoListViewModel: ObservableObject {
         self.retryTranscriptionUseCase = retryTranscriptionUseCase
         self.getTranscriptionStateUseCase = getTranscriptionStateUseCase
         self.memoRepository = memoRepository
-        self.transcriptionService = transcriptionService
+        self.transcriptionRepository = transcriptionRepository
         
         setupBindings()
         loadMemos()
@@ -80,7 +80,6 @@ final class MemoListViewModel: ObservableObject {
         let container = DIContainer.shared
         let memoRepository = container.memoRepository()
         let transcriptionRepository = container.transcriptionRepository()
-        let transcriptionService = container.transcriptionService()
         let transcriptionAPI = container.transcriptionAPI()
         
         // Use direct repository initialization to ensure real persistence
@@ -104,7 +103,7 @@ final class MemoListViewModel: ObservableObject {
             retryTranscriptionUseCase: retryTranscriptionUseCase,
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
             memoRepository: memoRepository,
-            transcriptionService: transcriptionService
+            transcriptionRepository: transcriptionRepository
         )
     }
     
@@ -119,7 +118,7 @@ final class MemoListViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
-        // Bind transcription service states
+        // Bind transcription states
         Timer.publish(every: 0.2, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
@@ -146,7 +145,7 @@ final class MemoListViewModel: ObservableObject {
     }
     
     private func updateTranscriptionStates() {
-        transcriptionStates = transcriptionService.transcriptionStates
+        transcriptionStates = transcriptionRepository.transcriptionStates
     }
     
     // MARK: - Public Methods
