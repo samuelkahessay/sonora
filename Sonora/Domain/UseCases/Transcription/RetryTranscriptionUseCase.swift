@@ -18,15 +18,6 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
         self.transcriptionAPI = transcriptionAPI
     }
     
-    // MARK: - Factory Method (for backward compatibility)
-    @MainActor
-    static func create(transcriptionService: TranscriptionServiceProtocol) -> RetryTranscriptionUseCase {
-        // Use DI container to get repository
-        let repository = DIContainer.shared.transcriptionRepository()
-        return RetryTranscriptionUseCase(transcriptionRepository: repository, transcriptionAPI: TranscriptionService())
-    }
-    
-    
     // MARK: - Use Case Execution
     func execute(memo: Memo) async throws {
         print("🔄 RetryTranscriptionUseCase: Retrying transcription for memo: \(memo.filename)")
@@ -89,4 +80,3 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
         }
     }
 }
-

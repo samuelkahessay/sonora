@@ -16,15 +16,6 @@ final class GetTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol {
         self.transcriptionRepository = transcriptionRepository
     }
     
-    // MARK: - Factory Method (for backward compatibility)
-    @MainActor
-    static func create(transcriptionService: TranscriptionServiceProtocol) -> GetTranscriptionStateUseCase {
-        // Use DI container to get repository
-        let repository = DIContainer.shared.transcriptionRepository()
-        return GetTranscriptionStateUseCase(transcriptionRepository: repository)
-    }
-    
-    
     // MARK: - Use Case Execution
     @MainActor
     func execute(memo: Memo) -> TranscriptionState {

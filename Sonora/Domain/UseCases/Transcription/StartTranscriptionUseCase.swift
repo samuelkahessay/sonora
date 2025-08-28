@@ -30,21 +30,6 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         self.logger = logger
     }
     
-    // MARK: - Factory Method (for backward compatibility)
-    @MainActor
-    static func create(transcriptionService: TranscriptionServiceProtocol) -> StartTranscriptionUseCase {
-        // Use DI container to get repository
-        let repository = DIContainer.shared.transcriptionRepository()
-        return StartTranscriptionUseCase(
-            transcriptionRepository: repository, 
-            transcriptionAPI: TranscriptionService(), 
-            eventBus: EventBus.shared,
-            operationCoordinator: OperationCoordinator.shared,
-            logger: Logger.shared
-        )
-    }
-    
-    
     // MARK: - Use Case Execution
     func execute(memo: Memo) async throws {
         let context = LogContext(additionalInfo: [

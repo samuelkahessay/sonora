@@ -101,18 +101,4 @@ final class RequestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCa
     }
 }
 
-// MARK: - Legacy Compatibility
-
-extension RequestMicrophonePermissionUseCase {
-    
-    /// Legacy synchronous method for backward compatibility
-    /// Note: This only returns current status, doesn't request permission
-    @available(*, deprecated, message: "Use async execute() method instead")
-    func executeLegacy() -> Bool {
-        let status = getCurrentStatus()
-        logger.warning("Using deprecated synchronous permission check", 
-                      category: .audio,
-                       context: LogContext(additionalInfo: ["status": status.rawValue]), error: nil)
-        return status.allowsRecording
-    }
-}
+ 
