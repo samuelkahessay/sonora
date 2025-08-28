@@ -82,6 +82,13 @@
 			);
 			target = 0A875D992E600B7100245D4A /* SonoraLiveActivityExtension */;
 		};
+		0A875EC12E6101F500245D4A /* Exceptions for "SonoraLiveActivity" folder in "Sonora" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				StopRecordingIntent.swift,
+			);
+			target = 0A3974092E5A6CA400F27D16 /* Sonora */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -107,6 +114,7 @@
 		0A875DA02E600B7100245D4A /* SonoraLiveActivity */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				0A875EC12E6101F500245D4A /* Exceptions for "SonoraLiveActivity" folder in "Sonora" target */,
 				0A875DB02E600B7300245D4A /* Exceptions for "SonoraLiveActivity" folder in "SonoraLiveActivityExtension" target */,
 			);
 			path = SonoraLiveActivity;

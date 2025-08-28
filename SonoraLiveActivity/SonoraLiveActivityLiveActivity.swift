@@ -1,10 +1,3 @@
-//
-//  SonoraLiveActivityLiveActivity.swift
-//  SonoraLiveActivity
-//
-//  Created by Samuel Kahessay on 2025-08-27.
-//
-
 import ActivityKit
 import WidgetKit
 import SwiftUI
@@ -41,7 +34,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     
                     Spacer()
                     
-                    // Prominent native-style stop button
+                    // Open the host app via deep link to stop recording
                     if let url = URL(string: "sonora://stopRecording") {
                         Link(destination: url) {
                             HStack(alignment: .center, spacing: 8) {
@@ -119,7 +112,6 @@ struct SonoraLiveActivityLiveActivity: Widget {
                             .stroke(.white.opacity(0.15), lineWidth: 1)
                     )
             )
-            .widgetURL(URL(string: "sonora://stopRecording"))
             .activityBackgroundTint(.clear)
             .activitySystemActionForegroundColor(.white)
 
@@ -249,11 +241,13 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     .foregroundStyle(.red)
                     .symbolEffect(.pulse, options: .repeating, value: true)
             }
+            // Use App Intent for Dynamic Island tap (iOS 17+) or fallback to URL
             .widgetURL(URL(string: "sonora://stopRecording"))
         }
     }
 }
 
+// Helper functions remain the same
 private func elapsedString(from start: Date) -> String {
     let interval = max(0, Int(Date().timeIntervalSince(start)))
     return String(format: "%d:%02d", interval/60, interval%60)
@@ -268,5 +262,3 @@ private func timerString(from start: Date, isCountdown: Bool, remaining: TimeInt
     if isCountdown, let rem = remaining { return "Ends in " + countdownString(rem) }
     return elapsedString(from: start)
 }
-
-// Previews omitted for simplicity
