@@ -21,6 +21,7 @@ Sonora combines:
 - Protocol-first dependency injection
 
 ## 📐 Architecture Overview
+For the complete architecture, current metrics, and next steps, see `ARCHITECTURE.md`.
 
 Sonora follows **Clean Architecture** principles with **MVVM** presentation patterns.
 
