@@ -12,7 +12,7 @@ final class AudioPlayerProxy: NSObject, AVAudioPlayerDelegate {
 
 @MainActor
 final class AudioRepositoryImpl: ObservableObject, AudioRepository {
-    @Published var playingMemo: Memo?
+    @Published var playingMemo: DomainMemo?
     @Published var isPlaying = false
     
     // MARK: - Audio Services
@@ -111,7 +111,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         countdownSubject.send((backgroundAudioService.isInCountdown, backgroundAudioService.remainingTime))
     }
     
-    func loadAudioFiles() -> [Memo] {
+    func loadAudioFiles() -> [DomainMemo] {
         do {
             let files = try FileManager.default.contentsOfDirectory(
                 at: documentsPath, 
@@ -120,21 +120,21 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
             )
             
             let audioFiles = files.filter { $0.pathExtension == "m4a" }
-            var loadedMemos: [Memo] = []
+            var loadedMemos: [DomainMemo] = []
             
             for file in audioFiles {
                 let resourceValues = try file.resourceValues(forKeys: [.creationDateKey])
                 let creationDate = resourceValues.creationDate ?? Date()
                 
-                let memo = Memo(
+                let memo = DomainMemo(
                     filename: file.lastPathComponent,
-                    url: file,
-                    createdAt: creationDate
+                    fileURL: file,
+                    creationDate: creationDate
                 )
                 loadedMemos.append(memo)
             }
             
-            return loadedMemos.sorted { $0.createdAt > $1.createdAt }
+            return loadedMemos.sorted { $0.creationDate > $1.creationDate }
         } catch {
             print("❌ AudioRepository: Error loading audio files: \(error)")
             return []
@@ -144,7 +144,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     func deleteAudioFile(at url: URL) throws {
         do {
             try FileManager.default.removeItem(at: url)
-            if playingMemo?.url == url {
+            if playingMemo?.fileURL == url {
                 stopAudio()
             }
         } catch {
@@ -179,7 +179,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         }
         
         // If the same memo is playing, pause it
-        if let memo = playingMemo, memo.url == url, isPlaying {
+        if let memo = playingMemo, memo.fileURL == url, isPlaying {
             audioPlayer?.pause()
             isPlaying = false
             return
@@ -201,10 +201,10 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         audioPlayer?.delegate = audioPlayerProxy
         audioPlayer?.play()
         
-        let playingMemoForURL = Memo(
+        let playingMemoForURL = DomainMemo(
             filename: url.lastPathComponent,
-            url: url,
-            createdAt: Date()
+            fileURL: url,
+            creationDate: Date()
         )
         
         playingMemo = playingMemoForURL
@@ -233,7 +233,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         print("🎵 AudioRepositoryImpl: Stopped audio playback")
     }
     
-    func isAudioPlaying(for memo: Memo) -> Bool {
+    func isAudioPlaying(for memo: DomainMemo) -> Bool {
         return playingMemo?.id == memo.id && isPlaying
     }
     

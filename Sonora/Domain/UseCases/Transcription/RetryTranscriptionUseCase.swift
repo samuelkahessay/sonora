@@ -3,7 +3,7 @@ import Foundation
 /// Use case for retrying transcription of a memo
 /// Encapsulates the business logic for retrying failed transcriptions
 protocol RetryTranscriptionUseCaseProtocol {
-    func execute(memo: Memo) async throws
+    func execute(memo: DomainMemo) async throws
 }
 
 final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
@@ -19,7 +19,7 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
-    func execute(memo: Memo) async throws {
+    func execute(memo: DomainMemo) async throws {
         print("🔄 RetryTranscriptionUseCase: Retrying transcription for memo: \(memo.filename)")
         
         // Check current transcription state
@@ -42,7 +42,7 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
         }
         
         // Check if file exists
-        guard FileManager.default.fileExists(atPath: memo.url.path) else {
+        guard FileManager.default.fileExists(atPath: memo.fileURL.path) else {
             print("❌ RetryTranscriptionUseCase: Audio file not found")
             throw TranscriptionError.fileNotFound
         }
@@ -54,7 +54,7 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
         
         do {
             // Perform transcription retry
-            let transcriptionText = try await transcriptionAPI.transcribe(url: memo.url)
+            let transcriptionText = try await transcriptionAPI.transcribe(url: memo.fileURL)
             print("✅ RetryTranscriptionUseCase: Transcription retry completed for \(memo.filename)")
             print("💾 RetryTranscriptionUseCase: Text: \(transcriptionText.prefix(100))...")
             

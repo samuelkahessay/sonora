@@ -3,7 +3,7 @@ import Foundation
 /// Use case for starting transcription of a memo
 /// Encapsulates the business logic for initiating transcription
 protocol StartTranscriptionUseCaseProtocol {
-    func execute(memo: Memo) async throws
+    func execute(memo: DomainMemo) async throws
 }
 
 final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
@@ -31,7 +31,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
-    func execute(memo: Memo) async throws {
+    func execute(memo: DomainMemo) async throws {
         let context = LogContext(additionalInfo: [
             "memoId": memo.id.uuidString,
             "filename": memo.filename
@@ -66,7 +66,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             }
             
             // Check if file exists
-            guard FileManager.default.fileExists(atPath: memo.url.path) else {
+            guard FileManager.default.fileExists(atPath: memo.fileURL.path) else {
                 await operationCoordinator.failOperation(operationId, error: TranscriptionError.fileNotFound)
                 throw TranscriptionError.fileNotFound
             }
@@ -77,8 +77,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             }
             
             // Perform transcription
-            logger.info("Starting transcription service for file: \(memo.url.lastPathComponent)", category: .transcription, context: context)
-            let transcriptionText = try await transcriptionAPI.transcribe(url: memo.url)
+            logger.info("Starting transcription service for file: \(memo.fileURL.lastPathComponent)", category: .transcription, context: context)
+            let transcriptionText = try await transcriptionAPI.transcribe(url: memo.fileURL)
             
             logger.info("Transcription completed successfully", category: .transcription, context: LogContext(
                 additionalInfo: [

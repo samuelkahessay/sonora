@@ -3,7 +3,7 @@ import Foundation
 /// Use case for deleting a memo
 /// Encapsulates the business logic for memo deletion
 protocol DeleteMemoUseCaseProtocol {
-    func execute(memo: Memo) async throws
+    func execute(memo: DomainMemo) async throws
 }
 
 final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
@@ -34,7 +34,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
-    func execute(memo: Memo) async throws {
+    func execute(memo: DomainMemo) async throws {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: [
             "memoId": memo.id.uuidString,
@@ -106,7 +106,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     // MARK: - Private Methods
     
     /// Validates that the memo exists in the repository
-    private func validateMemoExists(_ memo: Memo) throws {
+    private func validateMemoExists(_ memo: DomainMemo) throws {
         guard memoRepository.memos.contains(where: { $0.id == memo.id }) else {
             print("⚠️ DeleteMemoUseCase: Memo not found in repository: \(memo.filename)")
             throw RepositoryError.resourceNotFound("Memo with ID \(memo.id) not found")
@@ -116,7 +116,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     }
     
     /// Handles playback state if the memo is currently playing
-    private func handlePlaybackIfNeeded(_ memo: Memo) throws {
+    private func handlePlaybackIfNeeded(_ memo: DomainMemo) throws {
         if memoRepository.playingMemo?.id == memo.id && memoRepository.isPlaying {
             print("⏸️ DeleteMemoUseCase: Stopping playback before deletion")
             
@@ -130,32 +130,32 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     }
     
     /// Validates file system state before attempting deletion
-    private func validateFileSystemState(_ memo: Memo) throws {
+    private func validateFileSystemState(_ memo: DomainMemo) throws {
         // Check if file exists
-        guard FileManager.default.fileExists(atPath: memo.url.path) else {
-            print("⚠️ DeleteMemoUseCase: File already missing: \(memo.url.path)")
+        guard FileManager.default.fileExists(atPath: memo.fileURL.path) else {
+            print("⚠️ DeleteMemoUseCase: File already missing: \(memo.fileURL.path)")
             // This is not necessarily an error - file might have been deleted externally
             return
         }
         
         // Check if file is writable (can be deleted)
-        guard FileManager.default.isDeletableFile(atPath: memo.url.path) else {
-            throw RepositoryError.permissionDenied("Cannot delete file: \(memo.url.path)")
+        guard FileManager.default.isDeletableFile(atPath: memo.fileURL.path) else {
+            throw RepositoryError.permissionDenied("Cannot delete file: \(memo.fileURL.path)")
         }
         
         print("🔍 DeleteMemoUseCase: File system state validated for deletion")
     }
     
     /// Verifies that the deletion was successful
-    private func verifyDeletion(_ memo: Memo) throws {
+    private func verifyDeletion(_ memo: DomainMemo) throws {
         // Check that memo is no longer in repository
         if memoRepository.memos.contains(where: { $0.id == memo.id }) {
             throw RepositoryError.resourceAlreadyExists("Memo still exists in repository after deletion")
         }
         
         // Check that file no longer exists
-        if FileManager.default.fileExists(atPath: memo.url.path) {
-            throw RepositoryError.fileDeletionFailed("File still exists after deletion: \(memo.url.path)")
+        if FileManager.default.fileExists(atPath: memo.fileURL.path) {
+            throw RepositoryError.fileDeletionFailed("File still exists after deletion: \(memo.fileURL.path)")
         }
         
         logger.useCase("Deletion verification completed successfully", 
@@ -163,7 +163,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     }
     
     /// Delete all analysis results for the memo (cascading deletion)
-    private func deleteAnalysisResults(for memo: Memo, correlationId: String) async {
+    private func deleteAnalysisResults(for memo: DomainMemo, correlationId: String) async {
         let context = LogContext(correlationId: correlationId, additionalInfo: [
             "memoId": memo.id.uuidString,
             "operation": "cascading_analysis_deletion"

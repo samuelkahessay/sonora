@@ -3,7 +3,7 @@ import AVFoundation
 import UIKit
 
 struct MemoDetailView: View {
-    let memo: Memo
+    let memo: DomainMemo
     @StateObject private var viewModel = MemoDetailViewModel()
     
     var body: some View {

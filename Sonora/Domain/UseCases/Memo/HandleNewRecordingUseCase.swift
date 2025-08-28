@@ -3,7 +3,7 @@ import Foundation
 /// Use case for handling a new recording
 /// Encapsulates the business logic for processing new recordings
 protocol HandleNewRecordingUseCaseProtocol {
-    func execute(at url: URL) async throws -> Memo
+    func execute(at url: URL) async throws -> DomainMemo
 }
 
 final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
@@ -23,7 +23,7 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
-    func execute(at url: URL) async throws -> Memo {
+    func execute(at url: URL) async throws -> DomainMemo {
         print("💾 HandleNewRecordingUseCase: Processing new recording at: \(url.lastPathComponent)")
         
         do {
@@ -41,7 +41,7 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
             
             // Publish memoCreated event on main actor
             print("📡 HandleNewRecordingUseCase: Publishing memoCreated event for memo \(memo.id)")
-            let domainMemo = memo.toDomain()
+            let domainMemo = memo
             await MainActor.run { [eventBus] in
                 eventBus.publish(.memoCreated(domainMemo))
             }
@@ -121,11 +121,11 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
     // Audio integrity validation moved to Data layer.
     
     /// Creates a memo object from the validated recording
-    private func createMemoFromRecording(url: URL, metadata: FileMetadata) throws -> Memo {
-        let memo = Memo(
+    private func createMemoFromRecording(url: URL, metadata: FileMetadata) throws -> DomainMemo {
+        let memo = DomainMemo(
             filename: url.lastPathComponent,
-            url: url,
-            createdAt: metadata.creationDate
+            fileURL: url,
+            creationDate: metadata.creationDate
         )
         
         print("📝 HandleNewRecordingUseCase: Created memo object for \(memo.filename)")
@@ -133,11 +133,11 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
     }
     
     /// Verifies that the recording was processed successfully by the repository
-    private func verifyRecordingProcessed(_ memo: Memo) throws {
+    private func verifyRecordingProcessed(_ memo: DomainMemo) throws {
         // Give the repository a moment to process
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             // Check if memo appears in repository
-            if !self.memoRepository.memos.contains(where: { $0.url == memo.url }) {
+            if !self.memoRepository.memos.contains(where: { $0.fileURL == memo.fileURL }) {
                 print("⚠️ HandleNewRecordingUseCase: Memo not found in repository after processing")
             } else {
                 print("✅ HandleNewRecordingUseCase: Memo successfully added to repository")

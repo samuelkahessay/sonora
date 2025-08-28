@@ -11,10 +11,10 @@ struct MemoFileMetadata: Codable {
     let fileSize: Int64?
     let duration: TimeInterval?
     
-    init(memo: Memo, audioPath: String, fileSize: Int64? = nil, duration: TimeInterval? = nil) {
+    init(memo: DomainMemo, audioPath: String, fileSize: Int64? = nil, duration: TimeInterval? = nil) {
         self.id = memo.id.uuidString
         self.filename = memo.filename
-        self.createdAt = memo.createdAt
+        self.createdAt = memo.creationDate
         self.audioPath = audioPath
         self.fileSize = fileSize
         self.duration = duration
@@ -34,10 +34,10 @@ struct MemoIndex: Codable {
 
 @MainActor
 final class MemoRepositoryImpl: ObservableObject, MemoRepository {
-    @Published var memos: [Memo] = []
+    @Published var memos: [DomainMemo] = []
     
     // Playback state
-    @Published private(set) var playingMemo: Memo?
+    @Published private(set) var playingMemo: DomainMemo?
     @Published private(set) var isPlaying: Bool = false
     
     // Transcription is handled via dedicated repository and use cases
@@ -117,7 +117,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
     
     // MARK: - Playback
-    func playMemo(_ memo: Memo) {
+    func playMemo(_ memo: DomainMemo) {
         // Handle pause/resume toggle for same memo
         if playingMemo?.id == memo.id && isPlaying {
             pausePlaying()
@@ -138,7 +138,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         }
         
         do {
-            let audio = try AVAudioPlayer(contentsOf: memo.url)
+            let audio = try AVAudioPlayer(contentsOf: memo.fileURL)
             player = audio
             audio.prepareToPlay()
             audio.play()
@@ -213,7 +213,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
     
     func loadMemos() {
-        var loadedMemos: [Memo] = []
+        var loadedMemos: [DomainMemo] = []
         let index = loadIndex()
         
         print("📋 MemoRepository: Loading \(index.memos.count) memos from index")
@@ -237,11 +237,11 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 let metadata = try atomicRead(MemoFileMetadata.self, from: metadataPath)
                 
                 // Create memo with the saved ID to ensure consistency
-                let memo = Memo(
+                let memo = DomainMemo(
                     id: memoId,  // Use the ID from the index/filename, which matches metadata.id
                     filename: metadata.filename,
-                    url: audioPath,
-                    createdAt: metadata.createdAt
+                    fileURL: audioPath,
+                    creationDate: metadata.createdAt
                 )
                 
                 // Verify memo ID matches metadata (should always be true now)
@@ -257,12 +257,12 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             }
         }
         
-        let sortedMemos = loadedMemos.sorted { $0.createdAt > $1.createdAt }
+        let sortedMemos = loadedMemos.sorted { $0.creationDate > $1.creationDate }
         print("✅ MemoRepository: Successfully loaded \(sortedMemos.count) memos")
         self.memos = sortedMemos
     }
     
-    func saveMemo(_ memo: Memo) {
+    func saveMemo(_ memo: DomainMemo) {
         do {
             let memoDirectoryPath = memoDirectoryPath(for: memo.id)
             let audioDestination = audioFilePath(for: memo.id)
@@ -274,11 +274,11 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                                                    attributes: nil)
             
             // Copy audio file if it's not already in the correct location
-            if memo.url != audioDestination {
+            if memo.fileURL != audioDestination {
                 if fileExists(at: audioDestination) {
                     try FileManager.default.removeItem(at: audioDestination)
                 }
-                try FileManager.default.copyItem(at: memo.url, to: audioDestination)
+                try FileManager.default.copyItem(at: memo.fileURL, to: audioDestination)
                 print("📁 MemoRepository: Audio file copied to \(audioDestination.lastPathComponent)")
             }
             
@@ -312,14 +312,14 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             // Update in-memory list
             if !memos.contains(where: { $0.id == memo.id }) {
                 // Create new memo with the same ID and updated URL
-                let savedMemo = Memo(
+                let savedMemo = DomainMemo(
                     id: memo.id,  // Preserve the original ID
                     filename: memo.filename,
-                    url: audioDestination,
-                    createdAt: memo.createdAt
+                    fileURL: audioDestination,
+                    creationDate: memo.creationDate
                 )
                 memos.append(savedMemo)
-                memos.sort { $0.createdAt > $1.createdAt }
+                memos.sort { $0.creationDate > $1.creationDate }
                 print("📝 MemoRepository: Added memo \(savedMemo.filename) to in-memory list with ID \(savedMemo.id)")
             }
             
@@ -330,7 +330,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         }
     }
     
-    func deleteMemo(_ memo: Memo) {
+    func deleteMemo(_ memo: DomainMemo) {
         do {
             if playingMemo?.id == memo.id {
                 stopPlaying()
@@ -354,7 +354,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             memos.removeAll { $0.id == memo.id }
             
             // Clean up old metadata manager entry
-            metadataManager.deleteMetadata(for: memo.url)
+            metadataManager.deleteMetadata(for: memo.fileURL)
             
             print("✅ MemoRepository: Successfully deleted memo \(memo.filename)")
             
@@ -363,12 +363,12 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         }
     }
     
-    func getMemo(by id: UUID) -> Memo? {
+    func getMemo(by id: UUID) -> DomainMemo? {
         return memos.first { $0.id == id }
     }
     
-    func getMemo(by url: URL) -> Memo? {
-        return memos.first { $0.url == url }
+    func getMemo(by url: URL) -> DomainMemo? {
+        return memos.first { $0.fileURL == url }
     }
     
     func handleNewRecording(at url: URL) {
@@ -395,10 +395,10 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 return
             }
             
-            let newMemo = Memo(
+            let newMemo = DomainMemo(
                 filename: url.lastPathComponent,
-                url: url,
-                createdAt: creationDate
+                fileURL: url,
+                creationDate: creationDate
             )
             
             print("💾 MemoRepository: Saving new recording as memo \(newMemo.filename)")
@@ -419,7 +419,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     
     /// Triggers automatic transcription for a newly saved memo
     /// This uses modern Use Case architecture for clean separation of concerns
-    private func triggerAutoTranscription(for memo: Memo) {
+    private func triggerAutoTranscription(for memo: DomainMemo) {
         Task { @MainActor in
             do {
                 print("🎯 MemoRepository: Starting auto-transcription via StartTranscriptionUseCase for \(memo.filename)")
@@ -434,7 +434,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         }
     }
     
-    func updateMemoMetadata(_ memo: Memo, metadata: [String: Any]) {
+    func updateMemoMetadata(_ memo: DomainMemo, metadata: [String: Any]) {
         do {
             let metadataPath = metadataFilePath(for: memo.id)
             

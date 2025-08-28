@@ -21,7 +21,7 @@ final class MemoDetailViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Current Memo
-    private var currentMemo: Memo?
+    private var currentMemo: DomainMemo?
     
     // MARK: - Published Properties
     
@@ -192,7 +192,7 @@ final class MemoDetailViewModel: ObservableObject {
     // MARK: - Public Methods
     
     /// Configure the ViewModel with a memo
-    func configure(with memo: Memo) {
+    func configure(with memo: DomainMemo) {
         print("📝 MemoDetailViewModel: Configuring with memo: \(memo.filename)")
         self.currentMemo = memo
         
@@ -344,7 +344,7 @@ final class MemoDetailViewModel: ObservableObject {
     
     // MARK: - Private Methods
     
-    private func updateTranscriptionState(for memo: Memo) {
+    private func updateTranscriptionState(for memo: DomainMemo) {
         let newState = getTranscriptionStateUseCase.execute(memo: memo)
         print("🔄 MemoDetailViewModel: Updating state for \(memo.filename)")
         print("🔄 MemoDetailViewModel: Current UI state: \(transcriptionState.statusText)")
@@ -354,7 +354,7 @@ final class MemoDetailViewModel: ObservableObject {
         transcriptionState = newState
     }
     
-    private func setupPlayingState(for memo: Memo) {
+    private func setupPlayingState(for memo: DomainMemo) {
         isPlaying = memoRepository.playingMemo?.id == memo.id && memoRepository.isPlaying
     }
     

@@ -3,7 +3,7 @@ import Foundation
 /// Use case for loading memos from storage
 /// Encapsulates the business logic for memo retrieval
 protocol LoadMemosUseCaseProtocol {
-    func execute() async throws -> [Memo]
+    func execute() async throws -> [DomainMemo]
 }
 
 final class LoadMemosUseCase: LoadMemosUseCaseProtocol {
@@ -17,7 +17,7 @@ final class LoadMemosUseCase: LoadMemosUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
-    func execute() async throws -> [Memo] {
+    func execute() async throws -> [DomainMemo] {
         print("📂 LoadMemosUseCase: Starting memo loading operation")
         
         do {
@@ -50,7 +50,7 @@ final class LoadMemosUseCase: LoadMemosUseCaseProtocol {
     // MARK: - Private Methods
     
     /// Validates the loaded memos for consistency and integrity
-    private func validateLoadedMemos(_ memos: [Memo]) throws {
+    private func validateLoadedMemos(_ memos: [DomainMemo]) throws {
         print("🔍 LoadMemosUseCase: Validating \(memos.count) loaded memos")
         
         // Check for duplicate IDs
@@ -61,9 +61,9 @@ final class LoadMemosUseCase: LoadMemosUseCaseProtocol {
         
         // Validate file existence for each memo
         for memo in memos {
-            guard FileManager.default.fileExists(atPath: memo.url.path) else {
+            guard FileManager.default.fileExists(atPath: memo.fileURL.path) else {
                 print("⚠️ LoadMemosUseCase: Missing file for memo \(memo.filename)")
-                throw RepositoryError.fileNotFound(memo.url.path)
+                throw RepositoryError.fileNotFound(memo.fileURL.path)
             }
         }
         

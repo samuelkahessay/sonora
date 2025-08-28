@@ -136,7 +136,7 @@ final class TranscriptionPersistenceTestUseCase {
     }
     
     /// Test real transcription workflow with persistence
-    func testRealTranscriptionWorkflow(memo: Memo) async {
+    func testRealTranscriptionWorkflow(memo: DomainMemo) async {
         print("🧪 TranscriptionPersistenceTestUseCase: Testing real transcription workflow")
         
         do {
@@ -253,14 +253,14 @@ final class TranscriptionPersistenceTestUseCase {
     
     // MARK: - Helper Methods
     
-    private func createTestMemo(id: UUID) -> Memo {
+    private func createTestMemo(id: UUID) -> DomainMemo {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let testURL = documentsPath.appendingPathComponent("test_memo.m4a")
         
-        return Memo(
+        return DomainMemo(
             filename: "test_memo.m4a",
-            url: testURL,
-            createdAt: Date()
+            fileURL: testURL,
+            creationDate: Date()
         )
     }
     

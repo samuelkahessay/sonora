@@ -3,7 +3,7 @@ import Foundation
 /// Use case for getting transcription state of a memo
 /// Encapsulates the business logic for retrieving transcription status
 protocol GetTranscriptionStateUseCaseProtocol {
-    func execute(memo: Memo) -> TranscriptionState
+    func execute(memo: DomainMemo) -> TranscriptionState
 }
 
 final class GetTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol {
@@ -18,7 +18,7 @@ final class GetTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol {
     
     // MARK: - Use Case Execution
     @MainActor
-    func execute(memo: Memo) -> TranscriptionState {
+    func execute(memo: DomainMemo) -> TranscriptionState {
         // Get current transcription state from repository
         let state = transcriptionRepository.getTranscriptionState(for: memo.id)
         
