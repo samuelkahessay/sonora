@@ -20,7 +20,7 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
         analysisService: any AnalysisServiceProtocol, 
         analysisRepository: any AnalysisRepository,
         logger: any LoggerProtocol = Logger.shared,
-        eventBus: any EventBusProtocol = EventBus.shared,
+        eventBus: any EventBusProtocol,
         operationCoordinator: any OperationCoordinatorProtocol
     ) {
         self.analysisService = analysisService

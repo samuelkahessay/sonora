@@ -86,6 +86,7 @@ final class MemoListViewModel: ObservableObject {
         let startTranscriptionUseCase = StartTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
             transcriptionAPI: transcriptionAPI,
+            eventBus: container.eventBus(),
             operationCoordinator: container.operationCoordinator()
         )
         let retryTranscriptionUseCase = RetryTranscriptionUseCase(

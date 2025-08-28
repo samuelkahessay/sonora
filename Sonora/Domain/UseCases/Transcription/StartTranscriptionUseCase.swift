@@ -19,7 +19,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     init(
         transcriptionRepository: any TranscriptionRepository, 
         transcriptionAPI: any TranscriptionAPI, 
-        eventBus: any EventBusProtocol = EventBus.shared,
+        eventBus: any EventBusProtocol,
         operationCoordinator: any OperationCoordinatorProtocol,
         logger: any LoggerProtocol = Logger.shared
     ) {

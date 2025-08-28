@@ -182,7 +182,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
                 operationCoordinator: container.operationCoordinator()
             ),
             requestPermissionUseCase: RequestMicrophonePermissionUseCase(logger: logger),
-            handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository),
+            handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository, eventBus: container.eventBus()),
             audioRepository: audioRepository,
             operationCoordinator: container.operationCoordinator(),
             systemNavigator: container.systemNavigator()

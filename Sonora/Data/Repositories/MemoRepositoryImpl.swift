@@ -80,6 +80,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         let start = StartTranscriptionUseCase(
             transcriptionRepository: trRepo,
             transcriptionAPI: api,
+            eventBus: EventBus.shared,
             operationCoordinator: OperationCoordinator.shared
         )
         let get = GetTranscriptionStateUseCase(transcriptionRepository: trRepo)

@@ -19,7 +19,7 @@ final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
         analysisService: any AnalysisServiceProtocol, 
         analysisRepository: any AnalysisRepository,
         logger: any LoggerProtocol = Logger.shared,
-        eventBus: any EventBusProtocol = EventBus.shared
+        eventBus: any EventBusProtocol
     ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository

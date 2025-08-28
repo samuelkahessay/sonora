@@ -22,6 +22,7 @@ final class TranscriptionPersistenceTestUseCase {
         self.startTranscriptionUseCase = StartTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
             transcriptionAPI: TranscriptionService(),
+            eventBus: EventBus.shared,
             operationCoordinator: OperationCoordinator.shared
         )
         self.getTranscriptionStateUseCase = GetTranscriptionStateUseCase(transcriptionRepository: transcriptionRepository)

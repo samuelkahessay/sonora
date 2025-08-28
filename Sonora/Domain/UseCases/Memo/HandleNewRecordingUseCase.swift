@@ -17,7 +17,7 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
     private let supportedFormats: Set<String> = ["m4a", "mp3", "wav", "aiff"]
     
     // MARK: - Initialization
-    init(memoRepository: any MemoRepository, eventBus: any EventBusProtocol = EventBus.shared) {
+    init(memoRepository: any MemoRepository, eventBus: any EventBusProtocol) {
         self.memoRepository = memoRepository
         self.eventBus = eventBus
     }

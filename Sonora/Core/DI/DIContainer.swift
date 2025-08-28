@@ -133,6 +133,7 @@ final class DIContainer: ObservableObject, Resolver {
         let startTranscriptionUseCase = StartTranscriptionUseCase(
             transcriptionRepository: trRepo,
             transcriptionAPI: trAPI,
+            eventBus: self._eventBus!,
             operationCoordinator: self._operationCoordinator
         )
         let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(

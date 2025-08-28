@@ -107,6 +107,7 @@ final class MemoDetailViewModel: ObservableObject {
         let startTranscriptionUseCase = StartTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
             transcriptionAPI: transcriptionAPI,
+            eventBus: container.eventBus(),
             operationCoordinator: container.operationCoordinator()
         )
         let retryTranscriptionUseCase = RetryTranscriptionUseCase(
@@ -122,10 +123,10 @@ final class MemoDetailViewModel: ObservableObject {
             startTranscriptionUseCase: startTranscriptionUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase,
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
-            analyzeTLDRUseCase: AnalyzeTLDRUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, operationCoordinator: container.operationCoordinator()),
-            analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
-            analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
-            analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
+            analyzeTLDRUseCase: AnalyzeTLDRUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus(), operationCoordinator: container.operationCoordinator()),
+            analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
+            analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
+            analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
             memoRepository: memoRepository,
             operationCoordinator: container.operationCoordinator()
         )
