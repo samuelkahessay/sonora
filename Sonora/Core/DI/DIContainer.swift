@@ -3,6 +3,7 @@ import Combine
 
 // Simple dependency registration container
 typealias ResolverType = DIContainer
+@MainActor
 protocol Resolver {
     func resolve<T>(_ type: T.Type) -> T?
 }
@@ -215,7 +216,7 @@ import SwiftUI
 
 /// Environment key for DIContainer
 private struct DIContainerKey: EnvironmentKey {
-    static let defaultValue = DIContainer.shared
+    @MainActor static var defaultValue: DIContainer { DIContainer.shared }
 }
 
 extension EnvironmentValues {
@@ -228,6 +229,7 @@ extension EnvironmentValues {
 
 extension View {
     /// Inject DIContainer into SwiftUI environment
+    @MainActor
     func withDIContainer(_ container: DIContainer = .shared) -> some View {
         environment(\.diContainer, container)
     }
