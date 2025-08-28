@@ -8,7 +8,7 @@ import SwiftUI
 final class OperationStatusViewModel: ObservableObject, OperationStatusDelegate {
     
     // MARK: - Dependencies
-    private let operationCoordinator: OperationCoordinator
+    private let operationCoordinator: any OperationCoordinatorProtocol
     private let logger: any LoggerProtocol
     private var cancellables = Set<AnyCancellable>()
     
@@ -49,7 +49,7 @@ final class OperationStatusViewModel: ObservableObject, OperationStatusDelegate 
     // MARK: - Initialization
     
     init(
-        operationCoordinator: OperationCoordinator = OperationCoordinator.shared,
+        operationCoordinator: any OperationCoordinatorProtocol,
         logger: any LoggerProtocol = Logger.shared
     ) {
         self.operationCoordinator = operationCoordinator
@@ -99,7 +99,8 @@ final class OperationStatusViewModel: ObservableObject, OperationStatusDelegate 
         // Get all operations
         allOperations = await operationCoordinator.getOperationSummaries(
             group: .all,
-            filter: .all
+            filter: .all,
+            for: nil
         )
         
         // Apply current filters
@@ -111,7 +112,8 @@ final class OperationStatusViewModel: ObservableObject, OperationStatusDelegate 
     private func applyFilters() async {
         filteredOperations = await operationCoordinator.getOperationSummaries(
             group: selectedGroup,
-            filter: selectedFilter
+            filter: selectedFilter,
+            for: nil
         )
     }
     

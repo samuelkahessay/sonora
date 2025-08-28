@@ -21,10 +21,10 @@ final class RecordingFlowTestUseCase {
     private var currentMemoId: UUID?
     
     // MARK: - Initialization
-    init(audioRepository: any AudioRepository) {
+    init(audioRepository: any AudioRepository, operationCoordinator: any OperationCoordinatorProtocol) {
         self.audioRepository = audioRepository
-        self.startRecordingUseCase = StartRecordingUseCase(audioRepository: audioRepository)
-        self.stopRecordingUseCase = StopRecordingUseCase(audioRepository: audioRepository)
+        self.startRecordingUseCase = StartRecordingUseCase(audioRepository: audioRepository, operationCoordinator: operationCoordinator)
+        self.stopRecordingUseCase = StopRecordingUseCase(audioRepository: audioRepository, operationCoordinator: operationCoordinator)
         self.permissionUseCase = RequestMicrophonePermissionUseCase()
     }
     
@@ -33,7 +33,10 @@ final class RecordingFlowTestUseCase {
     static func create() -> RecordingFlowTestUseCase {
         let backgroundService = BackgroundAudioService()
         let audioRepo = AudioRepositoryImpl(backgroundAudioService: backgroundService)
-        return RecordingFlowTestUseCase(audioRepository: audioRepo)
+        return RecordingFlowTestUseCase(
+            audioRepository: audioRepo,
+            operationCoordinator: DIContainer.shared.operationCoordinator()
+        )
     }
     
     // MARK: - Test Execution

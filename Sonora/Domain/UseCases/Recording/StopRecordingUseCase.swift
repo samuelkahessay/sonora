@@ -10,13 +10,13 @@ final class StopRecordingUseCase: StopRecordingUseCaseProtocol {
     
     // MARK: - Dependencies
     private let audioRepository: any AudioRepository
-    private let operationCoordinator: OperationCoordinator
+    private let operationCoordinator: any OperationCoordinatorProtocol
     private let logger: any LoggerProtocol
     
     // MARK: - Initialization
     init(
         audioRepository: any AudioRepository,
-        operationCoordinator: OperationCoordinator = OperationCoordinator.shared,
+        operationCoordinator: any OperationCoordinatorProtocol,
         logger: any LoggerProtocol = Logger.shared
     ) {
         self.audioRepository = audioRepository

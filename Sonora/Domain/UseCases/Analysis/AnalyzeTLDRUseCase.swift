@@ -13,7 +13,7 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
     private let analysisRepository: any AnalysisRepository
     private let logger: any LoggerProtocol
     private let eventBus: any EventBusProtocol
-    private let operationCoordinator: OperationCoordinator
+    private let operationCoordinator: any OperationCoordinatorProtocol
     
     // MARK: - Initialization
     init(
@@ -21,7 +21,7 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
         analysisRepository: any AnalysisRepository,
         logger: any LoggerProtocol = Logger.shared,
         eventBus: any EventBusProtocol = EventBus.shared,
-        operationCoordinator: OperationCoordinator = OperationCoordinator.shared
+        operationCoordinator: any OperationCoordinatorProtocol
     ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository

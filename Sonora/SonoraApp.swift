@@ -10,38 +10,34 @@ import SwiftUI
 @main
 struct SonoraApp: App {
     @StateObject private var themeManager = ThemeManager()
+    init() {
+        // Configure DI and register event handlers before any views initialize
+        DIContainer.shared.configure()
+        print("🚀 SonoraApp: DIContainer configured with shared services (App init)")
+        EventHandlerRegistry.shared.registerAllHandlers()
+        print("🎯 SonoraApp: Event handlers registered (App init)")
+    }
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(themeManager)
                 .preferredColorScheme(themeManager.colorSchemeOverride)
+                // Optional debug validation of handlers
+                #if DEBUG
                 .onAppear {
-                    // Configure DIContainer with shared service instances
-                    DIContainer.shared.configure()
-                    print("🚀 SonoraApp: DIContainer configured with shared services")
-                    
-                    // Register event handlers for reactive features
-                    EventHandlerRegistry.shared.registerAllHandlers()
-                    print("🎯 SonoraApp: Event handlers registered and active")
-                    
-                    // Test event flow in debug builds
-                    #if DEBUG
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         EventHandlerRegistry.shared.testEventFlow()
-                        
-                        // Additional verification - check handler status
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             print("🔍 Event Handler Status:")
                             print(EventHandlerRegistry.shared.detailedStatus)
-                            
                             if let memoHandler = EventHandlerRegistry.shared.getHandler("MemoEventHandler", as: MemoEventHandler.self) {
                                 print("📊 MemoEventHandler Statistics:")
                                 print(memoHandler.handlerStatistics)
                             }
                         }
                     }
-                    #endif
                 }
+                #endif
                 .onOpenURL { url in
                     print("🔗 SonoraApp: Deep link received: \(url)")
                     guard url.scheme == "sonora" else { 
@@ -54,7 +50,7 @@ struct SonoraApp: App {
                         Task { @MainActor in
                             do {
                                 // Attempt to stop the current recording operation gracefully
-                                let coordinator = OperationCoordinator.shared
+                                let coordinator = DIContainer.shared.operationCoordinator()
                                 let activeOps = await coordinator.getAllActiveOperations()
                                 print("📊 SonoraApp: Found \(activeOps.count) active operations")
                                 
@@ -62,7 +58,10 @@ struct SonoraApp: App {
                                     print("🎤 SonoraApp: Found active recording operation for memo: \(recordingOp.type.memoId)")
                                     let memoId = recordingOp.type.memoId
                                     let audioRepo = DIContainer.shared.audioRepository()
-                                    let stopUseCase = StopRecordingUseCase(audioRepository: audioRepo)
+                                    let stopUseCase = StopRecordingUseCase(
+                                        audioRepository: audioRepo,
+                                        operationCoordinator: DIContainer.shared.operationCoordinator()
+                                    )
                                     
                                     do {
                                         try await stopUseCase.execute(memoId: memoId)

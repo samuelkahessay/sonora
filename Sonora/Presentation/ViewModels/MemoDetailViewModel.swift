@@ -17,7 +17,7 @@ final class MemoDetailViewModel: ObservableObject {
     private let analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol
     private let analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol
     private let memoRepository: any MemoRepository // Still needed for state updates
-    private let operationCoordinator: OperationCoordinator
+    private let operationCoordinator: any OperationCoordinatorProtocol
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Current Memo
@@ -73,7 +73,7 @@ final class MemoDetailViewModel: ObservableObject {
         analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol,
         analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol,
         memoRepository: any MemoRepository,
-        operationCoordinator: OperationCoordinator = OperationCoordinator.shared
+        operationCoordinator: any OperationCoordinatorProtocol
     ) {
         self.playMemoUseCase = playMemoUseCase
         self.startTranscriptionUseCase = startTranscriptionUseCase
@@ -106,7 +106,8 @@ final class MemoDetailViewModel: ObservableObject {
         // Use direct repository initialization to ensure real persistence
         let startTranscriptionUseCase = StartTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
-            transcriptionAPI: transcriptionAPI
+            transcriptionAPI: transcriptionAPI,
+            operationCoordinator: container.operationCoordinator()
         )
         let retryTranscriptionUseCase = RetryTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
@@ -121,7 +122,7 @@ final class MemoDetailViewModel: ObservableObject {
             startTranscriptionUseCase: startTranscriptionUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase,
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
-            analyzeTLDRUseCase: AnalyzeTLDRUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
+            analyzeTLDRUseCase: AnalyzeTLDRUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, operationCoordinator: container.operationCoordinator()),
             analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
             analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),
             analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger),

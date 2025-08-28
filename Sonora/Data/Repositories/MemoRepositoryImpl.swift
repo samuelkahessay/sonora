@@ -77,7 +77,11 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     convenience init() {
         let trRepo = TranscriptionRepositoryImpl()
         let api = TranscriptionService()
-        let start = StartTranscriptionUseCase(transcriptionRepository: trRepo, transcriptionAPI: api)
+        let start = StartTranscriptionUseCase(
+            transcriptionRepository: trRepo,
+            transcriptionAPI: api,
+            operationCoordinator: OperationCoordinator.shared
+        )
         let get = GetTranscriptionStateUseCase(transcriptionRepository: trRepo)
         let retry = RetryTranscriptionUseCase(transcriptionRepository: trRepo, transcriptionAPI: api)
         self.init(

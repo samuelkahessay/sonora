@@ -31,7 +31,7 @@ public actor OperationCoordinator {
     public weak var statusDelegate: (any OperationStatusDelegate)?
     
     /// Set the status delegate (thread-safe method)
-    public func setStatusDelegate(_ delegate: (any OperationStatusDelegate)?) {
+    public func setStatusDelegate(_ delegate: (any OperationStatusDelegate)?) async {
         statusDelegate = delegate
     }
     
@@ -336,6 +336,10 @@ public actor OperationCoordinator {
         // Attempt to start operation if no conflicts
         let _ = await startOperation(operationId)
     }
+
+    public func getOperation(_ operationId: UUID) async -> Operation? {
+        return operations[operationId]
+    }
     
     private func processQueuedOperations() async {
         // Try to start queued operations in priority order
@@ -445,11 +449,6 @@ public actor OperationCoordinator {
     }
     
     // MARK: - Public Query Interface
-    
-    /// Get current operation status
-    public func getOperation(_ operationId: UUID) async -> Operation? {
-        return operations[operationId]
-    }
     
     /// Get all active operations for a memo
     public func getActiveOperations(for memoId: UUID) async -> [Operation] {
@@ -614,6 +613,8 @@ public actor OperationCoordinator {
         """
     }
 }
+
+extension OperationCoordinator: OperationCoordinatorProtocol {}
 
 // MARK: - Convenience Extensions
 

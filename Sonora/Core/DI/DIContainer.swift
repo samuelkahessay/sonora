@@ -26,7 +26,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _transcriptionRepository: (any TranscriptionRepository)?
     private var _analysisRepository: (any AnalysisRepository)?
     private var _logger: (any LoggerProtocol)?
-    private var _operationCoordinator: OperationCoordinator!
+    private var _operationCoordinator: (any OperationCoordinatorProtocol)!
     private var _backgroundAudioService: BackgroundAudioService!
     private var _audioRepository: (any AudioRepository)?
     private var _startRecordingUseCase: StartRecordingUseCase!
@@ -38,6 +38,9 @@ final class DIContainer: ObservableObject, Resolver {
         // Services will be injected after initialization
         print("🏭 DIContainer: Initialized, waiting for service injection")
     }
+    
+    // MARK: - Configuration Guard
+    private var isConfigured: Bool = false
     
     // MARK: - Registration Methods
     
@@ -74,10 +77,11 @@ final class DIContainer: ObservableObject, Resolver {
             return AudioRepositoryImpl(backgroundAudioService: backgroundService) as any AudioRepository
         }
         
-        // Register StartRecordingUseCase 
+        // Register StartRecordingUseCase (resolve coordinator directly to avoid early DI accessor)
         register(StartRecordingUseCase.self) { resolver in
             let audioRepository = resolver.resolve((any AudioRepository).self)!
-            return StartRecordingUseCase(audioRepository: audioRepository)
+            let coordinator: any OperationCoordinatorProtocol = OperationCoordinator.shared
+            return StartRecordingUseCase(audioRepository: audioRepository, operationCoordinator: coordinator)
         }
         
         // Register LiveActivityService
@@ -92,6 +96,11 @@ final class DIContainer: ObservableObject, Resolver {
         analysisService: AnalysisService? = nil,
         logger: (any LoggerProtocol)? = nil
     ) {
+        // Prevent re-entrant configuration
+        if isConfigured { return }
+        isConfigured = true
+        // Initialize coordinator early to satisfy registrations that may resolve it
+        self._operationCoordinator = OperationCoordinator.shared
         // Setup repositories first
         setupRepositories()
         
@@ -110,7 +119,7 @@ final class DIContainer: ObservableObject, Resolver {
         // Initialize external API services  
         self._transcriptionAPI = TranscriptionService()
         self._analysisService = analysisService ?? AnalysisService()
-        self._operationCoordinator = OperationCoordinator.shared
+        // Coordinator already initialized above
         
         // Initialize MemoRepository with Use Case dependencies
         guard let trRepo = _transcriptionRepository, let trAPI = _transcriptionAPI else {
@@ -118,7 +127,8 @@ final class DIContainer: ObservableObject, Resolver {
         }
         let startTranscriptionUseCase = StartTranscriptionUseCase(
             transcriptionRepository: trRepo,
-            transcriptionAPI: trAPI
+            transcriptionAPI: trAPI,
+            operationCoordinator: self._operationCoordinator
         )
         let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(
             transcriptionRepository: trRepo
@@ -147,16 +157,8 @@ final class DIContainer: ObservableObject, Resolver {
     
     /// Check if container has been properly configured
     private func ensureConfigured() {
-        guard _memoRepository != nil,
-              _audioRepository != nil,
-              _startRecordingUseCase != nil,
-              _transcriptionRepository != nil,
-              _analysisRepository != nil,
-              _transcriptionAPI != nil,
-              _logger != nil,
-              _systemNavigator != nil,
-              _liveActivityService != nil else {
-            fatalError("DIContainer has not been configured. Call configure() before using services.")
+        if !isConfigured {
+            configure()
         }
     }
     
@@ -231,7 +233,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get operation coordinator service
-    func operationCoordinator() -> OperationCoordinator {
+    func operationCoordinator() -> any OperationCoordinatorProtocol {
         ensureConfigured()
         return _operationCoordinator
     }

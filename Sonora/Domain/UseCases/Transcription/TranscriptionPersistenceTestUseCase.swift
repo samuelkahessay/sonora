@@ -19,7 +19,11 @@ final class TranscriptionPersistenceTestUseCase {
     // MARK: - Initialization
     init(transcriptionRepository: any TranscriptionRepository) {
         self.transcriptionRepository = transcriptionRepository
-        self.startTranscriptionUseCase = StartTranscriptionUseCase(transcriptionRepository: transcriptionRepository, transcriptionAPI: TranscriptionService())
+        self.startTranscriptionUseCase = StartTranscriptionUseCase(
+            transcriptionRepository: transcriptionRepository,
+            transcriptionAPI: TranscriptionService(),
+            operationCoordinator: OperationCoordinator.shared
+        )
         self.getTranscriptionStateUseCase = GetTranscriptionStateUseCase(transcriptionRepository: transcriptionRepository)
     }
     

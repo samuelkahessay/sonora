@@ -13,7 +13,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     private let requestPermissionUseCase: any RequestMicrophonePermissionUseCaseProtocol
     private let handleNewRecordingUseCase: any HandleNewRecordingUseCaseProtocol
     private let audioRepository: any AudioRepository
-    private let operationCoordinator: OperationCoordinator
+    private let operationCoordinator: any OperationCoordinatorProtocol
     private let systemNavigator: any SystemNavigator
     private var cancellables = Set<AnyCancellable>()
     
@@ -141,7 +141,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         requestPermissionUseCase: any RequestMicrophonePermissionUseCaseProtocol,
         handleNewRecordingUseCase: any HandleNewRecordingUseCaseProtocol,
         audioRepository: any AudioRepository,
-        operationCoordinator: OperationCoordinator = OperationCoordinator.shared,
+        operationCoordinator: any OperationCoordinatorProtocol,
         systemNavigator: any SystemNavigator
     ) {
         self.startRecordingUseCase = startRecordingUseCase
@@ -173,8 +173,14 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         let logger = container.logger()
         
         self.init(
-            startRecordingUseCase: StartRecordingUseCase(audioRepository: audioRepository),
-            stopRecordingUseCase: StopRecordingUseCase(audioRepository: audioRepository),
+            startRecordingUseCase: StartRecordingUseCase(
+                audioRepository: audioRepository,
+                operationCoordinator: container.operationCoordinator()
+            ),
+            stopRecordingUseCase: StopRecordingUseCase(
+                audioRepository: audioRepository,
+                operationCoordinator: container.operationCoordinator()
+            ),
             requestPermissionUseCase: RequestMicrophonePermissionUseCase(logger: logger),
             handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository),
             audioRepository: audioRepository,

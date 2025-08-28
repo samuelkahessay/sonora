@@ -12,7 +12,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     private let transcriptionRepository: any TranscriptionRepository
     private let transcriptionAPI: any TranscriptionAPI
     private let eventBus: any EventBusProtocol
-    private let operationCoordinator: OperationCoordinator
+    private let operationCoordinator: any OperationCoordinatorProtocol
     private let logger: any LoggerProtocol
     
     // MARK: - Initialization
@@ -20,7 +20,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         transcriptionRepository: any TranscriptionRepository, 
         transcriptionAPI: any TranscriptionAPI, 
         eventBus: any EventBusProtocol = EventBus.shared,
-        operationCoordinator: OperationCoordinator = OperationCoordinator.shared,
+        operationCoordinator: any OperationCoordinatorProtocol,
         logger: any LoggerProtocol = Logger.shared
     ) {
         self.transcriptionRepository = transcriptionRepository

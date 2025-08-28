@@ -85,7 +85,8 @@ final class MemoListViewModel: ObservableObject {
         // Use direct repository initialization to ensure real persistence
         let startTranscriptionUseCase = StartTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
-            transcriptionAPI: transcriptionAPI
+            transcriptionAPI: transcriptionAPI,
+            operationCoordinator: container.operationCoordinator()
         )
         let retryTranscriptionUseCase = RetryTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
