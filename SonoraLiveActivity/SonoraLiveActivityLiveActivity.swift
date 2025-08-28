@@ -19,6 +19,18 @@ struct SonoraLiveActivityLiveActivity: Widget {
                         .font(.subheadline)
                         .lineLimit(1)
                         .truncationMode(.tail)
+                    Spacer(minLength: 8)
+                    // Deep link to stop recording in the app
+                    if let url = URL(string: "sonora://stopRecording") {
+                        Link(destination: url) {
+                            Text("Stop")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+                        .tint(.red)
+                        .buttonStyle(.bordered)
+                        .controlSize(.mini)
+                    }
                 }
                 Text(timerString(from: context.state.startTime, isCountdown: context.state.isCountdown, remaining: context.state.remainingTime))
                     .font(.caption).monospacedDigit()

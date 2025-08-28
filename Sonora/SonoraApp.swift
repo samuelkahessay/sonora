@@ -39,6 +39,27 @@ struct SonoraApp: App {
                     }
                     #endif
                 }
+                .onOpenURL { url in
+                    guard url.scheme == "sonora" else { return }
+                    if url.host == "stopRecording" {
+                        Task { @MainActor in
+                            // Attempt to stop the current recording operation gracefully
+                            let coordinator = OperationCoordinator.shared
+                            // Find any active recording operation and stop via use case
+                            let activeOps = await coordinator.getAllActiveOperations()
+                            if let recordingOp = activeOps.first(where: { $0.type.category == .recording }) {
+                                let memoId = recordingOp.type.memoId
+                                let audioRepo = DIContainer.shared.audioRepository()
+                                let stopUseCase = StopRecordingUseCase(audioRepository: audioRepo)
+                                do {
+                                    try await stopUseCase.execute(memoId: memoId)
+                                } catch {
+                                    print("❌ SonoraApp: Failed to stop recording via deep link: \(error)")
+                                }
+                            }
+                        }
+                    }
+                }
         }
     }
 }
