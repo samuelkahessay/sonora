@@ -1,5 +1,4 @@
 import Foundation
-import AVFoundation
 
 /// Use case for requesting microphone permission
 /// Encapsulates the business logic for handling microphone permissions with proper async support
@@ -60,44 +59,25 @@ final class RequestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCa
     // MARK: - Private Methods
     
     private func requestPermissionFromSystem() async -> MicrophonePermissionStatus {
-        return await withCheckedContinuation { continuation in
-            let requestPermission: (@escaping (Bool) -> Void) -> Void
-            
-            // Use appropriate API based on iOS version
-            if #available(iOS 17.0, *) {
-                requestPermission = { completion in
-                    AVAudioApplication.requestRecordPermission(completionHandler: completion)
-                }
-            } else {
-                requestPermission = { completion in
-                    AVAudioSession.sharedInstance().requestRecordPermission(completion)
-                }
-            }
-            
-            logger.debug("Requesting permission from system", category: .audio, context: LogContext())
-            
-            requestPermission { [weak self] granted in
-                let finalStatus = MicrophonePermissionStatus.current()
-                
-                self?.logger.info("Permission request completed", 
-                                category: .audio,
-                                context: LogContext(additionalInfo: [
-                                    "granted": granted,
-                                    "final_status": finalStatus.rawValue
-                                ]))
-                
-                // Post notification for UI updates
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(
-                        name: .microphonePermissionStatusChanged,
-                        object: nil,
-                        userInfo: [MicrophonePermissionStatus.notificationUserInfoKey: finalStatus]
-                    )
-                }
-                
-                continuation.resume(returning: finalStatus)
-            }
+        // Delegate platform-specific permission request to Core/Permissions
+        let finalStatus = await requestMicrophonePermission()
+        
+        logger.info("Permission request completed",
+                    category: .audio,
+                    context: LogContext(additionalInfo: [
+                        "final_status": finalStatus.rawValue
+                    ]))
+        
+        // Post notification for UI updates
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: .microphonePermissionStatusChanged,
+                object: nil,
+                userInfo: [MicrophonePermissionStatus.notificationUserInfoKey: finalStatus]
+            )
         }
+        
+        return finalStatus
     }
 }
 

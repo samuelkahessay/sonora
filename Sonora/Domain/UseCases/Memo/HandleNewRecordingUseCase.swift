@@ -1,5 +1,4 @@
 import Foundation
-import AVFoundation
 
 /// Use case for handling a new recording
 /// Encapsulates the business logic for processing new recordings
@@ -107,8 +106,8 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
         // Get creation date
         let creationDate = fileAttributes[.creationDate] as? Date ?? Date()
         
-        // Validate audio file integrity
-        try validateAudioFileIntegrity(at: url)
+        // Audio file integrity validation is handled in the Data layer.
+        // Domain layer avoids AVFoundation dependency.
         
         print("✅ HandleNewRecordingUseCase: Recording validation completed")
         
@@ -119,29 +118,7 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
         )
     }
     
-    /// Validates audio file integrity using AVFoundation
-    private func validateAudioFileIntegrity(at url: URL) throws {
-        let asset = AVURLAsset(url: url)
-        
-        // Check if the asset is playable
-        guard asset.isPlayable else {
-            throw RepositoryError.fileCorrupted("Audio file is not playable: \(url.lastPathComponent)")
-        }
-        
-        // Check duration
-        let duration = CMTimeGetSeconds(asset.duration)
-        guard duration.isFinite && duration > 0 else {
-            throw RepositoryError.fileCorrupted("Invalid audio duration: \(url.lastPathComponent)")
-        }
-        
-        // Check for audio tracks
-        let audioTracks = asset.tracks(withMediaType: .audio)
-        guard !audioTracks.isEmpty else {
-            throw RepositoryError.fileCorrupted("No audio tracks found: \(url.lastPathComponent)")
-        }
-        
-        print("🎵 HandleNewRecordingUseCase: Audio integrity validated - Duration: \(String(format: "%.2f", duration))s")
-    }
+    // Audio integrity validation moved to Data layer.
     
     /// Creates a memo object from the validated recording
     private func createMemoFromRecording(url: URL, metadata: FileMetadata) throws -> Memo {

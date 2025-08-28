@@ -1,5 +1,4 @@
 import Foundation
-import AVFoundation
 
 /// Use case for playing a memo
 /// Encapsulates the business logic for memo playback
@@ -27,9 +26,6 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
             
             // Validate file system state
             try validateFileSystemState(memo)
-            
-            // Validate audio file integrity
-            try validateAudioFile(memo)
             
             // Execute playback via repository
             memoRepository.playMemo(memo)
@@ -101,29 +97,8 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
         }
     }
     
-    /// Validates audio file integrity before playback
-    private func validateAudioFile(_ memo: Memo) throws {
-        let asset = AVURLAsset(url: memo.url)
-        
-        // Check if the asset is playable
-        guard asset.isPlayable else {
-            throw RepositoryError.fileCorrupted("Audio file is not playable: \(memo.filename)")
-        }
-        
-        // Check duration
-        let duration = CMTimeGetSeconds(asset.duration)
-        guard duration.isFinite && duration > 0 else {
-            throw RepositoryError.fileCorrupted("Invalid audio duration: \(memo.filename)")
-        }
-        
-        // Check for audio tracks
-        let audioTracks = asset.tracks(withMediaType: .audio)
-        guard !audioTracks.isEmpty else {
-            throw RepositoryError.fileCorrupted("No audio tracks found: \(memo.filename)")
-        }
-        
-        print("🎵 PlayMemoUseCase: Audio integrity validated - Duration: \(String(format: "%.2f", duration))s, Tracks: \(audioTracks.count)")
-    }
+    // Audio integrity validation is handled in the Data layer 
+    // to avoid AVFoundation dependency in the Domain layer.
     
     /// Verifies that playback started successfully
     private func verifyPlaybackStarted(_ memo: Memo) throws {

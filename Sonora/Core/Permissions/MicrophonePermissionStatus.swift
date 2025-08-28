@@ -97,3 +97,28 @@ public extension Notification.Name {
 public extension MicrophonePermissionStatus {
     static let notificationUserInfoKey = "MicrophonePermissionStatus"
 }
+
+// MARK: - Permission Request API (Core layer)
+
+/// Requests microphone permission using platform APIs and returns final status.
+@MainActor
+public func requestMicrophonePermission() async -> MicrophonePermissionStatus {
+    return await withCheckedContinuation { continuation in
+        let performRequest: (@escaping (Bool) -> Void) -> Void
+        
+        if #available(iOS 17.0, *) {
+            performRequest = { completion in
+                AVAudioApplication.requestRecordPermission(completionHandler: completion)
+            }
+        } else {
+            performRequest = { completion in
+                AVAudioSession.sharedInstance().requestRecordPermission(completion)
+            }
+        }
+        
+        performRequest { _ in
+            let status = MicrophonePermissionStatus.current()
+            continuation.resume(returning: status)
+        }
+    }
+}

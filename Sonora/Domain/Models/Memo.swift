@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import AVFoundation
 
 struct Memo: Identifiable, Equatable, Hashable {
     let id: UUID
@@ -39,16 +38,6 @@ struct Memo: Identifiable, Equatable, Hashable {
         return formatter.string(from: createdAt)
     }
     
-    @available(iOS, introduced: 11.0, deprecated: 16.0)
-    var duration: TimeInterval {
-        let asset = AVURLAsset(url: url)
-        return CMTimeGetSeconds(asset.duration)
-    }
-    
-    @available(iOS, introduced: 11.0, deprecated: 16.0)
-    var durationString: String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        return String(format: "%d:%02d", minutes, seconds)
-    }
+    // Duration-related helpers have been moved to the Data layer to
+    // avoid AVFoundation dependency in the Domain layer.
 }
