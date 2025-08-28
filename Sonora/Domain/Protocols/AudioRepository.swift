@@ -18,6 +18,13 @@ protocol AudioRepository: ObservableObject {
     var isInCountdown: Bool { get }
     var remainingTime: TimeInterval { get }
     
+    // MARK: - Reactive Publishers
+    var isRecordingPublisher: AnyPublisher<Bool, Never> { get }
+    var recordingTimePublisher: AnyPublisher<TimeInterval, Never> { get }
+    var permissionStatusPublisher: AnyPublisher<MicrophonePermissionStatus, Never> { get }
+    /// Emits a tuple of (isInCountdown, remainingTime)
+    var countdownPublisher: AnyPublisher<(Bool, TimeInterval), Never> { get }
+    
     // MARK: - File Management
     func loadAudioFiles() -> [Memo]
     func deleteAudioFile(at url: URL) throws

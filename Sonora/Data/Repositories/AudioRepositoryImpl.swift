@@ -23,11 +23,22 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     
     // MARK: - Combine
     private var cancellables = Set<AnyCancellable>()
+    private let isRecordingSubject = CurrentValueSubject<Bool, Never>(false)
+    private let recordingTimeSubject = CurrentValueSubject<TimeInterval, Never>(0)
+    private let permissionStatusSubject = CurrentValueSubject<MicrophonePermissionStatus, Never>(.notDetermined)
+    private let countdownSubject = CurrentValueSubject<(Bool, TimeInterval), Never>((false, 0))
+    
+    // MARK: - AudioRepository Publishers
+    var isRecordingPublisher: AnyPublisher<Bool, Never> { isRecordingSubject.eraseToAnyPublisher() }
+    var recordingTimePublisher: AnyPublisher<TimeInterval, Never> { recordingTimeSubject.eraseToAnyPublisher() }
+    var permissionStatusPublisher: AnyPublisher<MicrophonePermissionStatus, Never> { permissionStatusSubject.eraseToAnyPublisher() }
+    var countdownPublisher: AnyPublisher<(Bool, TimeInterval), Never> { countdownSubject.eraseToAnyPublisher() }
     
     init(backgroundAudioService: BackgroundAudioService) {
         self.backgroundAudioService = backgroundAudioService
         setupAudioPlayerProxy()
         setupBackgroundAudioService()
+        setupPolling()
         print("🎵 AudioRepositoryImpl: Initialized with BackgroundAudioService integration")
     }
     
@@ -68,12 +79,36 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         // Observe background audio service state
         backgroundAudioService.$isRecording
             .sink { [weak self] isRecording in
-                // Can be used for additional state management if needed
+                self?.isRecordingSubject.send(isRecording)
+                // Additional state management if needed
                 print("🎵 AudioRepositoryImpl: Recording state changed: \(isRecording)")
             }
             .store(in: &cancellables)
         
         print("🎵 AudioRepositoryImpl: BackgroundAudioService configured")
+    }
+    
+    // MARK: - Internal Polling for UI Streams
+    private func setupPolling() {
+        // 0.1s polling to expose stable UI publishers; service also updates internally
+        Timer.publish(every: 0.1, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                // Recording time
+                self.recordingTimeSubject.send(self.backgroundAudioService.recordingTime)
+                // Permission status
+                self.permissionStatusSubject.send(MicrophonePermissionStatus.current())
+                // Countdown
+                self.countdownSubject.send((self.backgroundAudioService.isInCountdown, self.backgroundAudioService.remainingTime))
+            }
+            .store(in: &cancellables)
+        
+        // Seed initial values
+        isRecordingSubject.send(backgroundAudioService.isRecording)
+        recordingTimeSubject.send(backgroundAudioService.recordingTime)
+        permissionStatusSubject.send(MicrophonePermissionStatus.current())
+        countdownSubject.send((backgroundAudioService.isInCountdown, backgroundAudioService.remainingTime))
     }
     
     func loadAudioFiles() -> [Memo] {
