@@ -45,10 +45,10 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
         
         do {
             // Validate memo exists in repository
-            try validateMemoExists(memo)
+            try await validateMemoExists(memo)
             
             // Check if memo is currently playing and stop if needed
-            try handlePlaybackIfNeeded(memo)
+            try await handlePlaybackIfNeeded(memo)
             
             // Validate file system state before deletion
             try validateFileSystemState(memo)
@@ -57,12 +57,12 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
             await deleteAnalysisResults(for: memo, correlationId: correlationId)
             
             // Delete memo from repository
-            memoRepository.deleteMemo(memo)
+            await memoRepository.deleteMemo(memo)
             logger.useCase("Memo deleted from repository", 
                          context: LogContext(correlationId: correlationId, additionalInfo: ["memoId": memo.id.uuidString]))
             
             // Verify deletion was successful
-            try verifyDeletion(memo)
+            try await verifyDeletion(memo)
             
             logger.useCase("Memo deletion completed successfully", 
                          level: .info,
@@ -106,6 +106,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     // MARK: - Private Methods
     
     /// Validates that the memo exists in the repository
+    @MainActor
     private func validateMemoExists(_ memo: Memo) throws {
         guard memoRepository.memos.contains(where: { $0.id == memo.id }) else {
             print("⚠️ DeleteMemoUseCase: Memo not found in repository: \(memo.filename)")
@@ -116,6 +117,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     }
     
     /// Handles playback state if the memo is currently playing
+    @MainActor
     private func handlePlaybackIfNeeded(_ memo: Memo) throws {
         if memoRepository.playingMemo?.id == memo.id && memoRepository.isPlaying {
             print("⏸️ DeleteMemoUseCase: Stopping playback before deletion")
@@ -147,6 +149,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     }
     
     /// Verifies that the deletion was successful
+    @MainActor
     private func verifyDeletion(_ memo: Memo) throws {
         // Check that memo is no longer in repository
         if memoRepository.memos.contains(where: { $0.id == memo.id }) {

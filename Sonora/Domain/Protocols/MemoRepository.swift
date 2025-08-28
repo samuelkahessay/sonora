@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 protocol MemoRepository: ObservableObject {
     var objectWillChange: ObservableObjectPublisher { get }
     var memos: [Memo] { get set }

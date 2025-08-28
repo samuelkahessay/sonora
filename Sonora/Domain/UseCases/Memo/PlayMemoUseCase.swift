@@ -22,16 +22,16 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
         
         do {
             // Validate memo exists in repository
-            try validateMemoExists(memo)
+            try await validateMemoExists(memo)
             
             // Validate file system state
             try validateFileSystemState(memo)
             
             // Execute playback via repository
-            memoRepository.playMemo(memo)
+            await memoRepository.playMemo(memo)
             
             // Verify playback started successfully
-            try verifyPlaybackStarted(memo)
+            try await verifyPlaybackStarted(memo)
             
             print("✅ PlayMemoUseCase: Successfully initiated playback for memo: \(memo.filename)")
             
@@ -57,6 +57,7 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
     // MARK: - Private Methods
     
     /// Validates that the memo exists in the repository
+    @MainActor
     private func validateMemoExists(_ memo: Memo) throws {
         guard memoRepository.memos.contains(where: { $0.id == memo.id }) else {
             print("⚠️ PlayMemoUseCase: Memo not found in repository: \(memo.filename)")
@@ -101,6 +102,7 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
     // to avoid AVFoundation dependency in the Domain layer.
     
     /// Verifies that playback started successfully
+    @MainActor
     private func verifyPlaybackStarted(_ memo: Memo) throws {
         // Give a brief moment for playback to initialize
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {

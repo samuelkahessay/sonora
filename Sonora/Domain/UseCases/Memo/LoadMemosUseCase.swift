@@ -22,9 +22,9 @@ final class LoadMemosUseCase: LoadMemosUseCaseProtocol {
         
         do {
             // Load memos from repository
-            memoRepository.loadMemos()
+            await memoRepository.loadMemos()
             
-            let loadedMemos = memoRepository.memos
+            let loadedMemos = await memoRepository.memos
             print("📂 LoadMemosUseCase: Successfully loaded \(loadedMemos.count) memos")
             
             // Validate loaded data

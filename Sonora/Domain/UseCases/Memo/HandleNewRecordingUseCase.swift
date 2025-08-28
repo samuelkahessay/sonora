@@ -34,10 +34,10 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
             let memo = try createMemoFromRecording(url: url, metadata: fileMetadata)
             
             // Process recording through repository
-            memoRepository.handleNewRecording(at: url)
+            await memoRepository.handleNewRecording(at: url)
             
             // Verify processing was successful
-            try verifyRecordingProcessed(memo)
+            try await verifyRecordingProcessed(memo)
             
             // Publish memoCreated event on main actor
             print("📡 HandleNewRecordingUseCase: Publishing memoCreated event for memo \(memo.id)")
@@ -133,14 +133,18 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
     }
     
     /// Verifies that the recording was processed successfully by the repository
+    @MainActor
     private func verifyRecordingProcessed(_ memo: Memo) throws {
         // Give the repository a moment to process
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            // Check if memo appears in repository
-            if !self.memoRepository.memos.contains(where: { $0.fileURL == memo.fileURL }) {
-                print("⚠️ HandleNewRecordingUseCase: Memo not found in repository after processing")
-            } else {
-                print("✅ HandleNewRecordingUseCase: Memo successfully added to repository")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            Task { @MainActor in
+                guard let self = self else { return }
+                // Check if memo appears in repository
+                if !self.memoRepository.memos.contains(where: { $0.fileURL == memo.fileURL }) {
+                    print("⚠️ HandleNewRecordingUseCase: Memo not found in repository after processing")
+                } else {
+                    print("✅ HandleNewRecordingUseCase: Memo successfully added to repository")
+                }
             }
         }
     }
