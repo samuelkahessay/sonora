@@ -44,30 +44,14 @@ final class StopRecordingUseCase: StopRecordingUseCaseProtocol {
         let recordingOperation = activeOperations.first { $0.type.category == .recording }
         
         do {
-            // Check if AudioRepository supports recording
-            if let audioRepoImpl = audioRepository as? AudioRepositoryImpl {
-                await MainActor.run {
-                    guard audioRepoImpl.isRecording else {
-                        logger.warning("Audio repository shows no recording in progress", category: .audio, context: context, error: nil)
-                        return
-                    }
-                    
-                    // Stop background recording
-                    audioRepoImpl.stopRecording()
-                    logger.info("Background recording stopped successfully", category: .audio, context: context)
+            // Stop via repository on main actor for thread safety
+            await MainActor.run {
+                guard self.audioRepository.isRecording else {
+                    logger.warning("Audio repository shows no recording in progress", category: .audio, context: context, error: nil)
+                    return
                 }
-            } else if let wrapper = audioRepository as? AudioRecordingServiceWrapper {
-                // Use legacy AudioRecordingService
-                let service = wrapper.service
-                
-                guard service.isRecording else {
-                    throw RecordingError.notRecording
-                }
-                
-                service.stopRecording()
-                logger.info("Legacy recording stopped successfully", category: .audio, context: context)
-            } else {
-                throw RecordingError.backgroundRecordingNotSupported
+                self.audioRepository.stopRecording()
+                logger.info("Background recording stopped successfully", category: .audio, context: context)
             }
             
             // Complete the recording operation
