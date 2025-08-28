@@ -34,6 +34,8 @@ final class BackgroundAudioService: NSObject, ObservableObject {
     private var recordingTimer: Timer?
     private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    private var wasInterrupted: Bool = false
+    private var wasRecordingBeforeInterruption: Bool = false
     
     // MARK: - Configuration
     private let config = AppConfiguration.shared
@@ -484,21 +486,44 @@ final class BackgroundAudioService: NSObject, ObservableObject {
         
         switch interruptionType {
         case .began:
-            print("🔇 BackgroundAudioService: Audio session interrupted")
-            if isRecording {
-                stopRecording()
+            print("🔇 BackgroundAudioService: Audio session interrupted (began)")
+            // Do not stop recording on interruption; pause and remember state
+            wasInterrupted = true
+            wasRecordingBeforeInterruption = audioRecorder?.isRecording ?? false
+            if wasRecordingBeforeInterruption {
+                audioRecorder?.pause()
             }
             
         case .ended:
             print("🔊 BackgroundAudioService: Audio session interruption ended")
-            
-            if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
-                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
-                if options.contains(.shouldResume) {
-                    print("🔄 BackgroundAudioService: Should resume after interruption")
-                    // Note: Don't auto-resume recording, let user decide
+            let shouldResume: Bool = {
+                if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
+                    return AVAudioSession.InterruptionOptions(rawValue: optionsValue).contains(.shouldResume)
+                }
+                return false
+            }()
+            if wasInterrupted && wasRecordingBeforeInterruption {
+                // Attempt to resume recording if system indicates it's safe
+                do {
+                    let session = AVAudioSession.sharedInstance()
+                    try session.setActive(true)
+                } catch {
+                    print("⚠️ BackgroundAudioService: Failed to reactivate session after interruption: \(error)")
+                }
+                if shouldResume {
+                    if let recorder = audioRecorder, !recorder.isRecording {
+                        let resumed = recorder.record()
+                        print("🔄 BackgroundAudioService: Resuming recorder after interruption: \(resumed)")
+                        if resumed {
+                            DispatchQueue.main.async { self.isRecording = true }
+                        }
+                    }
+                } else {
+                    print("ℹ️ BackgroundAudioService: System indicated not to resume automatically")
                 }
             }
+            wasInterrupted = false
+            wasRecordingBeforeInterruption = false
             
         @unknown default:
             print("❓ BackgroundAudioService: Unknown interruption type")

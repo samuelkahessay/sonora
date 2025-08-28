@@ -40,12 +40,22 @@ struct SonoraApp: App {
                 #endif
                 .onOpenURL { url in
                     print("🔗 SonoraApp: Deep link received: \(url)")
-                    guard url.scheme == "sonora" else { 
+                    guard url.scheme == "sonora" else {
                         print("❌ SonoraApp: Invalid scheme: \(url.scheme ?? "nil")")
-                        return 
+                        return
                     }
-                    
-                    if url.host == "stopRecording" {
+
+                    // Accept both sonora://stopRecording and sonora:/stopRecording formats
+                    let isStopLink: Bool = {
+                        if url.host == "stopRecording" { return true }
+                        let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                        return path == "stopRecording"
+                    }()
+                    if isStopLink == false {
+                        print("ℹ️ SonoraApp: Deep link not matched as stop (host=\(url.host ?? "nil"), path=\(url.path))")
+                    }
+
+                    if isStopLink {
                         print("🎯 SonoraApp: Processing stop recording deep link")
                         Task { @MainActor in
                             do {

@@ -35,29 +35,25 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     
                     Spacer()
                     
-                    // Use a deep link to open the host app and stop recording
-                    if let url = URL(string: "sonora://stopRecording") {
-                        Link(destination: url) {
-                            HStack(alignment: .center, spacing: 8) {
-                                Image(systemName: "stop.circle.fill")
-                                    .font(.system(size: 18, weight: .bold))
-                                Text("Stop")
-                                    .font(.system(size: 16, weight: .bold))
-                            }
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 24)
-                                    .fill(.red.gradient)
-                                    .shadow(color: .red.opacity(0.4), radius: 4, x: 0, y: 2)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 24)
-                                    .stroke(.white.opacity(0.2), lineWidth: 1)
-                            )
-                        }
+                    // Stylized STOP pill (tap anywhere uses widgetURL to deep-link)
+                    HStack(alignment: .center, spacing: 8) {
+                        Image(systemName: "stop.circle.fill")
+                            .font(.system(size: 18, weight: .bold))
+                        Text("Stop")
+                            .font(.system(size: 16, weight: .bold))
                     }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(.red.gradient)
+                            .shadow(color: .red.opacity(0.4), radius: 4, x: 0, y: 2)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                    )
                 }
                 
                 // Large monospace timer display
@@ -115,6 +111,8 @@ struct SonoraLiveActivityLiveActivity: Widget {
             )
             .activityBackgroundTint(.clear)
             .activitySystemActionForegroundColor(.white)
+            // Attach deep link to entire lock-screen activity surface
+            .widgetURL(URL(string: "sonora://stopRecording"))
 
         } dynamicIsland: { context in
             DynamicIsland {
