@@ -134,9 +134,9 @@ final class MemoDetailViewModel: ObservableObject {
     // MARK: - Setup Methods
     
     private func setupBindings() {
-        // Use timer to periodically sync with repository
-        Timer.publish(every: 0.2, on: .main, in: .common)
-            .autoconnect()
+        // React to repository changes instead of polling
+        memoRepository.objectWillChange
+            .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.updateFromRepository()
             }

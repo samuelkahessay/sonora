@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 protocol MemoRepository: ObservableObject {
+    var objectWillChange: ObservableObjectPublisher { get }
     var memos: [Memo] { get set }
     
     // Playback state

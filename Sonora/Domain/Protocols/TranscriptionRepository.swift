@@ -3,6 +3,7 @@ import Combine
 
 @MainActor
 protocol TranscriptionRepository: ObservableObject {
+    var objectWillChange: ObservableObjectPublisher { get }
     var transcriptionStates: [String: TranscriptionState] { get set }
     
     func saveTranscriptionState(_ state: TranscriptionState, for memoId: UUID)

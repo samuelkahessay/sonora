@@ -217,20 +217,11 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     }
     
     private func setupOperationStatusMonitoring() {
-        // Set up delegation for operation status updates
-        Task {
+        // Set up delegation for operation status updates and fetch initial metrics once
+        Task { @MainActor in
             await operationCoordinator.setStatusDelegate(self)
+            await updateOperationStatus()
         }
-        
-        // Periodically update system metrics and operation status
-        Timer.publish(every: 1.0, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                Task { @MainActor in
-                    await self?.updateOperationStatus()
-                }
-            }
-            .store(in: &cancellables)
     }
     
     private func updateOperationStatus() async {
@@ -489,6 +480,9 @@ extension RecordingViewModel {
         // Update recording operation status if it matches our current operation
         if update.operationId == currentRecordingOperationId {
             recordingOperationStatus = update.currentStatus
+            // Update queue position and system metrics reactively
+            queuePosition = await operationCoordinator.getQueuePosition(for: update.operationId)
+            systemMetrics = await operationCoordinator.getSystemMetrics()
             
             switch update.currentStatus {
             case .completed, .failed, .cancelled:
@@ -496,6 +490,7 @@ extension RecordingViewModel {
                 currentRecordingOperationId = nil
                 recordingOperationStatus = nil
                 queuePosition = nil
+                systemMetrics = await operationCoordinator.getSystemMetrics()
             default:
                 break
             }

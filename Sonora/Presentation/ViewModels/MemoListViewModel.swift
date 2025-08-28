@@ -111,22 +111,22 @@ final class MemoListViewModel: ObservableObject {
     // MARK: - Setup Methods
     
     private func setupBindings() {
-        // Bind repository properties to ViewModel properties using timer sync
-        Timer.publish(every: 0.2, on: .main, in: .common)
-            .autoconnect()
+        // Observe memo repository changes
+        memoRepository.objectWillChange
+            .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.updateFromRepository()
             }
             .store(in: &cancellables)
-        
-        // Bind transcription states
-        Timer.publish(every: 0.2, on: .main, in: .common)
-            .autoconnect()
+
+        // Observe transcription repository state changes
+        transcriptionRepository.objectWillChange
+            .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.updateTranscriptionStates()
             }
             .store(in: &cancellables)
-        
+
         // Listen for navigation notifications
         NotificationCenter.default.publisher(for: .popToRootMemos)
             .sink { [weak self] _ in
