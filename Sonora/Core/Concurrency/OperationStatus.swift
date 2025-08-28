@@ -234,6 +234,7 @@ public struct OperationStatusUpdate {
 }
 
 /// Protocol for receiving operation status updates
+@MainActor
 public protocol OperationStatusDelegate: AnyObject {
     func operationStatusDidUpdate(_ update: OperationStatusUpdate)
     func operationDidComplete(_ operationId: UUID, memoId: UUID, operationType: OperationType)
