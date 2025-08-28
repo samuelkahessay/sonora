@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct SonoraApp: App {
+    @StateObject private var themeManager = ThemeManager()
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(themeManager)
+                .preferredColorScheme(themeManager.colorSchemeOverride)
                 .onAppear {
                     // Configure DIContainer with shared service instances
                     DIContainer.shared.configure()
