@@ -157,7 +157,7 @@ final class MemoListViewModel: ObservableObject {
         print("📱 MemoListViewModel: Loading memos")
         Task {
             do {
-                try await loadMemosUseCase.execute()
+                _ = try await loadMemosUseCase.execute()
             } catch {
                 print("❌ MemoListViewModel: Failed to load memos: \(error)")
             }

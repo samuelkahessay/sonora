@@ -68,8 +68,8 @@ final class RequestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCa
                         "final_status": finalStatus.rawValue
                     ]))
         
-        // Post notification for UI updates
-        DispatchQueue.main.async {
+        // Post notification for UI updates on the main actor
+        await MainActor.run {
             NotificationCenter.default.post(
                 name: .microphonePermissionStatusChanged,
                 object: nil,

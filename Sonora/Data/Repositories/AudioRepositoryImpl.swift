@@ -454,7 +454,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         
         do {
             // Start recording
-            try await startRecording()
+            _ = try await startRecording()
             print("🧪 AudioRepositoryImpl: Recording started successfully")
             print("🧪 Background task active: \(isBackgroundTaskActive)")
             

@@ -1,9 +1,10 @@
 import Foundation
 import AVFoundation
+import AVFAudio
 
 /// Comprehensive microphone permission status tracking
 /// Provides clear differentiation between all possible permission states
-public enum MicrophonePermissionStatus: String, CaseIterable, Equatable {
+public enum MicrophonePermissionStatus: String, CaseIterable, Equatable, Sendable {
     case notDetermined = "not_determined"
     case granted = "granted"
     case denied = "denied"
@@ -83,8 +84,22 @@ public enum MicrophonePermissionStatus: String, CaseIterable, Equatable {
     /// Get current system permission status
     /// This is a synchronous read of the current state
     public static func current() -> MicrophonePermissionStatus {
-        let avPermission = AVAudioSession.sharedInstance().recordPermission
-        return from(avPermission: avPermission)
+        if #available(iOS 17.0, *) {
+            // Prefer AVAudioApplication on iOS 17+
+            switch AVAudioApplication.shared.recordPermission {
+            case .undetermined:
+                return .notDetermined
+            case .granted:
+                return .granted
+            case .denied:
+                return .denied
+            @unknown default:
+                return .denied
+            }
+        } else {
+            let avPermission = AVAudioSession.sharedInstance().recordPermission
+            return from(avPermission: avPermission)
+        }
     }
 }
 

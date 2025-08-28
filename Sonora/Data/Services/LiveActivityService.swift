@@ -102,11 +102,21 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
                 emoji: "🎤"
             )
             do {
-                let activity = try Activity<SonoraLiveActivityAttributes>.request(
-                    attributes: attributes,
-                    contentState: initialState,
-                    pushType: nil
-                )
+                let activity: Activity<SonoraLiveActivityAttributes>
+                if #available(iOS 16.2, *) {
+                    let content = ActivityContent(state: initialState, staleDate: nil)
+                    activity = try Activity<SonoraLiveActivityAttributes>.request(
+                        attributes: attributes,
+                        content: content,
+                        pushType: nil
+                    )
+                } else {
+                    activity = try Activity<SonoraLiveActivityAttributes>.request(
+                        attributes: attributes,
+                        contentState: initialState,
+                        pushType: nil
+                    )
+                }
                 self.lastContentState = initialState
                 activityStateSubject.send(.active(id: activity.id))
             } catch {
@@ -153,7 +163,11 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
                 remainingTime: remainingTime,
                 emoji: isCountdown ? "⏳" : "🎤"
             )
-            await activity.update(using: newState)
+            if #available(iOS 16.2, *) {
+                await activity.update(ActivityContent(state: newState, staleDate: nil))
+            } else {
+                await activity.update(using: newState)
+            }
             self.lastContentState = newState
             activityStateSubject.send(.active(id: activityId))
         } else {
@@ -186,7 +200,20 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
             case .userDismissal:
                 policy = .default
             }
-            await activity.end(dismissalPolicy: policy)
+            if #available(iOS 16.2, *) {
+                let finalState = self.lastContentState ?? SonoraLiveActivityAttributes.ContentState(
+                    memoTitle: "Recording",
+                    startTime: Date(),
+                    duration: 0,
+                    isCountdown: false,
+                    remainingTime: nil,
+                    emoji: "🎤"
+                )
+                let content = ActivityContent(state: finalState, staleDate: nil)
+                await activity.end(content, dismissalPolicy: policy)
+            } else {
+                await activity.end(dismissalPolicy: policy)
+            }
             activityStateSubject.send(.inactive)
             self.lastContentState = nil
         } else {

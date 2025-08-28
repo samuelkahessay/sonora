@@ -454,7 +454,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 return
             }
             
-            var existingMetadata = try atomicRead(MemoFileMetadata.self, from: metadataPath)
+            let existingMetadata = try atomicRead(MemoFileMetadata.self, from: metadataPath)
             
             // Update specific fields if provided
             // For now, we'll just log the update since MemoFileMetadata is a struct

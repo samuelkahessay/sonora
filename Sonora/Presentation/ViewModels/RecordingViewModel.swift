@@ -129,7 +129,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     
     /// Whether the recording operation can be cancelled
     var canCancelRecording: Bool {
-        guard let operationId = currentRecordingOperationId else { return false }
+        guard currentRecordingOperationId != nil else { return false }
         return recordingOperationStatus?.isInProgress == true
     }
     
@@ -400,7 +400,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         print("🎤 RecordingViewModel: Handling recording finished for \(url.lastPathComponent)")
         Task {
             do {
-                try await handleNewRecordingUseCase.execute(at: url)
+                _ = try await handleNewRecordingUseCase.execute(at: url)
             } catch {
                 print("❌ RecordingViewModel: Failed to handle new recording: \(error)")
             }

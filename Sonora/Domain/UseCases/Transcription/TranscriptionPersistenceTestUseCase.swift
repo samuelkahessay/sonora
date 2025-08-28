@@ -43,7 +43,6 @@ final class TranscriptionPersistenceTestUseCase {
         
         // Create a test memo (you would typically use an actual recorded memo)
         let testMemoId = UUID()
-        let testMemo = createTestMemo(id: testMemoId)
         
         // Phase 1: Save transcription states
             print("🧪 Phase 1: Saving various transcription states...")

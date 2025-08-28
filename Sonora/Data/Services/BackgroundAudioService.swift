@@ -7,6 +7,7 @@
 
 import Foundation
 import AVFoundation
+import AVFAudio
 import UIKit
 import Combine
 
@@ -143,14 +144,19 @@ final class BackgroundAudioService: NSObject, ObservableObject {
     /// Logs detailed audio session routing information for diagnostics
     private func logAudioSessionRoute(_ prefix: String = "") {
         let session = AVAudioSession.sharedInstance()
-        let permission = session.recordPermission
+        let permissionDescription: String
+        if #available(iOS 17.0, *) {
+            permissionDescription = String(describing: AVAudioApplication.shared.recordPermission)
+        } else {
+            permissionDescription = String(describing: session.recordPermission)
+        }
         let isInputAvailable = session.isInputAvailable
         let route = session.currentRoute
         let inputs = route.inputs.map { "\($0.portType.rawValue) [\($0.portName)]" }.joined(separator: ", ")
         let outputs = route.outputs.map { "\($0.portType.rawValue) [\($0.portName)]" }.joined(separator: ", ")
         let availableInputs = (session.availableInputs ?? []).map { "\($0.portType.rawValue) [\($0.portName)]" }.joined(separator: ", ")
         let preferred = session.preferredInput?.portType.rawValue ?? "nil"
-        print("🔎 AudioSession Route \(prefix): permission=\(permission.rawValue), inputAvailable=\(isInputAvailable)")
+        print("🔎 AudioSession Route \(prefix): permission=\(permissionDescription), inputAvailable=\(isInputAvailable)")
         print("🔎 Inputs: \(inputs)")
         print("🔎 Outputs: \(outputs)")
         print("🔎 AvailableInputs: \(availableInputs)")
@@ -360,7 +366,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
     
     /// Creates and configures a new AVAudioRecorder instance
     private func createAudioRecorder(url: URL) throws -> AVAudioRecorder {
-        var settings: [String: Any] = [
+        let settings: [String: Any] = [
             AVFormatIDKey: Int(AudioConfiguration.audioFormat),
             AVSampleRateKey: sampleRate,
             AVNumberOfChannelsKey: numberOfChannels,

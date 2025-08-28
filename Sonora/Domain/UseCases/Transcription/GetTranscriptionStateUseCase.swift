@@ -3,6 +3,7 @@ import Foundation
 /// Use case for getting transcription state of a memo
 /// Encapsulates the business logic for retrieving transcription status
 protocol GetTranscriptionStateUseCaseProtocol {
+    @MainActor
     func execute(memo: Memo) -> TranscriptionState
 }
 

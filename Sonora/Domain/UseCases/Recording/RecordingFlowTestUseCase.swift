@@ -61,7 +61,7 @@ final class RecordingFlowTestUseCase {
             print("🧪 Phase 2: Starting background recording...")
             currentMemoId = try await startRecordingUseCase.execute()
             
-            guard let memoId = currentMemoId else {
+            guard currentMemoId != nil else {
                 print("❌ RecordingFlowTestUseCase: Test failed - no memoId returned from start recording")
                 return
             }
