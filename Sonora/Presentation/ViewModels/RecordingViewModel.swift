@@ -154,9 +154,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         
         setupBindings()
         setupRecordingCallback()
-        setupPermissionNotifications()
         setupOperationStatusMonitoring()
-        updatePermissionStatus()
         
         print("🎬 RecordingViewModel: Initialized with dependency injection")
     }
@@ -258,24 +256,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         print("🔧 RecordingViewModel: Callback function set successfully")
     }
     
-    private func setupPermissionNotifications() {
-        NotificationCenter.default.addObserver(
-            forName: .microphonePermissionStatusChanged,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            if let status = notification.userInfo?[MicrophonePermissionStatus.notificationUserInfoKey] as? MicrophonePermissionStatus {
-                self?.permissionStatus = status
-                self?.hasPermission = status.allowsRecording
-            }
-        }
-    }
     
-    private func updatePermissionStatus() {
-        let status = requestPermissionUseCase.getCurrentStatus()
-        permissionStatus = status
-        hasPermission = status.allowsRecording
-    }
     
     // MARK: - Public Methods
     
@@ -441,7 +422,6 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     func onViewAppear() {
         print("🎬 RecordingViewModel: View appeared, ensuring callback is set")
         setupRecordingCallback()
-        updatePermissionStatus() // Refresh permission status when view appears
     }
     
     func onViewDisappear() {
