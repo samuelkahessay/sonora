@@ -43,6 +43,18 @@ struct MemosView: View {
                             NavigationLink(value: memo) {
                                 MemoRowView(memo: memo, viewModel: viewModel)
                             }
+                            .swipeActions(allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    if let idx = viewModel.memos.firstIndex(where: { $0.id == memo.id }) {
+                                        viewModel.deleteMemo(at: idx)
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                        .onDelete { offsets in
+                            viewModel.deleteMemos(at: offsets)
                         }
                     }
                     .listStyle(.insetGrouped)
