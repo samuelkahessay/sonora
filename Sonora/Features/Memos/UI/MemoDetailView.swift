@@ -256,6 +256,16 @@ struct MemoDetailView: View {
         .onDisappear {
             viewModel.onViewDisappear()
         }
+        .errorAlert($viewModel.error) {
+            viewModel.retryLastOperation()
+        }
+        .loadingState(
+            isLoading: viewModel.isLoading,
+            message: "Loading...",
+            error: $viewModel.error
+        ) {
+            viewModel.retryLastOperation()
+        }
     }
     
     // MARK: - UI Helper Methods

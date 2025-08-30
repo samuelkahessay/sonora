@@ -23,21 +23,11 @@ struct MemosView: View {
         NavigationStack(path: $viewModel.navigationPath) {
             Group {
                 if viewModel.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: viewModel.emptyStateIcon)
-                            .font(.largeTitle)
-                            .fontWeight(.medium)
-                            .foregroundColor(.semantic(.textSecondary))
-                        Text(viewModel.emptyStateTitle)
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        Text(viewModel.emptyStateSubtitle)
-                            .font(.body)
-                            .foregroundColor(.semantic(.textSecondary))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
+                    EmptyStateView.noMemos {
+                        // Navigate to recording - could trigger navigation or show recording view
+                        // For now, just refresh to show user something happened
+                        viewModel.refreshMemos()
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
                         ForEach(viewModel.memos) { memo in
@@ -70,6 +60,16 @@ struct MemosView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Refresh") { viewModel.loadMemos() }
                 }
+            }
+            .errorAlert($viewModel.error) {
+                viewModel.retryLastOperation()
+            }
+            .loadingState(
+                isLoading: viewModel.isLoading,
+                message: "Loading memos...",
+                error: $viewModel.error
+            ) {
+                viewModel.retryLastOperation()
             }
         }
     }

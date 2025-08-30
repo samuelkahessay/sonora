@@ -6,7 +6,7 @@ import SwiftUI
 /// ViewModel for handling memo detail functionality
 /// Uses dependency injection for testability and clean architecture
 @MainActor
-final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
+final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, ErrorHandling {
     
     // MARK: - Dependencies
     private let playMemoUseCase: PlayMemoUseCaseProtocol
@@ -56,6 +56,10 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
     // Moderation state for transcription
     @Published var transcriptionModerationFlagged: Bool = false
     @Published var transcriptionModerationCategories: [String: Bool] = [:]
+    
+    // Error handling
+    @Published var error: SonoraError?
+    @Published var isLoading: Bool = false
     
     // MARK: - Computed Properties
     
@@ -253,7 +257,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
             do {
                 try await startTranscriptionUseCase.execute(memo: memo)
             } catch {
-                print("❌ MemoDetailViewModel: Failed to start transcription: \(error)")
+                await MainActor.run {
+                    self.error = ErrorMapping.mapError(error)
+                }
             }
         }
     }
@@ -266,7 +272,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
             do {
                 try await retryTranscriptionUseCase.execute(memo: memo)
             } catch {
-                print("❌ MemoDetailViewModel: Failed to retry transcription: \(error)")
+                await MainActor.run {
+                    self.error = ErrorMapping.mapError(error)
+                }
             }
         }
     }
@@ -279,7 +287,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
             do {
                 try await playMemoUseCase.execute(memo: memo)
             } catch {
-                print("❌ MemoDetailViewModel: Failed to play memo: \(error)")
+                await MainActor.run {
+                    self.error = ErrorMapping.mapError(error)
+                }
             }
         }
     }
@@ -287,8 +297,8 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
     /// Perform analysis with the specified mode
     func performAnalysis(mode: AnalysisMode, transcript: String) {
         guard let memo = currentMemo else {
-            print("❌ MemoDetailViewModel: Cannot perform analysis - no current memo")
             analysisError = "No memo selected for analysis"
+            self.error = .analysisInvalidInput("No memo selected for analysis")
             return
         }
         
@@ -355,8 +365,8 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
             } catch {
                 await MainActor.run {
                     analysisError = error.localizedDescription
+                    self.error = ErrorMapping.mapError(error)
                     isAnalyzing = false
-                    print("❌ MemoDetailViewModel: Analysis failed: \(error)")
                 }
             }
         }
@@ -499,10 +509,28 @@ extension MemoDetailViewModel {
         - isAnalyzing: \(isAnalyzing)
         - selectedAnalysisMode: \(selectedAnalysisMode?.displayName ?? "none")
         - analysisError: \(analysisError ?? "none")
+        - error: \(error?.localizedDescription ?? "none")
+        - isLoading: \(isLoading)
         """
     }
+    
+    // MARK: - ErrorHandling Protocol
+    
+    func retryLastOperation() {
+        clearError()
+        guard currentMemo != nil else { return }
+        
+        // Determine what operation to retry based on current state
+        if transcriptionState.isFailed {
+            retryTranscription()
+        } else if !transcriptionState.isCompleted {
+            startTranscription()
+        }
+    }
+}
 
-    // MARK: - Language Banner API
+// MARK: - Language Banner API
+extension MemoDetailViewModel {
     func updateLanguageDetection(language: String?, qualityScore: Double) {
         detectedLanguage = language
         guard let memo = currentMemo else { return }

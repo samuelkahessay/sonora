@@ -235,10 +235,11 @@ struct TodosResultView: View {
                 .fontWeight(.semibold)
             
             if data.todos.isEmpty {
-                Text("No action items found")
-                    .font(.body)
-                    .foregroundColor(.semantic(.textSecondary))
-                    .italic()
+                EmptyStateView(
+                    icon: "checkmark.circle",
+                    title: "No Action Items",
+                    subtitle: "No actionable tasks were found in this transcription"
+                )
             } else {
                 ForEach(Array(data.todos.enumerated()), id: \.offset) { _, todo in
                     HStack(alignment: .top, spacing: 12) {

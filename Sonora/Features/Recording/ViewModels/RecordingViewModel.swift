@@ -33,6 +33,9 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     @Published var showAutoStopAlert: Bool = false
     @Published var isRequestingPermission: Bool = false
     
+    // MARK: - Error Handling Properties
+    @Published var error: SonoraError?
+    
     // MARK: - Operation Status Properties
     @Published var currentRecordingOperationId: UUID?
     @Published var recordingOperationStatus: DetailedOperationStatus?
@@ -276,6 +279,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
                 }
             } catch {
                 currentRecordingOperationId = nil
+                self.error = ErrorMapping.mapError(error)
                 print("❌ RecordingViewModel: Failed to start recording: \(error)")
             }
         }
@@ -297,6 +301,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
                     print("✅ RecordingViewModel: Recording stopped successfully")
                 }
             } catch {
+                self.error = ErrorMapping.mapError(error)
                 print("❌ RecordingViewModel: Failed to stop recording: \(error)")
             }
         }
@@ -403,6 +408,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
             do {
                 _ = try await handleNewRecordingUseCase.execute(at: url)
             } catch {
+                self.error = ErrorMapping.mapError(error)
                 print("❌ RecordingViewModel: Failed to handle new recording: \(error)")
             }
         }
@@ -501,6 +507,7 @@ extension RecordingViewModel {
     func operationDidFail(_ operationId: UUID, memoId: UUID, operationType: OperationType, error: Error) async {
         if operationId == currentRecordingOperationId {
             print("❌ RecordingViewModel: Recording operation failed: \(error.localizedDescription)")
+            self.error = ErrorMapping.mapError(error)
             currentRecordingOperationId = nil
             recordingOperationStatus = nil
             queuePosition = nil
@@ -545,5 +552,29 @@ extension RecordingViewModel {
             print("🧪 Result: isRecording = \(self.isRecording)")
             print("🧪 Expected: Only one toggle should have executed")
         }
+    }
+    
+    // MARK: - Error Handling
+    
+    /// Clear the current error state
+    func clearError() {
+        error = nil
+    }
+    
+    /// Retry the last failed operation
+    func retryLastOperation() {
+        clearError()
+        // Implementation depends on the specific failed operation
+        // For now, we'll just clear the error
+    }
+    
+    // Note: Protocol-level handleError is provided by ErrorHandling default impl
+}
+
+// MARK: - ErrorHandling Protocol Conformance
+
+extension RecordingViewModel: ErrorHandling {
+    var isLoading: Bool {
+        isRequestingPermission || currentRecordingOperationId != nil
     }
 }

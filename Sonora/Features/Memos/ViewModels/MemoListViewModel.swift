@@ -6,7 +6,7 @@ import SwiftUI
 /// ViewModel for handling memo list functionality
 /// Uses dependency injection for testability and clean architecture
 @MainActor
-final class MemoListViewModel: ObservableObject {
+final class MemoListViewModel: ObservableObject, ErrorHandling {
     
     // MARK: - Dependencies
     private let loadMemosUseCase: LoadMemosUseCaseProtocol
@@ -25,6 +25,8 @@ final class MemoListViewModel: ObservableObject {
     @Published var isPlaying: Bool = false
     @Published var navigationPath = NavigationPath()
     @Published var transcriptionStates: [String: TranscriptionState] = [:]
+    @Published var error: SonoraError?
+    @Published var isLoading: Bool = false
     
     // MARK: - Computed Properties
     
@@ -164,9 +166,17 @@ final class MemoListViewModel: ObservableObject {
         print("📱 MemoListViewModel: Loading memos")
         Task {
             do {
+                isLoading = true
                 _ = try await loadMemosUseCase.execute()
+                await MainActor.run {
+                    self.isLoading = false
+                    self.error = nil
+                }
             } catch {
-                print("❌ MemoListViewModel: Failed to load memos: \(error)")
+                await MainActor.run {
+                    self.isLoading = false
+                    self.error = ErrorMapping.mapError(error)
+                }
             }
         }
     }
@@ -185,7 +195,9 @@ final class MemoListViewModel: ObservableObject {
             do {
                 try await deleteMemoUseCase.execute(memo: memo)
             } catch {
-                print("❌ MemoListViewModel: Failed to delete memo: \(error)")
+                await MainActor.run {
+                    self.error = ErrorMapping.mapError(error)
+                }
             }
         }
     }
@@ -199,7 +211,9 @@ final class MemoListViewModel: ObservableObject {
                     do {
                         try await deleteMemoUseCase.execute(memo: memos[index])
                     } catch {
-                        print("❌ MemoListViewModel: Failed to delete memo at index \(index): \(error)")
+                        await MainActor.run {
+                            self.error = ErrorMapping.mapError(error)
+                        }
                     }
                 }
             }
@@ -213,7 +227,9 @@ final class MemoListViewModel: ObservableObject {
             do {
                 try await playMemoUseCase.execute(memo: memo)
             } catch {
-                print("❌ MemoListViewModel: Failed to play memo: \(error)")
+                await MainActor.run {
+                    self.error = ErrorMapping.mapError(error)
+                }
             }
         }
     }
@@ -225,7 +241,9 @@ final class MemoListViewModel: ObservableObject {
             do {
                 try await startTranscriptionUseCase.execute(memo: memo)
             } catch {
-                print("❌ MemoListViewModel: Failed to start transcription: \(error)")
+                await MainActor.run {
+                    self.error = ErrorMapping.mapError(error)
+                }
             }
         }
     }
@@ -237,7 +255,9 @@ final class MemoListViewModel: ObservableObject {
             do {
                 try await retryTranscriptionUseCase.execute(memo: memo)
             } catch {
-                print("❌ MemoListViewModel: Failed to retry transcription: \(error)")
+                await MainActor.run {
+                    self.error = ErrorMapping.mapError(error)
+                }
             }
         }
     }
@@ -363,6 +383,15 @@ extension MemoListViewModel {
         - isPlaying: \(isPlaying)
         - navigationPath count: \(navigationPath.count)
         - transcriptionStates count: \(transcriptionStates.count)
+        - error: \(error?.localizedDescription ?? "none")
+        - isLoading: \(isLoading)
         """
+    }
+    
+    // MARK: - ErrorHandling Protocol
+    
+    func retryLastOperation() {
+        clearError()
+        loadMemos()
     }
 }
