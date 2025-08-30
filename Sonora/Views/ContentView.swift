@@ -23,6 +23,12 @@ struct ContentView: View {
                     Label("Memos", systemImage: selectedTab == 1 ? "list.bullet.circle.fill" : "list.bullet.circle")
                 }
                 .tag(1)
+
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: selectedTab == 2 ? "gearshape.fill" : "gearshape")
+                }
+                .tag(2)
         }
         .onChange(of: selectedTab) { oldValue, newValue in
             if oldValue == 1 && newValue == 1 {

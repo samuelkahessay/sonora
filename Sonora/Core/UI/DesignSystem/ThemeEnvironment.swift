@@ -18,4 +18,3 @@ extension View {
         environment(\.theme, theme)
     }
 }
-

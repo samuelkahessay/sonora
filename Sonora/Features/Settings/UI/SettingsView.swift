@@ -1,0 +1,23 @@
+import SwiftUI
+
+struct SettingsView: View {
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: Spacing.lg) {
+                    PrivacySectionView()
+                }
+                .padding(.horizontal)
+                .padding(.top, Spacing.lg)
+                .padding(.bottom, Spacing.xl)
+            }
+            .background(Color.semantic(.bgPrimary).ignoresSafeArea())
+            .navigationTitle("Settings")
+        }
+    }
+}
+
+#Preview {
+    SettingsView()
+}
