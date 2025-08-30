@@ -21,7 +21,7 @@ struct VADConfig {
     let windowSize: Int
 
     init(
-        silenceThreshold: Float = -30.0,
+        silenceThreshold: Float = -45.0,
         minSpeechDuration: TimeInterval = 0.5,
         minSilenceGap: TimeInterval = 0.3,
         windowSize: Int = 1024
@@ -212,18 +212,19 @@ final class DefaultVADSplittingService: VADSplittingService {
         let frameLength = Int(buffer.frameLength)
         if frameLength == 0 { return -120.0 }
 
-        // Mono buffer expected; if not, average channels
-        let channels = Int(buffer.format.channelCount)
-        var sumSquares: Float = 0
+        // Mono buffer expected; if not, average channels properly
+        let channels = max(1, Int(buffer.format.channelCount))
+        var meanSquareAccum: Float = 0
         for ch in 0..<channels {
             let ptr = channelData[ch]
-            var channelSum: Float = 0
-            vDSP_measqv(ptr, 1, &channelSum, vDSP_Length(frameLength))
-            sumSquares += channelSum
+            var meanSquareCh: Float = 0
+            // vDSP_measqv returns mean of squares over the vector
+            vDSP_measqv(ptr, 1, &meanSquareCh, vDSP_Length(frameLength))
+            meanSquareAccum += meanSquareCh
         }
-        let meanSquare = sumSquares / Float(frameLength * max(1, channels))
-        let rms = sqrtf(meanSquare)
-        let db = 20.0 * log10f(max(rms, 1.0e-7)) // Avoid -inf
+        let meanSquare = meanSquareAccum / Float(channels)
+        let rms = sqrtf(max(meanSquare, 1.0e-14))
+        let db = 20.0 * log10f(rms)
         return db
     }
 
