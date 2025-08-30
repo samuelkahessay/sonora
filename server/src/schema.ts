@@ -33,7 +33,14 @@ export const ResponseSchema = z.object({
     input: z.number(),
     output: z.number()
   }),
-  latency_ms: z.number()
+  latency_ms: z.number(),
+  moderation: z
+    .object({
+      flagged: z.boolean(),
+      categories: z.record(z.boolean()).optional(),
+      category_scores: z.record(z.number()).optional(),
+    })
+    .optional()
 });
 
 export type RequestData = z.infer<typeof RequestSchema>;

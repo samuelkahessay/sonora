@@ -7,6 +7,7 @@ struct SettingsView: View {
             ScrollView {
                 VStack(spacing: Spacing.lg) {
                     LanguageSectionView()
+                    AIDisclosureSectionView()
                     PrivacySectionView()
                 }
                 .padding(.horizontal)

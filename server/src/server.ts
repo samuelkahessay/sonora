@@ -6,7 +6,7 @@ import fs from 'fs';
 import { FormData, File } from 'undici';
 import { RequestSchema, AnalysisDataSchema, ThemesDataSchema, TodosDataSchema } from './schema.js';
 import { buildPrompt } from './prompts.js';
-import { createChatJSON } from './openai.js';
+import { createChatJSON, createModeration } from './openai.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -250,6 +250,25 @@ app.post('/analyze', async (req, res) => {
       });
     }
     
+    // Build a compact text sample for moderation
+    let textForModeration = '';
+    try {
+      const vd: any = validatedData as any;
+      switch (mode) {
+        case 'tldr':
+        case 'analysis':
+          textForModeration = `${vd.summary}\n${(vd.key_points || []).join(' \n')}`;
+          break;
+        case 'themes':
+          textForModeration = `${vd.sentiment}\n${vd.themes.map((t: any) => `${t.name}: ${(t.evidence || []).join(' ')}`).join(' \n')}`;
+          break;
+        case 'todos':
+          textForModeration = `${vd.todos.map((t: any) => t.text).join(' \n')}`;
+          break;
+      }
+    } catch {}
+    const moderation = await createModeration(String(textForModeration || '').slice(0, 8000));
+    
     const latency = Date.now() - startTime;
     
     // Return canonical response
@@ -261,7 +280,8 @@ app.post('/analyze', async (req, res) => {
         input: usage.input,
         output: usage.output
       },
-      latency_ms: latency
+      latency_ms: latency,
+      moderation
     });
     
   } catch (error: any) {
@@ -305,6 +325,21 @@ app.get('/keycheck', async (_req, res) => {
     return res.json({ ok: !!parsed?.ok, message: 'Key valid', raw: parsed });
   } catch (e:any) {
     return res.status(502).json({ ok: false, message: e?.message || 'OpenAI call failed' });
+  }
+});
+
+// Simple moderation endpoint for client to check transcripts
+const ModerateRequest = z.object({ text: z.string().min(1).max(20000) });
+app.post('/moderate', async (req, res) => {
+  try {
+    const { text } = ModerateRequest.parse(req.body);
+    const moderation = await createModeration(text);
+    res.json(moderation);
+  } catch (e: any) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: 'BadRequest', details: e.errors });
+    }
+    res.status(502).json({ error: 'ModerationFailed' });
   }
 });
 

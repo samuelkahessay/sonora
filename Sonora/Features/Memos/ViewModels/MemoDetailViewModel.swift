@@ -53,6 +53,10 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
     @Published var languageBannerMessage: String = ""
     private var languageBannerDismissedForMemo: [UUID: Bool] = [:]
     
+    // Moderation state for transcription
+    @Published var transcriptionModerationFlagged: Bool = false
+    @Published var transcriptionModerationCategories: [String: Bool] = [:]
+    
     // MARK: - Computed Properties
     
     /// Play button icon based on current playing state
@@ -125,7 +129,8 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
             transcriptionRepository: transcriptionRepository,
             transcriptionAPI: transcriptionAPI,
             eventBus: container.eventBus(),
-            operationCoordinator: container.operationCoordinator()
+            operationCoordinator: container.operationCoordinator(),
+            moderationService: container.moderationService()
         )
         let retryTranscriptionUseCase = RetryTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
@@ -212,11 +217,14 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
             isPlaying = newIsPlaying
         }
 
-        // Update language detection banner from metadata if available
-        if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id),
-           let lang = meta["detectedLanguage"] as? String,
-           let score = meta["qualityScore"] as? Double {
-            updateLanguageDetection(language: lang, qualityScore: score)
+        // Update language detection + moderation from metadata if available
+        if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
+            if let lang = meta["detectedLanguage"] as? String,
+               let score = meta["qualityScore"] as? Double {
+                updateLanguageDetection(language: lang, qualityScore: score)
+            }
+            if let flagged = meta["moderationFlagged"] as? Bool { transcriptionModerationFlagged = flagged }
+            if let cats = meta["moderationCategories"] as? [String: Bool] { transcriptionModerationCategories = cats }
         }
     }
     
@@ -438,10 +446,13 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
             self.transcriptionProgressPercent = nil
             self.transcriptionProgressStep = nil
             // Refresh language metadata and banner on completion
-            if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id),
-               let lang = meta["detectedLanguage"] as? String,
-               let score = meta["qualityScore"] as? Double {
-                self.updateLanguageDetection(language: lang, qualityScore: score)
+            if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
+                if let lang = meta["detectedLanguage"] as? String,
+                   let score = meta["qualityScore"] as? Double {
+                    self.updateLanguageDetection(language: lang, qualityScore: score)
+                }
+                if let flagged = meta["moderationFlagged"] as? Bool { self.transcriptionModerationFlagged = flagged }
+                if let cats = meta["moderationCategories"] as? [String: Bool] { self.transcriptionModerationCategories = cats }
             }
         }
     }

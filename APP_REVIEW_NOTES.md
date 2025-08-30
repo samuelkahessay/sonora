@@ -15,7 +15,8 @@ Server Endpoints
 
 - Base: https://sonora.fly.dev
 - Transcription: POST /transcribe (OpenAI Whisper)
-- Analysis: POST /analyze (OpenAI GPT-4o-mini)
+- Analysis: POST /analyze (OpenAI GPT-4o-mini) — returns JSON with optional moderation metadata.
+- Moderation: POST /moderate (OpenAI moderation) — used to check AI outputs (e.g., transcripts) client-side.
 
 Privacy
 
@@ -34,4 +35,4 @@ Notes
 
 - The app does not require App Groups. The Live Activity is managed via ActivityKit APIs and does not share files or preferences with the host app.
 - Network calls use standard HTTPS only; no ATS exceptions.
-
+ - AI labeling and moderation: Transcription and analysis screens display an “AI-generated” label. If moderation flags content, a safety notice appears; the app does not present deceptive or harmful content without a warning.

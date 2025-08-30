@@ -28,6 +28,7 @@ public struct AnalyzeEnvelope<T: Codable>: Codable {
     public let model: String
     public let tokens: TokenUsage
     public let latency_ms: Int
+    public let moderation: ModerationResult?
 }
 
 public struct TokenUsage: Codable {

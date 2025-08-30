@@ -81,7 +81,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             transcriptionRepository: trRepo,
             transcriptionAPI: api,
             eventBus: EventBus.shared,
-            operationCoordinator: OperationCoordinator.shared
+            operationCoordinator: OperationCoordinator.shared,
+            moderationService: ModerationService()
         )
         let get = GetTranscriptionStateUseCase(transcriptionRepository: trRepo)
         let retry = RetryTranscriptionUseCase(transcriptionRepository: trRepo, transcriptionAPI: api)

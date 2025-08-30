@@ -22,6 +22,12 @@ interface CreateChatResult {
   usage: { input: number; output: number };
 }
 
+export interface ModerationOutput {
+  flagged: boolean;
+  categories?: Record<string, boolean>;
+  category_scores?: Record<string, number>;
+}
+
 async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -87,7 +93,7 @@ export async function createChatJSON({ system, user }: { system: string; user: s
         throw { status: response.status, message: `OpenAI API error: ${response.status}` };
       }
       
-      const data = await response.json() as ChatResponse;
+    const data = await response.json() as ChatResponse;
       return data;
     } catch (error) {
       clearTimeout(timeout);
@@ -102,4 +108,36 @@ export async function createChatJSON({ system, user }: { system: string; user: s
   };
   
   return { jsonText: content, usage };
+}
+
+export async function createModeration(text: string): Promise<ModerationOutput> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch('https://api.openai.com/v1/moderations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: 'omni-moderation-latest',
+        input: text.slice(0, 15000)
+      })
+    });
+    clearTimeout(timeout);
+    if (!response.ok) throw new Error(`Moderation API error: ${response.status}`);
+    const data: any = await response.json();
+    const res = (data && (data as any).results) ? (data as any).results[0] : undefined;
+    return {
+      flagged: !!res?.flagged,
+      categories: res?.categories,
+      category_scores: res?.category_scores
+    };
+  } catch (e) {
+    clearTimeout(timeout);
+    // Fail-closed as not flagged to avoid breaking app; server logs can capture details separately
+    return { flagged: false };
+  }
 }

@@ -80,10 +80,11 @@ struct MemoDetailView: View {
                 
                 // Transcription Section
                 VStack(alignment: .leading, spacing: 16) {
-                    HStack {
+                    HStack(spacing: 8) {
                         Text("Transcription")
                             .font(.headline)
                             .fontWeight(.semibold)
+                        AIBadge()
                         
                         Spacer()
                         
@@ -131,6 +132,19 @@ struct MemoDetailView: View {
                         .cornerRadius(8)
                         
                     case .completed(let text):
+                        // Moderation warning if flagged
+                        if viewModel.transcriptionModerationFlagged {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.semantic(.warning))
+                                Text("This AI-generated transcription may contain sensitive or harmful content.")
+                                    .font(.caption)
+                                    .foregroundColor(.semantic(.textSecondary))
+                            }
+                            .padding(8)
+                            .background(Color.semantic(.warning).opacity(0.08))
+                            .cornerRadius(8)
+                        }
                         VStack(alignment: .leading, spacing: 12) {
                             ScrollView {
                                 Text(text)

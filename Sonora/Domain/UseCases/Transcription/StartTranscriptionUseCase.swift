@@ -23,6 +23,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     private let eventBus: any EventBusProtocol
     private let operationCoordinator: any OperationCoordinatorProtocol
     private let logger: any LoggerProtocol
+    private let moderationService: any ModerationServiceProtocol
     // New dependencies for chunked flow
     private let vadService: any VADSplittingService
     private let chunkManager: AudioChunkManager
@@ -42,7 +43,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         chunkManager: AudioChunkManager = AudioChunkManager(),
         qualityEvaluator: any LanguageQualityEvaluator = DefaultLanguageQualityEvaluator(),
         clientLanguageService: any ClientLanguageDetectionService = DefaultClientLanguageDetectionService(),
-        languageFallbackConfig: LanguageFallbackConfig = LanguageFallbackConfig()
+        languageFallbackConfig: LanguageFallbackConfig = LanguageFallbackConfig(),
+        moderationService: any ModerationServiceProtocol
     ) {
         self.transcriptionRepository = transcriptionRepository
         self.transcriptionAPI = transcriptionAPI
@@ -54,6 +56,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         self.qualityEvaluator = qualityEvaluator
         self.clientLanguageService = clientLanguageService
         self.languageFallbackConfig = languageFallbackConfig
+        self.moderationService = moderationService
     }
     
     // MARK: - Use Case Execution
@@ -118,9 +121,10 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 return
             }
 
-            // Assess duration for gating
+            // Assess duration for gating (use async loader for iOS 16+)
             let asset = AVURLAsset(url: audioURL)
-            let totalDurationSec = CMTimeGetSeconds(asset.duration)
+            let durationTime = try await asset.load(.duration)
+            let totalDurationSec = CMTimeGetSeconds(durationTime)
 
             // Branch: Preferred language set
             let preferredLang = AppConfiguration.shared.preferredTranscriptionLanguage
@@ -146,6 +150,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                             "qualityScore": qualityToSave
                         ], for: memo.id)
                     }
+                    await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
                     logger.info("Transcription completed (single, preferred language)", category: .transcription, context: LogContext(additionalInfo: ["memoId": memo.id.uuidString, "textLength": textLen, "language": langToSave, "quality": qualityToSave]))
                     await MainActor.run { [eventBus, textToSave] in
                         eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
@@ -177,6 +182,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                         "qualityScore": qualityToSave
                     ], for: memo.id)
                 }
+                await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
                 logger.info("Transcription completed (chunked, preferred language)", category: .transcription, context: LogContext(additionalInfo: ["memoId": memo.id.uuidString, "textLength": textLen, "language": langToSave, "quality": qualityToSave]))
                 await MainActor.run { [eventBus, textToSave] in
                     eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
@@ -295,6 +301,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     "qualityScore": qualityToSave
                 ], for: memo.id)
             }
+            await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
 
             logger.info("Transcription completed successfully (chunked)", category: .transcription, context: LogContext(
                 additionalInfo: ["memoId": memo.id.uuidString, "textLength": textLen, "language": langToSave, "quality": qualityToSave]
@@ -434,12 +441,34 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             transcriptionRepository.saveTranscriptionText(text, for: memoId)
         }
 
+        await annotateAIMetadataAndModerate(memoId: memoId, text: text)
+
         await MainActor.run { [eventBus] in
             eventBus.publish(.transcriptionCompleted(memoId: memoId, text: text))
         }
 
         await operationCoordinator.completeOperation(operationId)
         logger.debug("Transcription operation completed (single-shot fallback)", category: .transcription, context: context)
+    }
+
+    // MARK: - AI Labeling & Moderation
+    private func annotateAIMetadataAndModerate(memoId: UUID, text: String) async {
+        let existingMeta: [String: Any] = await MainActor.run {
+            DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memoId) ?? [:]
+        }
+        var workingMeta = existingMeta
+        workingMeta["aiGenerated"] = true
+        do {
+            let mod = try await moderationService.moderate(text: text)
+            workingMeta["moderationFlagged"] = mod.flagged
+            if let cats = mod.categories { workingMeta["moderationCategories"] = cats }
+        } catch {
+            // Best-effort; keep AI label.
+        }
+        let metaToSave = workingMeta
+        await MainActor.run {
+            DIContainer.shared.transcriptionRepository().saveTranscriptionMetadata(metaToSave, for: memoId)
+        }
     }
 }
 

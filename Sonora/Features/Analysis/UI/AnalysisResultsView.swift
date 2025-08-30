@@ -20,6 +20,20 @@ struct AnalysisResultsView: View {
                     HeaderInfoView(envelope: env)
                 }
                 
+                // Moderation warning if flagged
+                if isModerationFlagged(envelope) {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.semantic(.warning))
+                        Text("This AI-generated analysis may contain sensitive or harmful content.")
+                            .font(.caption)
+                            .foregroundColor(.semantic(.textSecondary))
+                    }
+                    .padding(8)
+                    .background(Color.semantic(.warning).opacity(0.08))
+                    .cornerRadius(8)
+                }
+                
                 // Mode-specific content
                 switch mode {
                 case .tldr, .analysis:
@@ -41,6 +55,14 @@ struct AnalysisResultsView: View {
             .padding()
         }
     }
+
+    private func isModerationFlagged(_ anyEnvelope: Any) -> Bool {
+        if let e = anyEnvelope as? AnalyzeEnvelope<TLDRData> { return e.moderation?.flagged ?? false }
+        if let e = anyEnvelope as? AnalyzeEnvelope<AnalysisData> { return e.moderation?.flagged ?? false }
+        if let e = anyEnvelope as? AnalyzeEnvelope<ThemesData> { return e.moderation?.flagged ?? false }
+        if let e = anyEnvelope as? AnalyzeEnvelope<TodosData> { return e.moderation?.flagged ?? false }
+        return false
+    }
 }
 
 struct HeaderInfoView<T: Codable>: View {
@@ -48,10 +70,11 @@ struct HeaderInfoView<T: Codable>: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 8) {
                 Text(envelope.mode.displayName)
                     .font(.title2)
                     .fontWeight(.bold)
+                AIBadge()
                 
                 Spacer()
                 

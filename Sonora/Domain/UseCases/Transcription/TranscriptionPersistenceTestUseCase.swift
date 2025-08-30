@@ -9,6 +9,7 @@ import Foundation
 
 /// Test use case for validating transcription persistence across app restarts
 /// This use case tests that transcriptions are properly saved and restored from disk
+@MainActor
 final class TranscriptionPersistenceTestUseCase {
     
     // MARK: - Dependencies
@@ -23,7 +24,8 @@ final class TranscriptionPersistenceTestUseCase {
             transcriptionRepository: transcriptionRepository,
             transcriptionAPI: TranscriptionService(),
             eventBus: EventBus.shared,
-            operationCoordinator: OperationCoordinator.shared
+            operationCoordinator: OperationCoordinator.shared,
+            moderationService: NoopModerationService()
         )
         self.getTranscriptionStateUseCase = GetTranscriptionStateUseCase(transcriptionRepository: transcriptionRepository)
     }

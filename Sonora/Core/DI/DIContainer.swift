@@ -34,6 +34,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _liveActivityService: (any LiveActivityServiceProtocol)?
     private var _eventBus: (any EventBusProtocol)?
     private var _eventHandlerRegistry: (any EventHandlerRegistryProtocol)?
+    private var _moderationService: (any ModerationServiceProtocol)?
     
     // MARK: - Initialization
     private init() {
@@ -122,6 +123,7 @@ final class DIContainer: ObservableObject, Resolver {
         // Initialize external API services  
         self._transcriptionAPI = TranscriptionService()
         self._analysisService = analysisService ?? AnalysisService()
+        self._moderationService = ModerationService()
         // Coordinator already initialized above
         // Initialize Event Handler Registry with shared EventBus (via protocol)
         self._eventHandlerRegistry = EventHandlerRegistry.shared
@@ -134,7 +136,8 @@ final class DIContainer: ObservableObject, Resolver {
             transcriptionRepository: trRepo,
             transcriptionAPI: trAPI,
             eventBus: self._eventBus!,
-            operationCoordinator: self._operationCoordinator
+            operationCoordinator: self._operationCoordinator,
+            moderationService: self._moderationService!
         )
         let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(
             transcriptionRepository: trRepo
@@ -183,6 +186,13 @@ final class DIContainer: ObservableObject, Resolver {
     func analysisService() -> any AnalysisServiceProtocol {
         ensureConfigured()
         return _analysisService
+    }
+
+    /// Get moderation service
+    func moderationService() -> any ModerationServiceProtocol {
+        ensureConfigured()
+        guard let svc = _moderationService else { fatalError("DIContainer not configured: moderationService") }
+        return svc
     }
     
     /// Get memo repository

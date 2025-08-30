@@ -13,7 +13,7 @@ Key Features Implemented
 
 - Recording: Uses `AVAudioSession` (.playAndRecord) and `AVAudioRecorder` with UIBackgroundModes `audio` to continue recording when backgrounded.
 - Playback: Basic playback via `AVAudioPlayer`.
-- Transcription/Analysis: Uploads audio to `https://sonora.fly.dev/transcribe` (OpenAI Whisper) and analyzes transcripts via `https://sonora.fly.dev/analyze` (OpenAI GPT-4o-mini).
+- Transcription/Analysis: Uploads audio to `https://sonora.fly.dev/transcribe` (OpenAI Whisper) and analyzes transcripts via `https://sonora.fly.dev/analyze` (OpenAI GPT-4o-mini). All AI outputs are labeled in-app as “AI-generated,” and content safeguards (moderation) are applied to reduce harmful or deceptive content.
 - Live Activities: ActivityKit Live Activity and Dynamic Island UI for recording state; deep link to stop recording (`sonora://stopRecording`).
 - MVVM + Clean Architecture: Repositories + use cases; DI container; event bus; main actor isolation fixes.
 
@@ -38,6 +38,7 @@ Privacy and Data Practices (App Store “App Privacy”)
   - Tracking: None.
 - Network: Uses HTTPS only. No ATS exceptions are configured or required.
 - Pasteboard: The app writes to the pasteboard to copy transcript text (no reading). This is not a Required Reason API use case, but call it out in review notes to preempt questions.
+- AI Disclosures: The app discloses AI functionality in Settings (AI Features card). Transcripts and analysis are machine-generated and may contain errors. We label AI-generated content and show a safety notice if content is flagged by moderation.
 - Required Reason APIs / Privacy Manifests:
   - The code uses standard APIs (URLSession, FileManager). If you add any “Required Reason API” usage (e.g., reading pasteboard contents, disk space, system boot time, etc.), include a `PrivacyInfo.xcprivacy` manifest with proper reasons before submission. For now, a manifest is optional but recommended for forward-compatibility.
   - Policy URLs: Provide a Privacy Policy URL in App Store Connect (recommended since audio leaves device for transcription).
@@ -122,6 +123,7 @@ Submission Checklist
 - [x] Disable `NSSupportsLiveActivitiesFrequentUpdates`.
 - [x] Remove App Group entitlements (not required for current features).
 - [ ] Confirm Privacy Policy URL and support URL in App Store Connect (audio leaves device for transcription).
+- [ ] Confirm AI disclosure text is visible in Settings and that “AI-generated” labels appear on transcription and analysis views.
 - [ ] Review “App Privacy” questionnaire: declare upload of user audio for App Functionality; no tracking.
 - [ ] Confirm backend availability (sonora.fly.dev) during review window.
 - [ ] Verify archive and code sign (Release, Distribution signing) and that Live Activity capability is enabled.
