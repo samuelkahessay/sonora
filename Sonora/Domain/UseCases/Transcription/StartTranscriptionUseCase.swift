@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 
 // Language fallback configuration
 struct LanguageFallbackConfig {
@@ -117,15 +118,130 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 return
             }
 
-            // Phase 2: Create chunks (10%)
+            // Assess duration for gating
+            let asset = AVURLAsset(url: audioURL)
+            let totalDurationSec = CMTimeGetSeconds(asset.duration)
+
+            // Branch: Preferred language set
+            let preferredLang = AppConfiguration.shared.preferredTranscriptionLanguage
+            if let lang = preferredLang {
+                if totalDurationSec < 90.0 {
+                    // Single-shot for short recordings
+                    await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (\(lang.uppercased()))...")
+                    let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang)
+                    let eval = qualityEvaluator.evaluateQuality(resp, text: resp.text)
+
+                    // Save and complete
+                    await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
+                    let textToSave = resp.text
+                    let langToSave = resp.detectedLanguage ?? lang
+                    let qualityToSave = eval.overallScore
+                    let textLen = textToSave.count
+                    await MainActor.run {
+                        let completedState = TranscriptionState.completed(textToSave)
+                        transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
+                        transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
+                        transcriptionRepository.saveTranscriptionMetadata([
+                            "detectedLanguage": langToSave,
+                            "qualityScore": qualityToSave
+                        ], for: memo.id)
+                    }
+                    logger.info("Transcription completed (single, preferred language)", category: .transcription, context: LogContext(additionalInfo: ["memoId": memo.id.uuidString, "textLength": textLen, "language": langToSave, "quality": qualityToSave]))
+                    await MainActor.run { [eventBus, textToSave] in
+                        eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
+                    }
+                    await operationCoordinator.completeOperation(operationId)
+                    return
+                }
+
+                // Long recording with preferred language: chunk with language hint per chunk
+                await updateProgress(operationId: operationId, fraction: 0.1, step: "Preparing audio segments...")
+                let chunks = try await chunkManager.createChunks(from: audioURL, segments: segments)
+                defer { Task { await chunkManager.cleanupChunks(chunks) } }
+
+                await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (\(lang.uppercased()))...")
+                let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: lang, stageLabel: "Transcribing (\(lang))")
+                let aggregator = TranscriptionAggregator()
+                let agg = aggregator.aggregate(primary)
+                let textToSave = agg.text
+                let langToSave = lang
+                let qualityToSave = agg.confidence
+                let textLen = textToSave.count
+                await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
+                await MainActor.run {
+                    let completedState = TranscriptionState.completed(textToSave)
+                    transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
+                    transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
+                    transcriptionRepository.saveTranscriptionMetadata([
+                        "detectedLanguage": langToSave,
+                        "qualityScore": qualityToSave
+                    ], for: memo.id)
+                }
+                logger.info("Transcription completed (chunked, preferred language)", category: .transcription, context: LogContext(additionalInfo: ["memoId": memo.id.uuidString, "textLength": textLen, "language": langToSave, "quality": qualityToSave]))
+                await MainActor.run { [eventBus, textToSave] in
+                    eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
+                }
+                await operationCoordinator.completeOperation(operationId)
+                return
+            }
+
+            // Branch: Auto-detect mode
+            if totalDurationSec < 60.0 {
+                // Single-shot auto with fallback if needed
+                await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (auto)...")
+                let primaryResp = try await transcriptionAPI.transcribe(url: audioURL, language: nil)
+                let primaryEval = qualityEvaluator.evaluateQuality(primaryResp, text: primaryResp.text)
+
+                var finalResp = primaryResp
+                var finalEval = primaryEval
+                if qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
+                    await updateProgress(operationId: operationId, fraction: 0.82, step: "Low confidence. Retrying with English...")
+                    do {
+                        let fallbackResp = try await transcriptionAPI.transcribe(url: audioURL, language: "en")
+                        let fallbackEval = qualityEvaluator.evaluateQuality(fallbackResp, text: fallbackResp.text)
+                        let comparison = qualityEvaluator.compareTwoResults(primaryEval, fallbackEval)
+                        switch comparison {
+                        case .useFallback:
+                            finalResp = fallbackResp
+                            finalEval = fallbackEval
+                        case .usePrimary:
+                            break
+                        }
+                    } catch {
+                        logger.warning("Fallback transcription failed; using primary result", category: .transcription, context: context, error: error)
+                    }
+                }
+
+                // Save and complete
+                await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
+                let textToSave = finalResp.text
+                let langToSave = DefaultClientLanguageDetectionService.iso639_1(fromBCP47: finalResp.detectedLanguage) ?? finalResp.detectedLanguage ?? "und"
+                let qualityToSave = finalEval.overallScore
+                let textLen = textToSave.count
+                await MainActor.run {
+                    let completedState = TranscriptionState.completed(textToSave)
+                    transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
+                    transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
+                    transcriptionRepository.saveTranscriptionMetadata([
+                        "detectedLanguage": langToSave,
+                        "qualityScore": qualityToSave
+                    ], for: memo.id)
+                }
+                logger.info("Transcription completed (single, auto)", category: .transcription, context: LogContext(additionalInfo: ["memoId": memo.id.uuidString, "textLength": textLen, "language": langToSave, "quality": qualityToSave]))
+                await MainActor.run { [eventBus, textToSave] in
+                    eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
+                }
+                await operationCoordinator.completeOperation(operationId)
+                return
+            }
+
+            // For longer Auto mode: proceed with chunking and fallback logic
             await updateProgress(operationId: operationId, fraction: 0.1, step: "Preparing audio segments...")
             let chunks = try await chunkManager.createChunks(from: audioURL, segments: segments)
             defer { Task { await chunkManager.cleanupChunks(chunks) } }
 
-            // Phase 3: Primary transcription honoring user language preference
-            let preferredLang = AppConfiguration.shared.preferredTranscriptionLanguage
-            await updateProgress(operationId: operationId, fraction: 0.2, step: preferredLang == nil ? "Transcribing with language detection..." : "Transcribing (\(preferredLang!.uppercased()))...")
-            let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: preferredLang, stageLabel: preferredLang == nil ? "Transcribing (auto)" : "Transcribing (\(preferredLang!))")
+            await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing with language detection...")
+            let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: nil, stageLabel: "Transcribing (auto)")
             let aggregator = TranscriptionAggregator()
             let primaryAgg = aggregator.aggregate(primary)
             let primaryText = primaryAgg.text
@@ -166,23 +282,27 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
             // Phase 5: Save and complete
             await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
+            let textToSave = finalText
+            let langToSave = finalLanguage
+            let qualityToSave = finalEval.overallScore
+            let textLen = textToSave.count
             await MainActor.run {
-                let completedState = TranscriptionState.completed(finalText)
+                let completedState = TranscriptionState.completed(textToSave)
                 transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
-                transcriptionRepository.saveTranscriptionText(finalText, for: memo.id)
+                transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
                 transcriptionRepository.saveTranscriptionMetadata([
-                    "detectedLanguage": finalLanguage,
-                    "qualityScore": finalEval.overallScore
+                    "detectedLanguage": langToSave,
+                    "qualityScore": qualityToSave
                 ], for: memo.id)
             }
 
             logger.info("Transcription completed successfully (chunked)", category: .transcription, context: LogContext(
-                additionalInfo: ["memoId": memo.id.uuidString, "textLength": finalText.count, "language": finalLanguage, "quality": finalEval.overallScore]
+                additionalInfo: ["memoId": memo.id.uuidString, "textLength": textLen, "language": langToSave, "quality": qualityToSave]
             ))
 
             // Publish transcriptionCompleted event
-            await MainActor.run { [eventBus] in
-                eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: finalText))
+            await MainActor.run { [eventBus, textToSave] in
+                eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
             }
 
             // Complete op

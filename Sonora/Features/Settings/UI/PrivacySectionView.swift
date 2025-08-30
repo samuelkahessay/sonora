@@ -7,7 +7,7 @@ struct PrivacySectionView: View {
     private let termsURL = URL(string: "https://sonora.app/terms")!
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.lg) {
+        SettingsCard {
             Text("Privacy & Data")
                 .font(.headline)
 
@@ -39,7 +39,6 @@ struct PrivacySectionView: View {
                         Divider().background(Color.semantic(.separator))
                         optionRow(title: "Analysis", binding: $controller.exportAnalysis)
                     }
-                    .background(Color.semantic(.bgSecondary))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.semantic(.separator).opacity(0.45), lineWidth: 1)
@@ -57,7 +56,6 @@ struct PrivacySectionView: View {
                     }
                     .padding(.vertical, 10)
                     .padding(.horizontal, Spacing.md)
-                    .background(Color.semantic(.bgSecondary))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.semantic(.separator).opacity(0.45), lineWidth: 1)
@@ -79,11 +77,7 @@ struct PrivacySectionView: View {
                     }
                     .padding(.vertical, 10)
                     .padding(.horizontal, Spacing.md)
-                    .background(Color.semantic(.error).opacity(0.12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.semantic(.error).opacity(0.55), lineWidth: 1)
-                    )
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.semantic(.error).opacity(0.55), lineWidth: 1))
                     .cornerRadius(10)
                 }
                 .buttonStyle(.plain)
@@ -92,13 +86,6 @@ struct PrivacySectionView: View {
 
             // No inline deletion banner; action is confirmed and immediate
         }
-        .padding()
-        .background(Color.semantic(.bgSecondary))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.semantic(.separator).opacity(0.45), lineWidth: 1)
-        )
-        .cornerRadius(12)
         .confirmationDialog(
             "Delete All Data?",
             isPresented: $controller.showDeleteConfirmation,
@@ -141,12 +128,6 @@ struct PrivacySectionView: View {
         }
         .padding(.vertical, 10)
         .padding(.horizontal, Spacing.md)
-        .background(Color.semantic(.bgSecondary))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.semantic(.separator).opacity(0.45), lineWidth: 1)
-        )
-        .cornerRadius(10)
         .contentShape(Rectangle())
     }
     private func optionRow(title: String, binding: Binding<Bool>) -> some View {
@@ -159,7 +140,6 @@ struct PrivacySectionView: View {
         }
         .padding(.vertical, 10)
         .padding(.horizontal, Spacing.md)
-        .background(Color.semantic(.bgSecondary))
     }
 }
 

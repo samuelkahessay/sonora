@@ -17,8 +17,9 @@ final class TranscriptionService: TranscriptionAPI {
 
     func transcribe(url: URL, language: String?) async throws -> TranscriptionResponse {
         print("🎙️ Starting transcription for: \(url.lastPathComponent)")
+        print("🎯 Language hint: \(language ?? "auto")")
 
-        // Validate language code if provided (ISO 639-1 two-letter, lowercase)
+        // Validate language code if provided (Whisper-supported code)
         if let language = language, !language.isEmpty {
             guard Self.isValidLanguageCode(language) else {
                 throw APIError(message: "Invalid language code: \(language)")
@@ -165,10 +166,7 @@ final class TranscriptionService: TranscriptionAPI {
     }
 
     private static func isValidLanguageCode(_ code: String) -> Bool {
-        // Very light validation for ISO 639-1 two-letter codes
-        let regex = try! NSRegularExpression(pattern: "^[a-z]{2}$")
-        let range = NSRange(code.startIndex..<code.endIndex, in: code)
-        return regex.firstMatch(in: code, options: [], range: range) != nil
+        WhisperLanguages.supportedCodes.contains(code.lowercased())
     }
 
     private static func shouldFallbackWithoutLanguage(apiError: APIError) -> Bool {
@@ -187,6 +185,10 @@ final class TranscriptionService: TranscriptionAPI {
         var form = MultipartForm()
         try form.addFileField(name: "file", filename: url.lastPathComponent, mimeType: mimeType(for: url), fileURL: url)
         if let language, !language.isEmpty { form.addTextField(name: "language", value: language) }
+        // Stabilize output; keep in-source language
+        form.addTextField(name: "response_format", value: "verbose_json")
+        form.addTextField(name: "temperature", value: "0")
+        form.addTextField(name: "translate", value: "false")
         let body = form.finalize()
 
         let transcribeURL = config.apiBaseURL.appendingPathComponent("transcribe")

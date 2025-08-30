@@ -500,7 +500,12 @@ extension MemoDetailViewModel {
             return
         }
 
-        if let lang = language, lang.lowercased() != "en", qualityScore > 0.6 {
+        // If user explicitly set a preferred language, don't warn when it matches
+        if let pref = AppConfiguration.shared.preferredTranscriptionLanguage, let lang = language?.lowercased() {
+            if pref == lang { showNonEnglishBanner = false; return }
+        }
+
+        if let lang = language, lang.lowercased() != "en", qualityScore > 0.6, AppConfiguration.shared.preferredTranscriptionLanguage == nil {
             showNonEnglishBanner = true
             languageBannerMessage = formatLanguageBannerMessage(for: lang)
         } else {
@@ -509,7 +514,7 @@ extension MemoDetailViewModel {
     }
 
     private func formatLanguageBannerMessage(for languageCode: String) -> String {
-        let languageName = Locale.current.localizedString(forLanguageCode: languageCode.lowercased()) ?? languageCode.uppercased()
+        let languageName = WhisperLanguages.localizedDisplayName(for: languageCode)
         return "Detected language: \(languageName). Result may be less accurate."
     }
 

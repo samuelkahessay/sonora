@@ -170,10 +170,40 @@ struct MemoDetailView: View {
                                     .foregroundColor(.semantic(.warning))
                             }
 
-                            Text(error)
-                                .font(.caption)
-                                .foregroundColor(.semantic(.textSecondary))
-                                .multilineTextAlignment(.center)
+                            if error == TranscriptionError.noSpeechDetected.errorDescription {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("We couldn't detect any speech in this recording.")
+                                        .font(.caption)
+                                        .foregroundColor(.semantic(.textSecondary))
+                                    
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        HStack(alignment: .top, spacing: 6) {
+                                            Text("•").bold()
+                                            Text("Try re-recording closer to the microphone.")
+                                                .font(.caption)
+                                                .foregroundColor(.semantic(.textSecondary))
+                                        }
+                                        HStack(alignment: .top, spacing: 6) {
+                                            Text("•").bold()
+                                            Text("Move to a quieter area to reduce background noise.")
+                                                .font(.caption)
+                                                .foregroundColor(.semantic(.textSecondary))
+                                        }
+                                        HStack(alignment: .top, spacing: 6) {
+                                            Text("•").bold()
+                                            Text("Start speaking right away to avoid long silence at the beginning.")
+                                                .font(.caption)
+                                                .foregroundColor(.semantic(.textSecondary))
+                                        }
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            } else {
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundColor(.semantic(.textSecondary))
+                                    .multilineTextAlignment(.center)
+                            }
 
                             if viewModel.canRetryTranscription {
                                 Button("Try Again") {

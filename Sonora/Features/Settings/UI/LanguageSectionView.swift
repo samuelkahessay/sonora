@@ -2,23 +2,14 @@ import SwiftUI
 
 struct LanguageSectionView: View {
     @State private var selectedCode: String = UserDefaults.standard.string(forKey: "preferredTranscriptionLanguage") ?? "auto"
-
-    private let languages: [(code: String, name: String)] = [
-        ("auto", "Auto (Detect)"),
-        ("en", "English"),
-        ("es", "Spanish"),
-        ("fr", "French"),
-        ("de", "German"),
-        ("it", "Italian"),
-        ("pt", "Portuguese"),
-        ("zh", "Chinese"),
-        ("ja", "Japanese"),
-        ("ko", "Korean"),
-        ("hi", "Hindi")
-    ]
+    private var languages: [(code: String, name: String)] {
+        var items = WhisperLanguages.pickerItems()
+        items.insert(("auto", "Auto (Detect)"), at: 0)
+        return items
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.lg) {
+        SettingsCard {
             Text("Transcription Language")
                 .font(.headline)
 
@@ -34,7 +25,7 @@ struct LanguageSectionView: View {
                 }
             }
             .pickerStyle(.menu)
-            .onChange(of: selectedCode) { newValue in
+            .onChange(of: selectedCode) { _, newValue in
                 let code = newValue == "auto" ? nil : newValue
                 AppConfiguration.shared.setPreferredTranscriptionLanguage(code)
             }
@@ -55,13 +46,6 @@ struct LanguageSectionView: View {
                     .foregroundColor(.semantic(.textSecondary))
             }
         }
-        .padding()
-        .background(Color.semantic(.bgSecondary))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.semantic(.separator).opacity(0.45), lineWidth: 1)
-        )
-        .cornerRadius(12)
     }
 }
 
@@ -69,4 +53,3 @@ struct LanguageSectionView: View {
     LanguageSectionView()
         .padding()
 }
-

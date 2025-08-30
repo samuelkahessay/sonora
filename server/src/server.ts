@@ -65,28 +65,130 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
     const file = new File([fileBuffer], req.file.originalname || 'audio.m4a', { type: 'audio/m4a' });
     form.append('file', file);
     form.append('model', 'whisper-1');
+    // Optional language hint from client (ISO 639-1 or BCP-47)
+    const langRaw = (req.body?.language as string | undefined)?.trim();
+    if (langRaw) {
+      console.log('[transcribe] language hint =', langRaw);
+    }
+    if (langRaw && langRaw.length > 0) {
+      form.append('language', langRaw);
+    }
+    // Ask for richer metadata so client can evaluate quality
+    form.append('response_format', 'verbose_json');
+    // Ensure we transcribe in-source language (not translate to English)
+    form.append('translate', 'false');
+    // Stabilize output a bit
+    form.append('temperature', '0');
 
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { 
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: form
-    });
+    // Optional biasing prompt to reinforce language for short clips
+    // This helps languages that Whisper may mis-detect on brief audio
+    const PROMPTS: Record<string, string> = {
+      es: 'Idioma: español. Transcribe en español, sin traducir. ¿Qué tal? ¡Gracias!',
+      zh: '语言：中文。请用中文转写，不要翻译。谢谢。',
+      ja: '言語：日本語。翻訳せずに日本語で書き起こしてください。',
+      ko: '언어: 한국어. 번역하지 말고 한국어로만 전사해주세요.',
+      fr: 'Langue : français. Transcrivez en français, sans traduire. Merci.',
+      de: 'Sprache: Deutsch. Bitte auf Deutsch transkribieren, ohne zu übersetzen.',
+      am: 'ቋንቋ፡ አማርኛ። እባክዎ ትርጉም ሳይሰጡ በአማርኛ ብቻ ይተክቱ። እናመሰግናለን።',
+      ar: 'اللغة: العربية. يرجى النسخ بالعربية دون ترجمة. شكراً.',
+      // Additional frequently used languages
+      ru: 'Язык: русский. Транскрибируйте на русском, без перевода. Спасибо.',
+      pt: 'Idioma: português. Transcreva em português, sem traduzir. Obrigado.',
+      it: 'Lingua: italiano. Trascrivere in italiano, senza tradurre. Grazie.',
+      hi: 'भाषा: हिंदी। कृपया हिंदी में ट्रांसक्राइब करें, अनुवाद न करें। धन्यवाद।',
+      nl: 'Taal: Nederlands. Transcribeer in het Nederlands, zonder te vertalen. Dank je.',
+      pl: 'Język: polski. Transkrybuj po polsku, bez tłumaczenia. Dziękuję.',
+      tr: 'Dil: Türkçe. Lütfen Türkçe olarak yazıya dökün, çevirmeyin. Teşekkürler.',
+      vi: 'Ngôn ngữ: tiếng Việt. Vui lòng phiên âm bằng tiếng Việt, không dịch. Cảm ơn.',
+      sv: 'Språk: svenska. Transkribera på svenska, utan att översätta. Tack.',
+      uk: 'Мова: українська. Транскрибуйте українською, без перекладу. Дякую.',
+      he: 'שפה: עברית. אנא תמלל בעברית, ללא תרגום. תודה.',
+      el: 'Γλώσσα: ελληνικά. Μεταγράψτε στα ελληνικά, χωρίς μετάφραση. Ευχαριστώ.',
+    };
+    if (langRaw && PROMPTS[langRaw]) {
+      form.append('prompt', PROMPTS[langRaw]);
+    }
 
-    const data = await response.json() as any;
+    async function callOpenAI(f: FormData) {
+      return await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+        body: f
+      });
+    }
+
+    let response = await callOpenAI(form);
+    let data = await response.json() as any;
 
     // Cleanup temp file
     fs.unlink(req.file.path, () => {});
 
     if (!response.ok) {
-      console.error('OpenAI error', data);
-      return res.status(response.status).json({ 
-        error: data.error?.message || 'transcription failed' 
-      });
+      const message: string | undefined = data?.error?.message || data?.message;
+      const unsupportedLang = (message && langRaw)
+        ? message.toLowerCase().includes('language') && message.toLowerCase().includes('not supported')
+        : false;
+
+      if (unsupportedLang && langRaw) {
+        // Retry once without the language parameter but keep the bias prompt
+        const form2 = new FormData();
+        form2.append('file', file);
+        form2.append('model', 'whisper-1');
+        form2.append('response_format', 'verbose_json');
+        form2.append('translate', 'false');
+        form2.append('temperature', '0');
+        if (PROMPTS[langRaw]) { form2.append('prompt', PROMPTS[langRaw]); }
+        console.warn(`[transcribe] Retrying without language (unsupported: ${langRaw})`);
+        response = await callOpenAI(form2);
+        data = await response.json();
+      }
+
+      if (!response.ok) {
+        console.error('OpenAI error', data);
+        return res.status(response.status).json({ 
+          error: data.error?.message || 'transcription failed' 
+        });
+      }
     }
 
-    res.json({ text: data.text ?? '' });
+    // Aggregate avg_logprob across segments if present
+    let avg_logprob: number | undefined = undefined;
+    if (Array.isArray(data?.segments) && data.segments.length > 0) {
+      const vals = data.segments
+        .map((s: any) => (typeof s?.avg_logprob === 'number' ? s.avg_logprob : undefined))
+        .filter((n: number | undefined) => typeof n === 'number') as number[];
+      if (vals.length > 0) {
+        avg_logprob = vals.reduce((a, b) => a + b, 0) / vals.length;
+      }
+    }
+    // Derive a soft confidence from avg_logprob in [-2, 0] -> [0, 1]
+    let confidence: number | undefined = undefined;
+    if (typeof avg_logprob === 'number') {
+      const norm = (avg_logprob + 2.0) / 2.0; // [-2,0] -> [0,1]
+      confidence = Math.max(0, Math.min(1, norm));
+    }
+
+    // Trace detection details for diagnostics
+    const detectedLang = typeof data?.language === 'string' ? data.language : undefined;
+    const dur = typeof data?.duration === 'number' ? data.duration : undefined;
+    const segCount = Array.isArray(data?.segments) ? data.segments.length : 0;
+    try {
+      console.log(
+        `[transcribe] detected_language=${detectedLang ?? 'und'} avg_logprob=${
+          typeof avg_logprob === 'number' ? avg_logprob.toFixed(3) : 'n/a'
+        } confidence=${typeof confidence === 'number' ? confidence.toFixed(3) : 'n/a'} duration=${
+          typeof dur === 'number' ? dur.toFixed(2) : 'n/a'
+        } segments=${segCount}`
+      );
+    } catch {}
+
+    res.json({ 
+      text: data.text ?? '',
+      detected_language: detectedLang ?? undefined,
+      avg_logprob,
+      confidence,
+      duration: typeof data.duration === 'number' ? data.duration : undefined
+    });
   } catch (error: any) {
     console.error('Transcription error:', error);
     res.status(500).json({ error: 'server error' });
