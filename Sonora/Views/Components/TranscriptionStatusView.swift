@@ -24,7 +24,7 @@ struct TranscriptionStatusView: View {
             if !compact {
                 Text(state.statusText)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.semantic(.textSecondary))
             }
         }
     }
@@ -32,13 +32,13 @@ struct TranscriptionStatusView: View {
     private func colorForState(_ state: TranscriptionState) -> Color {
         switch state {
         case .notStarted:
-            return .secondary
+            return .semantic(.textSecondary)
         case .inProgress:
-            return .blue
+            return .semantic(.info)
         case .completed:
-            return .green
+            return .semantic(.success)
         case .failed:
-            return .red
+            return .semantic(.error)
         }
     }
 }
@@ -81,12 +81,12 @@ struct TranscriptionActionButton: View {
                         .fontWeight(.medium)
                 }
             }
-            .foregroundColor(state.isFailed ? .orange : .blue)
+            .foregroundColor(state.isFailed ? .semantic(.warning) : .semantic(.brandPrimary))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(state.isFailed ? Color.orange.opacity(0.1) : Color.blue.opacity(0.1))
+                    .fill((state.isFailed ? Color.semantic(.warning) : Color.semantic(.brandPrimary)).opacity(0.1))
             )
         }
         .buttonStyle(PlainButtonStyle())

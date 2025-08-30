@@ -79,7 +79,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     
     /// Recording button color based on state
     var recordingButtonColor: Color {
-        isRecording ? .red : .blue
+        isRecording ? .semantic(.error) : .semantic(.brandPrimary)
     }
     
     /// Whether to show the recording indicator
@@ -450,20 +450,18 @@ extension RecordingViewModel {
     /// Get status text color
     var statusTextColor: Color {
         if !hasPermission {
-            return .red
+            return .semantic(.error)
         } else if isInCountdown {
-            return .orange
+            return .semantic(.warning)
         } else if isRecording {
-            return .red
+            return .semantic(.error)
         } else {
-            return .primary
+            return .semantic(.textPrimary)
         }
     }
     
     /// Get countdown text color
-    var countdownTextColor: Color {
-        .red
-    }
+    var countdownTextColor: Color { .semantic(.error) }
 }
 
 // MARK: - OperationStatusDelegate

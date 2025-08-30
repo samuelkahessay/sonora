@@ -60,6 +60,26 @@ Best practices:
 - Long-running work must be registered with `OperationCoordinator` and surfaced via ViewModels.
 - Use native SwiftUI components and system semantic colors. Respect `ThemeManager`.
 
+### Semantic Color Usage
+
+Centralize all colors via the semantic system in `Core/UI/DesignSystem`.
+
+- Access tokens: `Color.semantic(_:)` with `SemanticColor` cases. Do not use `.red/.blue/.orange`, `Color(red:...)`, `.primary/.secondary`, or `UIColor.*` in views.
+- Common tokens:
+  - Brand: `brand/Primary`, `brand/Secondary`, `brand/Accent`
+  - Backgrounds: `bg/Primary`, `bg/Secondary`, `bg/Tertiary`
+  - Text: `text/Primary`, `text/Secondary`, `text/Inverted` (for tinted surfaces)
+  - Fills/Separators: `fill/Primary`, `fill/Secondary`, `separator/Primary`
+  - States: `state/Success`, `state/Warning`, `state/Error`, `state/Info`
+- Examples:
+  - Buttons: `.tint(.semantic(.brandPrimary))`, destructive → `.tint(.semantic(.error))`
+  - Cards: `.background(Color.semantic(.bgSecondary))` + `.shadow(color: Color.semantic(.separator).opacity(0.2), ...)`
+  - Chips/badges: background `token.opacity(0.1~0.2)` + 
+    `foregroundColor(token)` where `token` is one of `success/warning/error/info/brandPrimary`
+  - Secondary text: `.foregroundColor(.semantic(.textSecondary))`
+- Asset mapping: Provide color assets named exactly as tokens (e.g., `bg/Primary`). The system fallback in `SemanticColors` ensures dynamic light/dark when an asset is missing.
+- Accessibility: Pair `text/Primary` or `text/Secondary` with `bg/*` tokens; use `text/Inverted` on tinted brand backgrounds. Avoid hardcoded opacities that reduce contrast for body text.
+
 ## Layer Details
 
 Presentation (MVVM)

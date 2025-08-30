@@ -282,11 +282,11 @@ final class MemoListViewModel: ObservableObject {
     func transcriptionActionColor(for memo: Memo) -> Color {
         let state = getTranscriptionState(for: memo)
         if state.isFailed {
-            return .orange
+            return .semantic(.warning)
         } else if state.isNotStarted {
-            return .blue
+            return .semantic(.brandPrimary)
         } else {
-            return .secondary
+            return .semantic(.textSecondary)
         }
     }
     

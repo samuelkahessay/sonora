@@ -19,17 +19,17 @@ struct MemoDetailView: View {
                     HStack {
                         Label(memo.durationString, systemImage: "clock")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.semantic(.textSecondary))
                         
                         Spacer()
                         
                         Text(memo.filename)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.semantic(.textSecondary))
                     }
                 }
                 .padding()
-                .background(Color.gray.opacity(0.1))
+                .background(Color.semantic(.fillPrimary))
                 .cornerRadius(12)
                 
                 // Audio Controls
@@ -41,9 +41,9 @@ struct MemoDetailView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: viewModel.playButtonIcon)
                                     .font(.title2)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.semantic(.textInverted))
                                     .frame(width: 50, height: 50)
-                                    .background(Color.blue)
+                                    .background(Color.semantic(.brandPrimary))
                                     .clipShape(Circle())
                                 
                                 VStack(alignment: .leading, spacing: 2) {
@@ -53,7 +53,7 @@ struct MemoDetailView: View {
                                     
                                     Text(memo.durationString)
                                         .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(.semantic(.textSecondary))
                                 }
                                 
                                 Spacer()
@@ -63,7 +63,7 @@ struct MemoDetailView: View {
                     }
                 }
                 .padding()
-                .background(Color.gray.opacity(0.05))
+                .background(Color.semantic(.fillSecondary))
                 .cornerRadius(12)
                 
                 // Transcription Section
@@ -80,7 +80,7 @@ struct MemoDetailView: View {
                                 .scaleEffect(0.8)
                         } else if viewModel.transcriptionState.isFailed {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
+                                .foregroundColor(.semantic(.warning))
                                 .font(.system(size: 14))
                         }
                     }
@@ -98,7 +98,7 @@ struct MemoDetailView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.gray.opacity(0.05))
+                        .background(Color.semantic(.fillSecondary))
                         .cornerRadius(8)
                         
                     case .inProgress:
@@ -110,7 +110,7 @@ struct MemoDetailView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.blue.opacity(0.05))
+                        .background(Color.semantic(.brandPrimary).opacity(0.05))
                         .cornerRadius(8)
                         
                     case .completed(let text):
@@ -121,7 +121,7 @@ struct MemoDetailView: View {
                                     .lineSpacing(4)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding()
-                                    .background(Color.gray.opacity(0.05))
+                                    .background(Color.semantic(.fillSecondary))
                                     .cornerRadius(8)
                                     .textSelection(.enabled)
                             }
@@ -146,16 +146,16 @@ struct MemoDetailView: View {
                         VStack(spacing: 12) {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle")
-                                    .foregroundColor(.orange)
+                                    .foregroundColor(.semantic(.warning))
                                 Text("Transcription Failed")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
-                                    .foregroundColor(.orange)
+                                    .foregroundColor(.semantic(.warning))
                             }
                             
                             Text(error)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.semantic(.textSecondary))
                                 .multilineTextAlignment(.center)
                             
                             Button("Try Again") {
@@ -165,14 +165,14 @@ struct MemoDetailView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.orange.opacity(0.05))
+                        .background(Color.semantic(.warning).opacity(0.05))
                         .cornerRadius(8)
                     }
                 }
                 .padding()
-                .background(Color.white)
+                .background(Color.semantic(.bgSecondary))
                 .cornerRadius(12)
-                .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+                .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
                 
                 // Analysis Section
                 if viewModel.isTranscriptionCompleted, let transcriptText = viewModel.transcriptionText {

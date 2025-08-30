@@ -19,7 +19,7 @@ struct RecordingView: View {
                     VStack(spacing: 16) {
                         Image(systemName: viewModel.permissionStatus.iconName)
                             .font(.system(size: 60, weight: .medium))
-                            .foregroundColor(.red)
+                            .foregroundColor(.semantic(.error))
                         
                         Text(viewModel.permissionStatus.displayName)
                             .font(.title2)
@@ -27,7 +27,7 @@ struct RecordingView: View {
                         
                         Text(getPermissionDescription())
                             .font(.body)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.semantic(.textSecondary))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                         
@@ -46,7 +46,7 @@ struct RecordingView: View {
                             Text(viewModel.recordingStatusText)
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                                .foregroundColor(viewModel.isRecording ? .red : .primary)
+                                .foregroundColor(viewModel.isRecording ? .semantic(.error) : .semantic(.textPrimary))
                             
                             Text(viewModel.formattedRecordingTime)
                                 .font(.largeTitle)
@@ -56,10 +56,10 @@ struct RecordingView: View {
                             if viewModel.isInCountdown {
                                 Text("Recording ends in")
                                     .font(.headline)
-                                    .foregroundColor(.orange)
+                                    .foregroundColor(.semantic(.warning))
                                 Text("\(Int(ceil(viewModel.remainingTime)))")
                                     .font(.system(size: 48, weight: .bold, design: .rounded))
-                                    .foregroundColor(.red)
+                                    .foregroundColor(.semantic(.error))
                                     .monospacedDigit()
                             }
                         }
@@ -73,16 +73,16 @@ struct RecordingView: View {
                             .font(.title2)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(viewModel.isRecording ? .red : .blue)
+                        .tint(viewModel.isRecording ? .semantic(.error) : .semantic(.brandPrimary))
                         
                         if viewModel.shouldShowRecordingIndicator {
                             HStack(spacing: 8) {
                                 Circle()
-                                    .fill(Color.red)
+                                    .fill(Color.semantic(.error))
                                     .frame(width: 8, height: 8)
                                 Text("Recording in progress")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.semantic(.textSecondary))
                             }
                         }
                     }

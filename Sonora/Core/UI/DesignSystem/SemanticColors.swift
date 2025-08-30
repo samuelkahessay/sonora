@@ -49,7 +49,7 @@ extension SemanticColor {
         // Text
         case .textPrimary: return .label
         case .textSecondary: return .secondaryLabel
-        case .textInverted: return .systemBackground // used on tinted/inverted surfaces
+        case .textInverted: return .label // used on tinted/inverted surfaces; assets should provide high-contrast values
 
         // Fills & Separators
         case .fillPrimary: return .systemFill
@@ -85,4 +85,3 @@ extension Color {
         Color(UIColor.fromAssets(name, fallback: fallback))
     }
 }
-

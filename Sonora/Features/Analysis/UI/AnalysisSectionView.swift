@@ -23,9 +23,9 @@ struct AnalysisSectionView: View {
                         VStack(spacing: 8) {
                             Image(systemName: mode.iconName)
                                 .font(.title2)
-                                .foregroundColor(.white)
+                                .foregroundColor(.semantic(.textInverted))
                                 .frame(width: 44, height: 44)
-                                .background(Color.blue)
+                                .background(Color.semantic(.brandPrimary))
                                 .clipShape(Circle())
                             
                             Text(mode.displayName)
@@ -34,11 +34,11 @@ struct AnalysisSectionView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(Color.gray.opacity(0.05))
+                        .background(Color.semantic(.fillSecondary))
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                .stroke(Color.semantic(.brandPrimary).opacity(0.2), lineWidth: 1)
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -58,7 +58,7 @@ struct AnalysisSectionView: View {
                     Spacer()
                 }
                 .padding()
-                .background(Color.blue.opacity(0.05))
+                .background(Color.semantic(.brandPrimary).opacity(0.05))
                 .cornerRadius(8)
             }
             
@@ -66,20 +66,20 @@ struct AnalysisSectionView: View {
             if let error = viewModel.analysisError {
                 HStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
+                        .foregroundColor(.semantic(.error))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Analysis Failed")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.red)
+                            .foregroundColor(.semantic(.error))
                         Text(error)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.semantic(.textSecondary))
                     }
                     Spacer()
                 }
                 .padding()
-                .background(Color.red.opacity(0.05))
+                .background(Color.semantic(.error).opacity(0.05))
                 .cornerRadius(8)
             }
             
@@ -95,8 +95,8 @@ struct AnalysisSectionView: View {
             }
         }
         .padding()
-        .background(Color.white)
+        .background(Color.semantic(.bgSecondary))
         .cornerRadius(12)
-        .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+        .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
     }
 }

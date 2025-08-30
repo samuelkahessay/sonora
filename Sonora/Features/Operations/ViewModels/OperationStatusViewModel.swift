@@ -306,11 +306,11 @@ extension OperationStatusViewModel {
     /// Get color for operation status
     func statusColor(for summary: OperationSummary) -> Color {
         switch summary.detailedStatus.statusColor {
-        case .blue: return .blue
-        case .green: return .green
-        case .orange: return .orange
-        case .red: return .red
-        case .gray: return .gray
+        case .blue: return .semantic(.info)
+        case .green: return .semantic(.success)
+        case .orange: return .semantic(.warning)
+        case .red: return .semantic(.error)
+        case .gray: return .semantic(.separator)
         }
     }
     

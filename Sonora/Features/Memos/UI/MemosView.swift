@@ -26,13 +26,13 @@ struct MemosView: View {
                     VStack(spacing: 12) {
                         Image(systemName: viewModel.emptyStateIcon)
                             .font(.system(size: 48, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.semantic(.textSecondary))
                         Text(viewModel.emptyStateTitle)
                             .font(.title2)
                             .fontWeight(.semibold)
                         Text(viewModel.emptyStateSubtitle)
                             .font(.body)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.semantic(.textSecondary))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                     }
@@ -95,12 +95,12 @@ struct MemoRowView: View {
                     HStack(spacing: 8) {
                         Text(memo.filename)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.semantic(.textSecondary))
                             .lineLimit(1)
                         Spacer()
                         Text(memo.durationString)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.semantic(.textSecondary))
                             .monospacedDigit()
                     }
                 }
@@ -117,7 +117,7 @@ struct MemoRowView: View {
                         ProgressView().scaleEffect(0.8)
                         Text("Processing...")
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.semantic(.info))
                     }
                 } else if transcriptionState.isNotStarted {
                     Button("Transcribe") { viewModel.startTranscription(for: memo) }

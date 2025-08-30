@@ -10,6 +10,16 @@
 - **Adaptive Theming**: Light/Dark mode support with system color adaptation
 - **Accessibility First**: Full VoiceOver support with standard accessibility patterns
 
+#### Semantic Colors (Quick Guide)
+- Use `Color.semantic(_:)` everywhere in views; avoid `.red/.blue/.orange`, `Color(red:...)`, and direct `UIColor.*`.
+- Tokens: `brand/Primary`, `bg/Primary`, `bg/Secondary`, `text/Primary`, `text/Secondary`, `text/Inverted`, `fill/Primary`, `fill/Secondary`, `separator/Primary`, and state tokens `success/warning/error/info`.
+- Examples:
+  - Button tint: `.tint(.semantic(.brandPrimary))` (destructive: `.semantic(.error)`)
+  - Card background: `.background(Color.semantic(.bgSecondary))`
+  - Secondary text: `.foregroundColor(.semantic(.textSecondary))`
+  - Badge: `.background(Color.semantic(.brandPrimary).opacity(0.12))` + `.foregroundColor(.semantic(.brandPrimary))`
+- Accessibility: Use `text/Inverted` over tinted brand backgrounds; prefer `bg/*` + `text/*` for content to maintain AA contrast.
+
 ### 🚀 **Core Capabilities**
 Sonora combines cutting-edge technology with intuitive design:
 - **Advanced Voice Recording**: Background recording with Live Activities integration

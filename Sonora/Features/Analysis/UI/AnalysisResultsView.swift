@@ -58,27 +58,27 @@ struct HeaderInfoView<T: Codable>: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(envelope.model)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.semantic(.textSecondary))
                     Text("\(envelope.latency_ms)ms")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.semantic(.textSecondary))
                 }
             }
             
             HStack {
                 Label("\(envelope.tokens.input + envelope.tokens.output) tokens", systemImage: "textformat")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.semantic(.textSecondary))
                 
                 Spacer()
                 
                 Text("\(envelope.tokens.input) in, \(envelope.tokens.output) out")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.semantic(.textSecondary))
             }
         }
         .padding()
-        .background(Color.gray.opacity(0.1))
+        .background(Color.semantic(.fillPrimary))
         .cornerRadius(12)
     }
 }
@@ -107,7 +107,7 @@ struct TLDRResultView: View {
                     HStack(alignment: .top, spacing: 8) {
                         Text("•")
                             .font(.body)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.semantic(.brandPrimary))
                         Text(point)
                             .font(.body)
                             .lineSpacing(2)
@@ -117,9 +117,9 @@ struct TLDRResultView: View {
             }
         }
         .padding()
-        .background(Color.white)
+        .background(Color.semantic(.bgSecondary))
         .cornerRadius(12)
-        .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+        .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -136,10 +136,10 @@ struct ThemesResultView: View {
     
     private var sentimentColor: Color {
         switch data.sentiment.lowercased() {
-        case "positive": return .green
-        case "negative": return .red
-        case "mixed": return .orange
-        default: return .gray
+        case "positive": return .semantic(.success)
+        case "negative": return .semantic(.error)
+        case "mixed": return .semantic(.warning)
+        default: return .semantic(.separator)
         }
     }
     
@@ -172,21 +172,21 @@ struct ThemesResultView: View {
                         Text(theme.name)
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.semantic(.brandPrimary))
                         
                         ForEach(Array(theme.evidence.enumerated()), id: \.offset) { _, evidence in
                             HStack(alignment: .top, spacing: 6) {
                                 Text("\"")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.semantic(.textSecondary))
                                 Text(evidence)
                                     .font(.caption)
                                     .italic()
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.semantic(.textSecondary))
                                     .lineLimit(3)
                                 Text("\"")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.semantic(.textSecondary))
                                 Spacer()
                             }
                         }
@@ -196,9 +196,9 @@ struct ThemesResultView: View {
             }
         }
         .padding()
-        .background(Color.white)
+        .background(Color.semantic(.bgSecondary))
         .cornerRadius(12)
-        .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+        .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -214,14 +214,14 @@ struct TodosResultView: View {
             if data.todos.isEmpty {
                 Text("No action items found")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.semantic(.textSecondary))
                     .italic()
             } else {
                 ForEach(Array(data.todos.enumerated()), id: \.offset) { _, todo in
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "circle")
                             .font(.body)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.semantic(.brandPrimary))
                         
                         VStack(alignment: .leading, spacing: 4) {
                             Text(todo.text)
@@ -232,10 +232,10 @@ struct TodosResultView: View {
                                 HStack(spacing: 4) {
                                     Image(systemName: "calendar")
                                         .font(.caption)
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(.semantic(.warning))
                                     Text(formatDate(dueDate))
                                         .font(.caption)
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(.semantic(.warning))
                                 }
                             }
                         }
