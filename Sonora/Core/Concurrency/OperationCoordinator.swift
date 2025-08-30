@@ -160,6 +160,21 @@ public actor OperationCoordinator {
     public func cancelOperation(_ operationId: UUID) async {
         await finishOperation(operationId, status: .cancelled, error: nil)
     }
+
+    /// Update progress for a running operation
+    public func updateProgress(operationId: UUID, progress: OperationProgress) async {
+        guard var operation = operations[operationId] else {
+            logger.warning("updateProgress: operation not found", category: .system, context: LogContext(additionalInfo: ["operationId": operationId.uuidString]), error: nil)
+            return
+        }
+
+        let previous = operation.progress
+        operation.progress = progress
+        operations[operationId] = operation
+
+        // Notify status delegate with a detailed progress update
+        await notifyProgressDelegate(operation: operation, previousProgress: previous)
+    }
     
     /// Cancel all operations for a specific memo
     public func cancelAllOperations(for memoId: UUID) async -> Int {
@@ -387,6 +402,23 @@ public actor OperationCoordinator {
         default:
             break
         }
+    }
+
+    private func notifyProgressDelegate(operation: Operation, previousProgress: OperationProgress?) async {
+        guard let delegate = statusDelegate else { return }
+
+        let previousStatus: DetailedOperationStatus? = previousProgress.map { .processing($0) } ?? .processing(nil)
+        let currentStatus: DetailedOperationStatus = .processing(operation.progress)
+
+        let update = OperationStatusUpdate(
+            operationId: operation.id,
+            memoId: operation.type.memoId,
+            operationType: operation.type,
+            previousStatus: previousStatus,
+            currentStatus: currentStatus
+        )
+
+        await delegate.operationStatusDidUpdate(update)
     }
     
     private func mapToDetailedStatus(_ status: OperationStatus) -> DetailedOperationStatus {

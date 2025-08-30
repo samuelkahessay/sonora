@@ -12,17 +12,24 @@ public struct OperationProgress {
     public let currentStep: String      // Human-readable current operation
     public let estimatedTimeRemaining: TimeInterval?
     public let additionalInfo: [String: Any]?
+    // New optional fields for step-aware progress
+    public let totalSteps: Int?
+    public let currentStepIndex: Int?
     
     public init(
         percentage: Double,
         currentStep: String,
         estimatedTimeRemaining: TimeInterval? = nil,
-        additionalInfo: [String: Any]? = nil
+        additionalInfo: [String: Any]? = nil,
+        totalSteps: Int? = nil,
+        currentStepIndex: Int? = nil
     ) {
         self.percentage = max(0.0, min(1.0, percentage))
         self.currentStep = currentStep
         self.estimatedTimeRemaining = estimatedTimeRemaining
         self.additionalInfo = additionalInfo
+        self.totalSteps = totalSteps
+        self.currentStepIndex = currentStepIndex
     }
     
     /// Progress as percentage string (e.g., "75%")

@@ -130,6 +130,7 @@ public struct Operation: Hashable, CustomStringConvertible {
     public var startedAt: Date?
     public var completedAt: Date?
     public var error: Error?
+    public var progress: OperationProgress?
     
     public init(
         type: OperationType,
@@ -141,6 +142,7 @@ public struct Operation: Hashable, CustomStringConvertible {
         self.priority = priority ?? OperationPriority.priority(for: type)
         self.createdAt = Date()
         self.status = status
+        self.progress = nil
     }
     
     /// Duration of operation execution (if started)

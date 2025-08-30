@@ -10,6 +10,8 @@ public protocol OperationCoordinatorProtocol: AnyObject {
     func completeOperation(_ operationId: UUID) async
     func failOperation(_ operationId: UUID, error: Error) async
     func cancelOperation(_ operationId: UUID) async
+    // Progress updates
+    func updateProgress(operationId: UUID, progress: OperationProgress) async
 
     // Cancellation helpers
     func cancelAllOperations(for memoId: UUID) async -> Int
