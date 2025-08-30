@@ -105,7 +105,6 @@ final class DefaultVADSplittingService: VADSplittingService {
         var finished = false
         var positionFrames: AVAudioFramePosition = 0
         let sampleRate = dstFormat.sampleRate
-        let windowDuration = Double(windowFrames) / sampleRate
 
         // State for segment detection
         var segments: [VoiceSegment] = []

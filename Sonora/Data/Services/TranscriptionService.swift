@@ -132,17 +132,21 @@ final class TranscriptionService: TranscriptionAPI {
         // Remove file if exists
         try? FileManager.default.removeItem(at: target)
 
+        // Wrap non-Sendable exporter to satisfy Swift concurrency checks
+        final class NonSendableBox<T>: @unchecked Sendable { let value: T; init(_ value: T) { self.value = value } }
+        let exporterBox = NonSendableBox(exporter)
+
         return try await withCheckedThrowingContinuation { cont in
-            exporter.exportAsynchronously {
-                switch exporter.status {
+            exporterBox.value.exportAsynchronously {
+                switch exporterBox.value.status {
                 case .completed:
                     cont.resume(returning: target)
                 case .failed, .cancelled:
-                    let err = exporter.error ?? NSError(domain: "TranscriptionService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Export failed"])
+                    let err = exporterBox.value.error ?? NSError(domain: "TranscriptionService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Export failed"])
                     cont.resume(throwing: err)
                 default:
                     // Should not happen; treat others as error
-                    let err = exporter.error ?? NSError(domain: "TranscriptionService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Export unknown state"])
+                    let err = exporterBox.value.error ?? NSError(domain: "TranscriptionService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Export unknown state"])
                     cont.resume(throwing: err)
                 }
             }
