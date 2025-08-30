@@ -100,7 +100,12 @@ final class MemoListViewModel: ObservableObject {
         
         self.init(
             loadMemosUseCase: LoadMemosUseCase(memoRepository: memoRepository),
-            deleteMemoUseCase: DeleteMemoUseCase(memoRepository: memoRepository),
+            deleteMemoUseCase: DeleteMemoUseCase(
+                memoRepository: memoRepository,
+                analysisRepository: container.analysisRepository(),
+                transcriptionRepository: transcriptionRepository,
+                logger: container.logger()
+            ),
             playMemoUseCase: PlayMemoUseCase(memoRepository: memoRepository),
             startTranscriptionUseCase: startTranscriptionUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase,

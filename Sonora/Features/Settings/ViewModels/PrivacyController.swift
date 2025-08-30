@@ -73,10 +73,7 @@ final class PrivacyController: ObservableObject {
 
     func exportData() async {
         guard !isExporting else { return }
-        if !hasDataToExport {
-            alertItem = AlertItem(title: "Nothing to Export", message: "There are no memos or app data to include in an export.")
-            return
-        }
+        // Availability validated below using selection-aware checks
 
         // Validate selection & availability
         guard exportMemos || exportTranscripts || exportAnalysis else {
@@ -110,9 +107,12 @@ final class PrivacyController: ObservableObject {
 
     func scheduleDeleteAll(countdown seconds: Int = 10) {
         guard !deleteScheduled, !isDeleting else { return }
-        // Quick guard: no memos to delete
-        if memoRepository.memos.isEmpty {
-            alertItem = AlertItem(title: "Nothing to Delete", message: "There are no memos or app data to delete.")
+        // Quick guard: nothing to delete across categories
+        let hasMemos = !memoRepository.memos.isEmpty
+        let hasTranscripts = directoryHasFiles(named: "transcriptions")
+        let hasAnalysis = directoryHasFiles(named: "analysis")
+        if !(hasMemos || hasTranscripts || hasAnalysis) {
+            alertItem = AlertItem(title: "Nothing to Delete", message: "There is no memo, transcript, or analysis data to delete.")
             return
         }
         deleteScheduled = true
@@ -148,18 +148,38 @@ final class PrivacyController: ObservableObject {
         defer { isDeleting = false; deleteScheduled = false }
 
         do {
-            // Best-effort deletion via repository API
+            // Use cascading DeleteMemoUseCase to remove memo + transcripts + analysis
+            let container = DIContainer.shared
+            let cascadeDelete = DeleteMemoUseCase(
+                memoRepository: memoRepository,
+                analysisRepository: container.analysisRepository(),
+                transcriptionRepository: container.transcriptionRepository(),
+                logger: container.logger()
+            )
             let existing = memoRepository.memos
             for memo in existing {
-                memoRepository.deleteMemo(memo)
+                try await cascadeDelete.execute(memo: memo)
             }
-            // Verify
-            if !memoRepository.memos.isEmpty {
-                throw PrivacyControllerError.deletionIncomplete
+
+            // If no memos remain, purge any residual transcripts/analysis directories
+            if memoRepository.memos.isEmpty {
+                purgeResidualData()
             }
             alertItem = AlertItem(title: "Data Deleted", message: "All memos and related data were deleted.")
         } catch {
             alertItem = AlertItem(title: "Delete Failed", message: error.localizedDescription)
+        }
+    }
+
+    private func purgeResidualData() {
+        let fm = FileManager.default
+        let documents = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let dirs = ["transcriptions", "analysis"]
+        for name in dirs {
+            let dir = documents.appendingPathComponent(name, isDirectory: true)
+            if fm.fileExists(atPath: dir.path) {
+                do { try fm.removeItem(at: dir) } catch { /* ignore */ }
+            }
         }
     }
 }

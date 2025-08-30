@@ -11,26 +11,32 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     // MARK: - Dependencies
     private let memoRepository: any MemoRepository
     private let analysisRepository: any AnalysisRepository
+    private let transcriptionRepository: any TranscriptionRepository
     private let logger: any LoggerProtocol
     
     // MARK: - Initialization
     init(
-        memoRepository: any MemoRepository, 
+        memoRepository: any MemoRepository,
         analysisRepository: any AnalysisRepository,
+        transcriptionRepository: any TranscriptionRepository,
         logger: any LoggerProtocol = Logger.shared
     ) {
         self.memoRepository = memoRepository
         self.analysisRepository = analysisRepository
+        self.transcriptionRepository = transcriptionRepository
         self.logger = logger
     }
     
     // MARK: - Convenience Initializer (for backward compatibility)
+    @MainActor
     convenience init(memoRepository: any MemoRepository) {
-        // Create a non-isolated analysis repository instance
-        let analysisRepo = MainActor.assumeIsolated {
-            AnalysisRepositoryImpl()
-        }
-        self.init(memoRepository: memoRepository, analysisRepository: analysisRepo)
+        let container = DIContainer.shared
+        self.init(
+            memoRepository: memoRepository,
+            analysisRepository: container.analysisRepository(),
+            transcriptionRepository: container.transcriptionRepository(),
+            logger: container.logger()
+        )
     }
     
     // MARK: - Use Case Execution
@@ -53,8 +59,9 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
             // Validate file system state before deletion
             try validateFileSystemState(memo)
             
-            // CRITICAL: Delete all analysis results first (cascading deletion)
+            // CRITICAL: Delete all analysis and transcription first (cascading deletion)
             await deleteAnalysisResults(for: memo, correlationId: correlationId)
+            await deleteTranscription(for: memo, correlationId: correlationId)
             
             // Delete memo from repository
             await memoRepository.deleteMemo(memo)
@@ -194,6 +201,23 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
                 logger.debug("No analysis results found for memo", category: .useCase, 
                            context: LogContext(correlationId: correlationId, additionalInfo: ["memoId": memo.id.uuidString]))
             }
+        }
+    }
+}
+
+extension DeleteMemoUseCase {
+    /// Delete transcription data for the memo
+    private func deleteTranscription(for memo: Memo, correlationId: String) async {
+        let context = LogContext(correlationId: correlationId, additionalInfo: [
+            "memoId": memo.id.uuidString,
+            "operation": "cascading_transcription_deletion"
+        ])
+
+        logger.useCase("Starting cascading transcription deletion", context: context)
+
+        await MainActor.run {
+            transcriptionRepository.deleteTranscriptionData(for: memo.id)
+            logger.useCase("Cascading transcription deletion completed", level: .info, context: context)
         }
     }
 }
