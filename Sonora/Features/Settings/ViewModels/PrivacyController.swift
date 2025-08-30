@@ -12,6 +12,12 @@ final class PrivacyController: ObservableObject {
     // Export state
     @Published var isExporting: Bool = false
     @Published var exportURL: URL?
+    @Published var isPresentingShareSheet: Bool = false
+
+    // Export options
+    @Published var exportMemos: Bool = true
+    @Published var exportTranscripts: Bool = true
+    @Published var exportAnalysis: Bool = true
 
     // Delete state
     @Published var isDeleting: Bool = false
@@ -34,11 +40,35 @@ final class PrivacyController: ObservableObject {
         self.resolver = resolver
         self.memoRepository = resolver.resolve((any MemoRepository).self) ?? DIContainer.shared.memoRepository()
         self.logger = resolver.resolve((any LoggerProtocol).self) ?? DIContainer.shared.logger()
+        #if canImport(ZIPFoundation)
+        self.exportService = exportService ?? ZipDataExportService()
+        #else
         self.exportService = exportService ?? StubDataExportService()
+        #endif
     }
 
     var hasDataToExport: Bool {
         return !memoRepository.memos.isEmpty
+    }
+
+    var canExport: Bool {
+        // At least one category selected and at least one selected category has content
+        let anySelected = exportMemos || exportTranscripts || exportAnalysis
+        guard anySelected else { return false }
+
+        if exportMemos, !memoRepository.memos.isEmpty { return true }
+        if exportTranscripts, directoryHasFiles(named: "transcriptions") { return true }
+        if exportAnalysis, directoryHasFiles(named: "analysis") { return true }
+        return false
+    }
+
+    private func directoryHasFiles(named name: String) -> Bool {
+        let fm = FileManager.default
+        let documents = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let dir = documents.appendingPathComponent(name, isDirectory: true)
+        guard fm.fileExists(atPath: dir.path) else { return false }
+        let e = fm.enumerator(at: dir, includingPropertiesForKeys: nil)
+        return e?.nextObject() != nil
     }
 
     func exportData() async {
@@ -48,11 +78,26 @@ final class PrivacyController: ObservableObject {
             return
         }
 
+        // Validate selection & availability
+        guard exportMemos || exportTranscripts || exportAnalysis else {
+            alertItem = AlertItem(title: "Nothing Selected", message: "Select at least one category to export.")
+            return
+        }
+        guard canExport else {
+            alertItem = AlertItem(title: "Nothing to Export", message: "No data found for the selected categories.")
+            return
+        }
+
         isExporting = true
         do {
-            let url = try await exportService.export()
+            var opts: ExportOptions = []
+            if exportMemos { opts.insert(.memos) }
+            if exportTranscripts { opts.insert(.transcripts) }
+            if exportAnalysis { opts.insert(.analysis) }
+            let url = try await exportService.export(options: opts)
             self.exportURL = url
-            self.alertItem = AlertItem(title: "Export Complete", message: "Your data export is ready.")
+            // Present share sheet on success
+            self.isPresentingShareSheet = true
         } catch {
             self.alertItem = AlertItem(title: "Export Failed", message: error.localizedDescription)
         }
@@ -65,6 +110,11 @@ final class PrivacyController: ObservableObject {
 
     func scheduleDeleteAll(countdown seconds: Int = 10) {
         guard !deleteScheduled, !isDeleting else { return }
+        // Quick guard: no memos to delete
+        if memoRepository.memos.isEmpty {
+            alertItem = AlertItem(title: "Nothing to Delete", message: "There are no memos or app data to delete.")
+            return
+        }
         deleteScheduled = true
         deleteCountdown = seconds
         startCountdown()
@@ -116,8 +166,15 @@ final class PrivacyController: ObservableObject {
 
 // MARK: - Protocols & Stubs
 
+struct ExportOptions: OptionSet {
+    let rawValue: Int
+    static let memos        = ExportOptions(rawValue: 1 << 0)
+    static let transcripts  = ExportOptions(rawValue: 1 << 1)
+    static let analysis     = ExportOptions(rawValue: 1 << 2)
+}
+
 protocol DataExporting {
-    func export() async throws -> URL
+    func export(options: ExportOptions) async throws -> URL
 }
 
 enum PrivacyControllerError: LocalizedError {
@@ -133,14 +190,13 @@ enum PrivacyControllerError: LocalizedError {
 
 /// Basic export stub that writes a small file with a .zip extension
 struct StubDataExportService: DataExporting {
-    func export() async throws -> URL {
+    func export(options: ExportOptions) async throws -> URL {
         try await Task.sleep(nanoseconds: 1_000_000_000) // Simulate work
         let tmp = FileManager.default.temporaryDirectory
         let filename = "Sonora_Export_\(Int(Date().timeIntervalSince1970)).zip"
         let url = tmp.appendingPathComponent(filename)
-        let data = Data("Sonora export placeholder".utf8)
+        let data = Data("Sonora export placeholder (options: \(options.rawValue))".utf8)
         try data.write(to: url, options: .atomic)
         return url
     }
 }
-

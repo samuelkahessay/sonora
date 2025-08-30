@@ -10,6 +10,8 @@
 		0A875D9D2E600B7100245D4A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9C2E600B7100245D4A /* WidgetKit.framework */; };
 		0A875D9F2E600B7100245D4A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9E2E600B7100245D4A /* SwiftUI.framework */; };
 		0A875DAC2E600B7300245D4A /* SonoraLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0A875D9A2E600B7100245D4A /* SonoraLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		0AA6FA0D2E6370F000C8BF7A /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0AA6FA0C2E6370F000C8BF7A /* WhisperKit */; };
+		0AA6FA102E63710600C8BF7A /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 0AA6FA0F2E63710600C8BF7A /* ZIPFoundation */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -127,6 +129,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0AA6FA0D2E6370F000C8BF7A /* WhisperKit in Frameworks */,
+				0AA6FA102E63710600C8BF7A /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -211,6 +215,8 @@
 			);
 			name = Sonora;
 			packageProductDependencies = (
+				0AA6FA0C2E6370F000C8BF7A /* WhisperKit */,
+				0AA6FA0F2E63710600C8BF7A /* ZIPFoundation */,
 			);
 			productName = Sonora;
 			productReference = 0A39740A2E5A6CA400F27D16 /* Sonora.app */;
@@ -319,6 +325,10 @@
 			);
 			mainGroup = 0A3974012E5A6CA400F27D16;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				0AA6FA0B2E6370F000C8BF7A /* XCRemoteSwiftPackageReference "WhisperKit" */,
+				0AA6FA0E2E63710600C8BF7A /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0A39740B2E5A6CA400F27D16 /* Products */;
 			projectDirPath = "";
@@ -793,6 +803,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		0AA6FA0B2E6370F000C8BF7A /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/WhisperKit";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+		0AA6FA0E2E63710600C8BF7A /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.19;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0AA6FA0C2E6370F000C8BF7A /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0AA6FA0B2E6370F000C8BF7A /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = WhisperKit;
+		};
+		0AA6FA0F2E63710600C8BF7A /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0AA6FA0E2E63710600C8BF7A /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0A3974022E5A6CA400F27D16 /* Project object */;
 }

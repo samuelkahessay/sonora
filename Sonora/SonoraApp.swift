@@ -26,6 +26,14 @@ struct SonoraApp: App {
         UINavigationBar.appearance().standardAppearance = navAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
         UINavigationBar.appearance().compactAppearance = navAppearance
+
+        // Global Tab Bar appearance: add a hairline divider at top of tab bar
+        let tabAppearance = UITabBarAppearance()
+        tabAppearance.configureWithDefaultBackground()
+        tabAppearance.backgroundColor = UIColor.systemBackground
+        tabAppearance.shadowColor = UIColor.separator
+        UITabBar.appearance().standardAppearance = tabAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabAppearance
     }
     var body: some Scene {
         WindowGroup {

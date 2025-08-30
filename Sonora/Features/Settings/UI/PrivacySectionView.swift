@@ -25,6 +25,27 @@ struct PrivacySectionView: View {
 
             // Actions
             VStack(spacing: Spacing.md) {
+                // Export options
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text("Export Options")
+                        .font(.subheadline)
+                        .foregroundColor(.semantic(.textSecondary))
+                        .padding(.horizontal, Spacing.sm)
+
+                    VStack(spacing: 0) {
+                        optionRow(title: "Memos", binding: $controller.exportMemos)
+                        Divider().background(Color.semantic(.separator))
+                        optionRow(title: "Transcripts", binding: $controller.exportTranscripts)
+                        Divider().background(Color.semantic(.separator))
+                        optionRow(title: "Analysis", binding: $controller.exportAnalysis)
+                    }
+                    .background(Color.semantic(.bgSecondary))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.semantic(.separator).opacity(0.45), lineWidth: 1)
+                    )
+                    .cornerRadius(10)
+                }
                 Button(action: { Task { await controller.exportData() } }) {
                     HStack(spacing: Spacing.md) {
                         if controller.isExporting { ProgressView().scaleEffect(0.9) }
@@ -44,8 +65,8 @@ struct PrivacySectionView: View {
                     .cornerRadius(10)
                 }
                 .buttonStyle(.plain)
-                .disabled(controller.isExporting || controller.isDeleting || controller.deleteScheduled || !controller.hasDataToExport)
-                .opacity((controller.hasDataToExport && !controller.isExporting) ? 1.0 : 0.7)
+                .disabled(controller.isExporting || controller.isDeleting || controller.deleteScheduled || !controller.canExport)
+                .opacity((controller.canExport && !controller.isExporting) ? 1.0 : 0.6)
 
                 Button(role: .destructive, action: { controller.requestDeleteAll() }) {
                     HStack(spacing: Spacing.md) {
@@ -116,6 +137,17 @@ struct PrivacySectionView: View {
         .alert(item: $controller.alertItem) { item in
             Alert(title: Text(item.title), message: Text(item.message), dismissButton: .default(Text("OK")))
         }
+        .sheet(isPresented: $controller.isPresentingShareSheet, onDismiss: {
+            // Cleanup after share sheet is dismissed
+            controller.exportURL = nil
+        }) {
+            if let url = controller.exportURL {
+                ActivityView(activityItems: [url])
+                    .ignoresSafeArea()
+            } else {
+                Text("No export available")
+            }
+        }
     }
 
     private func label(icon: String, title: String) -> some View {
@@ -139,6 +171,18 @@ struct PrivacySectionView: View {
         )
         .cornerRadius(10)
         .contentShape(Rectangle())
+    }
+    private func optionRow(title: String, binding: Binding<Bool>) -> some View {
+        HStack(spacing: Spacing.md) {
+            Text(title)
+                .font(.body)
+            Spacer()
+            Toggle("", isOn: binding)
+                .labelsHidden()
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, Spacing.md)
+        .background(Color.semantic(.bgSecondary))
     }
 }
 
