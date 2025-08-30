@@ -21,8 +21,6 @@ final class PrivacyController: ObservableObject {
 
     // Delete state
     @Published var isDeleting: Bool = false
-    @Published var deleteScheduled: Bool = false
-    @Published var deleteCountdown: Int = 0
     @Published var showDeleteConfirmation: Bool = false
 
     // Alerts
@@ -33,7 +31,7 @@ final class PrivacyController: ObservableObject {
     }
     @Published var alertItem: AlertItem?
 
-    private var countdownCancellable: AnyCancellable?
+    // No timers required after confirmation-only delete
 
     init(resolver: Resolver = DIContainer.shared,
          exportService: (any DataExporting)? = nil) {
@@ -102,12 +100,7 @@ final class PrivacyController: ObservableObject {
     }
 
     func requestDeleteAll() {
-        showDeleteConfirmation = true
-    }
-
-    func scheduleDeleteAll(countdown seconds: Int = 10) {
-        guard !deleteScheduled, !isDeleting else { return }
-        // Quick guard: nothing to delete across categories
+        // Guard: nothing to delete across categories
         let hasMemos = !memoRepository.memos.isEmpty
         let hasTranscripts = directoryHasFiles(named: "transcriptions")
         let hasAnalysis = directoryHasFiles(named: "analysis")
@@ -115,71 +108,26 @@ final class PrivacyController: ObservableObject {
             alertItem = AlertItem(title: "Nothing to Delete", message: "There is no memo, transcript, or analysis data to delete.")
             return
         }
-        deleteScheduled = true
-        deleteCountdown = seconds
-        startCountdown()
+        showDeleteConfirmation = true
     }
 
-    func undoDelete() {
-        countdownCancellable?.cancel()
-        deleteScheduled = false
-        deleteCountdown = 0
-    }
-
-    private func startCountdown() {
-        countdownCancellable?.cancel()
-        countdownCancellable = Timer.publish(every: 1.0, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self = self else { return }
-                if self.deleteCountdown > 0 {
-                    self.deleteCountdown -= 1
-                }
-                if self.deleteCountdown == 0 {
-                    self.countdownCancellable?.cancel()
-                    Task { await self.performDeleteNow() }
-                }
-            }
-    }
-
-    private func performDeleteNow() async {
-        guard deleteScheduled, !isDeleting else { return }
+    func deleteAllNow() async {
+        guard !isDeleting else { return }
         isDeleting = true
-        defer { isDeleting = false; deleteScheduled = false }
+        defer { isDeleting = false }
 
         do {
-            // Use cascading DeleteMemoUseCase to remove memo + transcripts + analysis
             let container = DIContainer.shared
-            let cascadeDelete = DeleteMemoUseCase(
+            let deleteAll = DeleteAllUserDataUseCase(
                 memoRepository: memoRepository,
-                analysisRepository: container.analysisRepository(),
                 transcriptionRepository: container.transcriptionRepository(),
+                analysisRepository: container.analysisRepository(),
                 logger: container.logger()
             )
-            let existing = memoRepository.memos
-            for memo in existing {
-                try await cascadeDelete.execute(memo: memo)
-            }
-
-            // If no memos remain, purge any residual transcripts/analysis directories
-            if memoRepository.memos.isEmpty {
-                purgeResidualData()
-            }
-            alertItem = AlertItem(title: "Data Deleted", message: "All memos and related data were deleted.")
+            try await deleteAll.execute()
+            alertItem = AlertItem(title: "Data Deleted", message: "All memos, transcripts, and analysis were permanently deleted.")
         } catch {
             alertItem = AlertItem(title: "Delete Failed", message: error.localizedDescription)
-        }
-    }
-
-    private func purgeResidualData() {
-        let fm = FileManager.default
-        let documents = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let dirs = ["transcriptions", "analysis"]
-        for name in dirs {
-            let dir = documents.appendingPathComponent(name, isDirectory: true)
-            if fm.fileExists(atPath: dir.path) {
-                do { try fm.removeItem(at: dir) } catch { /* ignore */ }
-            }
         }
     }
 }

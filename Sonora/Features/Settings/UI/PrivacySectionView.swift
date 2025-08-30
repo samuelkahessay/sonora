@@ -65,7 +65,7 @@ struct PrivacySectionView: View {
                     .cornerRadius(10)
                 }
                 .buttonStyle(.plain)
-                .disabled(controller.isExporting || controller.isDeleting || controller.deleteScheduled || !controller.canExport)
+                .disabled(controller.isExporting || controller.isDeleting || !controller.canExport)
                 .opacity((controller.canExport && !controller.isExporting) ? 1.0 : 0.6)
 
                 Button(role: .destructive, action: { controller.requestDeleteAll() }) {
@@ -90,30 +90,7 @@ struct PrivacySectionView: View {
                 .disabled(controller.isDeleting)
             }
 
-            // Inline deletion scheduled with undo
-            if controller.deleteScheduled {
-                HStack(spacing: Spacing.md) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .foregroundColor(Color.semantic(.accent))
-                    Text("Deletion in \(controller.deleteCountdown)s…")
-                        .font(.subheadline)
-                        .foregroundColor(.semantic(.textSecondary))
-                    Spacer()
-                    Button("Undo") { controller.undoDelete() }
-                        .font(.callout.weight(.semibold))
-                        .padding(.horizontal, Spacing.sm)
-                        .padding(.vertical, 6)
-                        .background(Color.semantic(.bgSecondary))
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.semantic(.separator).opacity(0.45), lineWidth: 1)
-                        )
-                }
-                .padding(Spacing.md)
-                .background(Color.semantic(.fillSecondary))
-                .cornerRadius(10)
-            }
+            // No inline deletion banner; action is confirmed and immediate
         }
         .padding()
         .background(Color.semantic(.bgSecondary))
@@ -128,11 +105,11 @@ struct PrivacySectionView: View {
             titleVisibility: .visible
         ) {
             Button("Delete Everything", role: .destructive) {
-                controller.scheduleDeleteAll()
+                Task { await controller.deleteAllNow() }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This removes all memos and related data. You can undo within a few seconds.")
+            Text("This action permanently deletes all memos, transcripts, and analysis. This cannot be undone.")
         }
         .alert(item: $controller.alertItem) { item in
             Alert(title: Text(item.title), message: Text(item.message), dismissButton: .default(Text("OK")))

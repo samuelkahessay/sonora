@@ -38,7 +38,8 @@ final class ZipDataExportService: DataExporting {
             try addDirectory(at: analysisDir, to: archive, relativeTo: documents)
         }
 
-        // You can add other app data here (e.g., configuration), following the same pattern
+        // Always include app settings snapshot
+        try addSettings(to: archive)
 
         return outURL
     }
@@ -72,6 +73,51 @@ final class ZipDataExportService: DataExporting {
                 )
             }
         }
+    }
+
+    private func addSettings(to archive: Archive) throws {
+        // Build a small JSON snapshot of app settings and configuration
+        struct SettingsSnapshot: Codable {
+            let themeSettingsRaw: String?
+            let configuration: [String: String]
+            let createdAt: String
+        }
+
+        let date = ISO8601DateFormatter().string(from: Date())
+        let themeRaw = UserDefaults.standard.data(forKey: "app.theme.settings").flatMap { String(data: $0, encoding: .utf8) }
+
+        // Pull a subset of AppConfiguration for context
+        let cfg = AppConfiguration.shared
+        var conf: [String: String] = [:]
+        conf["apiBaseURL"] = cfg.apiBaseURL.absoluteString
+        conf["analysisTimeoutInterval"] = String(cfg.analysisTimeoutInterval)
+        conf["transcriptionTimeoutInterval"] = String(cfg.transcriptionTimeoutInterval)
+        conf["maxRecordingDuration"] = String(cfg.maxRecordingDuration)
+        conf["maxRecordingFileSize"] = String(cfg.maxRecordingFileSize)
+        conf["audioSampleRate"] = String(cfg.audioSampleRate)
+        conf["audioChannels"] = String(cfg.audioChannels)
+
+        let snapshot = SettingsSnapshot(
+            themeSettingsRaw: themeRaw,
+            configuration: conf,
+            createdAt: date
+        )
+        let data = try JSONEncoder().encode(snapshot)
+
+        // Add as settings/settings.json
+        let entryPath = "settings/settings.json"
+        let size = Int64(data.count)
+        try archive.addEntry(
+            with: entryPath,
+            type: .file,
+            uncompressedSize: size,
+            compressionMethod: .deflate,
+            provider: { position, size in
+                let start = Int(position)
+                let end = min(start + size, data.count)
+                return data.subdata(in: start..<end)
+            }
+        )
     }
 
     enum ExportError: LocalizedError {
