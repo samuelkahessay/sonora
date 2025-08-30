@@ -110,21 +110,4 @@ struct DarkTheme: AppTheme {
     let animations: ThemeAnimations = .standard
 }
 
-// MARK: - Theme Environment
-private struct ThemeEnvironmentKey: EnvironmentKey {
-    static let defaultValue: AppTheme = LiquidGlassLightTheme()
-}
-
-extension EnvironmentValues {
-    var theme: AppTheme {
-        get { self[ThemeEnvironmentKey.self] }
-        set { self[ThemeEnvironmentKey.self] = newValue }
-    }
-}
-
-extension View {
-    func theme(_ theme: AppTheme) -> some View {
-        environment(\.theme, theme)
-    }
-}
-
+// Theme environment is defined in ThemeEnvironment.swift

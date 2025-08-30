@@ -90,3 +90,25 @@ extension View {
         }
     }
 }
+
+// MARK: - Dynamic Type Mapping
+extension Typography {
+    /// Convenience mapping from `Font.TextStyle` to the corresponding theme font.
+    func font(for style: Font.TextStyle) -> Font {
+        switch style {
+        case .largeTitle: return largeTitle
+        case .title: return title
+        case .title2: return title2
+        case .title3: return title3
+        case .headline: return headline
+        case .subheadline: return subheadline
+        case .body: return body
+        case .callout: return callout
+        case .footnote: return footnote
+        case .caption: return caption
+        case .caption2: return caption2
+        @unknown default:
+            return body
+        }
+    }
+}
