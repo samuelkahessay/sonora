@@ -1,5 +1,13 @@
 import Foundation
 
+// Language fallback configuration
+struct LanguageFallbackConfig {
+    let confidenceThreshold: Double
+    init(confidenceThreshold: Double = 0.7) {
+        self.confidenceThreshold = max(0.0, min(1.0, confidenceThreshold))
+    }
+}
+
 /// Use case for starting transcription of a memo
 /// Encapsulates the business logic for initiating transcription
 protocol StartTranscriptionUseCaseProtocol {
@@ -17,6 +25,10 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     // New dependencies for chunked flow
     private let vadService: any VADSplittingService
     private let chunkManager: AudioChunkManager
+    // Language evaluation and detection
+    private let qualityEvaluator: any LanguageQualityEvaluator
+    private let clientLanguageService: any ClientLanguageDetectionService
+    private let languageFallbackConfig: LanguageFallbackConfig
     
     // MARK: - Initialization
     init(
@@ -26,7 +38,10 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         operationCoordinator: any OperationCoordinatorProtocol,
         logger: any LoggerProtocol = Logger.shared,
         vadService: any VADSplittingService = DefaultVADSplittingService(),
-        chunkManager: AudioChunkManager = AudioChunkManager()
+        chunkManager: AudioChunkManager = AudioChunkManager(),
+        qualityEvaluator: any LanguageQualityEvaluator = DefaultLanguageQualityEvaluator(),
+        clientLanguageService: any ClientLanguageDetectionService = DefaultClientLanguageDetectionService(),
+        languageFallbackConfig: LanguageFallbackConfig = LanguageFallbackConfig()
     ) {
         self.transcriptionRepository = transcriptionRepository
         self.transcriptionAPI = transcriptionAPI
@@ -35,6 +50,9 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         self.logger = logger
         self.vadService = vadService
         self.chunkManager = chunkManager
+        self.qualityEvaluator = qualityEvaluator
+        self.clientLanguageService = clientLanguageService
+        self.languageFallbackConfig = languageFallbackConfig
     }
     
     // MARK: - Use Case Execution
@@ -104,24 +122,60 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             let chunks = try await chunkManager.createChunks(from: audioURL, segments: segments)
             defer { Task { await chunkManager.cleanupChunks(chunks) } }
 
-            // Phase 3: Transcribe chunks with progress (70%)
-            await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing speech...")
-            let results = try await transcribeChunksWithProgress(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.7)
-
-            // Phase 4: Aggregate and save (10%)
-            await updateProgress(operationId: operationId, fraction: 0.9, step: "Finalizing transcription...")
+            // Phase 3: Primary transcription with auto language detection
+            await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing with language detection...")
+            let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: nil, stageLabel: "Transcribing (auto)")
             let aggregator = TranscriptionAggregator()
-            let aggregated = aggregator.aggregate(results)
-            // Optionally treat extreme failure ratio as an error in the future (currently per-chunk retries already applied)
-            let finalText = aggregated.text
+            let primaryAgg = aggregator.aggregate(primary)
+            let primaryText = primaryAgg.text
+
+            // Phase 4: Evaluate quality and decide on fallback
+            await updateProgress(operationId: operationId, fraction: 0.8, step: "Evaluating transcription quality...")
+            let primarySummary = summarizeResponse(from: primary, aggregatedText: primaryText)
+            let primaryEval = qualityEvaluator.evaluateQuality(primarySummary, text: primaryText)
+
+            var finalText = primaryText
+            var finalEval = primaryEval
+            var finalLanguage = primaryEval.language
+
+            if qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
+                await updateProgress(operationId: operationId, fraction: 0.82, step: "Low confidence. Retrying with English...")
+                do {
+                    let fallback = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.82, fractionBudget: 0.12, language: "en", stageLabel: "Transcribing (en)")
+                    let fallbackAgg = aggregator.aggregate(fallback)
+                    let fallbackText = fallbackAgg.text
+                    let fallbackSummary = summarizeResponse(from: fallback, aggregatedText: fallbackText, overrideLanguage: "en")
+                    let fallbackEval = qualityEvaluator.evaluateQuality(fallbackSummary, text: fallbackText)
+
+                    await updateProgress(operationId: operationId, fraction: 0.95, step: "Selecting best transcription...")
+                    let comparison = qualityEvaluator.compareTwoResults(primaryEval, fallbackEval)
+                    switch comparison {
+                    case .useFallback:
+                        finalText = fallbackText
+                        finalEval = fallbackEval
+                        finalLanguage = "en"
+                    case .usePrimary:
+                        break
+                    }
+                } catch {
+                    logger.warning("Fallback transcription failed; using primary result", category: .transcription, context: context, error: error)
+                }
+            }
+
+            // Phase 5: Save and complete
+            await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
             await MainActor.run {
                 let completedState = TranscriptionState.completed(finalText)
                 transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
                 transcriptionRepository.saveTranscriptionText(finalText, for: memo.id)
+                transcriptionRepository.saveTranscriptionMetadata([
+                    "detectedLanguage": finalLanguage,
+                    "qualityScore": finalEval.overallScore
+                ], for: memo.id)
             }
 
             logger.info("Transcription completed successfully (chunked)", category: .transcription, context: LogContext(
-                additionalInfo: ["memoId": memo.id.uuidString, "textLength": finalText.count]
+                additionalInfo: ["memoId": memo.id.uuidString, "textLength": finalText.count, "language": finalLanguage, "quality": finalEval.overallScore]
             ))
 
             // Publish transcriptionCompleted event
@@ -194,6 +248,61 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             .map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+
+    private func transcribeChunksWithLanguage(operationId: UUID, chunks: [ChunkFile], baseFraction: Double, fractionBudget: Double, language: String?, stageLabel: String) async throws -> [ChunkTranscriptionResult] {
+        guard !chunks.isEmpty else { return [] }
+        var results: [ChunkTranscriptionResult] = []
+        results.reserveCapacity(chunks.count)
+
+        for (i, chunk) in chunks.enumerated() {
+            let stepFraction = Double(i) / Double(chunks.count)
+            let current = baseFraction + fractionBudget * stepFraction
+            await updateProgress(operationId: operationId, fraction: current, step: "\(stageLabel) \(i+1)/\(chunks.count)...", index: i+1, total: chunks.count)
+
+            do {
+                let response = try await transcriptionAPI.transcribe(url: chunk.url, language: language)
+                results.append(ChunkTranscriptionResult(segment: chunk.segment, response: response))
+            } catch {
+                logger.warning("Chunk transcription failed; continuing", category: .transcription, context: LogContext(additionalInfo: ["index": i, "lang": language ?? "auto"]), error: error)
+                results.append(ChunkTranscriptionResult(segment: chunk.segment, response: TranscriptionResponse(text: "", detectedLanguage: nil, confidence: nil, avgLogProb: nil, duration: nil)))
+            }
+        }
+
+        // Final progress at end of chunking
+        await updateProgress(operationId: operationId, fraction: baseFraction + fractionBudget, step: "Transcription stage complete")
+        return results
+    }
+
+    private func summarizeResponse(from results: [ChunkTranscriptionResult], aggregatedText: String, overrideLanguage: String? = nil) -> TranscriptionResponse {
+        // Aggregate server-provided metadata across chunks
+        var langWeights: [String: Double] = [:]
+        var confs: [Double] = []
+        var logProbs: [Double] = []
+        var totalDuration: TimeInterval = 0
+
+        for r in results {
+            if let dur = (r.response.duration) { totalDuration += dur }
+            if let c = r.response.confidence { confs.append(c) }
+            if let lp = r.response.avgLogProb { logProbs.append(lp) }
+            if let l = r.response.detectedLanguage {
+                let iso = DefaultClientLanguageDetectionService.iso639_1(fromBCP47: l) ?? l
+                let weight = r.response.confidence ?? 1.0
+                langWeights[iso, default: 0.0] += weight
+            }
+        }
+
+        let detectedLang: String? = overrideLanguage ?? langWeights.max(by: { $0.value < $1.value })?.key
+        let avgConf: Double? = confs.isEmpty ? nil : (confs.reduce(0, +) / Double(confs.count))
+        let avgLP: Double? = logProbs.isEmpty ? nil : (logProbs.reduce(0, +) / Double(logProbs.count))
+
+        return TranscriptionResponse(
+            text: aggregatedText,
+            detectedLanguage: detectedLang,
+            confidence: avgConf,
+            avgLogProb: avgLP,
+            duration: totalDuration > 0 ? totalDuration : nil
+        )
     }
 
     private func saveAndComplete(operationId: UUID, memoId: UUID, text: String, context: LogContext) async {
