@@ -11,11 +11,13 @@ struct PrivacySectionView: View {
             Text("Privacy & Data")
                 .font(.headline)
 
-            // Links
-            HStack(spacing: Spacing.lg) {
+            // Links (stacked)
+            VStack(spacing: Spacing.md) {
+                // TODO: Replace with real Privacy Policy link
                 Link(destination: privacyURL) {
                     label(icon: "hand.raised.fill", title: "Privacy Policy")
                 }
+                // TODO: Replace with real Terms of Use link
                 Link(destination: termsURL) {
                     label(icon: "doc.text.fill", title: "Terms of Use")
                 }
@@ -37,7 +39,7 @@ struct PrivacySectionView: View {
                     .background(Color.semantic(.bgSecondary))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.semantic(.separator).opacity(0.2), lineWidth: 1)
+                            .stroke(Color.semantic(.separator).opacity(0.45), lineWidth: 1)
                     )
                     .cornerRadius(10)
                 }
@@ -56,10 +58,10 @@ struct PrivacySectionView: View {
                     }
                     .padding(.vertical, 10)
                     .padding(.horizontal, Spacing.md)
-                    .background(Color.semantic(.error).opacity(0.08))
+                    .background(Color.semantic(.error).opacity(0.12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.semantic(.error).opacity(0.25), lineWidth: 1)
+                            .stroke(Color.semantic(.error).opacity(0.55), lineWidth: 1)
                     )
                     .cornerRadius(10)
                 }
@@ -84,7 +86,7 @@ struct PrivacySectionView: View {
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.semantic(.separator).opacity(0.2), lineWidth: 1)
+                                .stroke(Color.semantic(.separator).opacity(0.45), lineWidth: 1)
                         )
                 }
                 .padding(Spacing.md)
@@ -96,7 +98,7 @@ struct PrivacySectionView: View {
         .background(Color.semantic(.bgSecondary))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.semantic(.separator).opacity(0.15), lineWidth: 1)
+                .stroke(Color.semantic(.separator).opacity(0.45), lineWidth: 1)
         )
         .cornerRadius(12)
         .confirmationDialog(
@@ -133,7 +135,7 @@ struct PrivacySectionView: View {
         .background(Color.semantic(.bgSecondary))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.semantic(.separator).opacity(0.2), lineWidth: 1)
+                .stroke(Color.semantic(.separator).opacity(0.45), lineWidth: 1)
         )
         .cornerRadius(10)
         .contentShape(Rectangle())

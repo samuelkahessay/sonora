@@ -11,7 +11,7 @@ struct RecordingView: View {
     @StateObject private var viewModel = RecordingViewModel()
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 32) {
                 Spacer()
                 
@@ -95,6 +95,8 @@ struct RecordingView: View {
             }
             .padding()
             .navigationTitle("Sonora")
+            .toolbarBackground(Color.semantic(.bgPrimary), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .onAppear { viewModel.onViewAppear() }
             .alert("Recording Stopped", isPresented: $viewModel.showAutoStopAlert) {
                 Button("OK") { viewModel.dismissAutoStopAlert() }

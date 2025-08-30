@@ -14,6 +14,8 @@ struct SettingsView: View {
             }
             .background(Color.semantic(.bgPrimary).ignoresSafeArea())
             .navigationTitle("Settings")
+            .toolbarBackground(Color.semantic(.bgPrimary), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
 }

@@ -30,6 +30,7 @@ struct ContentView: View {
                 }
                 .tag(2)
         }
+        .animation(nil, value: selectedTab)
         .onChange(of: selectedTab) { oldValue, newValue in
             if oldValue == 1 && newValue == 1 {
                 popToRoot()

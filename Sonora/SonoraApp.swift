@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 @main
 struct SonoraApp: App {
@@ -16,6 +17,15 @@ struct SonoraApp: App {
         print("🚀 SonoraApp: DIContainer configured with shared services (App init)")
         DIContainer.shared.eventHandlerRegistry().registerAllHandlers()
         print("🎯 SonoraApp: Event handlers registered (App init)")
+
+        // Global Navigation Bar appearance: ensure clear bottom divider (hairline) visible across app
+        let navAppearance = UINavigationBarAppearance()
+        navAppearance.configureWithDefaultBackground()
+        navAppearance.backgroundColor = UIColor.systemBackground
+        navAppearance.shadowColor = UIColor.separator
+        UINavigationBar.appearance().standardAppearance = navAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+        UINavigationBar.appearance().compactAppearance = navAppearance
     }
     var body: some Scene {
         WindowGroup {
