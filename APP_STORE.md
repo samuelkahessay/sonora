@@ -40,7 +40,40 @@ Privacy and Data Practices (App Store “App Privacy”)
 - Pasteboard: The app writes to the pasteboard to copy transcript text (no reading). This is not a Required Reason API use case, but call it out in review notes to preempt questions.
 - Required Reason APIs / Privacy Manifests:
   - The code uses standard APIs (URLSession, FileManager). If you add any “Required Reason API” usage (e.g., reading pasteboard contents, disk space, system boot time, etc.), include a `PrivacyInfo.xcprivacy` manifest with proper reasons before submission. For now, a manifest is optional but recommended for forward-compatibility.
-- Policy URLs: Provide a Privacy Policy URL in App Store Connect (recommended since audio leaves device for transcription).
+  - Policy URLs: Provide a Privacy Policy URL in App Store Connect (recommended since audio leaves device for transcription).
+
+App Privacy Labels Mapping (for App Store Connect)
+
+| Data Type                          | Collected | Purpose            | Linked to User | Tracking |
+|------------------------------------|-----------|--------------------|----------------|----------|
+| User Content > Audio Data (Voice)  | Yes       | App Functionality  | No             | No       |
+| User Content > Other User Content (Transcripts, text derived from audio) | Yes | App Functionality | No | No |
+| Diagnostics (Crash data)           | No        | —                  | —              | —        |
+| Usage Data (Product interaction)   | No        | —                  | —              | —        |
+| Identifiers (Device/User)          | No        | —                  | —              | —        |
+| Contact Info                       | No        | —                  | —              | —        |
+| Location                           | No        | —                  | —              | —        |
+
+Notes
+- Audio recording happens on-device; when the user initiates transcription/analysis, the audio file is uploaded to the Sonora backend strictly to perform that feature (App Functionality). No advertising/marketing use.
+- Transcripts (text) are derived from the user’s audio; treated as User Content; used only for App Functionality.
+- No user accounts; we do not link data to identity. No third-party tracking SDKs.
+- Logging is local (console) only; no crash reporting SDK is integrated. If a crash reporting SDK is added later, update this table accordingly.
+
+xcprivacy (Privacy Manifest) Review
+
+- Current third-party SDKs: ZIPFoundation (SPM) only.
+  - Purpose: ZIP archive creation for user export.
+  - Required Reason APIs: None (standard file I/O only). No manifest entries required.
+- Project manifest: `Sonora/PrivacyInfo.xcprivacy` is present and currently minimal (no tracking, no accessed APIs). This is acceptable with the current codebase.
+- If later you integrate SDKs that access Required Reason APIs (e.g., clipboard read, disk space, file timestamping beyond normal use), add the appropriate entries to `PrivacyInfo.xcprivacy` and document them here.
+
+Test Plan (Privacy)
+
+1) Verify Settings shows Privacy Policy + Terms links (real URLs in release).
+2) Export Data: select Memos/Transcripts/Analysis; generate ZIP; confirm contents include selected folders and settings/settings.json; share via iOS share sheet.
+3) Delete All Data: confirm prompt warning; accept; verify Memos tab is empty and export contains no user content.
+4) Confirm App Privacy answers in App Store Connect match the mapping table above.
 
 Live Activities Compliance
 
