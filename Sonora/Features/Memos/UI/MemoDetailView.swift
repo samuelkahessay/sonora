@@ -42,7 +42,7 @@ struct MemoDetailView: View {
                                 Image(systemName: viewModel.playButtonIcon)
                                     .font(.title2)
                                     .foregroundColor(.semantic(.textInverted))
-                                    .frame(width: 50, height: 50)
+                                    .frame(minWidth: 50, minHeight: 50)
                                     .background(Color.semantic(.brandPrimary))
                                     .clipShape(Circle())
                                 
@@ -81,7 +81,7 @@ struct MemoDetailView: View {
                         } else if viewModel.transcriptionState.isFailed {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.semantic(.warning))
-                                .font(.system(size: 14))
+                                .font(.caption)
                         }
                     }
                     

@@ -18,7 +18,8 @@ struct RecordingView: View {
                 if !viewModel.hasPermission {
                     VStack(spacing: 16) {
                         Image(systemName: viewModel.permissionStatus.iconName)
-                            .font(.system(size: 60, weight: .medium))
+                            .font(.largeTitle)
+                            .fontWeight(.medium)
                             .foregroundColor(.semantic(.error))
                         
                         Text(viewModel.permissionStatus.displayName)
@@ -58,7 +59,8 @@ struct RecordingView: View {
                                     .font(.headline)
                                     .foregroundColor(.semantic(.warning))
                                 Text("\(Int(ceil(viewModel.remainingTime)))")
-                                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                                    .font(.system(.largeTitle, design: .rounded))
+                                    .fontWeight(.bold)
                                     .foregroundColor(.semantic(.error))
                                     .monospacedDigit()
                             }

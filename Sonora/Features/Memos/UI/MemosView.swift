@@ -25,7 +25,8 @@ struct MemosView: View {
                 if viewModel.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: viewModel.emptyStateIcon)
-                            .font(.system(size: 48, weight: .medium))
+                            .font(.largeTitle)
+                            .fontWeight(.medium)
                             .foregroundColor(.semantic(.textSecondary))
                         Text(viewModel.emptyStateTitle)
                             .font(.title2)
@@ -84,7 +85,9 @@ struct MemoRowView: View {
             HStack(spacing: 12) {
                 Button(action: { viewModel.playMemo(memo) }) {
                     Image(systemName: viewModel.playButtonIcon(for: memo))
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .frame(minWidth: 44, minHeight: 44)
                 }
                 .buttonStyle(.bordered)
                 
@@ -96,7 +99,8 @@ struct MemoRowView: View {
                         Text(memo.filename)
                             .font(.caption)
                             .foregroundColor(.semantic(.textSecondary))
-                            .lineLimit(1)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                         Spacer()
                         Text(memo.durationString)
                             .font(.caption)

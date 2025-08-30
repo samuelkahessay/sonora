@@ -18,7 +18,8 @@ struct TranscriptionStatusView: View {
             } else {
                 Image(systemName: state.iconName)
                     .foregroundColor(colorForState(state))
-                    .font(.system(size: compact ? 10 : 12, weight: .medium))
+                    .font(compact ? .caption2 : .caption)
+                    .fontWeight(.medium)
             }
             
             if !compact {
@@ -59,13 +60,15 @@ struct TranscriptionActionButton: View {
             HStack(spacing: 6) {
                 if state.isFailed {
                     Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.caption)
+                        .fontWeight(.medium)
                     Text("Retry")
                         .font(.caption)
                         .fontWeight(.medium)
                 } else if state.isCompleted {
                     Image(systemName: "doc.text")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.caption)
+                        .fontWeight(.medium)
                     Text("View")
                         .font(.caption)
                         .fontWeight(.medium)
@@ -75,7 +78,8 @@ struct TranscriptionActionButton: View {
                         .fontWeight(.medium)
                 } else {
                     Image(systemName: "waveform")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.caption)
+                        .fontWeight(.medium)
                     Text("Transcribe")
                         .font(.caption)
                         .fontWeight(.medium)
