@@ -33,11 +33,13 @@ final class PrivacyController: ObservableObject {
 
     // No timers required after confirmation-only delete
 
-    init(resolver: Resolver = DIContainer.shared,
+    init(resolver: Resolver? = nil,
          exportService: (any DataExporting)? = nil) {
-        self.resolver = resolver
-        self.memoRepository = resolver.resolve((any MemoRepository).self) ?? DIContainer.shared.memoRepository()
-        self.logger = resolver.resolve((any LoggerProtocol).self) ?? DIContainer.shared.logger()
+        let resolved = resolver ?? DIContainer.shared
+        self.resolver = resolved
+        let container = (resolved as? DIContainer) ?? DIContainer.shared
+        self.memoRepository = resolved.resolve((any MemoRepository).self) ?? container.memoRepository()
+        self.logger = resolved.resolve((any LoggerProtocol).self) ?? container.logger()
         #if canImport(ZIPFoundation)
         self.exportService = exportService ?? ZipDataExportService()
         #else

@@ -40,6 +40,12 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
                 throw TranscriptionError.invalidState
             }
         }
+
+        // Do not retry when the previous failure was "No speech detected"
+        if case .failed(let message) = currentState, message == TranscriptionError.noSpeechDetected.errorDescription {
+            print("⚠️ RetryTranscriptionUseCase: No speech detected previously; retry not allowed")
+            throw TranscriptionError.noSpeechDetected
+        }
         
         // Check if file exists
         guard FileManager.default.fileExists(atPath: memo.fileURL.path) else {

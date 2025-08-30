@@ -6,7 +6,7 @@ import SwiftUI
 /// ViewModel for handling memo detail functionality
 /// Uses dependency injection for testability and clean architecture
 @MainActor
-final class MemoDetailViewModel: ObservableObject {
+final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
     
     // MARK: - Dependencies
     private let playMemoUseCase: PlayMemoUseCaseProtocol
@@ -44,6 +44,8 @@ final class MemoDetailViewModel: ObservableObject {
     // MARK: - Operation Status
     @Published var activeOperations: [OperationSummary] = []
     @Published var memoOperationSummaries: [OperationSummary] = []
+    @Published var transcriptionProgressPercent: Double? = nil
+    @Published var transcriptionProgressStep: String? = nil
     
     // MARK: - Computed Properties
     
@@ -60,6 +62,14 @@ final class MemoDetailViewModel: ObservableObject {
     /// Text content from completed transcription
     var transcriptionText: String? {
         transcriptionState.text
+    }
+
+    /// Whether retry should be offered in UI
+    var canRetryTranscription: Bool {
+        if case .failed(let message) = transcriptionState {
+            return message != TranscriptionError.noSpeechDetected.errorDescription
+        }
+        return false
     }
     
     // MARK: - Initialization
@@ -146,7 +156,13 @@ final class MemoDetailViewModel: ObservableObject {
     }
     
     private func setupOperationMonitoring() {
-        // Update operation summaries every 2 seconds
+        // Set self as progress/status delegate to get live updates
+        Task { [weak self] in
+            guard let self else { return }
+            await operationCoordinator.setStatusDelegate(self)
+        }
+
+        // Update operation summaries every 2 seconds (fallback/debug)
         Timer.publish(every: 2.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
@@ -371,6 +387,47 @@ final class MemoDetailViewModel: ObservableObject {
     
     func onViewDisappear() {
         print("📝 MemoDetailViewModel: View disappeared")
+        Task { [weak self] in
+            guard let self else { return }
+            await operationCoordinator.setStatusDelegate(nil)
+        }
+    }
+
+    // MARK: - OperationStatusDelegate
+    func operationStatusDidUpdate(_ update: OperationStatusUpdate) async {
+        guard update.operationType.category == .transcription,
+              let memo = currentMemo,
+              update.memoId == memo.id else { return }
+
+        switch update.currentStatus {
+        case .processing(let progress):
+            await MainActor.run {
+                self.transcriptionProgressPercent = progress?.percentage
+                self.transcriptionProgressStep = progress?.currentStep ?? "Processing..."
+            }
+        default:
+            break
+        }
+    }
+
+    func operationDidComplete(_ operationId: UUID, memoId: UUID, operationType: OperationType) async {
+        guard operationType.category == .transcription,
+              let memo = currentMemo,
+              memoId == memo.id else { return }
+        await MainActor.run {
+            self.transcriptionProgressPercent = nil
+            self.transcriptionProgressStep = nil
+        }
+    }
+
+    func operationDidFail(_ operationId: UUID, memoId: UUID, operationType: OperationType, error: Error) async {
+        guard operationType.category == .transcription,
+              let memo = currentMemo,
+              memoId == memo.id else { return }
+        await MainActor.run {
+            self.transcriptionProgressPercent = nil
+            self.transcriptionProgressStep = nil
+        }
     }
 }
 

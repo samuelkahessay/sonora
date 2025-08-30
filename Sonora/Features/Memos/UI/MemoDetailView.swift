@@ -103,9 +103,14 @@ struct MemoDetailView: View {
                         
                     case .inProgress:
                         VStack(spacing: 12) {
-                            ProgressView()
-                                .scaleEffect(1.2)
-                            Text("Transcribing your audio...")
+                            if let pct = viewModel.transcriptionProgressPercent {
+                                ProgressView(value: pct)
+                                    .scaleEffect(1.2)
+                            } else {
+                                ProgressView()
+                                    .scaleEffect(1.2)
+                            }
+                            Text(viewModel.transcriptionProgressStep ?? "Transcribing your audio...")
                                 .foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity)
@@ -147,21 +152,23 @@ struct MemoDetailView: View {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle")
                                     .foregroundColor(.semantic(.warning))
-                                Text("Transcription Failed")
+                                Text(error == TranscriptionError.noSpeechDetected.errorDescription ? "No Speech Detected" : "Transcription Failed")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                     .foregroundColor(.semantic(.warning))
                             }
-                            
+
                             Text(error)
                                 .font(.caption)
                                 .foregroundColor(.semantic(.textSecondary))
                                 .multilineTextAlignment(.center)
-                            
-                            Button("Try Again") {
-                                viewModel.retryTranscription()
+
+                            if viewModel.canRetryTranscription {
+                                Button("Try Again") {
+                                    viewModel.retryTranscription()
+                                }
+                                .buttonStyle(.borderedProminent)
                             }
-                            .buttonStyle(.borderedProminent)
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
