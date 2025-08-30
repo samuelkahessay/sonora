@@ -63,6 +63,12 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
         
         do {
             let data = try JSONEncoder().encode(result)
+            
+            // Final guardrail: validate JSON structure before persisting
+            if !self.validateEnvelopeJSON(data: data, expectedMode: mode) {
+                logger.error("AnalysisRepository: Validation failed — refusing to persist analysis result", category: .repository, context: context, error: nil)
+                return
+            }
             let dataSize = data.count
             
             try data.write(to: url)
@@ -97,6 +103,36 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
                        category: .repository, 
                        context: context, 
                        error: error)
+        }
+    }
+
+    // MARK: - Private validation helpers
+    private func validateEnvelopeJSON(data: Data, expectedMode: AnalysisMode) -> Bool {
+        guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+        guard let modeStr = obj["mode"] as? String, modeStr == expectedMode.rawValue else { return false }
+        guard let payload = obj["data"] as? [String: Any] else { return false }
+        switch expectedMode {
+        case .tldr, .analysis:
+            guard let summary = payload["summary"] as? String, !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+            guard let keyPoints = payload["key_points"] as? [Any] else { return false }
+            // Ensure all key points are strings
+            return keyPoints.allSatisfy { ($0 as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
+        case .themes:
+            guard let themes = payload["themes"] as? [Any], let sentiment = payload["sentiment"] as? String else { return false }
+            guard ["positive","neutral","mixed","negative"].contains(sentiment.lowercased()) else { return false }
+            // Basic per-item validation
+            for item in themes {
+                guard let t = item as? [String: Any], let name = t["name"] as? String, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+                guard let evidence = t["evidence"] as? [Any], evidence.allSatisfy({ ($0 as? String)?.isEmpty == false }) else { return false }
+            }
+            return true
+        case .todos:
+            guard let todos = payload["todos"] as? [Any] else { return false }
+            for item in todos {
+                guard let t = item as? [String: Any], let text = t["text"] as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+                // due may be string or null — no strict check
+            }
+            return true
         }
     }
     

@@ -53,6 +53,12 @@ final class AnalyzeTodosUseCase: AnalyzeTodosUseCaseProtocol {
         do {
             // Call service to perform analysis
             let result = try await analysisService.analyzeTodos(transcript: transcript)
+
+            // Guardrails: validate structure before persisting
+            guard AnalysisGuardrails.validate(todos: result.data) else {
+                print("❌ AnalyzeTodosUseCase: Validation failed — not persisting result")
+                throw AnalysisError.invalidResponse
+            }
             
             print("✅ AnalyzeTodosUseCase: Todos analysis completed successfully")
             print("📋 Found \(result.data.todos.count) action items")

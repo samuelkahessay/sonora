@@ -86,6 +86,13 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
             // Call service to perform analysis
             let analysisTimer = PerformanceTimer(operation: "TLDR Analysis API Call", category: .analysis)
             let result = try await analysisService.analyzeTLDR(transcript: transcript)
+
+            // Guardrails: validate structure before persisting
+            guard AnalysisGuardrails.validate(tldr: result.data) else {
+                logger.error("TLDR validation failed — not persisting result", category: .analysis, context: context, error: nil)
+                await operationCoordinator.failOperation(operationId, error: AnalysisError.invalidResponse)
+                throw AnalysisError.invalidResponse
+            }
             _ = analysisTimer.finish(additionalInfo: "Service call completed successfully")
             
             logger.analysis("TLDR analysis completed successfully", 

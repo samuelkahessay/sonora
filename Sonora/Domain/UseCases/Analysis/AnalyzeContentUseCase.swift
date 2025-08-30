@@ -72,6 +72,12 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol {
             // Call service to perform analysis
             let analysisTimer = PerformanceTimer(operation: "Content Analysis API Call", category: .analysis)
             let result = try await analysisService.analyzeAnalysis(transcript: transcript)
+            
+            // Guardrails: validate structure before persisting
+            guard AnalysisGuardrails.validate(analysis: result.data) else {
+                logger.error("Content analysis validation failed — not persisting result", category: .analysis, context: context, error: nil)
+                throw AnalysisError.invalidResponse
+            }
             _ = analysisTimer.finish(additionalInfo: "Service call completed successfully")
             
             logger.analysis("Content analysis completed successfully", 

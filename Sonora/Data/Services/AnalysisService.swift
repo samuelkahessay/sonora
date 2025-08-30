@@ -8,9 +8,12 @@ class AnalysisService: ObservableObject, AnalysisServiceProtocol {
         let analyzeURL = config.apiBaseURL.appendingPathComponent("analyze")
         print("🔧 AnalysisService: Using API URL: \(analyzeURL.absoluteString)")
         
+        // Sanitize transcript to reduce prompt injection surface area on server
+        let safeTranscript = AnalysisGuardrails.sanitizeTranscriptForLLM(transcript)
+        
         let requestBody = [
             "mode": mode.rawValue,
-            "transcript": transcript
+            "transcript": safeTranscript
         ]
         
         var request = URLRequest(url: analyzeURL)
@@ -19,7 +22,7 @@ class AnalysisService: ObservableObject, AnalysisServiceProtocol {
         request.timeoutInterval = config.timeoutInterval(for: mode)
         
         print("🔧 AnalysisService: Using timeout: \(request.timeoutInterval)s for \(mode.displayName)")
-        print("🔧 AnalysisService: Transcript length: \(transcript.count) characters")
+        print("🔧 AnalysisService: Transcript length: \(transcript.count) characters (sanitized: \(safeTranscript.count))")
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)

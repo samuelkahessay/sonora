@@ -53,6 +53,12 @@ final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
         do {
             // Call service to perform analysis
             let result = try await analysisService.analyzeThemes(transcript: transcript)
+
+            // Guardrails: validate structure before persisting
+            guard AnalysisGuardrails.validate(themes: result.data) else {
+                print("❌ AnalyzeThemesUseCase: Validation failed — not persisting result")
+                throw AnalysisError.invalidResponse
+            }
             
             print("✅ AnalyzeThemesUseCase: Themes analysis completed successfully")
             print("🎯 Found \(result.data.themes.count) themes with sentiment: \(result.data.sentiment)")
