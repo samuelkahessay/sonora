@@ -20,6 +20,6 @@
 		<string>audio</string>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Sonora needs microphone access to record voice memos for transcription and analysis.</string>
+	<string>Sonora needs microphone access to record voice memos. Your recordings stay private on your device until you choose to transcribe them using AI.</string>
 </dict>
 </plist>

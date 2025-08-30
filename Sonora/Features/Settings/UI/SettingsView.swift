@@ -6,6 +6,7 @@ struct SettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Spacing.lg) {
+                    OnboardingSectionView()
                     LanguageSectionView()
                     AIDisclosureSectionView()
                     PrivacySectionView()

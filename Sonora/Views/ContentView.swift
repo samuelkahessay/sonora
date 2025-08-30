@@ -9,8 +9,23 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var selectedTab: Int = 0
+    @StateObject private var onboardingConfiguration = OnboardingConfiguration.shared
     
     var body: some View {
+        Group {
+            if onboardingConfiguration.shouldShowOnboarding {
+                OnboardingView()
+                    .transition(.opacity.combined(with: .scale))
+            } else {
+                mainAppContent
+                    .transition(.opacity.combined(with: .scale))
+            }
+        }
+        .animation(.easeInOut(duration: 0.5), value: onboardingConfiguration.shouldShowOnboarding)
+    }
+    
+    @ViewBuilder
+    private var mainAppContent: some View {
         TabView(selection: $selectedTab) {
             RecordingView()
                 .tabItem {

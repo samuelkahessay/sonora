@@ -17,6 +17,10 @@ struct SonoraApp: App {
         print("🚀 SonoraApp: DIContainer configured with shared services (App init)")
         DIContainer.shared.eventHandlerRegistry().registerAllHandlers()
         print("🎯 SonoraApp: Event handlers registered (App init)")
+        
+        // Initialize onboarding configuration
+        _ = OnboardingConfiguration.shared
+        print("📋 SonoraApp: OnboardingConfiguration initialized (App init)")
 
         // Global Navigation Bar appearance: ensure clear bottom divider (hairline) visible across app
         let navAppearance = UINavigationBarAppearance()

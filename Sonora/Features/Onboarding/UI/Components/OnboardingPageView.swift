@@ -1,0 +1,232 @@
+import SwiftUI
+
+/// Reusable onboarding page template component
+struct OnboardingPageView: View {
+    
+    // MARK: - Properties
+    let page: OnboardingPage
+    let onPrimaryAction: (() -> Void)?
+    let onSkip: () -> Void
+    let isLoading: Bool
+    
+    // MARK: - Optional customization
+    let showDetailedPoints: Bool
+    let primaryButtonStyle: OnboardingButtonStyle
+    
+    // MARK: - Button styles
+    enum OnboardingButtonStyle {
+        case primary
+        case secondary
+        case warning
+        
+        var backgroundColor: Color {
+            switch self {
+            case .primary:
+                return .semantic(.brandPrimary)
+            case .secondary:
+                return .semantic(.fillSecondary)
+            case .warning:
+                return .semantic(.warning)
+            }
+        }
+        
+        var foregroundColor: Color {
+            switch self {
+            case .primary:
+                return .semantic(.textInverted)
+            case .secondary:
+                return .semantic(.textPrimary)
+            case .warning:
+                return .semantic(.textInverted)
+            }
+        }
+    }
+    
+    // MARK: - Initialization
+    init(
+        page: OnboardingPage,
+        onPrimaryAction: (() -> Void)? = nil,
+        onSkip: @escaping () -> Void,
+        isLoading: Bool = false,
+        showDetailedPoints: Bool = true,
+        primaryButtonStyle: OnboardingButtonStyle = .primary
+    ) {
+        self.page = page
+        self.onPrimaryAction = onPrimaryAction
+        self.onSkip = onSkip
+        self.isLoading = isLoading
+        self.showDetailedPoints = showDetailedPoints
+        self.primaryButtonStyle = primaryButtonStyle
+    }
+    
+    // MARK: - Body
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Spacing.xl) {
+                // Header section
+                VStack(spacing: Spacing.lg) {
+                    // Icon
+                    Image(systemName: page.iconName)
+                        .font(.system(size: 64, weight: .medium))
+                        .foregroundColor(.semantic(.brandPrimary))
+                        .symbolRenderingMode(.hierarchical)
+                    
+                    // Title and description
+                    VStack(spacing: Spacing.md) {
+                        Text(page.title)
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.semantic(.textPrimary))
+                            .multilineTextAlignment(.center)
+                        
+                        Text(page.description)
+                            .font(.body)
+                            .foregroundColor(.semantic(.textSecondary))
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                    }
+                }
+                .padding(.top, Spacing.xl)
+                
+                // Detailed points section
+                if showDetailedPoints && !page.detailedPoints.isEmpty {
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        ForEach(page.detailedPoints, id: \.self) { point in
+                            OnboardingFeatureRow(text: point)
+                        }
+                    }
+                    .padding(.horizontal, Spacing.md)
+                }
+                
+                Spacer(minLength: Spacing.xxl)
+                
+                // Action buttons
+                VStack(spacing: Spacing.md) {
+                    // Primary action button
+                    if let primaryTitle = page.primaryButtonTitle, 
+                       let primaryAction = onPrimaryAction {
+                        Button(action: primaryAction) {
+                            HStack(spacing: Spacing.sm) {
+                                if isLoading {
+                                    ProgressView()
+                                        .scaleEffect(0.9)
+                                        .tint(primaryButtonStyle.foregroundColor)
+                                }
+                                
+                                Text(primaryTitle)
+                                    .font(.body.weight(.semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 52)
+                        }
+                        .buttonStyle(.plain)
+                        .background(primaryButtonStyle.backgroundColor)
+                        .foregroundColor(primaryButtonStyle.foregroundColor)
+                        .cornerRadius(12)
+                        .disabled(isLoading)
+                        .opacity(isLoading ? 0.8 : 1.0)
+                    }
+                    
+                    // Skip button
+                    Button("Skip") {
+                        onSkip()
+                    }
+                    .font(.body)
+                    .foregroundColor(.semantic(.textSecondary))
+                    .padding(.vertical, Spacing.sm)
+                }
+            }
+            .padding(.horizontal, Spacing.xl)
+            .padding(.bottom, Spacing.xl)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.semantic(.bgPrimary))
+    }
+}
+
+// MARK: - Feature Row Component
+
+/// Individual feature point display row
+struct OnboardingFeatureRow: View {
+    let text: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.md) {
+            // Checkmark icon
+            Image(systemName: "checkmark.circle.fill")
+                .font(.title3)
+                .foregroundColor(.semantic(.success))
+                .symbolRenderingMode(.hierarchical)
+            
+            // Feature text
+            Text(text)
+                .font(.body)
+                .foregroundColor(.semantic(.textPrimary))
+                .lineSpacing(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, Spacing.xs)
+    }
+}
+
+// MARK: - Previews
+
+#Preview("Welcome Page") {
+    OnboardingPageView(
+        page: .welcome,
+        onPrimaryAction: {
+            print("Welcome primary action")
+        },
+        onSkip: {
+            print("Skip tapped")
+        }
+    )
+}
+
+#Preview("Privacy Page") {
+    OnboardingPageView(
+        page: .privacy,
+        onPrimaryAction: {
+            print("Privacy primary action")
+        },
+        onSkip: {
+            print("Skip tapped")
+        }
+    )
+}
+
+#Preview("Microphone Page") {
+    OnboardingPageView(
+        page: .microphone,
+        onPrimaryAction: {
+            print("Microphone primary action")
+        },
+        onSkip: {
+            print("Skip tapped")
+        },
+        isLoading: true
+    )
+}
+
+#Preview("Features Page") {
+    OnboardingPageView(
+        page: .features,
+        onPrimaryAction: {
+            print("Features primary action")
+        },
+        onSkip: {
+            print("Skip tapped")
+        }
+    )
+}
+
+#Preview("Feature Row") {
+    VStack(spacing: Spacing.sm) {
+        OnboardingFeatureRow(text: "Privacy-first voice memos")
+        OnboardingFeatureRow(text: "AI transcription & analysis")
+        OnboardingFeatureRow(text: "Background recording support")
+        OnboardingFeatureRow(text: "Beautiful native iOS design")
+    }
+    .padding()
+    .background(Color.semantic(.bgPrimary))
+}
