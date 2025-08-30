@@ -19,6 +19,14 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
             try? FileManager.default.createDirectory(at: transcriptionDir, withIntermediateDirectories: true)
         }
     }
+
+    private func metadataURL(for memoId: UUID) -> URL {
+        let dir = documentsPath.appendingPathComponent("transcriptions").appendingPathComponent("meta", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        return dir.appendingPathComponent("\(memoId.uuidString).json")
+    }
     
     private func memoIdKey(for memoId: UUID) -> String {
         return memoId.uuidString
@@ -101,13 +109,21 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
     }
     
     func getTranscriptionMetadata(for memoId: UUID) -> [String: Any]? {
+        // Prefer separate metadata file if available
+        let metaURL = metadataURL(for: memoId)
+        if FileManager.default.fileExists(atPath: metaURL.path),
+           let data = try? Data(contentsOf: metaURL),
+           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            return obj
+        }
+
+        // Fallback: derive minimal metadata from transcription file
         let url = transcriptionURL(for: memoId)
         guard FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url),
               let transcriptionData = try? JSONDecoder().decode(TranscriptionData.self, from: data) else {
             return nil
         }
-        
         return [
             "memoId": transcriptionData.memoId.uuidString,
             "state": transcriptionData.state.statusText,
@@ -117,7 +133,14 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
     }
     
     func saveTranscriptionMetadata(_ metadata: [String: Any], for memoId: UUID) {
-        print("📝 TranscriptionRepository: Saving metadata for memo \(memoId)")
+        let url = metadataURL(for: memoId)
+        do {
+            let data = try JSONSerialization.data(withJSONObject: metadata, options: [.prettyPrinted])
+            try data.write(to: url)
+            print("📝 TranscriptionRepository: Saved metadata for memo \(memoId) at \(url.lastPathComponent)")
+        } catch {
+            print("❌ TranscriptionRepository: Failed to save metadata: \(error)")
+        }
     }
     
     func clearTranscriptionCache() {

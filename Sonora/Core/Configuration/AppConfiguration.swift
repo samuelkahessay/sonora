@@ -32,6 +32,10 @@ public final class AppConfiguration {
     /// API request timeout for transcription operations (in seconds)
     /// Can be overridden with SONORA_TRANSCRIPTION_TIMEOUT environment variable
     public private(set) var transcriptionTimeoutInterval: TimeInterval = 120.0
+
+    /// Preferred transcription language hint (ISO 639-1) or nil for Auto
+    /// Can be overridden with SONORA_TRANSCRIPTION_LANGUAGE environment variable
+    public private(set) var preferredTranscriptionLanguage: String? = nil
     
     /// API request timeout for health check operations (in seconds)
     /// Can be overridden with SONORA_HEALTH_TIMEOUT environment variable
@@ -147,6 +151,12 @@ public final class AppConfiguration {
         
         // Then override with environment variables if present
         loadEnvironmentOverrides()
+
+        // Load persisted user preference for transcription language
+        if let saved = UserDefaults.standard.string(forKey: "preferredTranscriptionLanguage"), !saved.isEmpty {
+            preferredTranscriptionLanguage = saved
+            print("🔧 AppConfiguration: Loaded preferred transcription language: \(saved)")
+        }
     }
     
     private func loadBuildSpecificDefaults() {
@@ -267,6 +277,11 @@ public final class AppConfiguration {
            let timeout = TimeInterval(timeoutString) {
             transcriptionTimeoutInterval = timeout
             print("🔧 AppConfiguration: Transcription timeout overridden to \(timeout)s")
+        }
+        
+        if let lang = ProcessInfo.processInfo.environment["SONORA_TRANSCRIPTION_LANGUAGE"], !lang.isEmpty {
+            preferredTranscriptionLanguage = lang.lowercased()
+            print("🔧 AppConfiguration: Preferred transcription language overridden to \(lang)")
         }
         
         if let timeoutString = ProcessInfo.processInfo.environment["SONORA_HEALTH_TIMEOUT"],
@@ -491,6 +506,17 @@ public final class AppConfiguration {
     /// Force reload configuration (useful for testing and debugging)
     public func reloadConfiguration() {
         loadConfiguration()
+    }
+
+    /// Update user's preferred transcription language and persist
+    /// Pass nil or "auto" to reset to auto-detect
+    public func setPreferredTranscriptionLanguage(_ code: String?) {
+        let normalized: String?
+        if let c = code?.lowercased(), c != "auto", !c.isEmpty { normalized = c } else { normalized = nil }
+        preferredTranscriptionLanguage = normalized
+        if let normalized { UserDefaults.standard.set(normalized, forKey: "preferredTranscriptionLanguage") }
+        else { UserDefaults.standard.removeObject(forKey: "preferredTranscriptionLanguage") }
+        print("🔧 AppConfiguration: Preferred transcription language set to: \(preferredTranscriptionLanguage ?? "auto")")
     }
     
     /// Validate configuration consistency

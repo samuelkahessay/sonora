@@ -122,9 +122,10 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             let chunks = try await chunkManager.createChunks(from: audioURL, segments: segments)
             defer { Task { await chunkManager.cleanupChunks(chunks) } }
 
-            // Phase 3: Primary transcription with auto language detection
-            await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing with language detection...")
-            let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: nil, stageLabel: "Transcribing (auto)")
+            // Phase 3: Primary transcription honoring user language preference
+            let preferredLang = AppConfiguration.shared.preferredTranscriptionLanguage
+            await updateProgress(operationId: operationId, fraction: 0.2, step: preferredLang == nil ? "Transcribing with language detection..." : "Transcribing (\(preferredLang!.uppercased()))...")
+            let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: preferredLang, stageLabel: preferredLang == nil ? "Transcribing (auto)" : "Transcribing (\(preferredLang!))")
             let aggregator = TranscriptionAggregator()
             let primaryAgg = aggregator.aggregate(primary)
             let primaryText = primaryAgg.text
@@ -138,7 +139,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             var finalEval = primaryEval
             var finalLanguage = primaryEval.language
 
-            if qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
+            // Only trigger English fallback when using auto-detect; skip when user prefers a specific language
+            if preferredLang == nil && qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
                 await updateProgress(operationId: operationId, fraction: 0.82, step: "Low confidence. Retrying with English...")
                 do {
                     let fallback = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.82, fractionBudget: 0.12, language: "en", stageLabel: "Transcribing (en)")

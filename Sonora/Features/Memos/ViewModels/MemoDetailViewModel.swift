@@ -46,6 +46,12 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
     @Published var memoOperationSummaries: [OperationSummary] = []
     @Published var transcriptionProgressPercent: Double? = nil
     @Published var transcriptionProgressStep: String? = nil
+
+    // Language detection banner
+    @Published var detectedLanguage: String? = nil
+    @Published var showNonEnglishBanner: Bool = false
+    @Published var languageBannerMessage: String = ""
+    private var languageBannerDismissedForMemo: [UUID: Bool] = [:]
     
     // MARK: - Computed Properties
     
@@ -204,6 +210,13 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
         let newIsPlaying = memoRepository.playingMemo?.id == memo.id && memoRepository.isPlaying
         if isPlaying != newIsPlaying {
             isPlaying = newIsPlaying
+        }
+
+        // Update language detection banner from metadata if available
+        if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id),
+           let lang = meta["detectedLanguage"] as? String,
+           let score = meta["qualityScore"] as? Double {
+            updateLanguageDetection(language: lang, qualityScore: score)
         }
     }
     
@@ -383,6 +396,13 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
         print("📝 MemoDetailViewModel: View appeared for memo: \(memo.filename)")
         updateTranscriptionState(for: memo)
         setupPlayingState(for: memo)
+        
+        // Attempt to load language metadata to show banner if needed
+        if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id),
+           let lang = meta["detectedLanguage"] as? String,
+           let score = meta["qualityScore"] as? Double {
+            updateLanguageDetection(language: lang, qualityScore: score)
+        }
     }
     
     func onViewDisappear() {
@@ -417,6 +437,12 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate {
         await MainActor.run {
             self.transcriptionProgressPercent = nil
             self.transcriptionProgressStep = nil
+            // Refresh language metadata and banner on completion
+            if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id),
+               let lang = meta["detectedLanguage"] as? String,
+               let score = meta["qualityScore"] as? Double {
+                self.updateLanguageDetection(language: lang, qualityScore: score)
+            }
         }
     }
 
@@ -463,5 +489,32 @@ extension MemoDetailViewModel {
         - selectedAnalysisMode: \(selectedAnalysisMode?.displayName ?? "none")
         - analysisError: \(analysisError ?? "none")
         """
+    }
+
+    // MARK: - Language Banner API
+    func updateLanguageDetection(language: String?, qualityScore: Double) {
+        detectedLanguage = language
+        guard let memo = currentMemo else { return }
+        if languageBannerDismissedForMemo[memo.id] == true {
+            showNonEnglishBanner = false
+            return
+        }
+
+        if let lang = language, lang.lowercased() != "en", qualityScore > 0.6 {
+            showNonEnglishBanner = true
+            languageBannerMessage = formatLanguageBannerMessage(for: lang)
+        } else {
+            showNonEnglishBanner = false
+        }
+    }
+
+    private func formatLanguageBannerMessage(for languageCode: String) -> String {
+        let languageName = Locale.current.localizedString(forLanguageCode: languageCode.lowercased()) ?? languageCode.uppercased()
+        return "Detected language: \(languageName). Result may be less accurate."
+    }
+
+    func dismissLanguageBanner() {
+        showNonEnglishBanner = false
+        if let memo = currentMemo { languageBannerDismissedForMemo[memo.id] = true }
     }
 }

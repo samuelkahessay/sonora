@@ -10,6 +10,18 @@ struct MemoDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                // Language detection banner
+                if viewModel.showNonEnglishBanner {
+                    LanguageDetectionBanner(
+                        message: viewModel.languageBannerMessage,
+                        onDismiss: viewModel.dismissLanguageBanner
+                    )
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .animation(.easeInOut(duration: 0.3), value: viewModel.showNonEnglishBanner)
+                }
+
                 // Header Info
                 VStack(alignment: .leading, spacing: 8) {
                     Text(memo.displayName)
