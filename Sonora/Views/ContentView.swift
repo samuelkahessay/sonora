@@ -12,7 +12,7 @@ struct ContentView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            RecordView()
+            RecordingView()
                 .tabItem {
                     Label("Record", systemImage: selectedTab == 0 ? "mic.circle.fill" : "mic.circle")
                 }
@@ -39,4 +39,3 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
-

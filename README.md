@@ -130,17 +130,62 @@ Sonora/
     └── TranscriptionState.swift   # Transcription state enum
 ```
 
+### Features Organization
+
+Presentation code is organized by feature for clarity and autonomy:
+
+```
+Sonora/Features/
+  Recording/
+    UI/                # SwiftUI views for recording
+    ViewModels/        # RecordingViewModel
+  Memos/
+    UI/                # MemosView, MemoDetailView
+    ViewModels/        # MemoListViewModel, MemoDetailViewModel
+  Analysis/
+    UI/                # AnalysisSectionView, AnalysisResultsView
+    ViewModels/        # AnalysisViewModel (coordination seam)
+  Operations/
+    ViewModels/        # OperationStatusViewModel
+
+Sonora/Views/Components/  # Truly shared UI components (e.g., TranscriptionStatusView)
+```
+
+Guidelines:
+- Features contain only Views and ViewModels. Put Use Cases in `Domain/UseCases` and data access in `Data/*`.
+- ViewModels receive protocol dependencies (constructor injection); DI happens in `Core/DI/DIContainer`.
+- Avoid importing one feature into another. Share UI via `Views/Components` and communicate via `EventBus` + repository state.
+- Register long work with `OperationCoordinator` and surface status via ViewModels.
+
 ### Quick Navigation Guide
 
 | **Component Type** | **Location** | **Purpose** |
 |-------------------|--------------|-------------|
 | **Business Logic** | `Domain/UseCases/` | Single-responsibility operations |
-| **UI State Management** | `Presentation/ViewModels/` | ObservableObject coordinators |
+| **UI State Management** | `Features/*/ViewModels/` | Feature ViewModels (MVVM) |
 | **Data Access** | `Data/Repositories/` | Protocol implementations |
 | **External APIs** | `Data/Services/` | Network & system services |
 | **Dependency Injection** | `Core/DI/DIContainer.swift` | Service coordination |
 | **Operation Management** | `Core/Concurrency/` | Thread-safe operation tracking |
 | **Event System** | `Core/Events/` | Reactive architecture components |
+| **Shared UI** | `Views/Components/` | Feature-agnostic components |
+
+### Adding a New Feature (Template)
+
+```
+Features/YourFeature/
+  UI/
+    YourFeatureView.swift
+  ViewModels/
+    YourFeatureViewModel.swift
+```
+
+Steps:
+- Define/extend Domain protocols + Use Case under `Domain/UseCases/*`.
+- Implement/extend repository/service under `Data/*` if needed.
+- Create Feature ViewModel, inject protocols, expose minimal UI state.
+- Build SwiftUI views in `Features/YourFeature/UI` using native components.
+- Register long-running work with `OperationCoordinator` and publish `AppEvent` for cross-feature reactions.
 | **Testing Documentation** | `docs/testing/` | Test guides & procedures |
 
 ## 🎯 Development Philosophy

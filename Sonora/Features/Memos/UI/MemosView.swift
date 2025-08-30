@@ -1,5 +1,5 @@
 //
-//  MemosView.swift
+//  MemosView.swift (moved to Features/Memos/UI)
 //  Sonora
 //
 //  Created by Samuel Kahessay on 2025-08-23.

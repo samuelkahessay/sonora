@@ -1,5 +1,5 @@
 //
-//  RecordView.swift
+//  RecordingView.swift
 //  Sonora
 //
 //  Created by Samuel Kahessay on 2025-08-23.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct RecordView: View {
+struct RecordingView: View {
     @StateObject private var viewModel = RecordingViewModel()
     
     var body: some View {
@@ -138,4 +138,3 @@ struct RecordView: View {
         }
     }
 }
-

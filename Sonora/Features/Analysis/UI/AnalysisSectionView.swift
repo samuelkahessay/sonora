@@ -1,3 +1,4 @@
+// Moved to Features/Analysis/UI
 import SwiftUI
 
 struct AnalysisSectionView: View {

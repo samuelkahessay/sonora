@@ -1,3 +1,4 @@
+// Moved to Features/Operations/ViewModels
 import Foundation
 import Combine
 import SwiftUI

@@ -28,6 +28,38 @@ UI Implementation:
 - **System Theming**: Automatic light/dark via `ThemeManager` and system colors
 - **Recording Guardrails**: 60-second limit with 10s warning countdown; override via `SONORA_MAX_RECORDING_DURATION` in `AppConfiguration`
 
+## Feature-Based Organization
+
+The Presentation layer is organized by feature for clarity and scalability. Each feature owns its UI and ViewModels; Domain and Data remain centralized.
+
+Folder layout:
+
+```
+Sonora/Features/
+  Recording/
+    UI/                 # SwiftUI views
+    ViewModels/         # Feature ViewModels (MVVM)
+  Memos/
+    UI/
+    ViewModels/
+  Analysis/
+    UI/
+    ViewModels/
+  Operations/
+    ViewModels/
+
+Sonora/Views/           # Truly shared UI components (cross-feature)
+  Components/
+```
+
+Best practices:
+- Keep features presentation-only: Views + ViewModels. Put new Use Cases in `Domain/UseCases/*` and Repositories/Services in `Data/*`.
+- Inject only protocols into ViewModels. Resolve implementations in `DIContainer`.
+- Do not import views or view models from another feature. Share UI via `Views/Components` or Core UI modules.
+- Cross-feature communication should use `AppEvent` via `EventBus` and repository state, not direct feature-to-feature calls.
+- Long-running work must be registered with `OperationCoordinator` and surfaced via ViewModels.
+- Use native SwiftUI components and system semantic colors. Respect `ThemeManager`.
+
 ## Layer Details
 
 Presentation (MVVM)
@@ -69,6 +101,13 @@ Core
 - ViewModels and Use Cases receive protocol types via constructor injection.
 - Repositories and services are composed in `DIContainer`; favor `OperationCoordinatorProtocol` and other protocols over concrete types.
 
+Feature dependency rules:
+- Features → Domain: allowed (use case protocols, domain models)
+- Features → Data: allowed through protocols only (via use cases or repositories injected from DIContainer); avoid referencing implementations
+- Features → Core: allowed (DI, Events, Logging, Concurrency, Theme)
+- Feature A ↔ Feature B: not allowed; communicate via events or shared repositories/state
+- Views/Components: can be imported by any feature; must remain UI-only and generic
+
 ## Concurrency & Operations
 
 - Long-running work (recording, transcription, analysis) is tracked by `OperationCoordinator` with conflict detection.
@@ -80,6 +119,11 @@ Core
 - `EventBus` publishes `AppEvent` (e.g., `memoCreated`, `recordingStarted/Stopped`, `transcriptionCompleted`, `analysisCompleted`).
 - Handlers (`LiveActivityEventHandler`, `MemoEventHandler`, `CalendarEventHandler`, `RemindersEventHandler`) react without coupling to feature code.
 - `EventHandlerRegistry` wires handlers at startup.
+
+Cross‑feature communication:
+- Publish `AppEvent` from Use Cases when other parts of the app should react.
+- Handle `AppEvent` in Core event handlers to update repositories or trigger side effects.
+- Features then react to repository state via Combine publishers (ViewModels subscribe), maintaining decoupling.
 
 ## Current Status
 
@@ -131,7 +175,8 @@ Core
 
 ## Appendix: File Map (Key Paths)
 
-- Core: `Sonora/Core/*` (DI, Events, Concurrency, Logging, Configuration)
+- Core: `Sonora/Core/*` (DI, Events, Concurrency, Logging, Configuration, UI/DesignSystem)
 - Domain: `Sonora/Domain/UseCases/*`, `Sonora/Domain/Protocols/*`, `Sonora/Domain/Models/*`
 - Data: `Sonora/Data/Repositories/*`, `Sonora/Data/Services/*`
-- Presentation: `Sonora/Presentation/ViewModels/*`, `Sonora/Views/*`
+- Features: `Sonora/Features/<FeatureName>/(UI|ViewModels)/*`
+- Shared UI: `Sonora/Views/Components/*` (feature-agnostic components)
