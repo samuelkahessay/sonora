@@ -118,7 +118,7 @@ struct RecordingView: View {
                                 HStack(spacing: 8) {
                                     Circle()
                                         .fill(Color.semantic(.error))
-                                        .frame(width: 16, height: 16)
+                                        .frame(width: IconSize.medium.rawValue, height: IconSize.medium.rawValue)
                                         .accessibilityHidden(true)
                                         .scaleEffect(1.0)
                                         .animation(.easeInOut(duration: 1.0).repeatForever(), value: viewModel.isRecording)

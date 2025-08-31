@@ -6,6 +6,7 @@ struct NotificationBanner: View {
     let message: String
     let onPrimaryAction: (() -> Void)?
     let onDismiss: () -> Void
+    let compact: Bool
     
     /// Banner types with consistent styling
     enum BannerType {
@@ -57,70 +58,89 @@ struct NotificationBanner: View {
     init(
         type: BannerType,
         message: String,
+        compact: Bool = false,
         onPrimaryAction: (() -> Void)? = nil,
         onDismiss: @escaping () -> Void
     ) {
         self.type = type
         self.message = message
+        self.compact = compact
         self.onPrimaryAction = onPrimaryAction
         self.onDismiss = onDismiss
     }
     
     var body: some View {
-        HStack(spacing: Spacing.md) {
+        HStack(spacing: compact ? Spacing.sm : Spacing.md) {
             // Icon
             Image(systemName: type.icon)
-                .font(.title3.weight(.medium))
+                .font(compact ? .caption.weight(.medium) : .title3.weight(.medium))
                 .foregroundColor(type.iconColor)
                 .accessibilityHidden(true)
             
             // Message content
             Text(message)
-                .font(.subheadline)
-                .foregroundColor(.semantic(.textPrimary))
-                .lineLimit(3)
+                .font(compact ? .caption : .subheadline)
+                .foregroundColor(compact ? .semantic(.textSecondary) : .semantic(.textPrimary))
+                .lineLimit(compact ? 2 : 3)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityLabel(message)
                 .accessibilityAddTraits(.isStaticText)
             
             // Action buttons
-            HStack(spacing: Spacing.xs) {
-                // Primary action button (if provided)
-                if let primaryAction = onPrimaryAction {
-                    Button("Retry", action: {
+            if !compact {
+                HStack(spacing: Spacing.xs) {
+                    // Primary action button (if provided)
+                    if let primaryAction = onPrimaryAction {
+                        Button("Retry", action: {
+                            HapticManager.shared.playSelection()
+                            primaryAction()
+                        })
+                        .font(.caption.weight(.medium))
+                        .buttonStyle(.bordered)
+                        .controlSize(.mini)
+                        .accessibilityLabel("Retry")
+                        .accessibilityHint("Double tap to retry the action")
+                    }
+                    
+                    // Dismiss button
+                    Button(action: {
                         HapticManager.shared.playSelection()
-                        primaryAction()
-                    })
-                    .font(.caption.weight(.medium))
+                        onDismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.caption.weight(.medium))
+                    }
                     .buttonStyle(.bordered)
                     .controlSize(.mini)
-                    .accessibilityLabel("Retry")
-                    .accessibilityHint("Double tap to retry the action")
+                    .foregroundColor(.semantic(.textSecondary))
+                    .accessibilityLabel("Dismiss")
+                    .accessibilityHint("Double tap to dismiss this notification")
                 }
-                
-                // Dismiss button
+            } else {
+                // Compact dismiss button
                 Button(action: {
                     HapticManager.shared.playSelection()
                     onDismiss()
                 }) {
                     Image(systemName: "xmark")
-                        .font(.caption.weight(.medium))
+                        .font(.caption2.weight(.medium))
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.mini)
                 .foregroundColor(.semantic(.textSecondary))
                 .accessibilityLabel("Dismiss")
-                .accessibilityHint("Double tap to dismiss this notification")
             }
         }
-        .padding(Spacing.md)
+        .padding(.horizontal, compact ? Spacing.md : Spacing.md)
+        .padding(.vertical, compact ? Spacing.sm : Spacing.md)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: compact ? 8 : 12)
                 .fill(type.backgroundColor)
-                .stroke(type.borderColor, lineWidth: 1)
+                .stroke(type.borderColor, lineWidth: compact ? 0.5 : 1)
         )
-        .padding(.horizontal, Spacing.md)
-        .accessibilityElement(children: .contain)
+        .if(!compact) { view in
+            view.padding(.horizontal, Spacing.md)
+        }
+        .accessibilityElement(children: compact ? .combine : .contain)
+        .accessibilityLabel(compact ? message : "")
     }
 }
 
@@ -130,11 +150,13 @@ extension NotificationBanner {
     /// Language detection banner
     static func languageDetection(
         message: String,
+        compact: Bool = false,
         onDismiss: @escaping () -> Void
     ) -> NotificationBanner {
         NotificationBanner(
             type: .language,
             message: message,
+            compact: compact,
             onDismiss: onDismiss
         )
     }
@@ -142,12 +164,14 @@ extension NotificationBanner {
     /// Error banner with retry option
     static func error(
         _ error: SonoraError,
+        compact: Bool = false,
         onRetry: (() -> Void)? = nil,
         onDismiss: @escaping () -> Void
     ) -> NotificationBanner {
         NotificationBanner(
             type: .error,
             message: error.errorDescription ?? "An error occurred",
+            compact: compact,
             onPrimaryAction: error.isRetryable ? onRetry : nil,
             onDismiss: onDismiss
         )
@@ -155,12 +179,14 @@ extension NotificationBanner {
     
     /// Network error banner
     static func networkError(
+        compact: Bool = false,
         onRetry: @escaping () -> Void,
         onDismiss: @escaping () -> Void
     ) -> NotificationBanner {
         NotificationBanner(
             type: .warning,
             message: "Check your internet connection and try again",
+            compact: compact,
             onPrimaryAction: onRetry,
             onDismiss: onDismiss
         )
@@ -169,11 +195,13 @@ extension NotificationBanner {
     /// Success banner
     static func success(
         message: String,
+        compact: Bool = false,
         onDismiss: @escaping () -> Void
     ) -> NotificationBanner {
         NotificationBanner(
             type: .success,
             message: message,
+            compact: compact,
             onDismiss: onDismiss
         )
     }
@@ -181,71 +209,20 @@ extension NotificationBanner {
     /// Info banner
     static func info(
         message: String,
+        compact: Bool = false,
         onDismiss: @escaping () -> Void
     ) -> NotificationBanner {
         NotificationBanner(
             type: .info,
             message: message,
+            compact: compact,
             onDismiss: onDismiss
         )
     }
 }
 
-// MARK: - Compact Banner Variant
-
-/// Compact banner for minimal space usage
-struct CompactNotificationBanner: View {
-    let type: NotificationBanner.BannerType
-    let message: String
-    let onDismiss: () -> Void
-    
-    init(
-        type: NotificationBanner.BannerType,
-        message: String,
-        onDismiss: @escaping () -> Void
-    ) {
-        self.type = type
-        self.message = message
-        self.onDismiss = onDismiss
-    }
-    
-    var body: some View {
-        HStack(spacing: Spacing.sm) {
-            // Icon
-            Image(systemName: type.icon)
-                .font(.caption.weight(.medium))
-                .foregroundColor(type.iconColor)
-                .accessibilityHidden(true)
-            
-            // Message
-            Text(message)
-                .font(.caption)
-                .foregroundColor(.semantic(.textSecondary))
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            // Dismiss button
-            Button(action: {
-                HapticManager.shared.playSelection()
-                onDismiss()
-            }) {
-                Image(systemName: "xmark")
-                    .font(.caption2.weight(.medium))
-            }
-            .foregroundColor(.semantic(.textSecondary))
-            .accessibilityLabel("Dismiss")
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(type.backgroundColor)
-                .stroke(type.borderColor, lineWidth: 0.5)
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(message)
-    }
-}
+// MARK: - Component Consolidation Complete
+// CompactNotificationBanner has been successfully merged into NotificationBanner
 
 // MARK: - Previews
 
@@ -281,16 +258,18 @@ struct CompactNotificationBanner: View {
 
 #Preview("Compact Banners") {
     VStack(spacing: Spacing.md) {
-        CompactNotificationBanner(
+        NotificationBanner(
             type: .warning,
-            message: "Low battery may affect recording quality"
+            message: "Low battery may affect recording quality",
+            compact: true
         ) {
             print("Compact warning dismissed")
         }
         
-        CompactNotificationBanner(
+        NotificationBanner(
             type: .success,
-            message: "Saved to Files"
+            message: "Saved to Files",
+            compact: true
         ) {
             print("Compact success dismissed")
         }

@@ -43,7 +43,7 @@ struct OnboardingSectionView: View {
                     }
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(PlainButtonStyle())
+                .buttonStyle(.plain)
                 
                 Divider()
                     .padding(.vertical, Spacing.xs)

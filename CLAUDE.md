@@ -285,6 +285,7 @@ launch_app_sim({ simulatorName: 'iPhone 16', bundleId: 'com.samuelkahessay.Sonor
 - Presentation
   - ViewModels: `RecordingViewModel`, `MemoListViewModel`, `MemoDetailViewModel`, `OperationStatusViewModel`
   - Views/Components: `MemosView`, `MemoDetailView`, `TranscriptionStatusView`, `AnalysisResultsView`
+  - UI Components: `StatusIndicator`, `NotificationBanner`, `UnifiedStateView`, `AIBadge`
 
 #### **Dependency Injection Excellence**
 - ✅ **Protocol-First**: All service access returns abstractions

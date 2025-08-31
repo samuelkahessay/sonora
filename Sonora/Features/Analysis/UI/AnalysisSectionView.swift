@@ -47,7 +47,7 @@ struct AnalysisSectionView: View {
                                 .stroke(Color.semantic(.brandPrimary).opacity(0.2), lineWidth: 1)
                         )
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(.plain)
                     .disabled(viewModel.isAnalyzing)
                     .opacity(viewModel.isAnalyzing ? 0.6 : 1.0)
                     .accessibilityLabel("\(mode.displayName) analysis")

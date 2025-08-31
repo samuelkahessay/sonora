@@ -96,7 +96,7 @@ struct TranscriptionActionButton: View {
                     .fill((state.isFailed ? Color.semantic(.warning) : Color.semantic(.brandPrimary)).opacity(0.1))
             )
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
         .disabled(state.isInProgress)
     }
 }

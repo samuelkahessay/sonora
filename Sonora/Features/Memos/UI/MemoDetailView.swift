@@ -139,7 +139,7 @@ struct MemoDetailView: View {
                         Spacer()
                     }
                 }
-                .buttonStyle(PlainButtonStyle())
+                .buttonStyle(.plain)
                 .accessibilityLabel(viewModel.isPlaying ? "Pause \(memo.displayName)" : "Play \(memo.displayName)")
                 .accessibilityHint("Double tap to \(viewModel.isPlaying ? "pause" : "play") this memo")
                 .accessibilityFocused($focusedElement, equals: .playButton)
