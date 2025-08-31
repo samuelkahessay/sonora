@@ -29,16 +29,46 @@ struct MemosView: View {
                         // For now, just refresh to show user something happened
                         viewModel.refreshMemos()
                     }
+                    .background(Color.semantic(.bgSecondary))
                     .accessibilityLabel("No memos yet. Start recording to see your audio memos here.")
                 } else {
                     List {
                         ForEach(viewModel.memos) { memo in
                             NavigationLink(value: memo) {
-                                MemoRowView(memo: memo, viewModel: viewModel)
+                                MemoCardView(memo: memo, viewModel: viewModel)
                             }
-                            .accessibilityLabel(getMemoAccessibilityLabel(for: memo))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(
+                                top: Spacing.sm,
+                                leading: Spacing.md,
+                                bottom: Spacing.sm,
+                                trailing: Spacing.md
+                            ))
                             .accessibilityHint("Double tap to open memo details, swipe for more actions")
-                            .swipeActions(allowsFullSwipe: true) {
+                            .swipeActions(allowsFullSwipe: false) {
+                                // Transcription actions
+                                if viewModel.getTranscriptionState(for: memo).isNotStarted {
+                                    Button {
+                                        HapticManager.shared.playSelection()
+                                        viewModel.startTranscription(for: memo)
+                                    } label: {
+                                        Label("Transcribe", systemImage: "text.quote")
+                                    }
+                                    .tint(.semantic(.brandPrimary))
+                                    .accessibilityLabel("Transcribe \(memo.displayName)")
+                                } else if viewModel.getTranscriptionState(for: memo).isFailed {
+                                    Button {
+                                        HapticManager.shared.playSelection()
+                                        viewModel.retryTranscription(for: memo)
+                                    } label: {
+                                        Label("Retry", systemImage: "arrow.clockwise")
+                                    }
+                                    .tint(.semantic(.warning))
+                                    .accessibilityLabel("Retry transcription for \(memo.displayName)")
+                                }
+                                
+                                // Delete action
                                 Button(role: .destructive) {
                                     HapticManager.shared.playDeletionFeedback()
                                     if let idx = viewModel.memos.firstIndex(where: { $0.id == memo.id }) {
@@ -57,7 +87,9 @@ struct MemosView: View {
                         }
                     }
                     .accessibilityLabel("Memos list")
-                    .listStyle(.insetGrouped)
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.semantic(.bgSecondary))
                     .refreshable { viewModel.refreshMemos() }
                 }
             }
@@ -67,14 +99,19 @@ struct MemosView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Refresh") { 
+                    Button {
                         HapticManager.shared.playSelection()
                         viewModel.loadMemos()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.body.weight(.medium))
                     }
                     .accessibilityLabel("Refresh memos")
                     .accessibilityHint("Double tap to reload the list of memos")
                 }
             }
+            .toolbarBackground(Color.semantic(.bgPrimary).opacity(0.8), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .errorAlert($viewModel.error) {
                 viewModel.retryLastOperation()
             }
@@ -95,14 +132,123 @@ struct MemosView: View {
     }
 }
 
-struct MemoRowView: View {
+/// Modern memo card component following native iOS design patterns
+struct MemoCardView: View {
     let memo: Memo
     let viewModel: MemoListViewModel
     @State private var transcriptionState: TranscriptionState = .notStarted
     
-    // MARK: - Accessibility Helpers
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Main content area
+            HStack(spacing: Spacing.md) {
+                // Play button - primary action
+                playButton
+                
+                // Content area
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    // Title
+                    Text(memo.displayName)
+                        .font(.system(.body, design: .default, weight: .medium))
+                        .foregroundColor(.semantic(.textPrimary))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    
+                    // Metadata row
+                    HStack(spacing: Spacing.sm) {
+                        // Duration
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .font(.system(.caption2, weight: .medium))
+                            Text(memo.durationString)
+                                .monospacedDigit()
+                        }
+                        .font(.caption)
+                        .foregroundColor(.semantic(.textSecondary))
+                        
+                        // Date
+                        Text(RelativeDateTimeFormatter().localizedString(for: memo.creationDate, relativeTo: Date()))
+                            .font(.caption)
+                            .foregroundColor(.semantic(.textSecondary))
+                        
+                        Spacer()
+                        
+                        // Transcription status indicator
+                        transcriptionStatusIndicator
+                    }
+                }
+            }
+            .padding(Spacing.md)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.semantic(.bgPrimary))
+                .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
+        )
+        .onAppear { updateTranscriptionState() }
+        .onReceive(viewModel.$transcriptionStates) { _ in updateTranscriptionState() }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(getMemoAccessibilityLabel())
+    }
     
-    private func getPlayButtonAccessibilityLabel(for memo: Memo) -> String {
+    // MARK: - Subviews
+    
+    @ViewBuilder
+    private var playButton: some View {
+        Button(action: { 
+            HapticManager.shared.playSelection()
+            viewModel.playMemo(memo)
+        }) {
+            Image(systemName: viewModel.playButtonIcon(for: memo))
+                .font(.title2.weight(.medium))
+                .foregroundColor(.semantic(.brandPrimary))
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.bordered)
+        .tint(.semantic(.brandPrimary))
+        .accessibilityLabel(getPlayButtonAccessibilityLabel())
+        .accessibilityHint("Double tap to \(viewModel.isMemoPaying(memo) ? "pause" : "play") this memo")
+        .accessibilityAddTraits(.startsMediaSession)
+    }
+    
+    @ViewBuilder
+    private var transcriptionStatusIndicator: some View {
+        switch transcriptionState {
+        case .completed:
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.semantic(.success))
+                .font(.caption.weight(.medium))
+                .accessibilityLabel("Transcribed")
+                .accessibilityAddTraits(.isStaticText)
+            
+        case .inProgress:
+            LoadingIndicator(size: .small)
+                .accessibilityLabel("Transcribing")
+                .accessibilityAddTraits(.isStaticText)
+            
+        case .failed:
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.semantic(.warning))
+                .font(.caption.weight(.medium))
+                .accessibilityLabel("Transcription failed")
+                .accessibilityAddTraits(.isStaticText)
+            
+        case .notStarted:
+            Image(systemName: "text.quote")
+                .foregroundColor(.semantic(.textSecondary))
+                .font(.caption.weight(.medium))
+                .accessibilityLabel("Not transcribed")
+                .accessibilityAddTraits(.isStaticText)
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func updateTranscriptionState() {
+        transcriptionState = viewModel.getTranscriptionState(for: memo)
+    }
+    
+    private func getPlayButtonAccessibilityLabel() -> String {
         if viewModel.isMemoPaying(memo) {
             return "Pause \(memo.displayName)"
         } else {
@@ -110,107 +256,26 @@ struct MemoRowView: View {
         }
     }
     
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 12) {
-                Button(action: { 
-                    HapticManager.shared.playSelection()
-                    viewModel.playMemo(memo)
-                }) {
-                    Image(systemName: viewModel.playButtonIcon(for: memo))
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .frame(minWidth: 44, minHeight: 44)
-                }
-                .buttonStyle(.bordered)
-                .accessibilityLabel(getPlayButtonAccessibilityLabel(for: memo))
-                .accessibilityHint("Double tap to \(viewModel.isMemoPaying(memo) ? "pause" : "play") this memo")
-                .accessibilityAddTraits(.startsMediaSession)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(memo.displayName)
-                        .font(.headline)
-                        .lineLimit(2)
-                    HStack(spacing: 8) {
-                        Text(memo.filename)
-                            .font(.caption)
-                            .foregroundColor(.semantic(.textSecondary))
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer()
-                        Text(memo.durationString)
-                            .font(.caption)
-                            .foregroundColor(.semantic(.textSecondary))
-                            .monospacedDigit()
-                    }
-                }
-            }
-            
-            HStack {
-                TranscriptionStatusView(state: transcriptionState, compact: true)
-                Spacer()
-                if transcriptionState.isFailed {
-                    Button("Retry") { 
-                        HapticManager.shared.playSelection()
-                        viewModel.retryTranscription(for: memo)
-                    }
-                    .buttonStyle(.bordered)
-                    .accessibilityLabel("Retry transcription")
-                    .accessibilityHint("Double tap to retry failed transcription")
-                } else if transcriptionState.isInProgress {
-                    HStack(spacing: 6) {
-                        LoadingIndicator(size: .small)
-                        Text("Processing...")
-                            .font(.caption)
-                            .foregroundColor(.semantic(.info))
-                    }
-                    .accessibilityLabel("Transcription in progress")
-                    .accessibilityAddTraits(.updatesFrequently)
-                } else if transcriptionState.isNotStarted {
-                    Button("Transcribe") { 
-                        HapticManager.shared.playSelection()
-                        viewModel.startTranscription(for: memo)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityLabel("Start transcription")
-                    .accessibilityHint("Double tap to transcribe this memo using AI")
-                }
-            }
-            .font(.caption)
-        }
-        .onAppear { updateTranscriptionState() }
-        .accessibilityElement(children: .combine)
-        .onReceive(viewModel.$transcriptionStates) { _ in updateTranscriptionState() }
-    }
-    
-    private func updateTranscriptionState() {
-        transcriptionState = viewModel.getTranscriptionState(for: memo)
-    }
-}
-
-
-// MARK: - MemosView Accessibility Extensions
-
-extension MemosView {
-    
-    private func getMemoAccessibilityLabel(for memo: Memo) -> String {
+    private func getMemoAccessibilityLabel() -> String {
         var components: [String] = []
         
         // Add memo name
         components.append(memo.displayName)
         
-        // Add duration
+        // Add duration and date
         components.append("Duration: \(memo.durationString)")
+        let relativeDateFormatter = RelativeDateTimeFormatter()
+        components.append("Created \(relativeDateFormatter.localizedString(for: memo.creationDate, relativeTo: Date()))")
         
         // Add transcription status
-        let transcriptionState = viewModel.getTranscriptionState(for: memo)
-        if transcriptionState.isCompleted {
+        switch transcriptionState {
+        case .completed:
             components.append("Transcribed")
-        } else if transcriptionState.isInProgress {
-            components.append("Transcription in progress")
-        } else if transcriptionState.isFailed {
+        case .inProgress:
+            components.append("Transcribing")
+        case .failed:
             components.append("Transcription failed")
-        } else {
+        case .notStarted:
             components.append("Not transcribed")
         }
         
@@ -222,5 +287,10 @@ extension MemosView {
         return components.joined(separator: ", ")
     }
 }
+
+
+// MARK: - MemosView Extensions
+
+// Accessibility helpers have been moved to MemoCardView for better encapsulation
 
 #Preview { MemosView(popToRoot: nil) }

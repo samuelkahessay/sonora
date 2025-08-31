@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "Icon-iOS-Dark-1024x1024@1x.png",
+      "filename" : "iOS 18 Icon.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "Icon-iOS-Dark-1024x1024@1x 1.png",
+      "filename" : "iOS 18 Icon 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "Icon-iOS-TintedDark-1024x1024@1x.png",
+      "filename" : "iOS 18 Icon 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
