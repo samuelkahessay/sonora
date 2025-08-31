@@ -494,10 +494,10 @@ public enum ServiceErrorSeverity: String, CaseIterable, Comparable {
     
     public var iconName: String {
         switch self {
-        case .info: return "info.circle"
-        case .warning: return "exclamationmark.triangle"
-        case .error: return "xmark.circle"
-        case .critical: return "exclamationmark.octagon"
+        case .info: return "info.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .error: return "xmark.circle.fill"
+        case .critical: return "exclamationmark.octagon.fill"
         }
     }
     

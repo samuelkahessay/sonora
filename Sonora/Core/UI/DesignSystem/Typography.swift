@@ -112,3 +112,62 @@ extension Typography {
         }
     }
 }
+
+// MARK: - Icon Sizing Standards
+
+/// Standardized icon sizes for consistent UI across the app
+/// Follows iOS accessibility guidelines with minimum 24pt for interactive elements
+enum IconSize: CGFloat, CaseIterable {
+    /// Small icons for compact UI elements (16pt)
+    case small = 16
+    /// Standard icons for most UI elements (24pt) - Accessibility minimum
+    case standard = 24  
+    /// Medium icons for section headers and important elements (28pt)
+    case medium = 28
+    /// Large icons for primary actions and state displays (32pt)
+    case large = 32
+    /// Extra large icons for main UI elements and hero states (48pt)
+    case extraLarge = 48
+    
+    /// Font equivalent for SF Symbols
+    var font: Font {
+        .system(size: rawValue, weight: .medium)
+    }
+    
+    /// Frame size for SwiftUI views
+    var frame: CGSize {
+        CGSize(width: rawValue, height: rawValue)
+    }
+}
+
+/// Icon style modifiers for consistent appearance
+extension Image {
+    /// Apply standard icon sizing and styling
+    func iconStyle(_ size: IconSize, color: Color = .primary) -> some View {
+        self
+            .font(size.font)
+            .foregroundColor(color)
+            .frame(width: size.rawValue, height: size.rawValue)
+            .accessibilityHidden(false) // Ensure icons are accessible
+    }
+}
+
+// MARK: - Font Weight Standards
+
+/// Standardized font weights for consistent typography
+extension View {
+    /// Apply standard font weight for status indicators
+    func statusIndicatorStyle() -> some View {
+        self.fontWeight(.medium)
+    }
+    
+    /// Apply standard font weight for secondary text
+    func secondaryTextStyle() -> some View {
+        self.fontWeight(.regular)
+    }
+    
+    /// Apply standard font weight for UI labels
+    func labelStyle() -> some View {
+        self.fontWeight(.medium)
+    }
+}

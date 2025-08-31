@@ -237,7 +237,7 @@ struct TodosResultView: View {
             if data.todos.isEmpty {
                 UnifiedStateView(
                     state: .empty(
-                        icon: "checkmark.circle",
+                        icon: "checkmark.circle.fill",
                         title: "No Action Items",
                         subtitle: "No actionable tasks were found in this transcription"
                     )

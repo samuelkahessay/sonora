@@ -17,7 +17,7 @@ public enum AnalysisMode: String, Codable, CaseIterable {
         case .tldr: return "text.quote"
         case .analysis: return "magnifyingglass.circle"
         case .themes: return "tag.circle"
-        case .todos: return "checkmark.circle"
+        case .todos: return "checkmark.circle.fill"
         }
     }
 }

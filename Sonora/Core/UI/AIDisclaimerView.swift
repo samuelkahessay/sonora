@@ -63,9 +63,9 @@ struct AIDisclaimerView: View {
         var iconName: String {
             switch self {
             case .compact:
-                return "info.circle"
+                return "info.circle.fill"
             case .detailed:
-                return "exclamationmark.triangle"
+                return "exclamationmark.triangle.fill"
             case .inline:
                 return "sparkles"
             }

@@ -160,12 +160,16 @@ struct MemoDetailView: View {
                     .fontWeight(.semibold)
                 AIBadge()
                 Spacer()
-                if viewModel.transcriptionState.isInProgress {
-                    LoadingIndicator(size: .small)
-                } else if viewModel.transcriptionState.isFailed {
+                if viewModel.transcriptionState.isFailed {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.semantic(.warning))
-                        .font(.caption)
+                        .font(.body)
+                        .accessibilityLabel("Transcription failed")
+                } else if viewModel.transcriptionState.isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.semantic(.success))
+                        .font(.body)
+                        .accessibilityLabel("Transcription completed")
                 }
             }
             transcriptionStateView
@@ -197,17 +201,25 @@ struct MemoDetailView: View {
             .background(Color.semantic(.fillSecondary))
             .cornerRadius(8)
         case .inProgress:
-            VStack(spacing: 12) {
-                if let pct = viewModel.transcriptionProgressPercent {
-                    ProgressView(value: pct)
-                        .scaleEffect(1.2)
-                        .accessibilityValue("\(Int(pct * 100)) percent complete")
-                } else {
-                    LoadingIndicator(size: .large)
-                        .accessibilityLabel("Transcription in progress")
+            VStack(spacing: 16) {
+                // Single unified progress display
+                VStack(spacing: 8) {
+                    if let pct = viewModel.transcriptionProgressPercent {
+                        ProgressView(value: pct)
+                            .tint(.semantic(.brandPrimary))
+                            .background(.secondary.opacity(0.2))
+                            .accessibilityValue("\(Int(pct * 100)) percent complete")
+                    } else {
+                        ProgressView()
+                            .tint(.semantic(.brandPrimary))
+                            .scaleEffect(1.0)
+                            .accessibilityLabel("Transcription in progress")
+                    }
                 }
                 Text(viewModel.transcriptionProgressStep ?? "Transcribing your audio...")
-                    .foregroundColor(.secondary)
+                    .font(.body)
+                    .foregroundColor(.semantic(.textSecondary))
+                    .multilineTextAlignment(.center)
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Transcription in progress. \(viewModel.transcriptionProgressStep ?? "Transcribing your audio...")")
@@ -278,7 +290,7 @@ struct MemoDetailView: View {
     private func failedTranscriptionView(error: String) -> some View {
         VStack(spacing: 12) {
             HStack {
-                Image(systemName: "exclamationmark.triangle")
+                Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.semantic(.warning))
                 Text(error == TranscriptionError.noSpeechDetected.errorDescription ? "No Speech Detected" : "Transcription Failed")
                     .font(.subheadline)

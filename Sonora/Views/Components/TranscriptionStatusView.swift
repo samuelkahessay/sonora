@@ -13,12 +13,13 @@ struct TranscriptionStatusView: View {
         HStack(spacing: compact ? 4 : 8) {
             if state.isInProgress {
                 LoadingIndicator(size: compact ? .small : .regular)
-                    .frame(width: compact ? 12 : 16, height: compact ? 12 : 16)
+                    .frame(width: compact ? 24 : 28, height: compact ? 24 : 28)
             } else {
                 Image(systemName: state.iconName)
                     .foregroundColor(colorForState(state))
-                    .font(compact ? .caption2 : .caption)
+                    .font(compact ? .body : .title3)
                     .fontWeight(.medium)
+                    .accessibilityLabel(state.statusText)
             }
             
             if !compact {
@@ -59,28 +60,31 @@ struct TranscriptionActionButton: View {
             HStack(spacing: 6) {
                 if state.isFailed {
                     Image(systemName: "arrow.clockwise")
-                        .font(.caption)
+                        .font(.body)
                         .fontWeight(.medium)
+                        .accessibilityLabel("Retry transcription")
                     Text("Retry")
-                        .font(.caption)
+                        .font(.body)
                         .fontWeight(.medium)
                 } else if state.isCompleted {
                     Image(systemName: "doc.text")
-                        .font(.caption)
+                        .font(.body)
                         .fontWeight(.medium)
+                        .accessibilityLabel("View transcription")
                     Text("View")
-                        .font(.caption)
+                        .font(.body)
                         .fontWeight(.medium)
                 } else if state.isInProgress {
                     Text("Processing...")
-                        .font(.caption)
+                        .font(.body)
                         .fontWeight(.medium)
                 } else {
                     Image(systemName: "waveform")
-                        .font(.caption)
+                        .font(.body)
                         .fontWeight(.medium)
+                        .accessibilityLabel("Start transcription")
                     Text("Transcribe")
-                        .font(.caption)
+                        .font(.body)
                         .fontWeight(.medium)
                 }
             }

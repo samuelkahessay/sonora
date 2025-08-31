@@ -7,6 +7,7 @@ struct AIBadge: View {
             Text("AI-generated")
         }
         .font(.caption2)
+        .fontWeight(.medium)
         .foregroundColor(.semantic(.brandPrimary))
         .padding(.horizontal, 8)
         .padding(.vertical, 4)

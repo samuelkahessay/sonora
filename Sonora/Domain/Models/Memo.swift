@@ -189,7 +189,7 @@ public enum DomainAnalysisType: String, CaseIterable, Codable, Hashable {
         switch self {
         case .summary: return "text.quote"
         case .themes: return "tag.circle"
-        case .actionItems: return "checkmark.circle"
+        case .actionItems: return "checkmark.circle.fill"
         case .keyPoints: return "list.bullet.circle"
         }
     }

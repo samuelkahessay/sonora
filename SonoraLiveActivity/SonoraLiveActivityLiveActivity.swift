@@ -61,7 +61,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     // Recording pulse indicator
                     Circle()
                         .fill(.red)
-                        .frame(width: 8, height: 8)
+                        .frame(width: 12, height: 12)
                         .opacity(context.state.isCountdown ? 0.0 : 0.9)
                         .animation(.easeInOut(duration: 1.0).repeatForever(), value: !context.state.isCountdown)
                     
@@ -96,8 +96,8 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color(red: 0.15, green: 0.35, blue: 0.85),
-                                Color(red: 0.05, green: 0.25, blue: 0.75)
+                                .blue,
+                                .blue.opacity(0.8)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -150,7 +150,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                             HStack(alignment: .center, spacing: 4) {
                                 Circle()
                                     .fill(.red)
-                                    .frame(width: 6, height: 6)
+                                    .frame(width: 8, height: 8)
                                     .opacity(0.8)
                                     .animation(.easeInOut(duration: 1.0).repeatForever(), value: true)
                                 
@@ -192,7 +192,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                             ForEach(0..<4, id: \.self) { index in
                                 RoundedRectangle(cornerRadius: 1)
                                     .fill(.blue.gradient)
-                                    .frame(width: 3, height: CGFloat.random(in: 4...12))
+                                    .frame(width: 4, height: CGFloat.random(in: 6...16))
                                     .animation(
                                         .easeInOut(duration: 0.6)
                                         .repeatForever()
@@ -218,7 +218,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     if !context.state.isCountdown {
                         Circle()
                             .fill(.red)
-                            .frame(width: 4, height: 4)
+                            .frame(width: 6, height: 6)
                             .opacity(0.8)
                     }
                     
