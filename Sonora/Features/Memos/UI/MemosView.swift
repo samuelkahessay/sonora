@@ -31,61 +31,40 @@ struct MemosView: View {
                     }
                     .accessibilityLabel("No memos yet. Start recording to see your audio memos here.")
                 } else {
+                    // MARK: - Memos List
+                    /// **Polished List Configuration**
+                    /// Optimized for readability, navigation, and modern iOS appearance
                     List {
                         ForEach(viewModel.memos) { memo in
+                            // MARK: Navigation Row Configuration
                             NavigationLink(value: memo) {
-                                MemoCardView(memo: memo, viewModel: viewModel)
+                                MemoRowView(memo: memo, viewModel: viewModel)
                             }
-                            .listRowSeparator(.visible, edges: .bottom)
-                            .listRowInsets(EdgeInsets(
-                                top: 0,
-                                leading: 0,
-                                bottom: 0,
-                                trailing: 0
-                            ))
+                            // **Row Visual Configuration**
+                            // Adjust these modifiers to fine-tune row appearance
+                            .listRowSeparator(.visible, edges: .bottom) // Clean separator between rows
+                            .listRowInsets(MemoListConstants.rowInsets) // Zero insets for full-width content
+                            
+                            // MARK: - Swipe Actions Configuration
+                            /// Secondary actions accessible via swipe gestures
+                            /// Design principle: Keep primary UI clean, secondary actions discoverable
                             .swipeActions(allowsFullSwipe: false) {
-                                // Transcription actions
-                                if viewModel.getTranscriptionState(for: memo).isNotStarted {
-                                    Button {
-                                        HapticManager.shared.playSelection()
-                                        viewModel.startTranscription(for: memo)
-                                    } label: {
-                                        Label("Transcribe", systemImage: "text.quote")
-                                    }
-                                    .tint(.semantic(.brandPrimary))
-                                    .accessibilityLabel("Transcribe \(memo.displayName)")
-                                } else if viewModel.getTranscriptionState(for: memo).isFailed {
-                                    Button {
-                                        HapticManager.shared.playSelection()
-                                        viewModel.retryTranscription(for: memo)
-                                    } label: {
-                                        Label("Retry", systemImage: "arrow.clockwise")
-                                    }
-                                    .tint(.semantic(.warning))
-                                    .accessibilityLabel("Retry transcription for \(memo.displayName)")
-                                }
-                                
-                                // Delete action
-                                Button(role: .destructive) {
-                                    HapticManager.shared.playDeletionFeedback()
-                                    if let idx = viewModel.memos.firstIndex(where: { $0.id == memo.id }) {
-                                        viewModel.deleteMemo(at: idx)
-                                    }
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                                .accessibilityLabel("Delete \(memo.displayName)")
-                                .accessibilityHint("Double tap to permanently delete this memo")
+                                swipeActionsView(for: memo)
                             }
                         }
+                        // **Bulk Operations**
+                        // Traditional iOS delete gesture support
                         .onDelete { offsets in
                             HapticManager.shared.playDeletionFeedback()
                             viewModel.deleteMemos(at: offsets)
                         }
                     }
-                    .accessibilityLabel("Memos list")
-                    .listStyle(.insetGrouped)
-                    .refreshable { viewModel.refreshMemos() }
+                    // **List Styling Configuration**
+                    .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
+                    .listStyle(MemoListConstants.listStyle) // Modern grouped appearance
+                    .scrollContentBackground(.hidden) // ADDED: Clean background
+                    .background(MemoListConstants.ListStyling.backgroundColor) // ADDED: Consistent bg
+                    .refreshable { viewModel.refreshMemos() } // Pull-to-refresh support
                 }
             }
             .navigationTitle("Memos")
@@ -112,74 +91,349 @@ struct MemosView: View {
     }
 }
 
-/// Clean memo row component for navigation-focused list
-struct MemoCardView: View {
+// MARK: - MemoRowView
+
+/// Polished memo row component optimized for navigation and readability
+/// 
+/// **Design Philosophy:**
+/// - Primary action: Navigation to memo details (entire row tappable)
+/// - Information hierarchy: Title prominence > Metadata clarity
+/// - Visual simplicity: Minimal UI chrome, maximum content focus
+/// - Accessibility first: Full VoiceOver support with logical reading order
+///
+/// **Customization Points:**
+/// All sizing, spacing, and styling constants are documented below for easy adjustment
+struct MemoRowView: View {
+    
+    // MARK: - Properties
+    
     let memo: Memo
     let viewModel: MemoListViewModel
     
-    var body: some View {
-        HStack(spacing: Spacing.md) {
-            // Content area
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                // Title
-                Text(memo.displayName)
-                    .font(.system(.body, design: .default, weight: .medium))
-                    .foregroundColor(.semantic(.textPrimary))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                
-                // Metadata row
-                HStack(spacing: Spacing.sm) {
-                    // Duration
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock")
-                            .font(.system(.caption2, weight: .medium))
-                        Text(memo.durationString)
-                            .monospacedDigit()
-                    }
-                    .font(.caption)
-                    .foregroundColor(.semantic(.textSecondary))
-                    
-                    // Date
-                    Text(RelativeDateTimeFormatter().localizedString(for: memo.creationDate, relativeTo: Date()))
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                    
-                    Spacer()
-                }
-            }
-            
-            Spacer()
-        }
-        .padding(.vertical, Spacing.sm)
-        .padding(.horizontal, Spacing.md)
-        .contentShape(Rectangle()) // Ensure entire row is tappable
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(getMemoAccessibilityLabel())
-        .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Double tap to view memo details")
+    // MARK: - Design Constants
+    
+    /// **Typography Configuration**
+    /// Adjust these values to fine-tune text appearance and hierarchy
+    private enum Typography {
+        /// Primary title font - prominent but not overwhelming
+        /// Default: .callout with semibold weight for strong hierarchy
+        static let titleFont: Font = .system(.callout, design: .default, weight: .semibold)
+        
+        /// Metadata font for duration and date information
+        /// Default: .caption for subtle, readable secondary information
+        static let metadataFont: Font = .system(.caption, design: .default, weight: .regular)
+        
+        /// Clock icon font size - should complement metadata text
+        /// Default: .caption2 with medium weight for optical balance
+        static let iconFont: Font = .system(.caption2, design: .default, weight: .medium)
     }
     
-    // MARK: - Helper Methods
+    /// **Color Configuration**
+    /// Semantic colors ensure proper light/dark mode adaptation
+    private enum Colors {
+        /// Primary text color for memo titles - maximum contrast
+        static let titleText: Color = .semantic(.textPrimary)
+        
+        /// Secondary text color for metadata - reduced emphasis
+        static let metadataText: Color = .semantic(.textSecondary)
+        
+        /// Icon tint color - should match or complement metadata text
+        static let iconTint: Color = .semantic(.textSecondary)
+    }
     
-    private func getMemoAccessibilityLabel() -> String {
-        var components: [String] = []
+    /// **Layout Configuration - FIXED VALUES**
+    /// These follow iOS Human Interface Guidelines spacing standards
+    private enum Layout {
+        /// Vertical padding - REDUCED from 12 to 8
+        /// iOS lists work best with minimal custom padding
+        static let verticalPadding: CGFloat = 8
         
-        // Add memo name
-        components.append(memo.displayName)
+        /// Horizontal padding - REMOVED (let list handle it)
+        /// List row insets will handle horizontal spacing properly
+        // static let horizontalPadding: CGFloat = 16 // REMOVED
         
-        // Add duration and date
-        components.append("Duration: \(memo.durationString)")
-        let relativeDateFormatter = RelativeDateTimeFormatter()
-        components.append("Created \(relativeDateFormatter.localizedString(for: memo.creationDate, relativeTo: Date()))")
+        /// Title to metadata spacing - REDUCED from 8 to 4
+        /// Smaller spacing creates tighter, more cohesive rows
+        static let titleToMetadataSpacing: CGFloat = 4
         
+        /// Metadata spacing - REDUCED from 16 to 12
+        /// More reasonable horizontal spacing between elements  
+        static let metadataElementSpacing: CGFloat = 12
+        
+        /// Icon to text spacing - REDUCED from 4 to 3
+        /// Tighter icon-text relationship
+        static let iconToTextSpacing: CGFloat = 3
+        
+        /// Line limit stays the same
+        static let titleLineLimit: Int = 2
+    }
+    
+    // MARK: - View Body
+    
+    var body: some View {
+        HStack(spacing: 0) { // CHANGED: Remove extra spacing
+            // Main content container
+            primaryContentView
+            
+            // Natural spacer - let system handle chevron positioning
+            Spacer()
+        }
+        .padding(.vertical, Layout.verticalPadding) // ONLY vertical padding
+        // .padding(.horizontal, Layout.horizontalPadding) // REMOVED - let list handle it
+        .contentShape(Rectangle()) // Ensures entire row area is tappable
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(AccessibilityStrings.rowHint)
+    }
+    
+    // MARK: - Subviews
+    
+    /// **Primary Content View**
+    /// Contains the main information hierarchy: title and metadata
+    @ViewBuilder
+    private var primaryContentView: some View {
+        VStack(alignment: .leading, spacing: Layout.titleToMetadataSpacing) {
+            // Memo title - primary information
+            titleView
+            
+            // Metadata row - secondary information (duration and date)
+            metadataRowView
+        }
+    }
+    
+    /// **Title View**
+    /// Displays the memo name with prominence and proper line handling
+    @ViewBuilder
+    private var titleView: some View {
+        Text(memo.displayName)
+            .font(Typography.titleFont)
+            .foregroundColor(Colors.titleText)
+            .lineLimit(Layout.titleLineLimit)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    /// **Metadata Row View**
+    /// Horizontal layout containing duration and creation date information
+    @ViewBuilder
+    private var metadataRowView: some View {
+        HStack(spacing: Layout.metadataElementSpacing) {
+            // Duration with clock icon
+            durationView
+            
+            // Creation date (relative format)
+            dateView
+            
+            // Spacer pushes content left and leaves room for system chevron
+            Spacer()
+        }
+    }
+    
+    /// **Duration View**
+    /// Clock icon + duration text with optimal spacing and styling
+    @ViewBuilder
+    private var durationView: some View {
+        HStack(spacing: Layout.iconToTextSpacing) {
+            Image(systemName: SystemIconNames.clock)
+                .font(Typography.iconFont)
+                .foregroundColor(Colors.iconTint)
+            
+            Text(memo.durationString)
+                .font(Typography.metadataFont)
+                .foregroundColor(Colors.metadataText)
+                .monospacedDigit() // Ensures consistent width for time display
+        }
+    }
+    
+    /// **Date View**
+    /// Relative date display ("7 hours ago", "yesterday", etc.)
+    @ViewBuilder
+    private var dateView: some View {
+        Text(formattedRelativeDate)
+            .font(Typography.metadataFont)
+            .foregroundColor(Colors.metadataText)
+    }
+    
+    // MARK: - Helper Properties
+    
+    /// Formatted relative date string using system formatter
+    /// Example outputs: "5 minutes ago", "2 hours ago", "yesterday"
+    private var formattedRelativeDate: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated // More compact display
+        return formatter.localizedString(for: memo.creationDate, relativeTo: Date())
+    }
+    
+    /// Comprehensive accessibility description for VoiceOver users
+    /// Provides all essential information in logical reading order
+    private var accessibilityDescription: String {
+        let components = [
+            memo.displayName,
+            "Duration: \(memo.durationString)",
+            "Created \(formattedRelativeDate)"
+        ]
         return components.joined(separator: ", ")
+    }
+    
+    // MARK: - Constants
+    
+    /// **System Icon Names**
+    /// Centralized SF Symbols names for consistency
+    private enum SystemIconNames {
+        static let clock = "clock"
+    }
+    
+    /// **Accessibility Strings**
+    /// Localization-ready accessibility strings
+    private enum AccessibilityStrings {
+        static let rowHint = "Double tap to view memo details"
     }
 }
 
 
 // MARK: - MemosView Extensions
 
-// Accessibility helpers have been moved to MemoCardView for better encapsulation
+/// **Swipe Actions Configuration**
+extension MemosView {
+    
+    /// **Swipe Actions View**
+    /// Contextual actions based on memo transcription state
+    /// 
+    /// **Design Philosophy:**
+    /// - Progressive disclosure: Show relevant actions only
+    /// - Visual hierarchy: Primary action (transcribe) vs secondary (delete)
+    /// - Accessibility: Full VoiceOver support with descriptive labels
+    @ViewBuilder
+    private func swipeActionsView(for memo: Memo) -> some View {
+        let transcriptionState = viewModel.getTranscriptionState(for: memo)
+        
+        // **Transcription Actions**
+        // Show transcription-related actions based on current state
+        if transcriptionState.isNotStarted {
+            transcribeButton(for: memo)
+        } else if transcriptionState.isFailed {
+            retryTranscriptionButton(for: memo)
+        }
+        
+        // **Destructive Actions**
+        // Always available as secondary action
+        deleteButton(for: memo)
+    }
+    
+    /// **Transcribe Button**
+    /// Primary action for unprocessed memos
+    @ViewBuilder
+    private func transcribeButton(for memo: Memo) -> some View {
+        Button {
+            HapticManager.shared.playSelection()
+            viewModel.startTranscription(for: memo)
+        } label: {
+            Label(MemoListConstants.SwipeActions.transcribeTitle, 
+                  systemImage: MemoListConstants.SwipeActions.transcribeIcon)
+        }
+        .tint(.semantic(.brandPrimary))
+        .accessibilityLabel("Transcribe \(memo.displayName)")
+        .accessibilityHint(MemoListConstants.AccessibilityLabels.transcribeHint)
+    }
+    
+    /// **Retry Transcription Button**
+    /// Recovery action for failed transcriptions
+    @ViewBuilder
+    private func retryTranscriptionButton(for memo: Memo) -> some View {
+        Button {
+            HapticManager.shared.playSelection()
+            viewModel.retryTranscription(for: memo)
+        } label: {
+            Label(MemoListConstants.SwipeActions.retryTitle,
+                  systemImage: MemoListConstants.SwipeActions.retryIcon)
+        }
+        .tint(.semantic(.warning))
+        .accessibilityLabel("Retry transcription for \(memo.displayName)")
+        .accessibilityHint(MemoListConstants.AccessibilityLabels.retryHint)
+    }
+    
+    /// **Delete Button**
+    /// Destructive action with appropriate styling and feedback
+    @ViewBuilder
+    private func deleteButton(for memo: Memo) -> some View {
+        Button(role: .destructive) {
+            HapticManager.shared.playDeletionFeedback()
+            if let idx = viewModel.memos.firstIndex(where: { $0.id == memo.id }) {
+                viewModel.deleteMemo(at: idx)
+            }
+        } label: {
+            Label(MemoListConstants.SwipeActions.deleteTitle,
+                  systemImage: MemoListConstants.SwipeActions.deleteIcon)
+        }
+        .accessibilityLabel("Delete \(memo.displayName)")
+        .accessibilityHint(MemoListConstants.AccessibilityLabels.deleteHint)
+    }
+}
+
+
+// MARK: - Configuration Constants
+
+/// **MemoListConstants**
+/// Centralized configuration for all memo list styling and behavior
+/// 
+/// **Usage:**
+/// Modify these constants to adjust the entire memo list appearance
+/// All values are documented for easy customization
+private enum MemoListConstants {
+    
+    /// **List Styling Configuration**
+    /// Controls overall list appearance and behavior
+    enum ListStyling {
+        /// List style - affects visual presentation and grouping
+        /// Options: .insetGrouped (modern cards), .grouped (traditional), .plain (minimal)
+        static let preferredStyle = InsetGroupedListStyle()
+        
+        /// Background color for the list container
+        /// Uses semantic color for automatic light/dark adaptation
+        static let backgroundColor: Color = .semantic(.bgSecondary)
+    }
+    
+    /// **Row Configuration**
+    /// Fine-tune individual row appearance
+    /// **FIXED Row Configuration** 
+    /// Proper insets that work with insetGrouped style
+    static let rowInsets = EdgeInsets(
+        top: 0,
+        leading: 16,    // CHANGED: Restore proper leading inset
+        bottom: 0,
+        trailing: 16    // CHANGED: Restore proper trailing inset
+    )
+    
+    /// Current list style setting
+    /// List style - keep insetGrouped but ensure proper setup
+    static let listStyle = InsetGroupedListStyle()
+    
+    /// **Swipe Actions Configuration**
+    /// Text and icons for swipe gesture actions
+    enum SwipeActions {
+        // Transcription actions
+        static let transcribeTitle = "Transcribe"
+        static let transcribeIcon = "text.quote"
+        
+        static let retryTitle = "Retry"
+        static let retryIcon = "arrow.clockwise"
+        
+        // Destructive actions
+        static let deleteTitle = "Delete"
+        static let deleteIcon = "trash"
+    }
+    
+    /// **Accessibility Configuration**
+    /// VoiceOver labels and hints for better accessibility
+    enum AccessibilityLabels {
+        static let mainList = "Memos list"
+        
+        // Action hints
+        static let transcribeHint = "Double tap to transcribe this memo using AI"
+        static let retryHint = "Double tap to retry the failed transcription"
+        static let deleteHint = "Double tap to permanently delete this memo"
+    }
+}
 
 #Preview { MemosView(popToRoot: nil) }
