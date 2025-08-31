@@ -12,7 +12,7 @@ struct CircularRecordButton: View {
     let isRecording: Bool
     let action: () -> Void
     
-    private let buttonSize: CGFloat = 80
+    private let buttonSize: CGFloat = 160
     
     var body: some View {
         Button(action: action) {
@@ -22,11 +22,10 @@ struct CircularRecordButton: View {
                     .fill(isRecording ? Color.semantic(.error) : Color.semantic(.brandPrimary))
                     .frame(width: buttonSize, height: buttonSize)
                     .scaleEffect(isRecording ? 1.05 : 1.0)
-//                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isRecording)
                 
                 // Icon
                 Image(systemName: isRecording ? "stop.fill" : "mic.fill")
-                    .font(.system(size: 32, weight: .medium))
+                    .font(.system(size: 64, weight: .medium))
                     .foregroundColor(.white)
             }
         }
@@ -86,36 +85,6 @@ struct RecordingView: View {
                     .accessibilityElement(children: .contain)
                 } else {
                     VStack(spacing: Spacing.xl) {
-                        // Timer - only show when recording
-                        if viewModel.isRecording {
-                            VStack(spacing: Spacing.sm) {
-                                Text(viewModel.formattedRecordingTime)
-                                    .font(.largeTitle)
-                                    .fontWeight(.bold)
-                                    .monospacedDigit()
-                                    .accessibilityLabel("Recording duration")
-                                    .accessibilityValue(getTimeAccessibilityLabel())
-                                    .accessibilityAddTraits(.updatesFrequently)
-                                    .accessibilityFocused($focusedElement, equals: .statusText)
-                                
-                                if viewModel.isInCountdown {
-                                    VStack(spacing: 4) {
-                                        Text("Recording ends in")
-                                            .font(.headline)
-                                            .foregroundColor(.semantic(.warning))
-                                        Text("\(Int(ceil(viewModel.remainingTime)))")
-                                            .font(.system(.largeTitle, design: .rounded))
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.semantic(.error))
-                                            .monospacedDigit()
-                                    }
-                                    .accessibilityElement(children: .combine)
-                                    .accessibilityLabel("Recording ends in \(Int(ceil(viewModel.remainingTime))) seconds")
-                                    .accessibilityAddTraits(.updatesFrequently)
-                                }
-                            }
-                            .accessibilityElement(children: .contain)
-                        }
                         
                         // Large circular recording button
                         CircularRecordButton(
@@ -129,6 +98,16 @@ struct RecordingView: View {
                         .accessibilityHint(getRecordButtonAccessibilityHint())
                         .accessibilityFocused($focusedElement, equals: .recordButton)
                         .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
+                        
+                        // Timer overlay area (fixed height to avoid layout shifts)
+                        ZStack(alignment: .top) {
+                            timerOverlayView
+                                .opacity(viewModel.isRecording ? 1 : 0)
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                                .accessibilityHidden(!viewModel.isRecording)
+                        }
+                        .frame(height: 80)
+                        .animation(.easeInOut(duration: 0.25), value: viewModel.isRecording)
                     }
                     .padding(.horizontal)
                 }
@@ -281,5 +260,42 @@ struct RecordingView: View {
             return "Recording time: \(minutes) minutes and \(seconds) seconds"
         }
         return "Recording time: \(viewModel.formattedRecordingTime)"
+    }
+}
+
+// MARK: - Timer Overlay View
+
+private extension RecordingView {
+    @ViewBuilder
+    var timerOverlayView: some View {
+        VStack(spacing: Spacing.sm) {
+            Text(viewModel.formattedRecordingTime)
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .accessibilityLabel("Recording duration")
+                .accessibilityValue(getTimeAccessibilityLabel())
+                .accessibilityAddTraits(.updatesFrequently)
+                .accessibilityFocused($focusedElement, equals: .statusText)
+
+            if viewModel.isInCountdown {
+                VStack(spacing: 4) {
+                    Text("Recording ends in")
+                        .font(.headline)
+                        .foregroundColor(.semantic(.warning))
+                    Text("\(Int(ceil(viewModel.remainingTime)))")
+                        .font(.system(.largeTitle, design: .rounded))
+                        .fontWeight(.bold)
+                        .foregroundColor(.semantic(.error))
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Recording ends in \(Int(ceil(viewModel.remainingTime))) seconds")
+                .accessibilityAddTraits(.updatesFrequently)
+            }
+        }
+        .accessibilityElement(children: .contain)
     }
 }
