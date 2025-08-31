@@ -1,8 +1,7 @@
 //  RecordingView.swift
 //  Sonora
 //
-//  Updated: adds Liquid Glass record/stop button with iOS 26 fallback
-// Created by Samuel Kahessay on 2025-08-23.
+//  Created by Samuel Kahessay on 2025-08-23.
 
 import SwiftUI
 
@@ -13,43 +12,23 @@ struct CircularRecordButton: View {
     private let buttonSize: CGFloat = 160
     
     var body: some View {
-        if #available(iOS 26.0, *) {
-            let tint = isRecording ? Color.semantic(.error): Color.semantic(.brandPrimary)
-            
-            Button(action: action) {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(isRecording ? Color.semantic(.error) : Color.semantic(.brandPrimary))
+                    .frame(width: buttonSize, height: buttonSize)
+                    .scaleEffect(isRecording ? 1.05 : 1.0)
+                
                 Label(isRecording ? "Stop" : "Record",
                       systemImage: isRecording ? "stop.fill" : "mic.fill")
                     .labelStyle(.iconOnly)
                     .font(.system(size: 64, weight: .medium))
-                    .foregroundStyle(.white)
-                    .frame(width: buttonSize, height: buttonSize)
-                    .contentShape(Circle())
+                    .foregroundColor(.white)
             }
-            .clipShape(Circle())
-            .glassEffect(
-                .regular
-                    .tint(tint.opacity(0.8))
-                    .interactive()
-            )
-            .shadow(radius: 6, y: 3)
-        } else {
-            Button(action: action) {
-                ZStack {
-                    Circle()
-                        .fill(isRecording ? Color.semantic(.error) : Color.semantic(.brandPrimary))
-                        .frame(width: buttonSize, height: buttonSize)
-                        .scaleEffect(isRecording ? 1.05 : 1.0)
-                    
-                    Label(isRecording ? "Stop" : "Record",
-                          systemImage: isRecording ? "stop.fill" : "mic.fill")
-                        .labelStyle(.iconOnly)
-                        .font(.system(size: 64, weight: .medium))
-                        .foregroundColor(.white)
-                }
-            }
-            .buttonStyle(.plain)
-            .animation(.spring(response: 0.25, dampingFraction: 0.9), value: isRecording)
         }
+        .buttonStyle(.plain)
+        .animation(.spring(response: 0.25, dampingFraction: 0.9), value: isRecording)
+        .shadow(radius: 5, y: 3)
     }
 }
 
