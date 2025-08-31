@@ -60,8 +60,7 @@ struct AnalysisSectionView: View {
             // Loading State
             if viewModel.isAnalyzing {
                 HStack(spacing: 12) {
-                    ProgressView()
-                        .scaleEffect(0.8)
+                    LoadingIndicator(size: .small)
                     Text("Analyzing with AI...")
                         .font(.subheadline)
                         .foregroundColor(.secondary)

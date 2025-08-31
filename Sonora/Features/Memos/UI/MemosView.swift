@@ -24,10 +24,9 @@ struct MemosView: View {
         NavigationStack(path: $viewModel.navigationPath) {
             Group {
                 if viewModel.isEmpty {
-                    EmptyStateView.noMemos {
+                    UnifiedStateView.noMemos {
                         // Navigate to recording - could trigger navigation or show recording view
                         // For now, just refresh to show user something happened
-                        HapticManager.shared.playSelection()
                         viewModel.refreshMemos()
                     }
                     .accessibilityLabel("No memos yet. Start recording to see your audio memos here.")
@@ -160,7 +159,7 @@ struct MemoRowView: View {
                     .accessibilityHint("Double tap to retry failed transcription")
                 } else if transcriptionState.isInProgress {
                     HStack(spacing: 6) {
-                        ProgressView().scaleEffect(0.8)
+                        LoadingIndicator(size: .small)
                         Text("Processing...")
                             .font(.caption)
                             .foregroundColor(.semantic(.info))

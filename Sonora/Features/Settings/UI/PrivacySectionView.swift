@@ -84,7 +84,7 @@ struct PrivacySectionView: View {
                 }) {
                     HStack(spacing: Spacing.md) {
                         if controller.isExporting { 
-                            ProgressView().scaleEffect(0.9)
+                            LoadingIndicator(size: .small)
                                 .accessibilityLabel("Exporting in progress")
                         }
                         Image(systemName: "square.and.arrow.up")
@@ -114,7 +114,7 @@ struct PrivacySectionView: View {
                 }) {
                     HStack(spacing: Spacing.md) {
                         if controller.isDeleting { 
-                            ProgressView().scaleEffect(0.9)
+                            LoadingIndicator(size: .small)
                                 .accessibilityLabel("Deleting in progress")
                         }
                         Image(systemName: "trash.fill")

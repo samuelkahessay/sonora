@@ -235,10 +235,12 @@ struct TodosResultView: View {
                 .fontWeight(.semibold)
             
             if data.todos.isEmpty {
-                EmptyStateView(
-                    icon: "checkmark.circle",
-                    title: "No Action Items",
-                    subtitle: "No actionable tasks were found in this transcription"
+                UnifiedStateView(
+                    state: .empty(
+                        icon: "checkmark.circle",
+                        title: "No Action Items",
+                        subtitle: "No actionable tasks were found in this transcription"
+                    )
                 )
             } else {
                 ForEach(Array(data.todos.enumerated()), id: \.offset) { _, todo in

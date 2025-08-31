@@ -43,9 +43,13 @@ struct RecordingView: View {
                             .accessibilityLabel(getPermissionAccessibilityLabel())
                         
                         if viewModel.isRequestingPermission {
-                            ProgressView("Requesting microphone permission")
-                                .progressViewStyle(CircularProgressViewStyle())
-                                .accessibilityLabel("Requesting microphone permission")
+                            VStack(spacing: 8) {
+                                LoadingIndicator(size: .regular)
+                                Text("Requesting microphone permission")
+                                    .font(.subheadline)
+                                    .foregroundColor(.semantic(.textSecondary))
+                            }
+                            .accessibilityLabel("Requesting microphone permission")
                         } else {
                             getPermissionButton()
                                 .accessibilityFocused($focusedElement, equals: .permissionButton)

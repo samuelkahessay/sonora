@@ -77,11 +77,10 @@ struct MemoDetailView: View {
     @ViewBuilder
     private var languageBannerView: some View {
         if viewModel.showNonEnglishBanner {
-            LanguageDetectionBanner(
+            NotificationBanner.languageDetection(
                 message: viewModel.languageBannerMessage,
                 onDismiss: viewModel.dismissLanguageBanner
             )
-            .padding(.horizontal)
             .padding(.top, 8)
             .transition(.opacity.combined(with: .move(edge: .top)))
             .animation(.easeInOut(duration: 0.3), value: viewModel.showNonEnglishBanner)
@@ -162,7 +161,7 @@ struct MemoDetailView: View {
                 AIBadge()
                 Spacer()
                 if viewModel.transcriptionState.isInProgress {
-                    ProgressView().scaleEffect(0.8)
+                    LoadingIndicator(size: .small)
                 } else if viewModel.transcriptionState.isFailed {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.semantic(.warning))
@@ -204,8 +203,7 @@ struct MemoDetailView: View {
                         .scaleEffect(1.2)
                         .accessibilityValue("\(Int(pct * 100)) percent complete")
                 } else {
-                    ProgressView()
-                        .scaleEffect(1.2)
+                    LoadingIndicator(size: .large)
                         .accessibilityLabel("Transcription in progress")
                 }
                 Text(viewModel.transcriptionProgressStep ?? "Transcribing your audio...")

@@ -125,8 +125,7 @@ struct OnboardingPageView: View {
                         }) {
                             HStack(spacing: Spacing.sm) {
                                 if isLoading {
-                                    ProgressView()
-                                        .scaleEffect(0.9)
+                                    LoadingIndicator(size: .small)
                                         .tint(primaryButtonStyle.foregroundColor)
                                         .accessibilityLabel("Loading")
                                 }

@@ -78,8 +78,8 @@ struct ErrorBannerModifier: ViewModifier {
     func body(content: Content) -> some View {
         VStack(spacing: 0) {
             if let error = error {
-                ErrorBannerView(
-                    error: error,
+                NotificationBanner.error(
+                    error,
                     onRetry: onRetry,
                     onDismiss: {
                         withAnimation(.easeInOut(duration: 0.3)) {
@@ -117,9 +117,9 @@ struct LoadingStateModifier: ViewModifier {
             }
             
             if let error = error, !isLoading {
-                ErrorStateView(
-                    error: error,
-                    onRetry: onRetry,
+                UnifiedStateView.error(
+                    error,
+                    onRetry: onRetry ?? {},
                     onDismiss: {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             self.error = nil
@@ -142,8 +142,7 @@ struct LoadingStateView: View {
     
     var body: some View {
         VStack(spacing: Spacing.lg) {
-            ProgressView()
-                .scaleEffect(1.2)
+            LoadingIndicator(size: .large)
                 .tint(.semantic(.brandPrimary))
             
             Text(message)

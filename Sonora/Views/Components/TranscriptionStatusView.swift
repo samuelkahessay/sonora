@@ -12,8 +12,7 @@ struct TranscriptionStatusView: View {
     var body: some View {
         HStack(spacing: compact ? 4 : 8) {
             if state.isInProgress {
-                ProgressView()
-                    .scaleEffect(compact ? 0.7 : 1.0)
+                LoadingIndicator(size: compact ? .small : .regular)
                     .frame(width: compact ? 12 : 16, height: compact ? 12 : 16)
             } else {
                 Image(systemName: state.iconName)
