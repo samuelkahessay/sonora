@@ -7,6 +7,33 @@
 
 import SwiftUI
 
+/// Large circular recording button component following modern iOS design patterns
+struct CircularRecordButton: View {
+    let isRecording: Bool
+    let action: () -> Void
+    
+    private let buttonSize: CGFloat = 80
+    
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                // Background circle
+                Circle()
+                    .fill(isRecording ? Color.semantic(.error) : Color.semantic(.brandPrimary))
+                    .frame(width: buttonSize, height: buttonSize)
+                    .scaleEffect(isRecording ? 1.05 : 1.0)
+//                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isRecording)
+                
+                // Icon
+                Image(systemName: isRecording ? "stop.fill" : "mic.fill")
+                    .font(.system(size: 32, weight: .medium))
+                    .foregroundColor(.white)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct RecordingView: View {
     @StateObject private var viewModel = RecordingViewModel()
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
@@ -59,88 +86,49 @@ struct RecordingView: View {
                     .accessibilityElement(children: .contain)
                 } else {
                     VStack(spacing: Spacing.xl) {
-                        // Status and timers
-                        VStack(spacing: Spacing.sm) {
-                            Text(viewModel.recordingStatusText)
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(viewModel.isRecording ? .semantic(.error) : .semantic(.textPrimary))
-                                .accessibilityAddTraits(.isHeader)
-                                .accessibilityFocused($focusedElement, equals: .statusText)
-                            
-                            Text(viewModel.formattedRecordingTime)
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
-                                .monospacedDigit()
-                                .accessibilityLabel("Recording duration")
-                                .accessibilityValue(getTimeAccessibilityLabel())
-                                .accessibilityAddTraits(.updatesFrequently)
-                            
-                            if viewModel.isInCountdown {
-                                VStack(spacing: 4) {
-                                    Text("Recording ends in")
-                                        .font(.headline)
-                                        .foregroundColor(.semantic(.warning))
-                                    Text("\(Int(ceil(viewModel.remainingTime)))")
-                                        .font(.system(.largeTitle, design: .rounded))
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.semantic(.error))
-                                        .monospacedDigit()
+                        // Timer - only show when recording
+                        if viewModel.isRecording {
+                            VStack(spacing: Spacing.sm) {
+                                Text(viewModel.formattedRecordingTime)
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                                    .monospacedDigit()
+                                    .accessibilityLabel("Recording duration")
+                                    .accessibilityValue(getTimeAccessibilityLabel())
+                                    .accessibilityAddTraits(.updatesFrequently)
+                                    .accessibilityFocused($focusedElement, equals: .statusText)
+                                
+                                if viewModel.isInCountdown {
+                                    VStack(spacing: 4) {
+                                        Text("Recording ends in")
+                                            .font(.headline)
+                                            .foregroundColor(.semantic(.warning))
+                                        Text("\(Int(ceil(viewModel.remainingTime)))")
+                                            .font(.system(.largeTitle, design: .rounded))
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.semantic(.error))
+                                            .monospacedDigit()
+                                    }
+                                    .accessibilityElement(children: .combine)
+                                    .accessibilityLabel("Recording ends in \(Int(ceil(viewModel.remainingTime))) seconds")
+                                    .accessibilityAddTraits(.updatesFrequently)
                                 }
-                                .accessibilityElement(children: .combine)
-                                .accessibilityLabel("Recording ends in \(Int(ceil(viewModel.remainingTime))) seconds")
-                                .accessibilityAddTraits(.updatesFrequently)
                             }
+                            .accessibilityElement(children: .contain)
                         }
-                        .accessibilityElement(children: .contain)
                         
-                        // Record/Stop button
-                        Button(action: { 
-                            // Add haptic feedback
-                            HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
-                            viewModel.toggleRecording()
-                        }) {
-                            HStack(spacing: 8) {
-                                Image(systemName: viewModel.isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                                Text(viewModel.isRecording ? "Stop" : "Record")
+                        // Large circular recording button
+                        CircularRecordButton(
+                            isRecording: viewModel.isRecording,
+                            action: {
+                                HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
+                                viewModel.toggleRecording()
                             }
-                            .font(.title2)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(viewModel.isRecording ? .semantic(.error) : .semantic(.brandPrimary))
+                        )
                         .accessibilityLabel(getRecordButtonAccessibilityLabel())
                         .accessibilityHint(getRecordButtonAccessibilityHint())
                         .accessibilityFocused($focusedElement, equals: .recordButton)
                         .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
-                        
-                        if viewModel.shouldShowRecordingIndicator {
-                            HStack(spacing: 12) {
-                                HStack(spacing: 8) {
-                                    Circle()
-                                        .fill(Color.semantic(.error))
-                                        .frame(width: IconSize.medium.rawValue, height: IconSize.medium.rawValue)
-                                        .accessibilityHidden(true)
-                                        .scaleEffect(1.0)
-                                        .animation(.easeInOut(duration: 1.0).repeatForever(), value: viewModel.isRecording)
-                                    
-                                    Text("Recording in progress")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.semantic(.error))
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                                .background(Color.semantic(.error).opacity(0.1))
-                                .cornerRadius(20)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .stroke(Color.semantic(.error).opacity(0.3), lineWidth: 1)
-                                )
-                            }
-                            .accessibilityElement(children: .combine)
-                            .accessibilityLabel("Recording is in progress in the background")
-                            .accessibilityAddTraits(.updatesFrequently)
-                        }
                     }
                     .padding(.horizontal)
                 }
