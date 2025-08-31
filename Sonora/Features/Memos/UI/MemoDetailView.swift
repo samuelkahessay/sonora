@@ -6,244 +6,23 @@ import UIKit
 struct MemoDetailView: View {
     let memo: Memo
     @StateObject private var viewModel = MemoDetailViewModel()
+    @AccessibilityFocusState private var focusedElement: AccessibleElement?
+    
+    enum AccessibleElement {
+        case playButton
+        case transcribeButton
+        case transcriptionText
+        case analysisResults
+    }
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Language detection banner
-                if viewModel.showNonEnglishBanner {
-                    LanguageDetectionBanner(
-                        message: viewModel.languageBannerMessage,
-                        onDismiss: viewModel.dismissLanguageBanner
-                    )
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                    .animation(.easeInOut(duration: 0.3), value: viewModel.showNonEnglishBanner)
-                }
-
-                // Header Info
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(memo.displayName)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
-                    HStack {
-                        Label(memo.durationString, systemImage: "clock")
-                            .font(.caption)
-                            .foregroundColor(.semantic(.textSecondary))
-                        
-                        Spacer()
-                        
-                        Text(memo.filename)
-                            .font(.caption)
-                            .foregroundColor(.semantic(.textSecondary))
-                    }
-                }
-                .padding()
-                .background(Color.semantic(.fillPrimary))
-                .cornerRadius(12)
-                
-                // Audio Controls
-                VStack(spacing: 16) {
-                    HStack {
-                        Button(action: {
-                            viewModel.playMemo()
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: viewModel.playButtonIcon)
-                                    .font(.title2)
-                                    .foregroundColor(.semantic(.textInverted))
-                                    .frame(minWidth: 50, minHeight: 50)
-                                    .background(Color.semantic(.brandPrimary))
-                                    .clipShape(Circle())
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(viewModel.isPlaying ? "Now Playing" : "Play Recording")
-                                        .font(.headline)
-                                        .fontWeight(.semibold)
-                                    
-                                    Text(memo.durationString)
-                                        .font(.subheadline)
-                                        .foregroundColor(.semantic(.textSecondary))
-                                }
-                                
-                                Spacer()
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                }
-                .padding()
-                .background(Color.semantic(.fillSecondary))
-                .cornerRadius(12)
-                
-                // Transcription Section
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(spacing: 8) {
-                        Text("Transcription")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        AIBadge()
-                        
-                        Spacer()
-                        
-                        if viewModel.transcriptionState.isInProgress {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else if viewModel.transcriptionState.isFailed {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.semantic(.warning))
-                                .font(.caption)
-                        }
-                    }
-                    
-                    switch viewModel.transcriptionState {
-                    case .notStarted:
-                        VStack(spacing: 12) {
-                            Text("This memo hasn't been transcribed yet.")
-                                .foregroundColor(.secondary)
-                            
-                            Button("Start Transcription") {
-                                viewModel.startTranscription()
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.semantic(.fillSecondary))
-                        .cornerRadius(8)
-                        
-                    case .inProgress:
-                        VStack(spacing: 12) {
-                            if let pct = viewModel.transcriptionProgressPercent {
-                                ProgressView(value: pct)
-                                    .scaleEffect(1.2)
-                            } else {
-                                ProgressView()
-                                    .scaleEffect(1.2)
-                            }
-                            Text(viewModel.transcriptionProgressStep ?? "Transcribing your audio...")
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.semantic(.brandPrimary).opacity(0.05))
-                        .cornerRadius(8)
-                        
-                    case .completed(let text):
-                        // Moderation warning if flagged
-                        if viewModel.transcriptionModerationFlagged {
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.semantic(.warning))
-                                Text("This AI-generated transcription may contain sensitive or harmful content.")
-                                    .font(.caption)
-                                    .foregroundColor(.semantic(.textSecondary))
-                            }
-                            .padding(8)
-                            .background(Color.semantic(.warning).opacity(0.08))
-                            .cornerRadius(8)
-                        }
-                        VStack(alignment: .leading, spacing: 12) {
-                            ScrollView {
-                                Text(text)
-                                    .font(.body)
-                                    .lineSpacing(4)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding()
-                                    .background(Color.semantic(.fillSecondary))
-                                    .cornerRadius(8)
-                                    .textSelection(.enabled)
-                            }
-                            .frame(minHeight: 120)
-                            
-                            HStack {
-                                Button("Share Text") {
-                                    shareText(text)
-                                }
-                                .buttonStyle(.bordered)
-                                
-                                Spacer()
-                                
-                                Button("Copy") {
-                                    copyText(text)
-                                }
-                                .buttonStyle(.bordered)
-                            }
-                        }
-                        
-                    case .failed(let error):
-                        VStack(spacing: 12) {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle")
-                                    .foregroundColor(.semantic(.warning))
-                                Text(error == TranscriptionError.noSpeechDetected.errorDescription ? "No Speech Detected" : "Transcription Failed")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.semantic(.warning))
-                            }
-
-                            if error == TranscriptionError.noSpeechDetected.errorDescription {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("We couldn't detect any speech in this recording.")
-                                        .font(.caption)
-                                        .foregroundColor(.semantic(.textSecondary))
-                                    
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        HStack(alignment: .top, spacing: 6) {
-                                            Text("•").bold()
-                                            Text("Try re-recording closer to the microphone.")
-                                                .font(.caption)
-                                                .foregroundColor(.semantic(.textSecondary))
-                                        }
-                                        HStack(alignment: .top, spacing: 6) {
-                                            Text("•").bold()
-                                            Text("Move to a quieter area to reduce background noise.")
-                                                .font(.caption)
-                                                .foregroundColor(.semantic(.textSecondary))
-                                        }
-                                        HStack(alignment: .top, spacing: 6) {
-                                            Text("•").bold()
-                                            Text("Start speaking right away to avoid long silence at the beginning.")
-                                                .font(.caption)
-                                                .foregroundColor(.semantic(.textSecondary))
-                                        }
-                                    }
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            } else {
-                                Text(error)
-                                    .font(.caption)
-                                    .foregroundColor(.semantic(.textSecondary))
-                                    .multilineTextAlignment(.center)
-                            }
-
-                            if viewModel.canRetryTranscription {
-                                Button("Try Again") {
-                                    viewModel.retryTranscription()
-                                }
-                                .buttonStyle(.borderedProminent)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.semantic(.warning).opacity(0.05))
-                        .cornerRadius(8)
-                    }
-                }
-                .padding()
-                .background(Color.semantic(.bgSecondary))
-                .cornerRadius(12)
-                .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
-                
-                // Analysis Section
-                if viewModel.isTranscriptionCompleted, let transcriptText = viewModel.transcriptionText {
-                    AnalysisSectionView(
-                        transcript: transcriptText,
-                        viewModel: viewModel
-                    )
-                }
+                languageBannerView
+                headerInfoView
+                audioControlsView
+                transcriptionSectionView
+                analysisSectionView
             }
             .padding()
         }
@@ -253,6 +32,31 @@ struct MemoDetailView: View {
             viewModel.configure(with: memo)
             viewModel.onViewAppear()
         }
+        .initialFocus {
+            focusedElement = .playButton
+        }
+        .onChange(of: viewModel.isTranscriptionCompleted) { _, completed in
+            if completed {
+                HapticManager.shared.playProcessingComplete()
+                FocusManager.shared.announceAndFocus(
+                    "Transcription completed successfully.",
+                    delay: FocusManager.contentDelay
+                ) {
+                    focusedElement = .transcriptionText
+                }
+            }
+        }
+        .onChange(of: viewModel.analysisResult != nil) { _, hasResult in
+            if hasResult {
+                FocusManager.shared.announceAndFocus(
+                    "AI analysis completed.",
+                    delay: FocusManager.contentDelay
+                ) {
+                    focusedElement = .analysisResults
+                }
+            }
+        }
+        .handleErrorFocus($viewModel.error)
         .onDisappear {
             viewModel.onViewDisappear()
         }
@@ -265,6 +69,263 @@ struct MemoDetailView: View {
             error: $viewModel.error
         ) {
             viewModel.retryLastOperation()
+        }
+    }
+
+    // MARK: - Extracted Sections
+
+    @ViewBuilder
+    private var languageBannerView: some View {
+        if viewModel.showNonEnglishBanner {
+            LanguageDetectionBanner(
+                message: viewModel.languageBannerMessage,
+                onDismiss: viewModel.dismissLanguageBanner
+            )
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .transition(.opacity.combined(with: .move(edge: .top)))
+            .animation(.easeInOut(duration: 0.3), value: viewModel.showNonEnglishBanner)
+        }
+    }
+
+    @ViewBuilder
+    private var headerInfoView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(memo.displayName)
+                .font(.title2)
+                .fontWeight(.bold)
+                .accessibilityAddTraits(.isHeader)
+            HStack {
+                Label(memo.durationString, systemImage: "clock")
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+                    .accessibilityLabel("Duration: \(memo.durationString)")
+                Spacer()
+                Text(memo.filename)
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+                    .accessibilityLabel("File: \(memo.filename)")
+            }
+        }
+        .padding()
+        .background(Color.semantic(.fillPrimary))
+        .cornerRadius(12)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Memo: \(memo.displayName), Duration: \(memo.durationString)")
+    }
+
+    @ViewBuilder
+    private var audioControlsView: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Button(action: {
+                    HapticManager.shared.playSelection()
+                    viewModel.playMemo()
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: viewModel.playButtonIcon)
+                            .font(.title2)
+                            .foregroundColor(.semantic(.textInverted))
+                            .frame(minWidth: 50, minHeight: 50)
+                            .background(Color.semantic(.brandPrimary))
+                            .clipShape(Circle())
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(viewModel.isPlaying ? "Now Playing" : "Play Recording")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            Text(memo.durationString)
+                                .font(.subheadline)
+                                .foregroundColor(.semantic(.textSecondary))
+                        }
+                        Spacer()
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel(viewModel.isPlaying ? "Pause \(memo.displayName)" : "Play \(memo.displayName)")
+                .accessibilityHint("Double tap to \(viewModel.isPlaying ? "pause" : "play") this memo")
+                .accessibilityFocused($focusedElement, equals: .playButton)
+                .accessibilityAddTraits(.startsMediaSession)
+            }
+        }
+        .padding()
+        .background(Color.semantic(.fillSecondary))
+        .cornerRadius(12)
+    }
+
+    @ViewBuilder
+    private var transcriptionSectionView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 8) {
+                Text("Transcription")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                AIBadge()
+                Spacer()
+                if viewModel.transcriptionState.isInProgress {
+                    ProgressView().scaleEffect(0.8)
+                } else if viewModel.transcriptionState.isFailed {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.semantic(.warning))
+                        .font(.caption)
+                }
+            }
+            transcriptionStateView
+        }
+        .padding()
+        .background(Color.semantic(.bgSecondary))
+        .cornerRadius(12)
+        .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
+    }
+
+    @ViewBuilder
+    private var transcriptionStateView: some View {
+        switch viewModel.transcriptionState {
+        case .notStarted:
+            VStack(spacing: 12) {
+                Text("This memo hasn't been transcribed yet.")
+                    .foregroundColor(.secondary)
+                Button("Start Transcription") {
+                    HapticManager.shared.playSelection()
+                    viewModel.startTranscription()
+                }
+                .accessibilityLabel("Start transcription")
+                .accessibilityHint("Double tap to transcribe this memo using AI")
+                .accessibilityFocused($focusedElement, equals: .transcribeButton)
+                .buttonStyle(.borderedProminent)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.semantic(.fillSecondary))
+            .cornerRadius(8)
+        case .inProgress:
+            VStack(spacing: 12) {
+                if let pct = viewModel.transcriptionProgressPercent {
+                    ProgressView(value: pct)
+                        .scaleEffect(1.2)
+                        .accessibilityValue("\(Int(pct * 100)) percent complete")
+                } else {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                        .accessibilityLabel("Transcription in progress")
+                }
+                Text(viewModel.transcriptionProgressStep ?? "Transcribing your audio...")
+                    .foregroundColor(.secondary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Transcription in progress. \(viewModel.transcriptionProgressStep ?? "Transcribing your audio...")")
+            .accessibilityAddTraits(.updatesFrequently)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.semantic(.brandPrimary).opacity(0.05))
+            .cornerRadius(8)
+        case .completed(let text):
+            completedTranscriptionView(text: text)
+        case .failed(let error):
+            failedTranscriptionView(error: error)
+        }
+    }
+
+    @ViewBuilder
+    private func completedTranscriptionView(text: String) -> some View {
+        if viewModel.transcriptionModerationFlagged {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.semantic(.warning))
+                Text("This AI-generated transcription may contain sensitive or harmful content.")
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+            }
+            .padding(8)
+            .background(Color.semantic(.warning).opacity(0.08))
+            .cornerRadius(8)
+        }
+        VStack(alignment: .leading, spacing: 12) {
+            ScrollView {
+                Text(text)
+                    .font(.body)
+                    .lineSpacing(4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(Color.semantic(.fillSecondary))
+                    .cornerRadius(8)
+                    .textSelection(.enabled)
+                    .accessibilityLabel("Transcription text")
+                    .accessibilityValue(text)
+                    .accessibilityHint("Swipe to scroll through transcribed text")
+                    .accessibilityFocused($focusedElement, equals: .transcriptionText)
+            }
+            .frame(minHeight: 120)
+            AIDisclaimerView.transcription()
+            HStack {
+                Button("Share Text") {
+                    HapticManager.shared.playSelection()
+                    shareText(text)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel("Share transcription text")
+                .accessibilityHint("Double tap to share the transcribed text")
+                Spacer()
+                Button("Copy") {
+                    HapticManager.shared.playLightImpact()
+                    copyText(text)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel("Copy transcription text")
+                .accessibilityHint("Double tap to copy the transcribed text to clipboard")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func failedTranscriptionView(error: String) -> some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundColor(.semantic(.warning))
+                Text(error == TranscriptionError.noSpeechDetected.errorDescription ? "No Speech Detected" : "Transcription Failed")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.semantic(.warning))
+            }
+            if error == TranscriptionError.noSpeechDetected.errorDescription {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("We couldn't detect any speech in this recording.")
+                        .font(.caption)
+                        .foregroundColor(.semantic(.textSecondary))
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .top, spacing: 6) { Text("•").bold(); Text("Try re-recording closer to the microphone.").font(.caption).foregroundColor(.semantic(.textSecondary)) }
+                        HStack(alignment: .top, spacing: 6) { Text("•").bold(); Text("Move to a quieter area to reduce background noise.").font(.caption).foregroundColor(.semantic(.textSecondary)) }
+                        HStack(alignment: .top, spacing: 6) { Text("•").bold(); Text("Start speaking right away to avoid long silence at the beginning.").font(.caption).foregroundColor(.semantic(.textSecondary)) }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+                    .multilineTextAlignment(.center)
+            }
+            if viewModel.canRetryTranscription {
+                Button("Try Again") {
+                    HapticManager.shared.playSelection()
+                    viewModel.retryTranscription()
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityLabel("Retry transcription")
+                .accessibilityHint("Double tap to retry the failed transcription")
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color.semantic(.warning).opacity(0.05))
+        .cornerRadius(8)
+    }
+
+    @ViewBuilder
+    private var analysisSectionView: some View {
+        if viewModel.isTranscriptionCompleted, let transcriptText = viewModel.transcriptionText {
+            AnalysisSectionView(transcript: transcriptText, viewModel: viewModel)
+                .accessibilityFocused($focusedElement, equals: .analysisResults)
         }
     }
     
@@ -284,5 +345,10 @@ struct MemoDetailView: View {
     
     private func copyText(_ text: String) {
         UIPasteboard.general.string = text
+        
+        // Provide accessibility announcement
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            UIAccessibility.post(notification: .announcement, argument: "Text copied to clipboard")
+        }
     }
 }

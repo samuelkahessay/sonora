@@ -9,6 +9,15 @@ struct OnboardingView: View {
     
     // MARK: - State
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @AccessibilityFocusState private var focusedElement: AccessibleElement?
+    
+    enum AccessibleElement {
+        case pageContent
+        case primaryButton
+        case nextButton
+        case backButton
+        case skipButton
+    }
     
     // MARK: - Body
     var body: some View {
@@ -19,8 +28,9 @@ struct OnboardingView: View {
                 
                 // Page content
                 TabView(selection: $viewModel.currentPageIndex) {
-                    ForEach(Array(OnboardingPage.allCases.enumerated()), id: \.element) { pair in
-                        let (index, page) = pair
+                    ForEach(Array(OnboardingPage.allCases.enumerated()), id: \.offset) { pair in
+                        let index = pair.offset
+                        let page = pair.element
                         pageView(for: page)
                             .tag(index)
                     }
@@ -35,6 +45,25 @@ struct OnboardingView: View {
             .navigationBarHidden(true)
             .errorAlert($viewModel.error) {
                 viewModel.retryLastOperation()
+            }
+            .onChange(of: viewModel.currentPageIndex) { _, newIndex in
+                FocusManager.shared.handleNavigationFocus {
+                    focusedElement = .pageContent
+                }
+            }
+            .onChange(of: viewModel.microphonePermissionStatus) { _, status in
+                if status == .granted {
+                    HapticManager.shared.playProcessingComplete()
+                    FocusManager.shared.announceAndFocus(
+                        "Microphone permission granted. You can now proceed to the final step.",
+                        delay: FocusManager.standardDelay
+                    ) {
+                        focusedElement = .nextButton
+                    }
+                } else if status == .denied {
+                    HapticManager.shared.playWarning()
+                    FocusManager.shared.announceChange("Microphone permission was denied. You can still use the app with limited functionality.")
+                }
             }
             .onReceive(onboardingConfiguration.$hasCompletedOnboarding) { completed in
                 if completed {
@@ -57,11 +86,16 @@ struct OnboardingView: View {
                           Color.semantic(.separator))
                     .frame(height: 4)
                     .frame(maxWidth: .infinity)
+                    .accessibilityHidden(true)
             }
         }
         .padding(.horizontal, Spacing.xl)
         .padding(.top, Spacing.lg)
         .animation(.easeInOut(duration: 0.3), value: viewModel.currentPageIndex)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Onboarding progress")
+        .accessibilityValue("Page \(viewModel.currentPageIndex + 1) of \(viewModel.totalPages)")
+        .accessibilityAddTraits(.updatesFrequently)
     }
     
     // MARK: - Page Views
@@ -151,6 +185,7 @@ struct OnboardingView: View {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.semantic(.success))
+                    .accessibilityHidden(true)
                 Text("Microphone access granted")
                     .font(.subheadline)
                     .foregroundColor(.semantic(.success))
@@ -159,12 +194,16 @@ struct OnboardingView: View {
             .background(Color.semantic(.success).opacity(0.1))
             .cornerRadius(12)
             .padding(.horizontal, Spacing.xl)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Success: Microphone access granted")
+            .accessibilityAddTraits(.isStaticText)
             
         case .denied:
             VStack(spacing: Spacing.md) {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.semantic(.warning))
+                        .accessibilityHidden(true)
                     Text("Microphone access denied")
                         .font(.subheadline)
                         .foregroundColor(.semantic(.warning))
@@ -176,6 +215,7 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                 
                 Button("Open Settings") {
+                    HapticManager.shared.playSelection()
                     viewModel.openSettings()
                 }
                 .font(.subheadline.weight(.medium))
@@ -184,16 +224,20 @@ struct OnboardingView: View {
                 .background(Color.semantic(.warning))
                 .foregroundColor(.semantic(.textInverted))
                 .cornerRadius(8)
+                .accessibilityLabel("Open Settings")
+                .accessibilityHint("Double tap to open Settings app where you can enable microphone access")
             }
             .padding()
             .background(Color.semantic(.warning).opacity(0.1))
             .cornerRadius(12)
             .padding(.horizontal, Spacing.xl)
+            .accessibilityElement(children: .contain)
             
         case .restricted:
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "lock.fill")
                     .foregroundColor(.semantic(.textSecondary))
+                    .accessibilityHidden(true)
                 Text("Microphone access is restricted")
                     .font(.subheadline)
                     .foregroundColor(.semantic(.textSecondary))
@@ -202,6 +246,9 @@ struct OnboardingView: View {
             .background(Color.semantic(.fillSecondary))
             .cornerRadius(12)
             .padding(.horizontal, Spacing.xl)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Warning: Microphone access is restricted on this device")
+            .accessibilityAddTraits(.isStaticText)
             
         case .notDetermined:
             // Show nothing, let the primary button handle the request
@@ -216,6 +263,7 @@ struct OnboardingView: View {
         HStack {
             // Back button
             Button(action: {
+                HapticManager.shared.playSelection()
                 viewModel.goToPreviousPage()
             }) {
                 HStack(spacing: Spacing.xs) {
@@ -230,18 +278,26 @@ struct OnboardingView: View {
             }
             .opacity(viewModel.isFirstPage ? 0 : 1)
             .disabled(viewModel.isFirstPage)
+            .accessibilityLabel("Go back to previous page")
+            .accessibilityHint("Double tap to return to the previous onboarding step")
+            .accessibilityFocused($focusedElement, equals: .backButton)
+            // SwiftUI sets the 'dimmed' state automatically when disabled
             
             Spacer()
             
             // Next button (when applicable)
             if !viewModel.isLastPage && viewModel.canGoNext {
                 Button("Next") {
+                    HapticManager.shared.playSelection()
                     viewModel.goToNextPage()
                 }
                 .font(.body.weight(.medium))
                 .foregroundColor(.semantic(.brandPrimary))
                 .padding(.vertical, Spacing.sm)
                 .padding(.horizontal, Spacing.md)
+                .accessibilityLabel("Continue to next page")
+                .accessibilityHint("Double tap to proceed to the next onboarding step")
+                .accessibilityFocused($focusedElement, equals: .nextButton)
             }
         }
         .padding(.horizontal, Spacing.xl)

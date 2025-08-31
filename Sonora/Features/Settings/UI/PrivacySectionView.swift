@@ -10,6 +10,7 @@ struct PrivacySectionView: View {
         SettingsCard {
             Text("Privacy & Data")
                 .font(.headline)
+                .accessibilityAddTraits(.isHeader)
 
             // Links (stacked)
             VStack(spacing: Spacing.md) {
@@ -17,9 +18,22 @@ struct PrivacySectionView: View {
                 Link(destination: privacyURL) {
                     label(icon: "hand.raised.fill", title: "Privacy Policy")
                 }
+                .accessibilityLabel("Privacy Policy")
+                .accessibilityHint("Double tap to open Privacy Policy in your browser")
+                .accessibilityAddTraits(.isLink)
+                .onTapGesture {
+                    HapticManager.shared.playSelection()
+                }
+                
                 // TODO: Replace with real Terms of Use link
                 Link(destination: termsURL) {
                     label(icon: "doc.text.fill", title: "Terms of Use")
+                }
+                .accessibilityLabel("Terms of Use")
+                .accessibilityHint("Double tap to open Terms of Use in your browser")
+                .accessibilityAddTraits(.isLink)
+                .onTapGesture {
+                    HapticManager.shared.playSelection()
                 }
             }
 
@@ -31,13 +45,32 @@ struct PrivacySectionView: View {
                         .font(.subheadline)
                         .foregroundColor(.semantic(.textSecondary))
                         .padding(.horizontal, Spacing.sm)
+                        .accessibilityAddTraits(.isHeader)
 
                     VStack(spacing: 0) {
                         optionRow(title: "Memos", binding: $controller.exportMemos)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Include memos in export")
+                            .accessibilityValue(controller.exportMemos ? "enabled" : "disabled")
+                            .accessibilityHint("Double tap to toggle including audio memos in data export")
+                            
                         Divider().background(Color.semantic(.separator))
+                            .accessibilityHidden(true)
+                            
                         optionRow(title: "Transcripts", binding: $controller.exportTranscripts)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Include transcripts in export")
+                            .accessibilityValue(controller.exportTranscripts ? "enabled" : "disabled")
+                            .accessibilityHint("Double tap to toggle including transcription text in data export")
+                            
                         Divider().background(Color.semantic(.separator))
+                            .accessibilityHidden(true)
+                            
                         optionRow(title: "Analysis", binding: $controller.exportAnalysis)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Include analysis in export")
+                            .accessibilityValue(controller.exportAnalysis ? "enabled" : "disabled")
+                            .accessibilityHint("Double tap to toggle including AI analysis results in data export")
                     }
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
@@ -45,9 +78,15 @@ struct PrivacySectionView: View {
                     )
                     .cornerRadius(10)
                 }
-                Button(action: { Task { await controller.exportData() } }) {
+                Button(action: { 
+                    HapticManager.shared.playSelection()
+                    Task { await controller.exportData() } 
+                }) {
                     HStack(spacing: Spacing.md) {
-                        if controller.isExporting { ProgressView().scaleEffect(0.9) }
+                        if controller.isExporting { 
+                            ProgressView().scaleEffect(0.9)
+                                .accessibilityLabel("Exporting in progress")
+                        }
                         Image(systemName: "square.and.arrow.up")
                             .imageScale(.medium)
                         Text(controller.isExporting ? "Exporting…" : "Export Data")
@@ -65,10 +104,19 @@ struct PrivacySectionView: View {
                 .buttonStyle(.plain)
                 .disabled(controller.isExporting || controller.isDeleting || !controller.canExport)
                 .opacity((controller.canExport && !controller.isExporting) ? 1.0 : 0.6)
+                .accessibilityLabel(controller.isExporting ? "Exporting data" : "Export data")
+                .accessibilityHint(controller.isExporting ? "Data export is in progress" : "Double tap to export selected data types to share sheet")
+                .accessibilityAddTraits(controller.isExporting ? [.updatesFrequently] : [])
 
-                Button(role: .destructive, action: { controller.requestDeleteAll() }) {
+                Button(role: .destructive, action: { 
+                    HapticManager.shared.playWarning()
+                    controller.requestDeleteAll() 
+                }) {
                     HStack(spacing: Spacing.md) {
-                        if controller.isDeleting { ProgressView().scaleEffect(0.9) }
+                        if controller.isDeleting { 
+                            ProgressView().scaleEffect(0.9)
+                                .accessibilityLabel("Deleting in progress")
+                        }
                         Image(systemName: "trash.fill")
                             .imageScale(.medium)
                         Text(controller.isDeleting ? "Deleting…" : "Delete All Data")
@@ -82,6 +130,9 @@ struct PrivacySectionView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(controller.isDeleting)
+                .accessibilityLabel(controller.isDeleting ? "Deleting all data" : "Delete all data")
+                .accessibilityHint(controller.isDeleting ? "Data deletion is in progress" : "Double tap to permanently delete all memos, transcripts, and analysis")
+                .accessibilityAddTraits(controller.isDeleting ? [.updatesFrequently] : [])
             }
 
             // No inline deletion banner; action is confirmed and immediate
@@ -137,6 +188,9 @@ struct PrivacySectionView: View {
             Spacer()
             Toggle("", isOn: binding)
                 .labelsHidden()
+                .onChange(of: binding.wrappedValue) { _, _ in
+                    HapticManager.shared.playSelection()
+                }
         }
         .padding(.vertical, 10)
         .padding(.horizontal, Spacing.md)

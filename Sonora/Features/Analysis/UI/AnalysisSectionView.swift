@@ -7,9 +7,14 @@ struct AnalysisSectionView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("AI Analysis")
-                .font(.headline)
-                .fontWeight(.semibold)
+            HStack(spacing: 8) {
+                Text("AI Analysis")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .accessibilityAddTraits(.isHeader)
+                AIBadge()
+                    .accessibilityHidden(true)
+            }
             
             // Analysis Buttons
             LazyVGrid(columns: [
@@ -18,6 +23,7 @@ struct AnalysisSectionView: View {
             ], spacing: 12) {
                 ForEach(AnalysisMode.allCases, id: \.self) { mode in
                     Button(action: {
+                        HapticManager.shared.playSelection()
                         viewModel.performAnalysis(mode: mode, transcript: transcript)
                     }) {
                         VStack(spacing: 8) {
@@ -44,6 +50,10 @@ struct AnalysisSectionView: View {
                     .buttonStyle(PlainButtonStyle())
                     .disabled(viewModel.isAnalyzing)
                     .opacity(viewModel.isAnalyzing ? 0.6 : 1.0)
+                    .accessibilityLabel("\(mode.displayName) analysis")
+                    .accessibilityHint("Double tap to analyze transcript for \(mode.displayName.lowercased())")
+                    // Disabled state is conveyed by .disabled(); keep traits minimal
+                    .accessibilityAddTraits([])
                 }
             }
             
@@ -83,15 +93,22 @@ struct AnalysisSectionView: View {
                 .cornerRadius(8)
             }
             
-            // Results
+            // Results with AI disclaimer
             if let mode = viewModel.selectedAnalysisMode,
                let result = viewModel.analysisResult,
                let envelope = viewModel.analysisEnvelope {
-                AnalysisResultsView(
-                    mode: mode,
-                    result: result,
-                    envelope: envelope
-                )
+                VStack(alignment: .leading, spacing: 12) {
+                    AnalysisResultsView(
+                        mode: mode,
+                        result: result,
+                        envelope: envelope
+                    )
+                    
+                    // AI Disclaimer for analysis results
+                    AIDisclaimerView.analysis()
+                        .accessibilityLabel("AI disclaimer: Analysis results may contain inaccuracies or subjective interpretations")
+                }
+                .accessibilityElement(children: .contain)
             }
         }
         .padding()

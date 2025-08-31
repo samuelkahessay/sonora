@@ -12,11 +12,13 @@ struct LanguageSectionView: View {
         SettingsCard {
             Text("Transcription Language")
                 .font(.headline)
+                .accessibilityAddTraits(.isHeader)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("Choose your spoken language to improve accuracy. Auto will detect language automatically.")
                     .font(.subheadline)
                     .foregroundColor(.semantic(.textSecondary))
+                    .accessibilityLabel("Choose your spoken language to improve transcription accuracy. Auto detect will automatically identify the language.")
             }
 
             Picker("Language", selection: $selectedCode) {
@@ -25,7 +27,11 @@ struct LanguageSectionView: View {
                 }
             }
             .pickerStyle(.menu)
+            .accessibilityLabel("Transcription language selection")
+            .accessibilityHint("Double tap to choose your preferred language for voice transcription")
+            .accessibilityValue(getCurrentLanguageName())
             .onChange(of: selectedCode) { _, newValue in
+                HapticManager.shared.playSelection()
                 let code = newValue == "auto" ? nil : newValue
                 AppConfiguration.shared.setPreferredTranscriptionLanguage(code)
             }
@@ -41,11 +47,19 @@ struct LanguageSectionView: View {
             HStack(spacing: Spacing.md) {
                 Image(systemName: "info.circle")
                     .foregroundColor(.semantic(.textSecondary))
+                    .accessibilityHidden(true)
                 Text("You can change this any time. Non-English results show a banner warning by default.")
                     .font(.caption)
                     .foregroundColor(.semantic(.textSecondary))
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Information: You can change the language setting any time. Non-English transcription results will show a banner warning by default.")
+            .accessibilityAddTraits(.isStaticText)
         }
+    }
+    
+    private func getCurrentLanguageName() -> String {
+        return languages.first { $0.code == selectedCode }?.name ?? "Auto (Detect)"
     }
 }
 

@@ -9,6 +9,13 @@ import SwiftUI
 
 struct RecordingView: View {
     @StateObject private var viewModel = RecordingViewModel()
+    @AccessibilityFocusState private var focusedElement: AccessibleElement?
+    
+    enum AccessibleElement {
+        case recordButton
+        case permissionButton
+        case statusText
+    }
     
     var body: some View {
         NavigationStack {
@@ -21,25 +28,31 @@ struct RecordingView: View {
                             .font(.largeTitle)
                             .fontWeight(.medium)
                             .foregroundColor(.semantic(.error))
+                            .accessibilityHidden(true)
                         
                         Text(viewModel.permissionStatus.displayName)
                             .font(.title2)
                             .fontWeight(.semibold)
+                            .accessibilityAddTraits(.isHeader)
                         
                         Text(getPermissionDescription())
                             .font(.body)
                             .foregroundColor(.semantic(.textSecondary))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
+                            .accessibilityLabel(getPermissionAccessibilityLabel())
                         
                         if viewModel.isRequestingPermission {
-                            ProgressView()
+                            ProgressView("Requesting microphone permission")
                                 .progressViewStyle(CircularProgressViewStyle())
+                                .accessibilityLabel("Requesting microphone permission")
                         } else {
                             getPermissionButton()
+                                .accessibilityFocused($focusedElement, equals: .permissionButton)
                         }
                     }
                     .padding()
+                    .accessibilityElement(children: .contain)
                 } else {
                     VStack(spacing: 24) {
                         // Status and timers
@@ -48,26 +61,40 @@ struct RecordingView: View {
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(viewModel.isRecording ? .semantic(.error) : .semantic(.textPrimary))
+                                .accessibilityAddTraits(.isHeader)
+                                .accessibilityFocused($focusedElement, equals: .statusText)
                             
                             Text(viewModel.formattedRecordingTime)
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
                                 .monospacedDigit()
+                                .accessibilityLabel(getTimeAccessibilityLabel())
+                                .accessibilityValue(viewModel.formattedRecordingTime)
                             
                             if viewModel.isInCountdown {
-                                Text("Recording ends in")
-                                    .font(.headline)
-                                    .foregroundColor(.semantic(.warning))
-                                Text("\(Int(ceil(viewModel.remainingTime)))")
-                                    .font(.system(.largeTitle, design: .rounded))
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.semantic(.error))
-                                    .monospacedDigit()
+                                VStack(spacing: 4) {
+                                    Text("Recording ends in")
+                                        .font(.headline)
+                                        .foregroundColor(.semantic(.warning))
+                                    Text("\(Int(ceil(viewModel.remainingTime)))")
+                                        .font(.system(.largeTitle, design: .rounded))
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.semantic(.error))
+                                        .monospacedDigit()
+                                }
+                                .accessibilityElement(children: .combine)
+                                .accessibilityLabel("Recording ends in \(Int(ceil(viewModel.remainingTime))) seconds")
+                                .accessibilityAddTraits(.updatesFrequently)
                             }
                         }
+                        .accessibilityElement(children: .contain)
                         
                         // Record/Stop button
-                        Button(action: { viewModel.toggleRecording() }) {
+                        Button(action: { 
+                            // Add haptic feedback
+                            HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
+                            viewModel.toggleRecording()
+                        }) {
                             HStack(spacing: 8) {
                                 Image(systemName: viewModel.isRecording ? "stop.circle.fill" : "mic.circle.fill")
                                 Text(viewModel.isRecording ? "Stop" : "Record")
@@ -76,16 +103,24 @@ struct RecordingView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(viewModel.isRecording ? .semantic(.error) : .semantic(.brandPrimary))
+                        .accessibilityLabel(getRecordButtonAccessibilityLabel())
+                        .accessibilityHint(getRecordButtonAccessibilityHint())
+                        .accessibilityFocused($focusedElement, equals: .recordButton)
+                        .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
                         
                         if viewModel.shouldShowRecordingIndicator {
                             HStack(spacing: 8) {
                                 Circle()
                                     .fill(Color.semantic(.error))
                                     .frame(width: 8, height: 8)
+                                    .accessibilityHidden(true)
                                 Text("Recording in progress")
                                     .font(.caption)
                                     .foregroundColor(.semantic(.textSecondary))
                             }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Recording is in progress in the background")
+                            .accessibilityAddTraits(.updatesFrequently)
                         }
                     }
                     .padding(.horizontal)
@@ -97,7 +132,47 @@ struct RecordingView: View {
             .navigationTitle("Sonora")
             .toolbarBackground(Color.semantic(.bgPrimary), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .onAppear { viewModel.onViewAppear() }
+            .onAppear { 
+                viewModel.onViewAppear()
+            }
+            .initialFocus {
+                if viewModel.hasPermission {
+                    focusedElement = .recordButton
+                } else {
+                    focusedElement = .permissionButton
+                }
+            }
+            .onChange(of: viewModel.hasPermission) { _, hasPermission in
+                if hasPermission {
+                    HapticManager.shared.playPermissionGranted()
+                    FocusManager.shared.announceAndFocus(
+                        "Microphone access granted. You can now record voice memos.",
+                        delay: FocusManager.standardDelay
+                    ) {
+                        focusedElement = .recordButton
+                    }
+                } else {
+                    HapticManager.shared.playPermissionDenied()
+                    FocusManager.shared.announceChange("Microphone access is required to record voice memos.")
+                    focusedElement = .permissionButton
+                }
+            }
+            .onChange(of: viewModel.isRecording) { _, isRecording in
+                if isRecording {
+                    FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
+                        focusedElement = .statusText
+                    }
+                } else {
+                    FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
+                        focusedElement = .recordButton
+                    }
+                }
+            }
+            .onChange(of: viewModel.isInCountdown) { _, isInCountdown in
+                if isInCountdown {
+                    focusedElement = .statusText
+                }
+            }
             .alert("Recording Stopped", isPresented: $viewModel.showAutoStopAlert) {
                 Button("OK") { viewModel.dismissAutoStopAlert() }
             } message: {
@@ -125,20 +200,76 @@ struct RecordingView: View {
     private func getPermissionButton() -> some View {
         switch viewModel.permissionStatus {
         case .notDetermined:
-            Button("Allow Microphone Access") { viewModel.requestPermission() }
-                .buttonStyle(.borderedProminent)
-                .disabled(viewModel.isRequestingPermission)
+            Button("Allow Microphone Access") { 
+                HapticManager.shared.playSelection()
+                viewModel.requestPermission()
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(viewModel.isRequestingPermission)
+            .accessibilityLabel("Allow microphone access")
+            .accessibilityHint("Double tap to request microphone permission for recording voice memos")
             
         case .denied:
-            Button("Open Settings") { viewModel.openSettings() }
-                .buttonStyle(.bordered)
+            Button("Open Settings") { 
+                HapticManager.shared.playSelection()
+                viewModel.openSettings()
+            }
+            .buttonStyle(.bordered)
+            .accessibilityLabel("Open Settings app")
+            .accessibilityHint("Double tap to open Settings where you can enable microphone access")
             
         case .restricted:
-            Button("Check Device Settings") { viewModel.openSettings() }
-                .buttonStyle(.bordered)
+            Button("Check Device Settings") { 
+                HapticManager.shared.playSelection()
+                viewModel.openSettings()
+            }
+            .buttonStyle(.bordered)
+            .accessibilityLabel("Check device settings")
+            .accessibilityHint("Double tap to open Settings to check device restrictions")
             
         case .granted:
             EmptyView()
         }
+    }
+    
+    // MARK: - Accessibility Helpers
+    
+    private func getPermissionAccessibilityLabel() -> String {
+        switch viewModel.permissionStatus {
+        case .notDetermined:
+            return "Sonora needs microphone access to record voice memos for transcription and analysis. Allow microphone access to continue."
+        case .denied:
+            return "Microphone access was denied. Open Settings to enable microphone access for recording voice memos."
+        case .restricted:
+            return "Microphone access is restricted on this device. Check your device restrictions in Settings to enable recording."
+        case .granted:
+            return "Microphone access is enabled. You can now record voice memos."
+        }
+    }
+    
+    private func getRecordButtonAccessibilityLabel() -> String {
+        if viewModel.isRecording {
+            return "Stop recording"
+        } else {
+            return "Start recording"
+        }
+    }
+    
+    private func getRecordButtonAccessibilityHint() -> String {
+        if viewModel.isRecording {
+            return "Double tap to stop the current voice recording"
+        } else {
+            return "Double tap to start recording a 60-second voice memo"
+        }
+    }
+    
+    private func getTimeAccessibilityLabel() -> String {
+        let timeComponents = viewModel.formattedRecordingTime.split(separator: ":")
+        if timeComponents.count == 2 {
+            let minutes = String(timeComponents[0])
+            let seconds = String(timeComponents[1])
+            return "Recording time: \(minutes) minutes and \(seconds) seconds"
+        }
+        return "Recording time: \(viewModel.formattedRecordingTime)"
     }
 }

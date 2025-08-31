@@ -13,6 +13,15 @@ struct OnboardingPageView: View {
     let showDetailedPoints: Bool
     let primaryButtonStyle: OnboardingButtonStyle
     
+    // MARK: - Accessibility
+    @AccessibilityFocusState private var focusedElement: AccessibleElement?
+    
+    enum AccessibleElement {
+        case pageContent
+        case primaryButton
+        case skipButton
+    }
+    
     // MARK: - Button styles
     enum OnboardingButtonStyle {
         case primary
@@ -70,6 +79,7 @@ struct OnboardingPageView: View {
                         .font(.system(size: 64, weight: .medium))
                         .foregroundColor(.semantic(.brandPrimary))
                         .symbolRenderingMode(.hierarchical)
+                        .accessibilityHidden(true)
                     
                     // Title and description
                     VStack(spacing: Spacing.md) {
@@ -78,6 +88,7 @@ struct OnboardingPageView: View {
                             .fontWeight(.bold)
                             .foregroundColor(.semantic(.textPrimary))
                             .multilineTextAlignment(.center)
+                            .accessibilityAddTraits(.isHeader)
                         
                         Text(page.description)
                             .font(.body)
@@ -87,6 +98,9 @@ struct OnboardingPageView: View {
                     }
                 }
                 .padding(.top, Spacing.xl)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(page.title). \(page.description)")
+                .accessibilityFocused($focusedElement, equals: .pageContent)
                 
                 // Detailed points section
                 if showDetailedPoints && !page.detailedPoints.isEmpty {
@@ -105,12 +119,16 @@ struct OnboardingPageView: View {
                     // Primary action button
                     if let primaryTitle = page.primaryButtonTitle, 
                        let primaryAction = onPrimaryAction {
-                        Button(action: primaryAction) {
+                        Button(action: {
+                            HapticManager.shared.playSelection()
+                            primaryAction()
+                        }) {
                             HStack(spacing: Spacing.sm) {
                                 if isLoading {
                                     ProgressView()
                                         .scaleEffect(0.9)
                                         .tint(primaryButtonStyle.foregroundColor)
+                                        .accessibilityLabel("Loading")
                                 }
                                 
                                 Text(primaryTitle)
@@ -125,15 +143,23 @@ struct OnboardingPageView: View {
                         .cornerRadius(12)
                         .disabled(isLoading)
                         .opacity(isLoading ? 0.8 : 1.0)
+                        .accessibilityLabel(primaryTitle)
+                        .accessibilityHint(getPrimaryButtonHint())
+                        .accessibilityFocused($focusedElement, equals: .primaryButton)
+                        .accessibilityAddTraits(isLoading ? [.updatesFrequently] : [])
                     }
                     
                     // Skip button
                     Button("Skip") {
+                        HapticManager.shared.playSelection()
                         onSkip()
                     }
                     .font(.body)
                     .foregroundColor(.semantic(.textSecondary))
                     .padding(.vertical, Spacing.sm)
+                    .accessibilityLabel("Skip onboarding")
+                    .accessibilityHint("Double tap to skip the onboarding process and go directly to the app")
+                    .accessibilityFocused($focusedElement, equals: .skipButton)
                 }
             }
             .padding(.horizontal, Spacing.xl)
@@ -141,6 +167,26 @@ struct OnboardingPageView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.semantic(.bgPrimary))
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                focusedElement = .pageContent
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func getPrimaryButtonHint() -> String {
+        switch page {
+        case .welcome:
+            return "Double tap to continue to the privacy information"
+        case .privacy:
+            return "Double tap to proceed to microphone permission setup"
+        case .microphone:
+            return "Double tap to request microphone permission for recording voice memos"
+        case .features:
+            return "Double tap to complete onboarding and start using Sonora"
+        }
     }
 }
 
@@ -157,6 +203,7 @@ struct OnboardingFeatureRow: View {
                 .font(.title3)
                 .foregroundColor(.semantic(.success))
                 .symbolRenderingMode(.hierarchical)
+                .accessibilityHidden(true)
             
             // Feature text
             Text(text)
@@ -166,6 +213,9 @@ struct OnboardingFeatureRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, Spacing.xs)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Feature: \(text)")
+        .accessibilityAddTraits(.isStaticText)
     }
 }
 
