@@ -112,7 +112,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             try audioSession.setCategory(
                 .playAndRecord,
                 mode: .default,
-                options: [.defaultToSpeaker, .allowBluetooth]
+                options: [.defaultToSpeaker, .allowBluetoothHFP]
             )
             
             // Set preferred sample rate and I/O buffer duration for optimal performance
@@ -128,7 +128,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             
             print("🎵 BackgroundAudioService: Audio session configured successfully")
             print("   - Category: .playAndRecord")
-            print("   - Options: .defaultToSpeaker, .allowBluetooth")
+            print("   - Options: .defaultToSpeaker, .allowBluetoothHFP")
             print("   - Sample Rate: \(sampleRate) Hz")
             print("   - Channels: \(numberOfChannels)")
             print("   - Quality: \(recordingQuality)")
@@ -215,7 +215,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
                 
                 let session = AVAudioSession.sharedInstance()
                 try session.setActive(false)
-                try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .defaultToSpeaker])
+                try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothHFP, .defaultToSpeaker])
                 try session.setActive(true)
                 
                 // Prefer built-in mic if available

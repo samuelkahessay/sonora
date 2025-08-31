@@ -4,7 +4,7 @@ import Foundation
 class AnalysisService: ObservableObject, AnalysisServiceProtocol {
     private let config = AppConfiguration.shared
     
-    func analyze<T: Codable>(mode: AnalysisMode, transcript: String, responseType: T.Type) async throws -> AnalyzeEnvelope<T> {
+    func analyze<T: Codable & Sendable>(mode: AnalysisMode, transcript: String, responseType: T.Type) async throws -> AnalyzeEnvelope<T> {
         let analyzeURL = config.apiBaseURL.appendingPathComponent("analyze")
         print("🔧 AnalysisService: Using API URL: \(analyzeURL.absoluteString)")
         

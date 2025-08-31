@@ -131,7 +131,7 @@ public func requestMicrophonePermission() async -> MicrophonePermissionStatus {
             }
         }
         
-        performRequest { _ in
+        performRequest { @Sendable _ in
             let status = MicrophonePermissionStatus.current()
             continuation.resume(returning: status)
         }

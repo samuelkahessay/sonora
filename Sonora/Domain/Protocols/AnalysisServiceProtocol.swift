@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 protocol AnalysisServiceProtocol: ObservableObject {
-    func analyze<T: Codable>(mode: AnalysisMode, transcript: String, responseType: T.Type) async throws -> AnalyzeEnvelope<T>
+    func analyze<T: Codable & Sendable>(mode: AnalysisMode, transcript: String, responseType: T.Type) async throws -> AnalyzeEnvelope<T>
     
     func analyzeTLDR(transcript: String) async throws -> AnalyzeEnvelope<TLDRData>
     func analyzeAnalysis(transcript: String) async throws -> AnalyzeEnvelope<AnalysisData>
