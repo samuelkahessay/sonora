@@ -19,11 +19,11 @@ struct RecordingView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 32) {
+            VStack(spacing: Spacing.xxl) {
                 Spacer()
                 
                 if !viewModel.hasPermission {
-                    VStack(spacing: 16) {
+                    VStack(spacing: Spacing.lg) {
                         Image(systemName: viewModel.permissionStatus.iconName)
                             .font(.largeTitle)
                             .fontWeight(.medium)
@@ -58,9 +58,9 @@ struct RecordingView: View {
                     .padding()
                     .accessibilityElement(children: .contain)
                 } else {
-                    VStack(spacing: 24) {
+                    VStack(spacing: Spacing.xl) {
                         // Status and timers
-                        VStack(spacing: 8) {
+                        VStack(spacing: Spacing.sm) {
                             Text(viewModel.recordingStatusText)
                                 .font(.title2)
                                 .fontWeight(.semibold)
@@ -72,8 +72,9 @@ struct RecordingView: View {
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
                                 .monospacedDigit()
-                                .accessibilityLabel(getTimeAccessibilityLabel())
-                                .accessibilityValue(viewModel.formattedRecordingTime)
+                                .accessibilityLabel("Recording duration")
+                                .accessibilityValue(getTimeAccessibilityLabel())
+                                .accessibilityAddTraits(.updatesFrequently)
                             
                             if viewModel.isInCountdown {
                                 VStack(spacing: 4) {
@@ -113,14 +114,28 @@ struct RecordingView: View {
                         .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
                         
                         if viewModel.shouldShowRecordingIndicator {
-                            HStack(spacing: 8) {
-                                Circle()
-                                    .fill(Color.semantic(.error))
-                                    .frame(width: 8, height: 8)
-                                    .accessibilityHidden(true)
-                                Text("Recording in progress")
-                                    .font(.caption)
-                                    .foregroundColor(.semantic(.textSecondary))
+                            HStack(spacing: 12) {
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(Color.semantic(.error))
+                                        .frame(width: 16, height: 16)
+                                        .accessibilityHidden(true)
+                                        .scaleEffect(1.0)
+                                        .animation(.easeInOut(duration: 1.0).repeatForever(), value: viewModel.isRecording)
+                                    
+                                    Text("Recording in progress")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.semantic(.error))
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(Color.semantic(.error).opacity(0.1))
+                                .cornerRadius(20)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(Color.semantic(.error).opacity(0.3), lineWidth: 1)
+                                )
                             }
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel("Recording is in progress in the background")
@@ -133,6 +148,9 @@ struct RecordingView: View {
                 Spacer()
             }
             .padding()
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: 0)
+            }
             .navigationTitle("Sonora")
             .toolbarBackground(Color.semantic(.bgPrimary), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)

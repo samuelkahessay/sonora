@@ -251,18 +251,22 @@ struct MemoDetailView: View {
         }
         VStack(alignment: .leading, spacing: 12) {
             ScrollView {
-                Text(text)
-                    .font(.body)
-                    .lineSpacing(4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(Color.semantic(.fillSecondary))
-                    .cornerRadius(8)
-                    .textSelection(.enabled)
-                    .accessibilityLabel("Transcription text")
-                    .accessibilityValue(text)
-                    .accessibilityHint("Swipe to scroll through transcribed text")
-                    .accessibilityFocused($focusedElement, equals: .transcriptionText)
+                VStack(alignment: .leading, spacing: 16) {
+                    ForEach(Array(formatTranscriptParagraphs(text).enumerated()), id: \.offset) { index, paragraph in
+                        Text(paragraph)
+                            .font(.body)
+                            .lineSpacing(6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                }
+                .padding()
+                .background(Color.semantic(.fillSecondary))
+                .cornerRadius(8)
+                .accessibilityLabel("Transcription text")
+                .accessibilityValue(text)
+                .accessibilityHint("Swipe to scroll through transcribed text. Text is formatted in paragraphs for better readability.")
+                .accessibilityFocused($focusedElement, equals: .transcriptionText)
             }
             .frame(minHeight: 120)
             AIDisclaimerView.transcription()
@@ -292,7 +296,7 @@ struct MemoDetailView: View {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.semantic(.warning))
-                Text(error == TranscriptionError.noSpeechDetected.errorDescription ? "No Speech Detected" : "Transcription Failed")
+                Text(getErrorTitle(for: error))
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.semantic(.warning))
@@ -360,5 +364,55 @@ struct MemoDetailView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             UIAccessibility.post(notification: .announcement, argument: "Text copied to clipboard")
         }
+    }
+    
+    // MARK: - Error Message Helpers
+    
+    private func getErrorTitle(for error: String) -> String {
+        if error == TranscriptionError.noSpeechDetected.errorDescription {
+            return "No Speech Detected"
+        } else if error.contains("network") || error.contains("connection") {
+            return "Connection Problem"
+        } else if error.contains("timeout") {
+            return "Request Timed Out"
+        } else if error.contains("quota") || error.contains("limit") {
+            return "Service Limit Reached"
+        } else if error.contains("audio") || error.contains("format") {
+            return "Audio Format Issue"
+        } else {
+            return "Transcription Failed"
+        }
+    }
+    
+    // MARK: - Transcript Formatting Helpers
+    
+    private func formatTranscriptParagraphs(_ text: String) -> [String] {
+        // Split text into sentences and group them into paragraphs
+        let sentences = text.components(separatedBy: CharacterSet(charactersIn: ".!?"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        
+        var paragraphs: [String] = []
+        var currentParagraph: [String] = []
+        
+        for sentence in sentences {
+            currentParagraph.append(sentence)
+            
+            // Create a new paragraph every 3-4 sentences for better readability
+            if currentParagraph.count >= 3 {
+                let paragraph = currentParagraph.joined(separator: ". ") + "."
+                paragraphs.append(paragraph)
+                currentParagraph = []
+            }
+        }
+        
+        // Add any remaining sentences as the last paragraph
+        if !currentParagraph.isEmpty {
+            let paragraph = currentParagraph.joined(separator: ". ") + "."
+            paragraphs.append(paragraph)
+        }
+        
+        // If no paragraphs were created, return the original text
+        return paragraphs.isEmpty ? [text] : paragraphs
     }
 }

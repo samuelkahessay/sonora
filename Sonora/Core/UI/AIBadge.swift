@@ -8,6 +8,7 @@ struct AIBadge: View {
         }
         .font(.caption2)
         .fontWeight(.medium)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         .foregroundColor(.semantic(.brandPrimary))
         .padding(.horizontal, 8)
         .padding(.vertical, 4)

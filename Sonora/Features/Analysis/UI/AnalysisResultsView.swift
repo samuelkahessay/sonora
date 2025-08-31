@@ -82,9 +82,13 @@ struct HeaderInfoView<T: Codable>: View {
                     Text(envelope.model)
                         .font(.caption)
                         .foregroundColor(.semantic(.textSecondary))
+                        .accessibilityLabel("AI model: \(envelope.model)")
+                        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
                     Text("\(envelope.latency_ms)ms")
                         .font(.caption)
                         .foregroundColor(.semantic(.textSecondary))
+                        .accessibilityLabel("Response time: \(envelope.latency_ms) milliseconds")
+                        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
                 }
             }
             
@@ -92,12 +96,16 @@ struct HeaderInfoView<T: Codable>: View {
                 Label("\(envelope.tokens.input + envelope.tokens.output) tokens", systemImage: "textformat")
                     .font(.caption)
                     .foregroundColor(.semantic(.textSecondary))
+                    .accessibilityLabel("Total tokens used: \(envelope.tokens.input + envelope.tokens.output)")
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility2)
                 
                 Spacer()
                 
                 Text("\(envelope.tokens.input) in, \(envelope.tokens.output) out")
                     .font(.caption)
                     .foregroundColor(.semantic(.textSecondary))
+                    .accessibilityLabel("Input tokens: \(envelope.tokens.input), Output tokens: \(envelope.tokens.output)")
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility2)
             }
         }
         .padding()
