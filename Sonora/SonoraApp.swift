@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UIKit
+import CoreSpotlight
 
 @main
 struct SonoraApp: App {
@@ -118,7 +119,19 @@ struct SonoraApp: App {
                             }
                         }
                     } else {
-                        print("❌ SonoraApp: Unknown deep link host: \(url.host ?? "nil")")
+                        // Handle sonora://memo/<id>
+                        if url.host == "memo" {
+                            let idStr = url.lastPathComponent
+                            NotificationCenter.default.post(name: .openMemoByID, object: nil, userInfo: ["memoId": idStr])
+                        } else {
+                            print("❌ SonoraApp: Unknown deep link host: \(url.host ?? "nil")")
+                        }
+                    }
+                }
+                .onContinueUserActivity(CSSearchableItemActionType) { activity in
+                    if let idStr = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String {
+                        print("🔍 Spotlight activity for memo: \(idStr)")
+                        NotificationCenter.default.post(name: .openMemoByID, object: nil, userInfo: ["memoId": idStr])
                     }
                 }
         }

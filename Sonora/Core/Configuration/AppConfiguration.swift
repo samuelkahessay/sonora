@@ -142,6 +142,13 @@ public final class AppConfiguration {
     /// Whether to persist analysis cache to disk
     /// Can be overridden with SONORA_DISK_CACHE_ENABLED environment variable
     public private(set) var diskCacheEnabled: Bool = true
+
+    // MARK: - Search / Spotlight
+    /// Whether Core Spotlight indexing is enabled (user can opt out in Settings in future)
+    public var searchIndexingEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: "searchIndexingEnabled") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "searchIndexingEnabled") }
+    }
     
     // MARK: - Configuration Loading
     

@@ -9,6 +9,7 @@ import SwiftUI
 
 extension Notification.Name {
     static let popToRootMemos = Notification.Name("popToRootMemos")
+    static let openMemoByID = Notification.Name("openMemoByID")
 }
 
 struct MemosView: View {
@@ -84,6 +85,12 @@ struct MemosView: View {
                 error: $viewModel.error
             ) {
                 viewModel.retryLastOperation()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openMemoByID)) { note in
+                guard let idStr = note.userInfo?["memoId"] as? String, let id = UUID(uuidString: idStr) else { return }
+                if let memo = DIContainer.shared.memoRepository().getMemo(by: id) {
+                    viewModel.navigationPath.append(memo)
+                }
             }
         }
     }

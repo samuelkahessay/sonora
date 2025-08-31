@@ -35,6 +35,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _eventBus: (any EventBusProtocol)?
     private var _eventHandlerRegistry: (any EventHandlerRegistryProtocol)?
     private var _moderationService: (any ModerationServiceProtocol)?
+    private var _spotlightIndexer: (any SpotlightIndexing)?
     
     // MARK: - Initialization
     private init() {
@@ -152,6 +153,14 @@ final class DIContainer: ObservableObject, Resolver {
             startTranscriptionUseCase: startTranscriptionUseCase,
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase
+        )
+
+        // Spotlight Indexer (optional feature) — requires memoRepository to be initialized
+        self._spotlightIndexer = SpotlightIndexer(
+            logger: self._logger ?? Logger.shared,
+            memoRepository: self._memoRepository,
+            transcriptionRepository: self._transcriptionRepository!,
+            analysisRepository: self._analysisRepository!
         )
         
         _logger?.info("DIContainer: Configured with shared service instances", category: .system, context: LogContext())
@@ -273,6 +282,13 @@ final class DIContainer: ObservableObject, Resolver {
         ensureConfigured()
         guard let reg = _eventHandlerRegistry else { fatalError("DIContainer not configured: eventHandlerRegistry") }
         return reg
+    }
+
+    /// Spotlight indexing service
+    func spotlightIndexer() -> any SpotlightIndexing {
+        ensureConfigured()
+        guard let idx = _spotlightIndexer else { fatalError("DIContainer not configured: spotlightIndexer") }
+        return idx
     }
     
 }

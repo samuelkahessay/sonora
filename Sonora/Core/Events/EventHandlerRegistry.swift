@@ -22,6 +22,7 @@ public final class EventHandlerRegistry {
     private var calendarEventHandler: CalendarEventHandler?
     private var remindersEventHandler: RemindersEventHandler?
     private var liveActivityEventHandler: LiveActivityEventHandler?
+    private var spotlightEventHandler: SpotlightEventHandler?
     
     // MARK: - Configuration
     private let enabledHandlers: Set<String> = [
@@ -59,6 +60,7 @@ public final class EventHandlerRegistry {
         registerCalendarEventHandler()
         registerRemindersEventHandler()
         registerLiveActivityEventHandler()
+        registerSpotlightEventHandler()
         
         // Log registration summary
         let activeCount = handlerStatus.values.filter { $0 }.count
@@ -140,6 +142,16 @@ public final class EventHandlerRegistry {
                         category: .system,
                         context: LogContext())
         }
+    }
+
+    /// Register the Spotlight event handler
+    private func registerSpotlightEventHandler() {
+        let handlerName = "SpotlightEventHandler"
+        // Always register Spotlight; it internally respects the feature flag
+        spotlightEventHandler = SpotlightEventHandler(logger: logger, eventBus: eventBus, indexer: DIContainer.shared.spotlightIndexer())
+        registeredHandlers[handlerName] = spotlightEventHandler
+        handlerStatus[handlerName] = true
+        logger.info("Registered SpotlightEventHandler", category: .system, context: LogContext())
     }
     
     // MARK: - Handler Management

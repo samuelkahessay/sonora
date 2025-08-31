@@ -70,7 +70,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
             
             // Verify deletion was successful
             try await verifyDeletion(memo)
-            
+
             logger.useCase("Memo deletion completed successfully", 
                          level: .info,
                          context: LogContext(correlationId: correlationId, additionalInfo: [
@@ -78,6 +78,11 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
                              "filename": memo.filename,
                              "analysisCleanup": true
                          ]))
+
+            // Update Spotlight index (best-effort)
+            Task.detached(priority: .background) {
+                await DIContainer.shared.spotlightIndexer().delete(memoID: memo.id)
+            }
             
         } catch let repositoryError as RepositoryError {
             logger.error("DeleteMemoUseCase repository error", 
