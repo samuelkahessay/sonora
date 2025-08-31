@@ -23,11 +23,11 @@ struct SonoraApp: App {
         _ = OnboardingConfiguration.shared
         print("📋 SonoraApp: OnboardingConfiguration initialized (App init)")
 
-        // Global Navigation Bar appearance: ensure clear bottom divider (hairline) visible across app
+        // Global Navigation Bar appearance: keep thin bottom divider (hairline)
         let navAppearance = UINavigationBarAppearance()
         navAppearance.configureWithDefaultBackground()
         navAppearance.backgroundColor = UIColor.systemBackground
-        navAppearance.shadowColor = UIColor.separator
+        navAppearance.shadowColor = UIColor.separator // keep hairline
         UINavigationBar.appearance().standardAppearance = navAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
         UINavigationBar.appearance().compactAppearance = navAppearance

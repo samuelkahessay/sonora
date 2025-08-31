@@ -48,8 +48,11 @@ struct MemosView: View {
                             // MARK: - Swipe Actions Configuration
                             /// Secondary actions accessible via swipe gestures
                             /// Design principle: Keep primary UI clean, secondary actions discoverable
-                            .swipeActions(allowsFullSwipe: false) {
-                                swipeActionsView(for: memo)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                // Put delete first so full-swipe reliably deletes
+                                deleteButton(for: memo)
+                                // Contextual actions next (transcribe/retry)
+                                contextualTranscriptionActions(for: memo)
                             }
                         }
                         // **Bulk Operations**
@@ -64,6 +67,10 @@ struct MemosView: View {
                     .listStyle(MemoListConstants.listStyle) // Modern grouped appearance
                     .scrollContentBackground(.hidden) // ADDED: Clean background
                     .background(MemoListConstants.ListStyling.backgroundColor) // ADDED: Consistent bg
+                    // Add a small top inset so first row doesn't touch nav bar hairline
+                    .safeAreaInset(edge: .top) {
+                        Color.clear.frame(height: 8)
+                    }
                     .refreshable { viewModel.refreshMemos() } // Pull-to-refresh support
                 }
             }
@@ -297,15 +304,15 @@ struct MemoRowView: View {
 /// **Swipe Actions Configuration**
 extension MemosView {
     
-    /// **Swipe Actions View**
-    /// Contextual actions based on memo transcription state
+    /// **Contextual Transcription Actions**
+    /// Contextual actions based on memo transcription state (excluding delete)
     /// 
     /// **Design Philosophy:**
     /// - Progressive disclosure: Show relevant actions only
     /// - Visual hierarchy: Primary action (transcribe) vs secondary (delete)
     /// - Accessibility: Full VoiceOver support with descriptive labels
     @ViewBuilder
-    private func swipeActionsView(for memo: Memo) -> some View {
+    private func contextualTranscriptionActions(for memo: Memo) -> some View {
         let transcriptionState = viewModel.getTranscriptionState(for: memo)
         
         // **Transcription Actions**
@@ -315,10 +322,6 @@ extension MemosView {
         } else if transcriptionState.isFailed {
             retryTranscriptionButton(for: memo)
         }
-        
-        // **Destructive Actions**
-        // Always available as secondary action
-        deleteButton(for: memo)
     }
     
     /// **Transcribe Button**
