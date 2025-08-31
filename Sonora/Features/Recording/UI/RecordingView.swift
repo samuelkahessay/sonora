@@ -1,9 +1,8 @@
-//
 //  RecordingView.swift
 //  Sonora
 //
-//  Created by Samuel Kahessay on 2025-08-23.
-//
+//  Updated: adds Liquid Glass record/stop button with iOS 26 fallback
+// Created by Samuel Kahessay on 2025-08-23.
 
 import SwiftUI
 
@@ -11,25 +10,46 @@ import SwiftUI
 struct CircularRecordButton: View {
     let isRecording: Bool
     let action: () -> Void
-    
     private let buttonSize: CGFloat = 160
     
     var body: some View {
-        Button(action: action) {
-            ZStack {
-                // Background circle
-                Circle()
-                    .fill(isRecording ? Color.semantic(.error) : Color.semantic(.brandPrimary))
-                    .frame(width: buttonSize, height: buttonSize)
-                    .scaleEffect(isRecording ? 1.05 : 1.0)
-                
-                // Icon
-                Image(systemName: isRecording ? "stop.fill" : "mic.fill")
+        if #available(iOS 26.0, *) {
+            let tint = isRecording ? Color.semantic(.error): Color.semantic(.brandPrimary)
+            
+            Button(action: action) {
+                Label(isRecording ? "Stop" : "Record",
+                      systemImage: isRecording ? "stop.fill" : "mic.fill")
+                    .labelStyle(.iconOnly)
                     .font(.system(size: 64, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
+                    .frame(width: buttonSize, height: buttonSize)
+                    .contentShape(Circle())
             }
+            .clipShape(Circle())
+            .glassEffect(
+                .regular
+                    .tint(tint.opacity(0.8))
+                    .interactive()
+            )
+            .shadow(radius: 6, y: 3)
+        } else {
+            Button(action: action) {
+                ZStack {
+                    Circle()
+                        .fill(isRecording ? Color.semantic(.error) : Color.semantic(.brandPrimary))
+                        .frame(width: buttonSize, height: buttonSize)
+                        .scaleEffect(isRecording ? 1.05 : 1.0)
+                    
+                    Label(isRecording ? "Stop" : "Record",
+                          systemImage: isRecording ? "stop.fill" : "mic.fill")
+                        .labelStyle(.iconOnly)
+                        .font(.system(size: 64, weight: .medium))
+                        .foregroundColor(.white)
+                }
+            }
+            .buttonStyle(.plain)
+            .animation(.spring(response: 0.25, dampingFraction: 0.9), value: isRecording)
         }
-        .buttonStyle(.plain)
     }
 }
 
@@ -44,128 +64,157 @@ struct RecordingView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: Spacing.xxl) {
-                Spacer()
-                
-                if !viewModel.hasPermission {
-                    VStack(spacing: Spacing.lg) {
-                        Image(systemName: viewModel.permissionStatus.iconName)
-                            .font(.largeTitle)
-                            .fontWeight(.medium)
-                            .foregroundColor(.semantic(.error))
-                            .accessibilityHidden(true)
-                        
-                        Text(viewModel.permissionStatus.displayName)
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .accessibilityAddTraits(.isHeader)
-                        
-                        Text(getPermissionDescription())
-                            .font(.body)
-                            .foregroundColor(.semantic(.textSecondary))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                            .accessibilityLabel(getPermissionAccessibilityLabel())
-                        
-                        if viewModel.isRequestingPermission {
-                            VStack(spacing: 8) {
-                                LoadingIndicator(size: .regular)
-                                Text("Requesting microphone permission")
-                                    .font(.subheadline)
-                                    .foregroundColor(.semantic(.textSecondary))
+        ZStack {
+            // Background: base fill + subtle gradients for Liquid Glass contrast
+            Color.semantic(.bgPrimary)
+                .ignoresSafeArea()
+
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.black.opacity(0.08),
+                    Color.blue.opacity(0.08)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            RadialGradient(
+                gradient: Gradient(colors: [
+                    Color.white.opacity(0.22),
+                    .clear
+                ]),
+                center: .center,
+                startRadius: 40,
+                endRadius: 260
+            )
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+
+            // Your existing content
+            NavigationStack {
+                VStack(spacing: Spacing.xxl) {
+                    Spacer()
+                    
+                    if !viewModel.hasPermission {
+                        VStack(spacing: Spacing.lg) {
+                            Image(systemName: viewModel.permissionStatus.iconName)
+                                .font(.largeTitle)
+                                .fontWeight(.medium)
+                                .foregroundColor(.semantic(.error))
+                                .accessibilityHidden(true)
+                            
+                            Text(viewModel.permissionStatus.displayName)
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .accessibilityAddTraits(.isHeader)
+                            
+                            Text(getPermissionDescription())
+                                .font(.body)
+                                .foregroundColor(.semantic(.textSecondary))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                                .accessibilityLabel(getPermissionAccessibilityLabel())
+                            
+                            if viewModel.isRequestingPermission {
+                                VStack(spacing: 8) {
+                                    LoadingIndicator(size: .regular)
+                                    Text("Requesting microphone permission")
+                                        .font(.subheadline)
+                                        .foregroundColor(.semantic(.textSecondary))
+                                }
+                                .accessibilityLabel("Requesting microphone permission")
+                            } else {
+                                getPermissionButton()
+                                    .accessibilityFocused($focusedElement, equals: .permissionButton)
                             }
-                            .accessibilityLabel("Requesting microphone permission")
-                        } else {
-                            getPermissionButton()
-                                .accessibilityFocused($focusedElement, equals: .permissionButton)
                         }
-                    }
-                    .padding()
-                    .accessibilityElement(children: .contain)
-                } else {
-                    VStack(spacing: Spacing.xl) {
-                        
-                        // Large circular recording button
-                        CircularRecordButton(
-                            isRecording: viewModel.isRecording,
-                            action: {
-                                HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
-                                viewModel.toggleRecording()
+                        .padding()
+                        .accessibilityElement(children: .contain)
+                    } else {
+                        VStack(spacing: Spacing.xl) {
+                            
+                            // Large circular recording button
+                            CircularRecordButton(
+                                isRecording: viewModel.isRecording,
+                                action: {
+                                    HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
+                                    viewModel.toggleRecording()
+                                }
+                            )
+                            .accessibilityLabel(getRecordButtonAccessibilityLabel())
+                            .accessibilityHint(getRecordButtonAccessibilityHint())
+                            .accessibilityFocused($focusedElement, equals: .recordButton)
+                            .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
+                            
+                            // Timer overlay area (fixed height to avoid layout shifts)
+                            ZStack(alignment: .top) {
+                                timerOverlayView
+                                    .opacity(viewModel.isRecording ? 1 : 0)
+                                    .transition(.move(edge: .top).combined(with: .opacity))
+                                    .accessibilityHidden(!viewModel.isRecording)
                             }
-                        )
-                        .accessibilityLabel(getRecordButtonAccessibilityLabel())
-                        .accessibilityHint(getRecordButtonAccessibilityHint())
-                        .accessibilityFocused($focusedElement, equals: .recordButton)
-                        .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
-                        
-                        // Timer overlay area (fixed height to avoid layout shifts)
-                        ZStack(alignment: .top) {
-                            timerOverlayView
-                                .opacity(viewModel.isRecording ? 1 : 0)
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                                .accessibilityHidden(!viewModel.isRecording)
+                            .frame(height: 80)
+                            .animation(.easeInOut(duration: 0.25), value: viewModel.isRecording)
                         }
-                        .frame(height: 80)
-                        .animation(.easeInOut(duration: 0.25), value: viewModel.isRecording)
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal)
+                    
+                    Spacer()
                 }
-                
-                Spacer()
-            }
-            .padding()
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 0)
-            }
-            .navigationTitle("Sonora")
-            .toolbarBackground(Color.semantic(.bgPrimary), for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .onAppear { 
-                viewModel.onViewAppear()
-            }
-            .initialFocus {
-                if viewModel.hasPermission {
-                    focusedElement = .recordButton
-                } else {
-                    focusedElement = .permissionButton
+                .padding()
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 0)
                 }
-            }
-            .onChange(of: viewModel.hasPermission) { _, hasPermission in
-                if hasPermission {
-                    HapticManager.shared.playPermissionGranted()
-                    FocusManager.shared.announceAndFocus(
-                        "Microphone access granted. You can now record voice memos.",
-                        delay: FocusManager.standardDelay
-                    ) {
+                .navigationTitle("Sonora")
+                .toolbarBackground(.clear, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+                .onAppear {
+                    viewModel.onViewAppear()
+                }
+                .initialFocus {
+                    if viewModel.hasPermission {
                         focusedElement = .recordButton
+                    } else {
+                        focusedElement = .permissionButton
                     }
-                } else {
-                    HapticManager.shared.playPermissionDenied()
-                    FocusManager.shared.announceChange("Microphone access is required to record voice memos.")
-                    focusedElement = .permissionButton
                 }
-            }
-            .onChange(of: viewModel.isRecording) { _, isRecording in
-                if isRecording {
-                    FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
+                .onChange(of: viewModel.hasPermission) { _, hasPermission in
+                    if hasPermission {
+                        HapticManager.shared.playPermissionGranted()
+                        FocusManager.shared.announceAndFocus(
+                            "Microphone access granted. You can now record voice memos.",
+                            delay: FocusManager.standardDelay
+                        ) {
+                            focusedElement = .recordButton
+                        }
+                    } else {
+                        HapticManager.shared.playPermissionDenied()
+                        FocusManager.shared.announceChange("Microphone access is required to record voice memos.")
+                        focusedElement = .permissionButton
+                    }
+                }
+                .onChange(of: viewModel.isRecording) { _, isRecording in
+                    if isRecording {
+                        FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
+                            focusedElement = .statusText
+                        }
+                    } else {
+                        FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
+                            focusedElement = .recordButton
+                        }
+                    }
+                }
+                .onChange(of: viewModel.isInCountdown) { _, isInCountdown in
+                    if isInCountdown {
                         focusedElement = .statusText
                     }
-                } else {
-                    FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
-                        focusedElement = .recordButton
-                    }
                 }
-            }
-            .onChange(of: viewModel.isInCountdown) { _, isInCountdown in
-                if isInCountdown {
-                    focusedElement = .statusText
+                .alert("Recording Stopped", isPresented: $viewModel.showAutoStopAlert) {
+                    Button("OK") { viewModel.dismissAutoStopAlert() }
+                } message: {
+                    Text(viewModel.autoStopMessage ?? "")
                 }
-            }
-            .alert("Recording Stopped", isPresented: $viewModel.showAutoStopAlert) {
-                Button("OK") { viewModel.dismissAutoStopAlert() }
-            } message: {
-                Text(viewModel.autoStopMessage ?? "")
             }
         }
     }
