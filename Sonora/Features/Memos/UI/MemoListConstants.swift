@@ -68,14 +68,14 @@ enum MemoListConstants {
     enum SwipeActions {
         // Transcription actions
         static let transcribeTitle = "Transcribe"
-        static let transcribeIcon = "text.quote"
+        static let transcribeIcon = MemoSystemIcons.transcribe.rawValue
         
         static let retryTitle = "Retry"
-        static let retryIcon = "arrow.clockwise"
+        static let retryIcon = MemoSystemIcons.retry.rawValue
         
         // Destructive actions
         static let deleteTitle = "Delete"
-        static let deleteIcon = "trash"
+        static let deleteIcon = MemoSystemIcons.delete.rawValue
     }
     
     /// **Accessibility Configuration**

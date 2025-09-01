@@ -7,11 +7,6 @@
 
 import SwiftUI
 
-extension Notification.Name {
-    static let popToRootMemos = Notification.Name("popToRootMemos")
-    static let openMemoByID = Notification.Name("openMemoByID")
-}
-
 struct MemosView: View {
     @StateObject private var viewModel = MemoListViewModel()
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
@@ -32,8 +27,7 @@ struct MemosView: View {
                     /// **Polished List Configuration**
                     /// Optimized for readability, navigation, and modern iOS appearance
                     List {
-                        ForEach(viewModel.memos.indices, id: \.self) { index in
-                            let memo = viewModel.memos[index]
+                        ForEach(Array(viewModel.memos.enumerated()), id: \.element.id) { index, memo in
                             // MARK: Navigation Row Configuration
                             let separatorConfig = separatorConfiguration(at: index, total: viewModel.memos.count)
                             NavigationLink(value: memo) {
@@ -113,7 +107,7 @@ struct MemosView: View {
 }
 
 
-// MARK: - MemosView Extensions
+// MARK: - Swipe Action Components
 
 /// **Swipe Actions Configuration**
 extension MemosView {
@@ -137,6 +131,8 @@ extension MemosView {
             retryTranscriptionButton(for: memo)
         }
     }
+    
+    // MARK: Transcription Actions
     
     /// **Transcribe Button**
     /// Primary action for unprocessed memos
@@ -169,6 +165,8 @@ extension MemosView {
         .accessibilityLabel("Retry transcription for \(memo.displayName)")
         .accessibilityHint(MemoListConstants.AccessibilityLabels.retryHint)
     }
+    
+    // MARK: Destructive Actions
     
     /// **Delete Button**
     /// Destructive action with appropriate styling and feedback

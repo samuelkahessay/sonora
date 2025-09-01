@@ -81,20 +81,16 @@ struct MemoRowView: View {
     /// **Layout Configuration**
     /// These follow iOS Human Interface Guidelines spacing standards
     private enum Layout {
-        /// Vertical padding - 1.75x size increase (8 × 1.75 = 14)
-        /// Larger padding for more generous card appearance
+        /// Vertical padding for generous card appearance
         static let verticalPadding: CGFloat = 14
         
-        /// Title to metadata spacing - 1.75x size increase (4 × 1.75 = 7)
-        /// Proportional spacing for larger typography
+        /// Spacing between title and metadata sections
         static let titleToMetadataSpacing: CGFloat = 7
         
-        /// Metadata spacing - 1.75x size increase (12 × 1.75 = 21)
-        /// Generous horizontal spacing for larger cards
+        /// Horizontal spacing between metadata elements
         static let metadataElementSpacing: CGFloat = 21
         
-        /// Icon to text spacing - 1.75x size increase (3 × 1.75 = 5)
-        /// Proportional spacing for larger icons and text
+        /// Spacing between icons and their associated text
         static let iconToTextSpacing: CGFloat = 5
         
         /// Line limit stays the same
@@ -274,20 +270,15 @@ struct MemoRowView: View {
     
     /// Key for forcing view recreation when the transcription state changes case
     private var accentStateKey: String {
-        switch transcriptionState {
-        case .notStarted: return "notStarted"
-        case .inProgress: return "inProgress"
-        case .completed:  return "completed"
-        case .failed:     return "failed"
-        }
+        TranscriptionStateKey.key(for: transcriptionState)
     }
     
     // MARK: - Constants
     
     /// **System Icon Names**
-    /// Centralized SF Symbols names for consistency
+    /// Type-safe SF Symbols names for consistency
     private enum SystemIconNames {
-        static let clock = "clock"
+        static let clock = MemoSystemIcons.clock.rawValue
     }
     
     /// **Accessibility Strings**
