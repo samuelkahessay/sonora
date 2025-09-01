@@ -12,8 +12,6 @@ struct AnalysisSectionView: View {
                     .font(.headline)
                     .fontWeight(.semibold)
                     .accessibilityAddTraits(.isHeader)
-                AIBadge()
-                    .accessibilityHidden(true)
             }
             
             // Analysis Buttons
@@ -103,7 +101,7 @@ struct AnalysisSectionView: View {
                         envelope: envelope
                     )
                     
-                    // AI Disclaimer for analysis results
+//                     AI Disclaimer for analysis results
                     AIDisclaimerView.analysis()
                         .accessibilityLabel("AI disclaimer: Analysis results may contain inaccuracies or subjective interpretations")
                 }

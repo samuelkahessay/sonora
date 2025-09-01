@@ -74,7 +74,6 @@ struct HeaderInfoView<T: Codable>: View {
                 Text(envelope.mode.displayName)
                     .font(.title2)
                     .fontWeight(.bold)
-                AIBadge()
                 
                 Spacer()
                 

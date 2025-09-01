@@ -163,6 +163,51 @@ struct MemoRowView: View {
     // MARK: - View Body
     
     var body: some View {
+        // When editing, wrap in a different container that blocks navigation
+        Group {
+            if viewModel.isEditing(memo: memo) {
+                // Editing mode: disable navigation, allow text editing
+                editingContent
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        // Tapping outside the TextField stops editing
+                        viewModel.stopEditing()
+                    }
+            } else {
+                // Normal mode: full navigation and context menu
+                normalContent
+                    .contentShape(Rectangle()) // Ensures entire row area is tappable
+                    .contextMenu {
+                        Button {
+                            startRename()
+                        } label: {
+                            Label("Rename", systemImage: "pencil")
+                        }
+                        
+                        Button {
+                            shareMemo()
+                        } label: {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+                        
+                        Button(role: .destructive) {
+                            deleteMemo()
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+            }
+        }
+        .padding(.vertical, Layout.verticalPadding)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
+        .accessibilityHint(AccessibilityStrings.rowHint)
+    }
+    
+    // MARK: - Content Views
+    
+    @ViewBuilder
+    private var normalContent: some View {
         HStack(spacing: Layout.accentLineSpacing) {
             // Color-coded accent line
             accentLineView
@@ -173,31 +218,19 @@ struct MemoRowView: View {
             // Natural spacer - let system handle chevron positioning
             Spacer()
         }
-        .padding(.vertical, Layout.verticalPadding) // Only vertical padding
-        .contentShape(Rectangle()) // Ensures entire row area is tappable
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityDescription)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityHint(AccessibilityStrings.rowHint)
-        // Context menu for long press
-        .contextMenu {
-            Button {
-                startRename()
-            } label: {
-                Label("Rename", systemImage: "pencil")
-            }
+    }
+    
+    @ViewBuilder
+    private var editingContent: some View {
+        HStack(spacing: Layout.accentLineSpacing) {
+            // Color-coded accent line
+            accentLineView
             
-            Button {
-                shareMemo()
-            } label: {
-                Label("Share", systemImage: "square.and.arrow.up")
-            }
+            // Main content container (with inline editing)
+            primaryContentView
             
-            Button(role: .destructive) {
-                deleteMemo()
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
+            // Natural spacer
+            Spacer()
         }
     }
     

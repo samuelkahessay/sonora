@@ -94,17 +94,6 @@ struct MemoDetailView: View {
                 .font(.title2)
                 .fontWeight(.bold)
                 .accessibilityAddTraits(.isHeader)
-            HStack {
-                Label(memo.durationString, systemImage: "clock")
-                    .font(.caption)
-                    .foregroundColor(.semantic(.textSecondary))
-                    .accessibilityLabel("Duration: \(memo.durationString)")
-                Spacer()
-                Text(memo.filename)
-                    .font(.caption)
-                    .foregroundColor(.semantic(.textSecondary))
-                    .accessibilityLabel("File: \(memo.filename)")
-            }
         }
         .padding()
         .background(Color.semantic(.fillPrimary))
@@ -158,7 +147,7 @@ struct MemoDetailView: View {
                 Text("Transcription")
                     .font(.headline)
                     .fontWeight(.semibold)
-                AIBadge()
+
                 Spacer()
                 if viewModel.transcriptionState.isFailed {
                     Image(systemName: "exclamationmark.triangle.fill")

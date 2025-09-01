@@ -27,29 +27,24 @@ struct MemosView: View {
                     /// **Polished List Configuration**
                     /// Optimized for readability, navigation, and modern iOS appearance
                     List {
-                        ForEach(Array(viewModel.memos.enumerated()), id: \.element.id) { index, memo in
+                        ForEach(viewModel.memos) { memo in
                             // MARK: Navigation Row Configuration
-                            let separatorConfig = separatorConfiguration(at: index, total: viewModel.memos.count)
+                            let separatorConfig = separatorConfiguration(for: memo)
                             NavigationLink(value: memo) {
                                 MemoRowView(memo: memo, viewModel: viewModel)
                             }
+                            .buttonStyle(.plain)
                             // **Row Visual Configuration**
-                            // Adjust these modifiers to fine-tune row appearance
                             .listRowSeparator(separatorConfig.visibility, edges: separatorConfig.edges)
                             .listRowInsets(MemoListConstants.rowInsets)
                             .memoRowBackground(colorScheme)
                             // MARK: - Swipe Actions Configuration
-                            /// Secondary actions accessible via swipe gestures
-                            /// Design principle: Keep primary UI clean, secondary actions discoverable
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                // Put delete first so full-swipe reliably deletes
                                 deleteButton(for: memo)
-                                // Contextual actions next (transcribe/retry)
                                 contextualTranscriptionActions(for: memo)
                             }
                         }
                         // **Bulk Operations**
-                        // Traditional iOS delete gesture support
                         .onDelete { offsets in
                             HapticManager.shared.playDeletionFeedback()
                             viewModel.deleteMemos(at: offsets)
@@ -65,10 +60,6 @@ struct MemosView: View {
                         Color.clear.frame(height: 8)
                     }
                     .refreshable { viewModel.refreshMemos() } // Pull-to-refresh support
-                    // Stop editing when tapping outside
-                    .onTapGesture {
-                        viewModel.stopEditing()
-                    }
                 }
             }
             .navigationTitle("Memos")
@@ -93,17 +84,14 @@ struct MemosView: View {
     
     /// Position-specific separator configuration for clean design
     /// Handles edge cases: first memo (no separators), middle memos (top & bottom), last memo (top only)
-    private func separatorConfiguration(at index: Int, total count: Int) -> (visibility: Visibility, edges: VerticalEdge.Set) {
+    private func separatorConfiguration(for memo: Memo) -> (visibility: Visibility, edges: VerticalEdge.Set) {
+        let count = viewModel.memos.count
         guard count > 1 else { return (.hidden, []) }
-        
-        switch index {
-        case 0: // First memo - no separators (navigation spacing sufficient)
-            return (.hidden, [])
-        case count - 1: // Last memo - only top separator (no trailing separator)
-            return (.visible, .top)
-        default: // Middle memos - both top and bottom separators
-            return (.visible, .all)
-        }
+        let isFirst = viewModel.memos.first?.id == memo.id
+        let isLast = viewModel.memos.last?.id == memo.id
+        if isFirst { return (.hidden, []) }
+        if isLast { return (.visible, .top) }
+        return (.visible, .all)
     }
 }
 
