@@ -40,8 +40,17 @@ public final class ErrorMapping {
             return mapEncodingError(encodingError)
         }
         
-        // Fallback for unknown errors
-        return .unknown(error.localizedDescription)
+        // Handle TranscriptionError specifically
+        if let transcriptionError = error as? TranscriptionError {
+            return mapTranscriptionError(transcriptionError)
+        }
+        
+        // Fallback for unknown errors (apply simple heuristics)
+        let message = error.localizedDescription
+        if message.lowercased().contains("no speech detected") {
+            return .transcriptionFailed("No speech detected")
+        }
+        return .unknown(message)
     }
     
     // MARK: - NSError Mapping
@@ -61,7 +70,12 @@ public final class ErrorMapping {
         case "kCFErrorDomainCFNetwork":
             return mapCFNetworkError(nsError)
         default:
-            return .unknown("System error: \(nsError.localizedDescription)")
+            // Heuristic: common ASR engines report "No speech detected" in various domains
+            let message = nsError.localizedDescription
+            if message.lowercased().contains("no speech detected") {
+                return .transcriptionFailed("No speech detected")
+            }
+            return .unknown("System error: \(message)")
         }
     }
     
@@ -390,5 +404,35 @@ public final class ErrorMapping {
             }
         }
         return .unknown("Core Data error: \(error.localizedDescription)")
+    }
+    
+    // MARK: - TranscriptionError Mapping
+    
+    /// Maps TranscriptionError to appropriate SonoraError cases
+    private static func mapTranscriptionError(_ error: TranscriptionError) -> SonoraError {
+        switch error {
+        case .alreadyInProgress:
+            return .transcriptionFailed("Transcription is already in progress")
+        case .alreadyCompleted:
+            return .transcriptionFailed("Transcription has already been completed")
+        case .invalidState:
+            return .transcriptionFailed("Invalid transcription state")
+        case .fileNotFound:
+            return .audioFileNotFound("Audio file could not be found")
+        case .invalidAudioFormat:
+            return .audioFormatUnsupported("Audio format is not supported for transcription")
+        case .networkError(let message):
+            return .networkServerError(0, message)
+        case .serviceUnavailable:
+            return .transcriptionServiceUnavailable
+        case .conflictingOperation:
+            return .transcriptionFailed("Cannot transcribe while recording")
+        case .systemBusy:
+            return .transcriptionServiceUnavailable
+        case .noSpeechDetected:
+            return .transcriptionFailed("No speech detected")
+        case .transcriptionFailed(let reason):
+            return .transcriptionFailed(reason)
+        }
     }
 }

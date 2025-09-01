@@ -473,7 +473,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 }
 
 // MARK: - Transcription Errors
-enum TranscriptionError: LocalizedError {
+public enum TranscriptionError: LocalizedError {
     case alreadyInProgress
     case alreadyCompleted
     case invalidState
@@ -486,7 +486,7 @@ enum TranscriptionError: LocalizedError {
     case systemBusy
     case noSpeechDetected
     
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .alreadyInProgress:
             return "Transcription is already in progress for this memo"
