@@ -204,15 +204,13 @@ struct UnifiedStateView: View {
 
 extension UnifiedStateView {
     /// Empty state for memos list
-    static func noMemos(onStartRecording: (() -> Void)? = nil) -> UnifiedStateView {
+    static func noMemos() -> UnifiedStateView {
         UnifiedStateView(
             state: .empty(
                 icon: "mic.slash",
                 title: "No Memos Yet",
-                subtitle: "Start recording to see your audio memos here",
-                actionTitle: "Start Recording"
-            ),
-            onPrimaryAction: onStartRecording
+                subtitle: "Start recording to see your audio memos here"
+            )
         )
     }
     
@@ -311,10 +309,8 @@ struct LoadingIndicator: View {
 // MARK: - Previews
 
 #Preview("No Memos") {
-    UnifiedStateView.noMemos {
-        print("Start recording tapped")
-    }
-    .background(Color.semantic(.bgPrimary))
+    UnifiedStateView.noMemos()
+        .background(Color.semantic(.bgPrimary))
 }
 
 #Preview("Error State") {

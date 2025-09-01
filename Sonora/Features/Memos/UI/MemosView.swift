@@ -24,11 +24,7 @@ struct MemosView: View {
         NavigationStack(path: $viewModel.navigationPath) {
             Group {
                 if viewModel.isEmpty {
-                    UnifiedStateView.noMemos {
-                        // Navigate to recording - could trigger navigation or show recording view
-                        // For now, just refresh to show user something happened
-                        viewModel.refreshMemos()
-                    }
+                    UnifiedStateView.noMemos()
                     .accessibilityLabel("No memos yet. Start recording to see your audio memos here.")
                 } else {
                     // MARK: - Memos List
