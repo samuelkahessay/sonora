@@ -35,6 +35,10 @@ struct MemoDetailView: View {
                 .padding(.horizontal)
             }
         }
+        // Add a small top inset so content doesn't touch nav bar hairline
+        .safeAreaInset(edge: .top) {
+            Color.clear.frame(height: 8)
+        }
         .navigationTitle("Memo Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -190,7 +194,7 @@ struct MemoDetailView: View {
                     HStack(spacing: 12) {
                         Image(systemName: viewModel.playButtonIcon)
                             .font(.title2)
-                            .foregroundColor(.semantic(.textInverted))
+                            .foregroundColor(.semantic(.textOnColored))
                             .frame(minWidth: 50, minHeight: 50)
                             .background(Color.semantic(.brandPrimary))
                             .clipShape(Circle())

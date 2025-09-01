@@ -27,7 +27,7 @@ struct AnalysisSectionView: View {
                         VStack(spacing: 8) {
                             Image(systemName: mode.iconName)
                                 .font(.title2)
-                                .foregroundColor(.semantic(.textInverted))
+                                .foregroundColor(.semantic(.textOnColored))
                                 .frame(minWidth: 44, minHeight: 44)
                                 .background(Color.semantic(.brandPrimary))
                                 .clipShape(Circle())

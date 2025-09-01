@@ -23,7 +23,7 @@ struct CircularRecordButton: View {
                       systemImage: isRecording ? "stop.fill" : "mic.fill")
                     .labelStyle(.iconOnly)
                     .font(.system(size: 64, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundColor(.semantic(.textOnColored))
             }
         }
         .buttonStyle(.plain)
