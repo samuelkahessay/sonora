@@ -14,12 +14,22 @@ extension Notification.Name {
 
 struct MemosView: View {
     @StateObject private var viewModel = MemoListViewModel()
+    @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     let popToRoot: (() -> Void)?
     
     init(popToRoot: (() -> Void)? = nil) {
         self.popToRoot = popToRoot
     }
-    
+    // Slightly grey rows on dark mode, clear on light
+    private var rowBackgroundColor: Color {
+        colorScheme == .dark ? Color(UIColor.systemGray6) : .clear
+    }
+
+    // Pitch black container background on dark mode
+    private var containerBackgroundColor: Color {
+        colorScheme == .dark ? .black : MemoListConstants.ListStyling.backgroundColor
+    }
+
     var body: some View {
         NavigationStack(path: $viewModel.navigationPath) {
             Group {
@@ -31,7 +41,8 @@ struct MemosView: View {
                     /// **Polished List Configuration**
                     /// Optimized for readability, navigation, and modern iOS appearance
                     List {
-                        ForEach(Array(viewModel.memos.enumerated()), id: \.element.id) { index, memo in
+                        ForEach(viewModel.memos.indices, id: \.self) { index in
+                            let memo = viewModel.memos[index]
                             // MARK: Navigation Row Configuration
                             let separatorConfig = separatorConfiguration(at: index, total: viewModel.memos.count)
                             NavigationLink(value: memo) {
@@ -41,7 +52,7 @@ struct MemosView: View {
                             // Adjust these modifiers to fine-tune row appearance
                             .listRowSeparator(separatorConfig.visibility, edges: separatorConfig.edges)
                             .listRowInsets(MemoListConstants.rowInsets) // Zero insets for full-width content
-                            
+                            .modifier(DarkModeRowBackground(colorScheme: colorScheme))
                             // MARK: - Swipe Actions Configuration
                             /// Secondary actions accessible via swipe gestures
                             /// Design principle: Keep primary UI clean, secondary actions discoverable
@@ -63,7 +74,7 @@ struct MemosView: View {
                     .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
                     .listStyle(MemoListConstants.listStyle) // Modern grouped appearance
                     .scrollContentBackground(.hidden) // ADDED: Clean background
-                    .background(MemoListConstants.ListStyling.backgroundColor) // ADDED: Consistent bg
+                    .background(containerBackgroundColor) // OLED black in dark mode
                     // Add a small top inset so first row doesn't touch nav bar hairline
                     .safeAreaInset(edge: .top) {
                         Color.clear.frame(height: 8)
@@ -133,6 +144,18 @@ struct MemoRowView: View {
     // Recomputed each render; drives color/animation
     private var transcriptionState: TranscriptionState {
         viewModel.getTranscriptionState(for: memo)
+    }
+    
+    // MARK: - Computed Properties
+    /// Adaptive row background color for better type-checking performance
+    private var adaptiveRowBackground: Color {
+        Color(UIColor { traitCollection in
+            if traitCollection.userInterfaceStyle == .dark {
+                return UIColor.systemGray6
+            } else {
+                return UIColor.clear
+            }
+        })
     }
     
     // MARK: - Design Constants
@@ -397,6 +420,19 @@ struct MemoRowView: View {
     /// Localization-ready accessibility strings
     private enum AccessibilityStrings {
         static let rowHint = "Double tap to view memo details"
+    }
+}
+
+// MARK: - Helpers
+
+private struct DarkModeRowBackground: ViewModifier {
+    let colorScheme: ColorScheme
+    func body(content: Content) -> some View {
+        if colorScheme == .dark {
+            content.listRowBackground(Color(UIColor.systemGray6))
+        } else {
+            content
+        }
     }
 }
 

@@ -185,7 +185,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
 
         // Detect meaningful changes (keys added/removed or value changes)
         let changedKeys: [String] = {
-            var keys = Set(oldStates.keys).union(newStates.keys)
+            let keys = Set(oldStates.keys).union(newStates.keys)
             return keys.filter { oldStates[$0] != newStates[$0] }
         }()
 
