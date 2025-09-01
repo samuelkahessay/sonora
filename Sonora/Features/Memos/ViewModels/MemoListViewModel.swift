@@ -2,6 +2,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// ViewModel for handling memo list functionality
 /// Uses dependency injection for testability and clean architecture
@@ -472,46 +473,79 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             
             print("📤 MemoListViewModel: Created temporary share file: \(shareableFilename)")
             
-            let activityVC = UIActivityViewController(
-                activityItems: [tempURL],
-                applicationActivities: nil
-            )
-            
-            // Clean up temp file after sharing
-            activityVC.completionWithItemsHandler = { _, _, _, _ in
-                DispatchQueue.main.async {
-                    do {
-                        if FileManager.default.fileExists(atPath: tempURL.path) {
-                            try FileManager.default.removeItem(at: tempURL)
-                            print("📤 MemoListViewModel: Cleaned up temporary share file")
+            // Share via NSItemProvider with explicit UTType and suggestedName to preserve filename
+            if #available(iOS 14.0, *) {
+                let provider = NSItemProvider(item: tempURL as NSSecureCoding, typeIdentifier: UTType.mpeg4Audio.identifier)
+                provider.suggestedName = shareableFilename
+                let activityVC = UIActivityViewController(activityItems: [provider], applicationActivities: nil)
+                
+                // Clean up temp file after sharing
+                activityVC.completionWithItemsHandler = { _, _, _, _ in
+                    DispatchQueue.main.async {
+                        do {
+                            if FileManager.default.fileExists(atPath: tempURL.path) {
+                                try FileManager.default.removeItem(at: tempURL)
+                                print("📤 MemoListViewModel: Cleaned up temporary share file")
+                            }
+                        } catch {
+                            print("⚠️ MemoListViewModel: Failed to clean up temporary file: \(error)")
                         }
-                    } catch {
-                        print("⚠️ MemoListViewModel: Failed to clean up temporary file: \(error)")
                     }
                 }
-            }
-            
-            // Configure for iPad presentation
-            if let popover = activityVC.popoverPresentationController {
-                if let sourceView = sourceView {
-                    popover.sourceView = sourceView
-                    popover.sourceRect = sourceView.bounds
-                } else {
-                    // Fallback to center of screen
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let window = windowScene.windows.first {
+                
+                // Configure for iPad presentation
+                if let popover = activityVC.popoverPresentationController {
+                    if let sourceView = sourceView {
+                        popover.sourceView = sourceView
+                        popover.sourceRect = sourceView.bounds
+                    } else if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                              let window = windowScene.windows.first {
                         popover.sourceView = window
                         popover.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.midY, width: 0, height: 0)
                         popover.permittedArrowDirections = []
                     }
                 }
-            }
-            
-            // Present the share sheet
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let window = windowScene.windows.first,
-               let rootViewController = window.rootViewController {
-                rootViewController.present(activityVC, animated: true)
+                
+                // Present the share sheet
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first,
+                   let rootViewController = window.rootViewController {
+                    // Defer slightly to allow context menu dismissal before presenting
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        rootViewController.present(activityVC, animated: true)
+                    }
+                }
+            } else {
+                // Fallback: share the file URL directly
+                let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
+                
+                activityVC.completionWithItemsHandler = { _, _, _, _ in
+                    DispatchQueue.main.async {
+                        do {
+                            if FileManager.default.fileExists(atPath: tempURL.path) {
+                                try FileManager.default.removeItem(at: tempURL)
+                                print("📤 MemoListViewModel: Cleaned up temporary share file")
+                            }
+                        } catch {
+                            print("⚠️ MemoListViewModel: Failed to clean up temporary file: \(error)")
+                        }
+                    }
+                }
+                
+                if let popover = activityVC.popoverPresentationController {
+                    if let sourceView = sourceView {
+                        popover.sourceView = sourceView
+                        popover.sourceRect = sourceView.bounds
+                    }
+                }
+                
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first,
+                   let rootViewController = window.rootViewController {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        rootViewController.present(activityVC, animated: true)
+                    }
+                }
             }
             
         } catch {
