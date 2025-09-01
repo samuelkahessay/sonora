@@ -127,7 +127,13 @@ struct MemoRowView: View {
     // MARK: - Properties
     
     let memo: Memo
-    let viewModel: MemoListViewModel
+    @ObservedObject var viewModel: MemoListViewModel
+    @State private var pulsePhase = false
+
+    // Recomputed each render; drives color/animation
+    private var transcriptionState: TranscriptionState {
+        viewModel.getTranscriptionState(for: memo)
+    }
     
     // MARK: - Design Constants
     
@@ -217,16 +223,55 @@ struct MemoRowView: View {
     // MARK: - Accent Line Component
     
     /// **Accent Line View**
-    /// Color-coded status indicator with smooth animations
+    /// Color-coded status indicator with animated pulse for in-progress states
     @ViewBuilder
     private var accentLineView: some View {
-        let transcriptionState = viewModel.getTranscriptionState(for: memo)
-        
         RoundedRectangle(cornerRadius: Layout.accentLineCornerRadius)
             .fill(Colors.accentColor(for: transcriptionState))
             .frame(width: Layout.accentLineWidth)
-            .animation(.easeInOut(duration: 0.3), value: transcriptionState)
-            .accessibilityHidden(true) // Visual indicator only
+            .opacity(transcriptionState.isInProgress ? (pulsePhase ? 0.4 : 1.0) : 1.0)
+            // Force view recreation when state case changes (e.g., inProgress → completed)
+            .id(accentStateKey)
+            .onAppear {
+                // FIXED: Reset animation state based on current transcription state
+                if transcriptionState.isInProgress {
+                    withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                        pulsePhase.toggle()
+                    }
+                    print("🎨 MemoRow: start pulse for \(memo.displayName) [state=\(transcriptionState.statusText)]")
+                } else {
+                    // Reset pulse state for non-in-progress states (fixes cell reuse)
+                    pulsePhase = false
+                    print("🎨 MemoRow: no pulse for \(memo.displayName) [state=\(transcriptionState.statusText)]")
+                }
+            }
+            .onChange(of: transcriptionState.isInProgress) { _, isInProgress in  // FIXED: iOS 17+ syntax
+                if isInProgress {
+                    withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                        pulsePhase.toggle()
+                    }
+                    print("🎨 MemoRow: pulse toggling (isInProgress=true) for \(memo.displayName)")
+                } else {
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        pulsePhase = false
+                    }
+                    print("🎨 MemoRow: pulse stopped (isInProgress=false) for \(memo.displayName)")
+                }
+            }
+            // Additional safety: react to any state change
+            .onChange(of: transcriptionState) { old, new in
+                if old != new {
+                    print("🎨 MemoRow: state changed for \(memo.displayName): \(old.statusText) → \(new.statusText)")
+                }
+                if !new.isInProgress {
+                    pulsePhase = false
+                }
+            }
+            .onDisappear {
+                // ADDED: Stop animations when cell goes off-screen
+                pulsePhase = false
+            }
+            .accessibilityHidden(true)
     }
     
     // MARK: - View Body
@@ -352,6 +397,19 @@ struct MemoRowView: View {
     /// Localization-ready accessibility strings
     private enum AccessibilityStrings {
         static let rowHint = "Double tap to view memo details"
+    }
+}
+
+// MARK: - Private helpers
+extension MemoRowView {
+    // Key for forcing view recreation when the transcription state changes case
+    private var accentStateKey: String {
+        switch transcriptionState {
+        case .notStarted: return "notStarted"
+        case .inProgress: return "inProgress"
+        case .completed:  return "completed"
+        case .failed:     return "failed"
+        }
     }
 }
 

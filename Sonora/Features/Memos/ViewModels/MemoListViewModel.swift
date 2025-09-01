@@ -19,6 +19,11 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     private let transcriptionRepository: any TranscriptionRepository // For transcription states
     private var cancellables = Set<AnyCancellable>()
     
+    // Event-driven and polling for real-time updates
+    private var eventSubscriptionId: UUID?
+    private var pollingTimer: AnyCancellable?
+    private let eventBus = EventBus.shared
+    
     // MARK: - Published Properties
     @Published var memos: [Memo] = []
     @Published var playingMemo: Memo?
@@ -27,6 +32,8 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     @Published var transcriptionStates: [String: TranscriptionState] = [:]
     @Published var error: SonoraError?
     @Published var isLoading: Bool = false
+    // Force SwiftUI refresh when needed (not read by UI directly)
+    @Published private var refreshTrigger: Int = 0
     
     // MARK: - Computed Properties
     
@@ -144,9 +151,26 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
             .store(in: &cancellables)
         
+        // Subscribe to transcription completed events for real-time updates
+        eventSubscriptionId = eventBus.subscribe(to: AppEvent.self) { [weak self] event in
+            guard let self = self else { return }
+            switch event {
+            case .transcriptionCompleted(let memoId, _):
+                Task { @MainActor in
+                    // Force refresh the specific memo's transcription state
+                    self.refreshTranscriptionState(for: memoId)
+                }
+            default:
+                break
+            }
+        }
+        
         // Initial update
         updateFromRepository()
         updateTranscriptionStates()
+        
+        // Start polling timer for active transcriptions
+        startPollingIfNeeded()
     }
     
     private func updateFromRepository() {
@@ -156,7 +180,109 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     }
     
     private func updateTranscriptionStates() {
-        transcriptionStates = transcriptionRepository.transcriptionStates
+        let oldStates = transcriptionStates
+        let newStates = transcriptionRepository.transcriptionStates
+
+        // Detect meaningful changes (keys added/removed or value changes)
+        let changedKeys: [String] = {
+            var keys = Set(oldStates.keys).union(newStates.keys)
+            return keys.filter { oldStates[$0] != newStates[$0] }
+        }()
+
+        if !changedKeys.isEmpty {
+            print("📱 MemoListViewModel: Repo state change detected for keys: \(changedKeys)")
+            // Explicitly notify before mutation to guarantee UI refresh
+            objectWillChange.send()
+            transcriptionStates = newStates
+            refreshTrigger &+= 1
+            print("📱 MemoListViewModel: UI refresh triggered (refreshTrigger=\(refreshTrigger))")
+        } else {
+            // No-op but keep logs for debugging
+            print("📱 MemoListViewModel: Repo objectWillChange with no effective state diff")
+        }
+
+        startPollingIfNeeded() // Check if polling should start based on new states
+    }
+    
+    // MARK: - Polling and Real-time Update Methods
+    
+    /// Start polling when there are in-progress transcriptions
+    private func startPollingIfNeeded() {
+        // Check if any transcriptions are in progress
+        let hasActiveTranscriptions = transcriptionStates.values.contains { $0.isInProgress }
+        
+        if hasActiveTranscriptions && pollingTimer == nil {
+            // Start 2-second polling timer
+            pollingTimer = Timer.publish(every: 2.0, on: .main, in: .common)
+                .autoconnect()
+                .sink { [weak self] _ in
+                    self?.pollTranscriptionStates()
+                }
+            print("📱 MemoListViewModel: Started polling for transcription updates")
+        } else if !hasActiveTranscriptions && pollingTimer != nil {
+            // Stop polling when no active transcriptions
+            stopPolling()
+        }
+    }
+    
+    /// Stop polling timer
+    private func stopPolling() {
+        pollingTimer?.cancel()
+        pollingTimer = nil
+        print("📱 MemoListViewModel: Stopped polling")
+    }
+    
+    /// Poll transcription states for all in-progress memos
+    private func pollTranscriptionStates() {
+        var hasChanges = false
+        var changedMemos: [String] = []
+
+        for memo in memos {
+            let key = memo.id.uuidString
+            let currentState = transcriptionStates[key]
+
+            // Only check memos that are currently in-progress
+            if currentState?.isInProgress == true {
+                let newState = getTranscriptionStateUseCase.execute(memo: memo)
+
+                if newState != currentState {
+                    print("📱 MemoListViewModel: Poll detected change for \(memo.filename): \(currentState?.statusText ?? "nil") → \(newState.statusText)")
+                    // Explicitly send before mutation to ensure observers refresh
+                    objectWillChange.send()
+                    transcriptionStates[key] = newState
+                    hasChanges = true
+                    changedMemos.append(memo.filename)
+                }
+            }
+        }
+
+        if hasChanges {
+            refreshTrigger &+= 1
+            print("📱 MemoListViewModel: Poll applied updates for memos: \(changedMemos). refreshTrigger=\(refreshTrigger)")
+        } else {
+            print("📱 MemoListViewModel: Poll found no changes")
+        }
+
+        // Start/stop polling based on latest states
+        startPollingIfNeeded()
+    }
+    
+    /// Force refresh a specific memo's transcription state
+    private func refreshTranscriptionState(for memoId: UUID) {
+        guard let memo = memos.first(where: { $0.id == memoId }) else { return }
+        
+        let newState = getTranscriptionStateUseCase.execute(memo: memo)
+        let key = memoId.uuidString
+        
+        if transcriptionStates[key] != newState {
+            objectWillChange.send()
+            transcriptionStates[key] = newState
+            refreshTrigger &+= 1
+            print("📱 MemoListViewModel: Event-driven update for \(memo.filename): \(newState.statusText). refreshTrigger=\(refreshTrigger)")
+        }
+        
+        // Restart or stop polling based on current states
+        startPollingIfNeeded()
     }
     
     // MARK: - Public Methods
@@ -240,6 +366,10 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         Task {
             do {
                 try await startTranscriptionUseCase.execute(memo: memo)
+                await MainActor.run {
+                    // Start polling immediately when transcription begins
+                    self.startPollingIfNeeded()
+                }
             } catch {
                 await MainActor.run {
                     self.error = ErrorMapping.mapError(error)
@@ -254,6 +384,10 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         Task {
             do {
                 try await retryTranscriptionUseCase.execute(memo: memo)
+                await MainActor.run {
+                    // Start polling immediately when transcription retry begins
+                    self.startPollingIfNeeded()
+                }
             } catch {
                 await MainActor.run {
                     self.error = ErrorMapping.mapError(error)
@@ -394,4 +528,24 @@ extension MemoListViewModel {
         clearError()
         loadMemos()
     }
+    
+    // MARK: - Cleanup
+    
+    /// Clean up resources before deallocation
+    func cleanup() {
+        // Clean up event subscription
+        if let subscriptionId = eventSubscriptionId {
+            eventBus.unsubscribe(subscriptionId)
+            eventSubscriptionId = nil
+        }
+        
+        // Stop polling timer
+        stopPolling()
+        
+        print("📱 MemoListViewModel: Cleaned up subscriptions and timers")
+    }
+    
+    // Note: deinit cannot be used with @MainActor classes
+    // The timer cancellable will be automatically released
+    // EventBus subscriptions should be cleaned up manually via cleanup() if needed
 }
