@@ -158,6 +158,21 @@ struct MemoRowView: View {
         
         /// Icon tint color - should match or complement metadata text
         static let iconTint: Color = .semantic(.textSecondary)
+        
+        /// Accent line color based on transcription state
+        /// Follows semantic color patterns for accessibility and theming
+        static func accentColor(for state: TranscriptionState) -> Color {
+            switch state {
+            case .completed:
+                return .semantic(.success)      // Green - transcription complete
+            case .inProgress:
+                return .semantic(.info)         // Blue - actively transcribing
+            case .failed:
+                return .semantic(.error)        // Red - transcription failed
+            case .notStarted:
+                return .semantic(.textSecondary) // Gray - default/not started
+            }
+        }
     }
     
     /// **Layout Configuration - FIXED VALUES**
@@ -185,12 +200,42 @@ struct MemoRowView: View {
         
         /// Line limit stays the same
         static let titleLineLimit: Int = 2
+        
+        /// **Accent Line Configuration - Proportional to 1.75x Design**
+        /// Color-coded status indicators following iOS design principles
+        
+        /// Accent line width - prominent but not overwhelming
+        static let accentLineWidth: CGFloat = 4
+        
+        /// Accent line corner radius - subtle rounding for modern appearance
+        static let accentLineCornerRadius: CGFloat = 2
+        
+        /// Accent line spacing - proportional to iconToTextSpacing for visual balance
+        static let accentLineSpacing: CGFloat = 8
+    }
+    
+    // MARK: - Accent Line Component
+    
+    /// **Accent Line View**
+    /// Color-coded status indicator with smooth animations
+    @ViewBuilder
+    private var accentLineView: some View {
+        let transcriptionState = viewModel.getTranscriptionState(for: memo)
+        
+        RoundedRectangle(cornerRadius: Layout.accentLineCornerRadius)
+            .fill(Colors.accentColor(for: transcriptionState))
+            .frame(width: Layout.accentLineWidth)
+            .animation(.easeInOut(duration: 0.3), value: transcriptionState)
+            .accessibilityHidden(true) // Visual indicator only
     }
     
     // MARK: - View Body
     
     var body: some View {
-        HStack(spacing: 0) { // CHANGED: Remove extra spacing
+        HStack(spacing: Layout.accentLineSpacing) { // Color-coded accent line spacing
+            // Color-coded accent line
+            accentLineView
+            
             // Main content container
             primaryContentView
             
