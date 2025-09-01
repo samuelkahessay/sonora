@@ -37,12 +37,13 @@ struct MemosView: View {
                     List {
                         ForEach(Array(viewModel.memos.enumerated()), id: \.element.id) { index, memo in
                             // MARK: Navigation Row Configuration
+                            let separatorConfig = separatorConfiguration(at: index, total: viewModel.memos.count)
                             NavigationLink(value: memo) {
                                 MemoRowView(memo: memo, viewModel: viewModel)
                             }
                             // **Row Visual Configuration**
                             // Adjust these modifiers to fine-tune row appearance
-                            .listRowSeparator(shouldShowSeparator(at: index, total: viewModel.memos.count))
+                            .listRowSeparator(separatorConfig.visibility, edges: separatorConfig.edges)
                             .listRowInsets(MemoListConstants.rowInsets) // Zero insets for full-width content
                             
                             // MARK: - Swipe Actions Configuration
@@ -97,11 +98,19 @@ struct MemosView: View {
         }
     }
     
-    /// Helper function to determine separator visibility based on memo position
-    /// Only shows separators between memos, never after a single memo or the last memo
-    private func shouldShowSeparator(at index: Int, total count: Int) -> Visibility {
-        // Clean design: no separator for single memo, separators only between multiple memos
-        return (count > 1 && index < count - 1) ? .visible : .hidden
+    /// Position-specific separator configuration for clean design
+    /// Handles edge cases: first memo (no separators), middle memos (top & bottom), last memo (top only)
+    private func separatorConfiguration(at index: Int, total count: Int) -> (visibility: Visibility, edges: VerticalEdge.Set) {
+        guard count > 1 else { return (.hidden, []) }
+        
+        switch index {
+        case 0: // First memo - no separators (navigation spacing sufficient)
+            return (.hidden, [])
+        case count - 1: // Last memo - only top separator (no trailing separator)
+            return (.visible, .top)
+        default: // Middle memos - both top and bottom separators
+            return (.visible, .all)
+        }
     }
 }
 
