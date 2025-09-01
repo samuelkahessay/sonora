@@ -76,11 +76,8 @@ struct MemosView: View {
             }
             .loadingState(
                 isLoading: viewModel.isLoading,
-                message: "Loading memos...",
-                error: $viewModel.error
-            ) {
-                viewModel.retryLastOperation()
-            }
+                message: "Loading memos..."
+            )
             .onReceive(NotificationCenter.default.publisher(for: .openMemoByID)) { note in
                 guard let idStr = note.userInfo?["memoId"] as? String, let id = UUID(uuidString: idStr) else { return }
                 if let memo = DIContainer.shared.memoRepository().getMemo(by: id) {
