@@ -1,8 +1,8 @@
 //
-//  MemosView.swift (moved to Features/Memos/UI)
+//  MemosView.swift
 //  Sonora
 //
-//  Created by Samuel Kahessay on 2025-08-23.
+//  Main memo list container view
 //
 
 import SwiftUI
@@ -19,15 +19,6 @@ struct MemosView: View {
     
     init(popToRoot: (() -> Void)? = nil) {
         self.popToRoot = popToRoot
-    }
-    // Slightly grey rows on dark mode, clear on light
-    private var rowBackgroundColor: Color {
-        colorScheme == .dark ? Color(UIColor.systemGray6) : .clear
-    }
-
-    // Pitch black container background on dark mode
-    private var containerBackgroundColor: Color {
-        colorScheme == .dark ? .black : MemoListConstants.ListStyling.backgroundColor
     }
 
     var body: some View {
@@ -51,8 +42,8 @@ struct MemosView: View {
                             // **Row Visual Configuration**
                             // Adjust these modifiers to fine-tune row appearance
                             .listRowSeparator(separatorConfig.visibility, edges: separatorConfig.edges)
-                            .listRowInsets(MemoListConstants.rowInsets) // Zero insets for full-width content
-                            .modifier(DarkModeRowBackground(colorScheme: colorScheme))
+                            .listRowInsets(MemoListConstants.rowInsets)
+                            .memoRowBackground(colorScheme)
                             // MARK: - Swipe Actions Configuration
                             /// Secondary actions accessible via swipe gestures
                             /// Design principle: Keep primary UI clean, secondary actions discoverable
@@ -73,8 +64,8 @@ struct MemosView: View {
                     // **List Styling Configuration**
                     .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
                     .listStyle(MemoListConstants.listStyle) // Modern grouped appearance
-                    .scrollContentBackground(.hidden) // ADDED: Clean background
-                    .background(containerBackgroundColor) // OLED black in dark mode
+                    .scrollContentBackground(.hidden) // Clean background
+                    .background(MemoListColors.containerBackground(for: colorScheme)) // Unified color management
                     // Add a small top inset so first row doesn't touch nav bar hairline
                     .safeAreaInset(edge: .top) {
                         Color.clear.frame(height: 8)
@@ -117,334 +108,6 @@ struct MemosView: View {
             return (.visible, .top)
         default: // Middle memos - both top and bottom separators
             return (.visible, .all)
-        }
-    }
-}
-
-// MARK: - MemoRowView
-
-/// Polished memo row component optimized for navigation and readability
-/// sep
-/// **Design Philosophy:**
-/// - Primary action: Navigation to memo details (entire row tappable)
-/// - Information hierarchy: Title prominence > Metadata clarity
-/// - Visual simplicity: Minimal UI chrome, maximum content focus
-/// - Accessibility first: Full VoiceOver support with logical reading order
-///
-/// **Customization Points:**
-/// All sizing, spacing, and styling constants are documented below for easy adjustment
-struct MemoRowView: View {
-    
-    // MARK: - Properties
-    
-    let memo: Memo
-    @ObservedObject var viewModel: MemoListViewModel
-    @State private var pulsePhase = false
-
-    // Recomputed each render; drives color/animation
-    private var transcriptionState: TranscriptionState {
-        viewModel.getTranscriptionState(for: memo)
-    }
-    
-    // MARK: - Computed Properties
-    /// Adaptive row background color for better type-checking performance
-    private var adaptiveRowBackground: Color {
-        Color(UIColor { traitCollection in
-            if traitCollection.userInterfaceStyle == .dark {
-                return UIColor.systemGray6
-            } else {
-                return UIColor.clear
-            }
-        })
-    }
-    
-    // MARK: - Design Constants
-    
-    /// **Typography Configuration**
-    /// Adjust these values to fine-tune text appearance and hierarchy
-    private enum Typography {
-        /// Primary title font - prominent but not overwhelming
-        /// 1.75x size: .title3 with semibold weight for strong hierarchy
-        static let titleFont: Font = .system(.title3, design: .default, weight: .semibold)
-        
-        /// Metadata font for duration and date information
-        /// 1.75x size: .subheadline for better readability
-        static let metadataFont: Font = .system(.subheadline, design: .default, weight: .regular)
-        
-        /// Clock icon font size - should complement metadata text
-        /// 1.75x size: .footnote with medium weight for better visibility
-        static let iconFont: Font = .system(.footnote, design: .default, weight: .medium)
-    }
-    
-    /// **Color Configuration**
-    /// Semantic colors ensure proper light/dark mode adaptation
-    private enum Colors {
-        /// Primary text color for memo titles - maximum contrast
-        static let titleText: Color = .semantic(.textPrimary)
-        
-        /// Secondary text color for metadata - reduced emphasis
-        static let metadataText: Color = .semantic(.textSecondary)
-        
-        /// Icon tint color - should match or complement metadata text
-        static let iconTint: Color = .semantic(.textSecondary)
-        
-        /// Accent line color based on transcription state
-        /// Follows semantic color patterns for accessibility and theming
-        static func accentColor(for state: TranscriptionState) -> Color {
-            switch state {
-            case .completed:
-                return .semantic(.success)      // Green - transcription complete
-            case .inProgress:
-                return .semantic(.info)         // Blue - actively transcribing
-            case .failed:
-                return .semantic(.error)        // Red - transcription failed
-            case .notStarted:
-                return .semantic(.textSecondary) // Gray - default/not started
-            }
-        }
-    }
-    
-    /// **Layout Configuration - FIXED VALUES**
-    /// These follow iOS Human Interface Guidelines spacing standards
-    private enum Layout {
-        /// Vertical padding - 1.75x size increase (8 × 1.75 = 14)
-        /// Larger padding for more generous card appearance
-        static let verticalPadding: CGFloat = 14
-        
-        /// Horizontal padding - REMOVED (let list handle it)
-        /// List row insets will handle horizontal spacing properly
-        // static let horizontalPadding: CGFloat = 16 // REMOVED
-        
-        /// Title to metadata spacing - 1.75x size increase (4 × 1.75 = 7)
-        /// Proportional spacing for larger typography
-        static let titleToMetadataSpacing: CGFloat = 7
-        
-        /// Metadata spacing - 1.75x size increase (12 × 1.75 = 21)
-        /// Generous horizontal spacing for larger cards
-        static let metadataElementSpacing: CGFloat = 21
-        
-        /// Icon to text spacing - 1.75x size increase (3 × 1.75 = 5)
-        /// Proportional spacing for larger icons and text
-        static let iconToTextSpacing: CGFloat = 5
-        
-        /// Line limit stays the same
-        static let titleLineLimit: Int = 2
-        
-        /// **Accent Line Configuration - Proportional to 1.75x Design**
-        /// Color-coded status indicators following iOS design principles
-        
-        /// Accent line width - prominent but not overwhelming
-        static let accentLineWidth: CGFloat = 4
-        
-        /// Accent line corner radius - subtle rounding for modern appearance
-        static let accentLineCornerRadius: CGFloat = 2
-        
-        /// Accent line spacing - proportional to iconToTextSpacing for visual balance
-        static let accentLineSpacing: CGFloat = 8
-    }
-    
-    // MARK: - Accent Line Component
-    
-    /// **Accent Line View**
-    /// Color-coded status indicator with animated pulse for in-progress states
-    @ViewBuilder
-    private var accentLineView: some View {
-        RoundedRectangle(cornerRadius: Layout.accentLineCornerRadius)
-            .fill(Colors.accentColor(for: transcriptionState))
-            .frame(width: Layout.accentLineWidth)
-            .opacity(transcriptionState.isInProgress ? (pulsePhase ? 0.4 : 1.0) : 1.0)
-            // Force view recreation when state case changes (e.g., inProgress → completed)
-            .id(accentStateKey)
-            .onAppear {
-                // FIXED: Reset animation state based on current transcription state
-                if transcriptionState.isInProgress {
-                    withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-                        pulsePhase.toggle()
-                    }
-                    print("🎨 MemoRow: start pulse for \(memo.displayName) [state=\(transcriptionState.statusText)]")
-                } else {
-                    // Reset pulse state for non-in-progress states (fixes cell reuse)
-                    pulsePhase = false
-                    print("🎨 MemoRow: no pulse for \(memo.displayName) [state=\(transcriptionState.statusText)]")
-                }
-            }
-            .onChange(of: transcriptionState.isInProgress) { _, isInProgress in  // FIXED: iOS 17+ syntax
-                if isInProgress {
-                    withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-                        pulsePhase.toggle()
-                    }
-                    print("🎨 MemoRow: pulse toggling (isInProgress=true) for \(memo.displayName)")
-                } else {
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        pulsePhase = false
-                    }
-                    print("🎨 MemoRow: pulse stopped (isInProgress=false) for \(memo.displayName)")
-                }
-            }
-            // Additional safety: react to any state change
-            .onChange(of: transcriptionState) { old, new in
-                if old != new {
-                    print("🎨 MemoRow: state changed for \(memo.displayName): \(old.statusText) → \(new.statusText)")
-                }
-                if !new.isInProgress {
-                    pulsePhase = false
-                }
-            }
-            .onDisappear {
-                // ADDED: Stop animations when cell goes off-screen
-                pulsePhase = false
-            }
-            .accessibilityHidden(true)
-    }
-    
-    // MARK: - View Body
-    
-    var body: some View {
-        HStack(spacing: Layout.accentLineSpacing) { // Color-coded accent line spacing
-            // Color-coded accent line
-            accentLineView
-            
-            // Main content container
-            primaryContentView
-            
-            // Natural spacer - let system handle chevron positioning
-            Spacer()
-        }
-        .padding(.vertical, Layout.verticalPadding) // ONLY vertical padding
-        // .padding(.horizontal, Layout.horizontalPadding) // REMOVED - let list handle it
-        .contentShape(Rectangle()) // Ensures entire row area is tappable
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityDescription)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityHint(AccessibilityStrings.rowHint)
-    }
-    
-    // MARK: - Subviews
-    
-    /// **Primary Content View**
-    /// Contains the main information hierarchy: title and metadata
-    @ViewBuilder
-    private var primaryContentView: some View {
-        VStack(alignment: .leading, spacing: Layout.titleToMetadataSpacing) {
-            // Memo title - primary information
-            titleView
-            
-            // Metadata row - secondary information (duration and date)
-            metadataRowView
-        }
-    }
-    
-    /// **Title View**
-    /// Displays the memo name with prominence and proper line handling
-    @ViewBuilder
-    private var titleView: some View {
-        Text(memo.displayName)
-            .font(Typography.titleFont)
-            .foregroundColor(Colors.titleText)
-            .lineLimit(Layout.titleLineLimit)
-            .multilineTextAlignment(.leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    
-    /// **Metadata Row View**
-    /// Horizontal layout containing duration and creation date information
-    @ViewBuilder
-    private var metadataRowView: some View {
-        HStack(spacing: Layout.metadataElementSpacing) {
-            // Duration with clock icon
-            durationView
-            
-            // Creation date (relative format)
-            dateView
-            
-            // Spacer pushes content left and leaves room for system chevron
-            Spacer()
-        }
-    }
-    
-    /// **Duration View**
-    /// Clock icon + duration text with optimal spacing and styling
-    @ViewBuilder
-    private var durationView: some View {
-        HStack(spacing: Layout.iconToTextSpacing) {
-            Image(systemName: SystemIconNames.clock)
-                .font(Typography.iconFont)
-                .foregroundColor(Colors.iconTint)
-            
-            Text(memo.durationString)
-                .font(Typography.metadataFont)
-                .foregroundColor(Colors.metadataText)
-                .monospacedDigit() // Ensures consistent width for time display
-        }
-    }
-    
-    /// **Date View**
-    /// Relative date display ("7 hours ago", "yesterday", etc.)
-    @ViewBuilder
-    private var dateView: some View {
-        Text(formattedRelativeDate)
-            .font(Typography.metadataFont)
-            .foregroundColor(Colors.metadataText)
-    }
-    
-    // MARK: - Helper Properties
-    
-    /// Formatted relative date string using system formatter
-    /// Example outputs: "5 minutes ago", "2 hours ago", "yesterday"
-    private var formattedRelativeDate: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated // More compact display
-        return formatter.localizedString(for: memo.creationDate, relativeTo: Date())
-    }
-    
-    /// Comprehensive accessibility description for VoiceOver users
-    /// Provides all essential information in logical reading order
-    private var accessibilityDescription: String {
-        let components = [
-            memo.displayName,
-            "Duration: \(memo.durationString)",
-            "Created \(formattedRelativeDate)"
-        ]
-        return components.joined(separator: ", ")
-    }
-    
-    // MARK: - Constants
-    
-    /// **System Icon Names**
-    /// Centralized SF Symbols names for consistency
-    private enum SystemIconNames {
-        static let clock = "clock"
-    }
-    
-    /// **Accessibility Strings**
-    /// Localization-ready accessibility strings
-    private enum AccessibilityStrings {
-        static let rowHint = "Double tap to view memo details"
-    }
-}
-
-// MARK: - Helpers
-
-private struct DarkModeRowBackground: ViewModifier {
-    let colorScheme: ColorScheme
-    func body(content: Content) -> some View {
-        if colorScheme == .dark {
-            content.listRowBackground(Color(UIColor.systemGray6))
-        } else {
-            content
-        }
-    }
-}
-
-// MARK: - Private helpers
-extension MemoRowView {
-    // Key for forcing view recreation when the transcription state changes case
-    private var accentStateKey: String {
-        switch transcriptionState {
-        case .notStarted: return "notStarted"
-        case .inProgress: return "inProgress"
-        case .completed:  return "completed"
-        case .failed:     return "failed"
         }
     }
 }
@@ -522,71 +185,6 @@ extension MemosView {
         }
         .accessibilityLabel("Delete \(memo.displayName)")
         .accessibilityHint(MemoListConstants.AccessibilityLabels.deleteHint)
-    }
-}
-
-
-// MARK: - Configuration Constants
-
-/// **MemoListConstants**
-/// Centralized configuration for all memo list styling and behavior
-/// 
-/// **Usage:**
-/// Modify these constants to adjust the entire memo list appearance
-/// All values are documented for easy customization
-private enum MemoListConstants {
-    
-    /// **List Styling Configuration**
-    /// Controls overall list appearance and behavior
-    enum ListStyling {
-        /// List style - affects visual presentation and grouping
-        /// Options: .insetGrouped (modern cards), .grouped (traditional), .plain (minimal)
-        static let preferredStyle = InsetGroupedListStyle()
-        
-        /// Background color for the list container
-        /// Uses semantic color for automatic light/dark adaptation
-        static let backgroundColor: Color = .semantic(.bgSecondary)
-    }
-    
-    /// **Row Configuration**
-    /// Fine-tune individual row appearance
-    /// **FIXED Row Configuration** 
-    /// Proper insets that work with insetGrouped style
-    static let rowInsets = EdgeInsets(
-        top: 0,
-        leading: 16,    // CHANGED: Restore proper leading inset
-        bottom: 0,
-        trailing: 16    // CHANGED: Restore proper trailing inset
-    )
-    
-    /// Current list style setting
-    /// List style - keep insetGrouped but ensure proper setup
-    static let listStyle = InsetGroupedListStyle()
-    
-    /// **Swipe Actions Configuration**
-    /// Text and icons for swipe gesture actions
-    enum SwipeActions {
-        // Transcription actions
-        static let transcribeTitle = "Transcribe"
-        static let transcribeIcon = "text.quote"
-        
-        static let retryTitle = "Retry"
-        static let retryIcon = "arrow.clockwise"
-        
-        // Destructive actions
-        static let deleteTitle = "Delete"
-        static let deleteIcon = "trash"
-    }
-    
-    /// **Accessibility Configuration**
-    /// VoiceOver labels and hints for better accessibility
-    enum AccessibilityLabels {
-        static let mainList = "Memos list"
-        
-        // Action hints
-        static let transcribeHint = "Double tap to transcribe this memo using AI"
-        static let retryHint = "Double tap to retry the failed transcription"
-        static let deleteHint = "Double tap to permanently delete this memo"
     }
 }
 
