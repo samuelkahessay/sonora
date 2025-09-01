@@ -46,31 +46,34 @@ struct FileNameSanitizer {
         // Step 1: Trim whitespace
         var sanitized = input.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Step 2: Replace spaces with underscores
+        // Step 2: Convert emojis to text equivalents for filesystem compatibility
+        sanitized = convertEmojisToText(sanitized)
+        
+        // Step 3: Replace spaces with underscores
         sanitized = sanitized.replacingOccurrences(of: " ", with: "_")
         
-        // Step 3: Remove invalid characters
+        // Step 4: Remove invalid characters
         sanitized = String(sanitized.unicodeScalars.filter { scalar in
             !Self.invalidCharacters.contains(scalar)
         })
         
-        // Step 4: Handle multiple consecutive underscores
+        // Step 5: Handle multiple consecutive underscores
         sanitized = sanitized.replacingOccurrences(of: "_+", with: "_", options: .regularExpression)
         
-        // Step 5: Remove leading/trailing underscores
+        // Step 6: Remove leading/trailing underscores
         sanitized = sanitized.trimmingCharacters(in: CharacterSet(charactersIn: "_"))
         
-        // Step 6: Handle empty result after sanitization
+        // Step 7: Handle empty result after sanitization
         if sanitized.isEmpty {
             sanitized = "untitled"
         }
         
-        // Step 7: Check for reserved names
+        // Step 8: Check for reserved names
         if Self.reservedNames.contains(sanitized.uppercased()) {
             sanitized = "memo_\(sanitized)"
         }
         
-        // Step 8: Truncate if too long
+        // Step 9: Truncate if too long
         if sanitized.count > Self.maxFileNameLength {
             let endIndex = sanitized.index(sanitized.startIndex, offsetBy: Self.maxFileNameLength)
             sanitized = String(sanitized[..<endIndex])
@@ -78,13 +81,59 @@ struct FileNameSanitizer {
             sanitized = sanitized.trimmingCharacters(in: CharacterSet(charactersIn: "_"))
         }
         
-        // Step 9: Final fallback check
+        // Step 10: Final fallback check
         if sanitized.isEmpty {
             sanitized = "untitled"
         }
         
-        // Step 10: Add file extension
+        // Step 11: Add file extension
         return "\(sanitized)\(fileExtension)"
+    }
+    
+    // MARK: - Private Methods
+    
+    /// Converts common emojis to text equivalents for filename compatibility
+    /// - Parameter input: String that may contain emojis
+    /// - Returns: String with emojis converted to text
+    private static func convertEmojisToText(_ input: String) -> String {
+        let emojiMappings: [String: String] = [
+            "📝": "memo",
+            "🎤": "audio", 
+            "🎵": "music",
+            "🎶": "music",
+            "💼": "business",
+            "📅": "calendar",
+            "📞": "call",
+            "✅": "done",
+            "❌": "cancel",
+            "⭐": "star",
+            "❤️": "heart",
+            "👍": "thumbs_up",
+            "👎": "thumbs_down",
+            "🔥": "fire",
+            "💡": "idea",
+            "📈": "chart",
+            "🏠": "home",
+            "🚗": "car",
+            "✈️": "airplane",
+            "🌟": "star",
+            "💯": "100",
+            "🎯": "target"
+        ]
+        
+        var result = input
+        for (emoji, text) in emojiMappings {
+            result = result.replacingOccurrences(of: emoji, with: text)
+        }
+        
+        // For any remaining emojis, convert to generic placeholder
+        // This regex matches emoji characters
+        let emojiRange = NSRange(location: 0, length: result.utf16.count)
+        if let regex = try? NSRegularExpression(pattern: "[\\p{Emoji}]", options: []) {
+            result = regex.stringByReplacingMatches(in: result, options: [], range: emojiRange, withTemplate: "emoji")
+        }
+        
+        return result
     }
     
     /// Validates if a filename is safe without modification
@@ -141,7 +190,10 @@ extension FileNameSanitizer {
             ("Very Long Filename That Exceeds The Maximum Character Limit And Should Be Truncated Properly Without Breaking", "Very_Long_Filename_That_Exceeds_The_Maximum_Character_Limit_And_Should_Be_Truncated_Pr.m4a"),
             ("___Leading_Trailing___", "Leading_Trailing.m4a"),
             ("Special@#$%Characters", "Special@#$%Characters.m4a"),
-            ("Final Meeting Jan 2, 2025", "Final_Meeting_Jan_2,_2025.m4a")
+            ("Final Meeting Jan 2, 2025", "Final_Meeting_Jan_2,_2025.m4a"),
+            ("📝 Meeting Notes", "memo_Meeting_Notes.m4a"),
+            ("🎤 Voice Memo 🎵", "audio_Voice_Memo_music.m4a"),
+            ("Business Call 💼📞", "Business_Call_business_call.m4a")
         ]
     }
 }
