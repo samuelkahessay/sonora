@@ -35,14 +35,14 @@ struct MemosView: View {
                     /// **Polished List Configuration**
                     /// Optimized for readability, navigation, and modern iOS appearance
                     List {
-                        ForEach(viewModel.memos) { memo in
+                        ForEach(Array(viewModel.memos.enumerated()), id: \.element.id) { index, memo in
                             // MARK: Navigation Row Configuration
                             NavigationLink(value: memo) {
                                 MemoRowView(memo: memo, viewModel: viewModel)
                             }
                             // **Row Visual Configuration**
                             // Adjust these modifiers to fine-tune row appearance
-                            .listRowSeparator(.visible, edges: .bottom) // Clean separator between rows
+                            .listRowSeparator(shouldShowSeparator(at: index, total: viewModel.memos.count))
                             .listRowInsets(MemoListConstants.rowInsets) // Zero insets for full-width content
                             
                             // MARK: - Swipe Actions Configuration
@@ -96,12 +96,19 @@ struct MemosView: View {
             }
         }
     }
+    
+    /// Helper function to determine separator visibility based on memo position
+    /// Only shows separators between memos, never after a single memo or the last memo
+    private func shouldShowSeparator(at index: Int, total count: Int) -> Visibility {
+        // Clean design: no separator for single memo, separators only between multiple memos
+        return (count > 1 && index < count - 1) ? .visible : .hidden
+    }
 }
 
 // MARK: - MemoRowView
 
 /// Polished memo row component optimized for navigation and readability
-/// 
+/// sep
 /// **Design Philosophy:**
 /// - Primary action: Navigation to memo details (entire row tappable)
 /// - Information hierarchy: Title prominence > Metadata clarity
