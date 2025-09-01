@@ -7,27 +7,44 @@ struct MemoDetailView: View {
     let memo: Memo
     @StateObject private var viewModel = MemoDetailViewModel()
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
+    @FocusState private var isTitleEditingFocused: Bool
     
     enum AccessibleElement {
         case playButton
         case transcribeButton
         case transcriptionText
         case analysisResults
+        case memoTitle
     }
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 0) {
                 languageBannerView
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
+                
                 headerInfoView
-                audioControlsView
-                transcriptionSectionView
-                analysisSectionView
+                    .padding(.bottom, 20)
+                
+                VStack(alignment: .leading, spacing: 20) {
+                    audioControlsView
+                    transcriptionSectionView
+                    analysisSectionView
+                }
+                .padding(.horizontal)
             }
-            .padding()
         }
         .navigationTitle("Memo Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                RenameButton()
+            }
+        }
+        .renameAction {
+            viewModel.startRenaming()
+        }
         .onAppear {
             viewModel.configure(with: memo)
             viewModel.onViewAppear()
@@ -60,6 +77,12 @@ struct MemoDetailView: View {
         .onDisappear {
             viewModel.onViewDisappear()
         }
+        .onTapGesture {
+            // Dismiss title editing when tapping outside
+            if viewModel.isRenamingTitle {
+                viewModel.cancelRenaming()
+            }
+        }
         .errorAlert($viewModel.error) {
             viewModel.retryLastOperation()
         }
@@ -69,6 +92,13 @@ struct MemoDetailView: View {
             error: $viewModel.error
         ) {
             viewModel.retryLastOperation()
+        }
+        .onKeyPress(.escape) {
+            if viewModel.isRenamingTitle {
+                viewModel.cancelRenaming()
+                return .handled
+            }
+            return .ignored
         }
     }
 
@@ -90,16 +120,63 @@ struct MemoDetailView: View {
     @ViewBuilder
     private var headerInfoView: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(memo.displayName)
-                .font(.title2)
-                .fontWeight(.bold)
-                .accessibilityAddTraits(.isHeader)
+            if viewModel.isRenamingTitle {
+                // Edit mode: Text field with save/cancel buttons
+                VStack(spacing: 12) {
+                    TextField("Memo Title", text: $viewModel.editedTitle)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($isTitleEditingFocused)
+                        .onAppear {
+                            // Auto-focus when entering edit mode
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                isTitleEditingFocused = true
+                            }
+                        }
+                        .onSubmit {
+                            viewModel.saveRename()
+                        }
+                        .accessibilityLabel("Memo title editor")
+                        .accessibilityFocused($focusedElement, equals: .memoTitle)
+                    
+                    HStack {
+                        Button("Cancel") {
+                            viewModel.cancelRenaming()
+                        }
+                        .buttonStyle(.bordered)
+                        .accessibilityLabel("Cancel title editing")
+                        
+                        Spacer()
+                        
+                        Button("Save") {
+                            viewModel.saveRename()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .accessibilityLabel("Save new title")
+                    }
+                }
+            } else {
+                // Display mode: Title with double-tap to edit
+                Text(viewModel.currentMemoTitle)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityFocused($focusedElement, equals: .memoTitle)
+                    .accessibilityLabel("Memo title: \(viewModel.currentMemoTitle)")
+                    .accessibilityHint("Double tap to rename this memo")
+                    .onTapGesture(count: 2) {
+                        viewModel.startRenaming()
+                    }
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color.semantic(.fillPrimary))
         .cornerRadius(12)
+        .padding(.horizontal)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Memo: \(memo.displayName), Duration: \(memo.durationString)")
+        .accessibilityLabel(viewModel.isRenamingTitle ? "Editing memo title" : "Memo: \(viewModel.currentMemoTitle), Duration: \(memo.durationString)")
     }
 
     @ViewBuilder
@@ -129,7 +206,7 @@ struct MemoDetailView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(viewModel.isPlaying ? "Pause \(memo.displayName)" : "Play \(memo.displayName)")
+                .accessibilityLabel(viewModel.isPlaying ? "Pause \(viewModel.currentMemoTitle)" : "Play \(viewModel.currentMemoTitle)")
                 .accessibilityHint("Double tap to \(viewModel.isPlaying ? "pause" : "play") this memo")
                 .accessibilityFocused($focusedElement, equals: .playButton)
                 .accessibilityAddTraits(.startsMediaSession)

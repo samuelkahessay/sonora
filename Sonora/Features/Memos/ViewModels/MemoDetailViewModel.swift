@@ -17,6 +17,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     private let analyzeContentUseCase: AnalyzeContentUseCaseProtocol
     private let analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol
     private let analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol
+    private let renameMemoUseCase: RenameMemoUseCaseProtocol
     private let memoRepository: any MemoRepository // Still needed for state updates
     private let operationCoordinator: any OperationCoordinatorProtocol
     private var cancellables = Set<AnyCancellable>()
@@ -61,6 +62,11 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     @Published var error: SonoraError?
     @Published var isLoading: Bool = false
     
+    // Title renaming state
+    @Published var isRenamingTitle: Bool = false
+    @Published var editedTitle: String = ""
+    @Published var currentMemoTitle: String = ""
+    
     // MARK: - Computed Properties
     
     /// Play button icon based on current playing state
@@ -97,6 +103,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         analyzeContentUseCase: AnalyzeContentUseCaseProtocol,
         analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol,
         analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol,
+        renameMemoUseCase: RenameMemoUseCaseProtocol,
         memoRepository: any MemoRepository,
         operationCoordinator: any OperationCoordinatorProtocol
     ) {
@@ -108,6 +115,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         self.analyzeContentUseCase = analyzeContentUseCase
         self.analyzeThemesUseCase = analyzeThemesUseCase
         self.analyzeTodosUseCase = analyzeTodosUseCase
+        self.renameMemoUseCase = renameMemoUseCase
         self.memoRepository = memoRepository
         self.operationCoordinator = operationCoordinator
         
@@ -153,6 +161,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
             analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
             analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
+            renameMemoUseCase: RenameMemoUseCase(memoRepository: memoRepository),
             memoRepository: memoRepository,
             operationCoordinator: container.operationCoordinator()
         )
@@ -238,6 +247,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     func configure(with memo: Memo) {
         print("📝 MemoDetailViewModel: Configuring with memo: \(memo.filename)")
         self.currentMemo = memo
+        self.currentMemoTitle = memo.displayName
         
         // Initial state update
         updateTranscriptionState(for: memo)
@@ -389,6 +399,65 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             print("🚫 MemoDetailViewModel: Cancelled \(cancelledCount) operations for memo: \(memo.filename)")
             await updateOperationStatus()
         }
+    }
+    
+    // MARK: - Title Renaming Methods
+    
+    /// Start renaming the memo title
+    func startRenaming() {
+        guard let memo = currentMemo else { return }
+        print("📝 MemoDetailViewModel: Starting title rename for: \(memo.filename)")
+        
+        editedTitle = currentMemoTitle
+        isRenamingTitle = true
+        
+        // Play light haptic feedback
+        HapticManager.shared.playLightImpact()
+    }
+    
+    /// Save the renamed title
+    func saveRename() {
+        guard let memo = currentMemo else { return }
+        
+        let trimmedTitle = editedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Don't save if title is empty or unchanged
+        if trimmedTitle.isEmpty || trimmedTitle == currentMemoTitle {
+            cancelRenaming()
+            return
+        }
+        
+        print("📝 MemoDetailViewModel: Saving rename to: '\(trimmedTitle)'")
+        
+        Task {
+            do {
+                try await renameMemoUseCase.execute(memo: memo, newTitle: trimmedTitle)
+                await MainActor.run {
+                    self.isRenamingTitle = false
+                    self.editedTitle = ""
+                    // Update title immediately and memo reference
+                    self.currentMemoTitle = trimmedTitle
+                    self.currentMemo = self.memoRepository.getMemo(by: memo.id)
+                    HapticManager.shared.playSuccess()
+                    print("📝 MemoDetailViewModel: Successfully renamed memo")
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = ErrorMapping.mapError(error)
+                    self.isRenamingTitle = false
+                    self.editedTitle = ""
+                    HapticManager.shared.playError()
+                    print("❌ MemoDetailViewModel: Failed to rename memo: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    /// Cancel renaming without saving
+    func cancelRenaming() {
+        print("📝 MemoDetailViewModel: Cancelling title rename")
+        isRenamingTitle = false
+        editedTitle = ""
     }
     
     // MARK: - Private Methods
