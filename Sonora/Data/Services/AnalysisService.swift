@@ -61,8 +61,8 @@ class AnalysisService: ObservableObject, AnalysisServiceProtocol {
     }
     
     // Convenience methods for each analysis type
-    func analyzeTLDR(transcript: String) async throws -> AnalyzeEnvelope<TLDRData> {
-        return try await analyze(mode: .tldr, transcript: transcript, responseType: TLDRData.self)
+    func analyzeDistill(transcript: String) async throws -> AnalyzeEnvelope<DistillData> {
+        return try await analyze(mode: .distill, transcript: transcript, responseType: DistillData.self)
     }
     
     func analyzeAnalysis(transcript: String) async throws -> AnalyzeEnvelope<AnalysisData> {

@@ -87,9 +87,9 @@ public final class AppConfiguration {
     
     // MARK: - Analysis Configuration
     
-    /// Timeout for TLDR analysis operations
-    /// Can be overridden with SONORA_TLDR_TIMEOUT environment variable
-    public private(set) var tldrAnalysisTimeout: TimeInterval = 15.0
+    /// Timeout for Distill analysis operations
+    /// Can be overridden with SONORA_DISTILL_TIMEOUT environment variable
+    public private(set) var distillAnalysisTimeout: TimeInterval = 15.0
     
     /// Timeout for content analysis operations
     /// Can be overridden with SONORA_CONTENT_TIMEOUT environment variable
@@ -228,13 +228,13 @@ public final class AppConfiguration {
         // Analysis Configuration - Build-specific timeouts
         if buildConfig.isDebug {
             // Debug builds get longer timeouts for easier debugging
-            tldrAnalysisTimeout = 25.0
+            distillAnalysisTimeout = 25.0
             contentAnalysisTimeout = 35.0
             themesAnalysisTimeout = 30.0
             todosAnalysisTimeout = 28.0
         } else {
             // Release builds use optimized timeouts
-            tldrAnalysisTimeout = 15.0
+            distillAnalysisTimeout = 15.0
             contentAnalysisTimeout = 20.0
             themesAnalysisTimeout = 18.0
             todosAnalysisTimeout = 16.0
@@ -354,10 +354,10 @@ public final class AppConfiguration {
         }
         
         // Analysis Configuration
-        if let timeoutString = ProcessInfo.processInfo.environment["SONORA_TLDR_TIMEOUT"],
+        if let timeoutString = ProcessInfo.processInfo.environment["SONORA_DISTILL_TIMEOUT"],
            let timeout = TimeInterval(timeoutString) {
-            tldrAnalysisTimeout = timeout
-            print("🔧 AppConfiguration: TLDR timeout overridden to \(timeout)s")
+            distillAnalysisTimeout = timeout
+            print("🔧 AppConfiguration: Distill timeout overridden to \(timeout)s")
         }
         
         if let timeoutString = ProcessInfo.processInfo.environment["SONORA_CONTENT_TIMEOUT"],
@@ -456,8 +456,8 @@ public final class AppConfiguration {
     /// Get timeout for specific analysis mode
     public func timeoutInterval(for mode: AnalysisMode) -> TimeInterval {
         switch mode {
-        case .tldr:
-            return tldrAnalysisTimeout
+        case .distill:
+            return distillAnalysisTimeout
         case .analysis:
             return contentAnalysisTimeout
         case .themes:

@@ -64,8 +64,8 @@ public final class RemindersEventHandler {
         case .analysisCompleted(let memoId, let type, let result):
             if type == .todos {
                 await handleTodosAnalysisCompleted(memoId: memoId, result: result)
-            } else if type == .tldr {
-                await handleTLDRAnalysisCompleted(memoId: memoId, result: result)
+            } else if type == .distill {
+                await handleDistillAnalysisCompleted(memoId: memoId, result: result)
             }
             
         case .transcriptionCompleted(let memoId, let text):
@@ -96,22 +96,22 @@ public final class RemindersEventHandler {
         await placeholderCreateRemindersFromTodos(memoId: memoId, result: result)
     }
     
-    private func handleTLDRAnalysisCompleted(memoId: UUID, result: String) async {
-        logger.debug("RemindersEventHandler: Would analyze TLDR for implicit action items", 
+    private func handleDistillAnalysisCompleted(memoId: UUID, result: String) async {
+        logger.debug("RemindersEventHandler: Would analyze Distill for implicit action items", 
                     category: .system, 
                     context: LogContext(additionalInfo: [
                         "memoId": memoId.uuidString,
-                        "tldrResult": result.prefix(100)
+                        "distillResult": result.prefix(100)
                     ]))
         
-        // TODO: Implement TLDR analysis for implicit action items
-        // 1. Parse TLDR summary for action-oriented language
+        // TODO: Implement Distill analysis for implicit action items
+        // 1. Parse Distill summary for action-oriented language
         // 2. Extract follow-up items that weren't caught in todos analysis
         // 3. Create low-priority reminders for follow-up
         
         let implicitActions = await placeholderExtractImplicitActions(result)
         if !implicitActions.isEmpty {
-            logger.debug("RemindersEventHandler: Found \(implicitActions.count) implicit actions in TLDR", 
+            logger.debug("RemindersEventHandler: Found \(implicitActions.count) implicit actions in Distill", 
                         category: .system, 
                         context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
         }
@@ -165,8 +165,8 @@ public final class RemindersEventHandler {
                    context: LogContext())
     }
     
-    private func placeholderExtractImplicitActions(_ tldrResult: String) async -> [String] {
-        logger.debug("TODO: Extract implicit action items from TLDR summary", 
+    private func placeholderExtractImplicitActions(_ distillResult: String) async -> [String] {
+        logger.debug("TODO: Extract implicit action items from Distill summary", 
                     category: .system, 
                     context: LogContext())
         

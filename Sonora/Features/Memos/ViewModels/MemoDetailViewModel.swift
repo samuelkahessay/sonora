@@ -13,7 +13,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     private let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
     private let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
     private let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
-    private let analyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol
+    private let analyzeDistillUseCase: AnalyzeDistillUseCaseProtocol
     private let analyzeContentUseCase: AnalyzeContentUseCaseProtocol
     private let analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol
     private let analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol
@@ -93,7 +93,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         startTranscriptionUseCase: StartTranscriptionUseCaseProtocol,
         retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol,
         getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
-        analyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol,
+        analyzeDistillUseCase: AnalyzeDistillUseCaseProtocol,
         analyzeContentUseCase: AnalyzeContentUseCaseProtocol,
         analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol,
         analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol,
@@ -104,7 +104,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         self.startTranscriptionUseCase = startTranscriptionUseCase
         self.retryTranscriptionUseCase = retryTranscriptionUseCase
         self.getTranscriptionStateUseCase = getTranscriptionStateUseCase
-        self.analyzeTLDRUseCase = analyzeTLDRUseCase
+        self.analyzeDistillUseCase = analyzeDistillUseCase
         self.analyzeContentUseCase = analyzeContentUseCase
         self.analyzeThemesUseCase = analyzeThemesUseCase
         self.analyzeTodosUseCase = analyzeTodosUseCase
@@ -149,7 +149,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             startTranscriptionUseCase: startTranscriptionUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase,
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
-            analyzeTLDRUseCase: AnalyzeTLDRUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus(), operationCoordinator: container.operationCoordinator()),
+            analyzeDistillUseCase: AnalyzeDistillUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus(), operationCoordinator: container.operationCoordinator()),
             analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
             analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
             analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
@@ -315,9 +315,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         Task {
             do {
                 switch mode {
-                case .tldr:
+                case .distill:
                     let startTime = CFAbsoluteTimeGetCurrent()
-                    let envelope = try await analyzeTLDRUseCase.execute(transcript: transcript, memoId: memo.id)
+                    let envelope = try await analyzeDistillUseCase.execute(transcript: transcript, memoId: memo.id)
                     let duration = CFAbsoluteTimeGetCurrent() - startTime
                     
                     await MainActor.run {
@@ -332,7 +332,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                             "Response: \(Int(duration * 1000))ms" : 
                             "API: \(envelope.latency_ms)ms, Total: \(Int(duration * 1000))ms"
                         
-                        print("📝 MemoDetailViewModel: TLDR analysis completed (cached: \(wasCached))")
+                        print("📝 MemoDetailViewModel: Distill analysis completed (cached: \(wasCached))")
                     }
                     
                 case .analysis:

@@ -1,12 +1,12 @@
 import Foundation
 
-/// Use case for performing TLDR analysis on transcript with repository caching
-/// Encapsulates the business logic for generating TLDR summaries with persistence
-protocol AnalyzeTLDRUseCaseProtocol {
-    func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<TLDRData>
+/// Use case for performing comprehensive Distill analysis on transcript with repository caching
+/// Provides mentor-like insights including summary, action items, themes, and reflection questions
+protocol AnalyzeDistillUseCaseProtocol {
+    func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<DistillData>
 }
 
-final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
+final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol {
     
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
@@ -31,19 +31,19 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
-    func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<TLDRData> {
+    func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<DistillData> {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
         
-        logger.analysis("Starting TLDR analysis", context: context)
+        logger.analysis("Starting Distill analysis (comprehensive mentor-like insights)", context: context)
         
         // Register analysis operation (analysis can run concurrently - no conflicts)
-        guard let operationId = await operationCoordinator.registerOperation(.analysis(memoId: memoId, analysisType: .tldr)) else {
-            logger.warning("TLDR analysis rejected by operation coordinator (system at capacity)", category: .analysis, context: context, error: nil)
+        guard let operationId = await operationCoordinator.registerOperation(.analysis(memoId: memoId, analysisType: .distill)) else {
+            logger.warning("Distill analysis rejected by operation coordinator (system at capacity)", category: .analysis, context: context, error: nil)
             throw AnalysisError.systemBusy
         }
         
-        logger.debug("TLDR analysis operation registered with ID: \(operationId)", category: .analysis, context: context)
+        logger.debug("Distill analysis operation registered with ID: \(operationId)", category: .analysis, context: context)
         
         do {
             // Validate inputs
@@ -60,12 +60,12 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
             logger.debug("Transcript validated (\(transcript.count) characters)", category: .analysis, context: context)
         
             // CACHE FIRST: Check if analysis already exists
-            let cacheTimer = PerformanceTimer(operation: "TLDR Cache Check", category: .performance)
+            let cacheTimer = PerformanceTimer(operation: "Distill Cache Check", category: .performance)
             if let cachedResult = await MainActor.run(body: {
-                analysisRepository.getAnalysisResult(for: memoId, mode: .tldr, responseType: TLDRData.self)
+                analysisRepository.getAnalysisResult(for: memoId, mode: .distill, responseType: DistillData.self)
             }) {
                 _ = cacheTimer.finish(additionalInfo: "Cache HIT - returning immediately")
-                logger.analysis("Found cached TLDR analysis (cache hit)", 
+                logger.analysis("Found cached Distill analysis (cache hit)", 
                               level: .info, 
                               context: LogContext(correlationId: correlationId, additionalInfo: [
                                   "memoId": memoId.uuidString,
@@ -84,49 +84,51 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
                           context: LogContext(correlationId: correlationId, additionalInfo: ["cacheHit": false]))
         
             // Call service to perform analysis
-            let analysisTimer = PerformanceTimer(operation: "TLDR Analysis API Call", category: .analysis)
-            let result = try await analysisService.analyzeTLDR(transcript: transcript)
+            let analysisTimer = PerformanceTimer(operation: "Distill Analysis API Call", category: .analysis)
+            let result = try await analysisService.analyzeDistill(transcript: transcript)
 
             // Guardrails: validate structure before persisting
-            guard AnalysisGuardrails.validate(tldr: result.data) else {
-                logger.error("TLDR validation failed — not persisting result", category: .analysis, context: context, error: nil)
+            guard AnalysisGuardrails.validate(distill: result.data) else {
+                logger.error("Distill validation failed — not persisting result", category: .analysis, context: context, error: nil)
                 await operationCoordinator.failOperation(operationId, error: AnalysisError.invalidResponse)
                 throw AnalysisError.invalidResponse
             }
             _ = analysisTimer.finish(additionalInfo: "Service call completed successfully")
             
-            logger.analysis("TLDR analysis completed successfully", 
+            logger.analysis("Distill analysis completed successfully", 
                           context: LogContext(correlationId: correlationId, additionalInfo: [
                               "apiLatencyMs": result.latency_ms,
                               "summaryLength": result.data.summary.count,
-                              "keyPointsCount": result.data.key_points.count,
+                              "actionItemsCount": result.data.action_items?.count ?? 0,
+                              "themesCount": result.data.key_themes.count,
+                              "questionsCount": result.data.reflection_questions.count,
                               "model": result.model
                           ]))
             
             // SAVE TO CACHE: Store result for future use
-            let saveTimer = PerformanceTimer(operation: "TLDR Cache Save", category: .performance)
+            let saveTimer = PerformanceTimer(operation: "Distill Cache Save", category: .performance)
             await MainActor.run {
-                analysisRepository.saveAnalysisResult(result, for: memoId, mode: .tldr)
+                analysisRepository.saveAnalysisResult(result, for: memoId, mode: .distill)
             }
             _ = saveTimer.finish(additionalInfo: "Analysis cached successfully")
             
-            logger.analysis("TLDR analysis cached successfully", 
+            logger.analysis("Distill analysis cached successfully", 
                           context: LogContext(correlationId: correlationId, additionalInfo: ["cached": true]))
             
             // Publish analysisCompleted event on main actor
-            logger.debug("Publishing analysisCompleted event for TLDR analysis", category: .analysis, context: context)
+            logger.debug("Publishing analysisCompleted event for Distill analysis", category: .analysis, context: context)
             await MainActor.run { [eventBus] in
-                eventBus.publish(.analysisCompleted(memoId: memoId, type: .tldr, result: result.data.summary))
+                eventBus.publish(.analysisCompleted(memoId: memoId, type: .distill, result: result.data.summary))
             }
             
             // Complete the analysis operation
             await operationCoordinator.completeOperation(operationId)
-            logger.debug("TLDR analysis operation completed: \(operationId)", category: .analysis, context: context)
+            logger.debug("Distill analysis operation completed: \(operationId)", category: .analysis, context: context)
             
             return result
             
         } catch {
-            logger.error("TLDR analysis service call failed", 
+            logger.error("Distill analysis service call failed", 
                        category: .analysis, 
                        context: LogContext(correlationId: correlationId, additionalInfo: ["serviceError": error.localizedDescription]), 
                        error: error)
@@ -137,4 +139,4 @@ final class AnalyzeTLDRUseCase: AnalyzeTLDRUseCaseProtocol {
             throw AnalysisError.analysisServiceError(error.localizedDescription)
         }
     }
-    }
+}

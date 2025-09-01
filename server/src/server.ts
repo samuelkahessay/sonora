@@ -4,7 +4,7 @@ import multer from 'multer';
 import { z } from 'zod';
 import fs from 'fs';
 import { FormData, File } from 'undici';
-import { RequestSchema, AnalysisDataSchema, ThemesDataSchema, TodosDataSchema } from './schema.js';
+import { RequestSchema, AnalysisDataSchema, DistillDataSchema, ThemesDataSchema, TodosDataSchema, ModelSettings, AnalysisJsonSchemas } from './schema.js';
 import { buildPrompt } from './prompts.js';
 import { createChatJSON, createModeration } from './openai.js';
 
@@ -206,8 +206,16 @@ app.post('/analyze', async (req, res) => {
     // Build prompts
     const { system, user } = buildPrompt(mode, transcript);
     
-    // Call OpenAI
-    const { jsonText, usage } = await createChatJSON({ system, user });
+    // Get GPT-5 settings for this mode
+    const settings = ModelSettings[mode as keyof typeof ModelSettings] || { verbosity: 'low', reasoningEffort: 'medium' };
+    const schema = AnalysisJsonSchemas[mode as keyof typeof AnalysisJsonSchemas];
+    const { jsonText, usage } = await createChatJSON({
+      system,
+      user,
+      verbosity: settings.verbosity,
+      reasoningEffort: settings.reasoningEffort,
+      schema
+    });
     
     // Parse and repair JSON if needed
     let parsedData;
@@ -230,9 +238,11 @@ app.post('/analyze', async (req, res) => {
     let validatedData;
     try {
       switch (mode) {
-        case 'tldr':
         case 'analysis':
           validatedData = AnalysisDataSchema.parse(parsedData);
+          break;
+        case 'distill':
+          validatedData = DistillDataSchema.parse(parsedData);
           break;
         case 'themes':
           validatedData = ThemesDataSchema.parse(parsedData);
@@ -255,9 +265,11 @@ app.post('/analyze', async (req, res) => {
     try {
       const vd: any = validatedData as any;
       switch (mode) {
-        case 'tldr':
         case 'analysis':
           textForModeration = `${vd.summary}\n${(vd.key_points || []).join(' \n')}`;
+          break;
+        case 'distill':
+          textForModeration = `${vd.summary}\n${(vd.action_items || []).map((a: any) => a.text).join(' \n')}\n${(vd.key_themes || []).join(' \n')}\n${(vd.reflection_questions || []).join(' \n')}`;
           break;
         case 'themes':
           textForModeration = `${vd.sentiment}\n${vd.themes.map((t: any) => `${t.name}: ${(t.evidence || []).join(' ')}`).join(' \n')}`;
@@ -275,10 +287,11 @@ app.post('/analyze', async (req, res) => {
     res.json({
       mode,
       data: validatedData,
-      model: process.env.SONORA_MODEL || 'gpt-5-nano',
+      model: process.env.SONORA_MODEL || 'gpt-5-mini',
       tokens: {
         input: usage.input,
-        output: usage.output
+        output: usage.output,
+        ...(usage.reasoning !== undefined && { reasoning: usage.reasoning })
       },
       latency_ms: latency,
       moderation
@@ -316,15 +329,188 @@ app.post('/analyze', async (req, res) => {
 app.get('/keycheck', async (_req, res) => {
   try {
     if (!OPENAI_API_KEY) return res.status(500).json({ ok: false, message: 'OPENAI_API_KEY missing' });
-    // minimal roundtrip via your existing client
-    const { jsonText } = await createChatJSON({
-      system: 'You are a ping.',
-      user: 'Respond with {"ok":true} only.'
+    
+    const startTime = Date.now();
+    const { jsonText, usage } = await createChatJSON({
+      system: 'You are a GPT-5-mini validation service. Respond with valid JSON exactly as requested.',
+      user: 'Respond with this JSON object: {"ok":true,"model":"gpt-5-mini","test":"keycheck"}',
+      verbosity: 'low',
+      reasoningEffort: 'low'
     });
+    const responseTime = Date.now() - startTime;
+    
     const parsed = JSON.parse(jsonText);
-    return res.json({ ok: !!parsed?.ok, message: 'Key valid', raw: parsed });
-  } catch (e:any) {
-    return res.status(502).json({ ok: false, message: e?.message || 'OpenAI call failed' });
+    const isValid = !!parsed?.ok;
+    
+    return res.json({ 
+      ok: isValid, 
+      message: isValid ? 'GPT-5-mini key valid' : 'Invalid response from GPT-5-mini',
+      model: process.env.SONORA_MODEL || 'gpt-5-mini',
+      performance: {
+        responseTime: `${responseTime}ms`,
+        tokens: {
+          input: usage.input,
+          output: usage.output,
+          ...(usage.reasoning && { reasoning: usage.reasoning })
+        }
+      },
+      raw: parsed 
+    });
+  } catch (e: any) {
+    console.error('🚨 Keycheck failed:', e?.message);
+    return res.status(502).json({ 
+      ok: false, 
+      message: `GPT-5-mini test failed: ${e?.message || 'Unknown error'}`,
+      model: process.env.SONORA_MODEL || 'gpt-5-mini'
+    });
+  }
+});
+
+app.get('/test-gpt5', async (_req, res) => {
+  try {
+    if (!OPENAI_API_KEY) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'OPENAI_API_KEY missing',
+        tests: []
+      });
+    }
+
+    const testTranscript = "Today I had a productive meeting about the new project. We discussed the timeline and budget concerns. I need to follow up with Sarah by Friday about the proposal, and remember to call the client tomorrow at 2pm to discuss the contract details. The team seemed optimistic about hitting our Q2 targets.";
+    
+    const testResults = [];
+    const overallStartTime = Date.now();
+    
+    // Test all analysis modes
+    const modes = ['distill', 'analysis', 'themes', 'todos'] as const;
+    
+    for (const mode of modes) {
+      const testStartTime = Date.now();
+      try {
+        console.log(`🧪 Testing GPT-5-mini mode: ${mode}`);
+        
+        // Get settings and schema for this mode
+        const settings = ModelSettings[mode] || { verbosity: 'low', reasoningEffort: 'medium' };
+        const schema = AnalysisJsonSchemas[mode];
+        const { system, user } = buildPrompt(mode, testTranscript);
+        
+        const { jsonText, usage } = await createChatJSON({
+          system,
+          user,
+          verbosity: settings.verbosity,
+          reasoningEffort: settings.reasoningEffort,
+          schema
+        });
+        
+        const responseTime = Date.now() - testStartTime;
+        
+        // Validate JSON structure
+        let parsedData;
+        let validationResult: { valid: boolean; error: string | null; keys: string[] } = { valid: false, error: null, keys: [] };
+        
+        try {
+          parsedData = JSON.parse(jsonText);
+          validationResult.valid = true;
+          validationResult.keys = Object.keys(parsedData);
+          
+          // Basic schema validation based on mode
+          switch (mode) {
+            case 'distill':
+              validationResult.valid = !!(parsedData.summary && parsedData.key_themes && parsedData.reflection_questions);
+              break;
+            case 'analysis':
+              validationResult.valid = !!(parsedData.summary && parsedData.key_points);
+              break;
+            case 'themes':
+              validationResult.valid = !!(parsedData.themes && parsedData.sentiment);
+              break;
+            case 'todos':
+              validationResult.valid = !!(parsedData.todos);
+              break;
+          }
+        } catch (jsonError: any) {
+          validationResult.error = jsonError.message;
+        }
+        
+        testResults.push({
+          mode,
+          success: true,
+          responseTime: `${responseTime}ms`,
+          settings: {
+            verbosity: settings.verbosity,
+            reasoningEffort: settings.reasoningEffort,
+            schemaUsed: schema.name
+          },
+          tokens: {
+            input: usage.input,
+            output: usage.output,
+            ...(usage.reasoning && { reasoning: usage.reasoning }),
+            total: usage.input + usage.output + (usage.reasoning || 0)
+          },
+          validation: validationResult,
+          responsePreview: jsonText.substring(0, 150) + (jsonText.length > 150 ? '...' : '')
+        });
+        
+      } catch (error: any) {
+        const responseTime = Date.now() - testStartTime;
+        console.error(`🚨 Test failed for mode ${mode}:`, error.message);
+        
+        testResults.push({
+          mode,
+          success: false,
+          error: error.message,
+          responseTime: `${responseTime}ms`,
+          settings: {
+            verbosity: ModelSettings[mode]?.verbosity || 'low',
+            reasoningEffort: ModelSettings[mode]?.reasoningEffort || 'medium',
+            schemaUsed: AnalysisJsonSchemas[mode]?.name || 'unknown'
+          }
+        });
+      }
+    }
+    
+    const totalTime = Date.now() - overallStartTime;
+    const successfulTests = testResults.filter(t => t.success).length;
+    const totalTokens = testResults.reduce((sum, test) => 
+      sum + (test.tokens?.total || 0), 0
+    );
+    
+    return res.json({
+      success: successfulTests === modes.length,
+      message: `GPT-5-mini comprehensive test completed: ${successfulTests}/${modes.length} modes successful`,
+      model: process.env.SONORA_MODEL || 'gpt-5-mini',
+      testSummary: {
+        totalTime: `${totalTime}ms`,
+        averageTimePerMode: `${Math.round(totalTime / modes.length)}ms`,
+        successRate: `${successfulTests}/${modes.length} (${Math.round(successfulTests / modes.length * 100)}%)`,
+        totalTokensUsed: totalTokens,
+        averageTokensPerMode: Math.round(totalTokens / modes.length)
+      },
+      tests: testResults,
+      diagnostics: {
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'production',
+        structuredOutputEnabled: true,
+        reasoningCapabilityEnabled: true,
+        supportedModes: modes,
+        performance: testResults.map(t => ({
+          mode: t.mode,
+          responseTime: t.responseTime,
+          reasoningEffort: t.settings?.reasoningEffort,
+          tokensUsed: t.tokens?.total || 0,
+          reasoningTokens: t.tokens?.reasoning || 0
+        }))
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('🚨 GPT-5 test endpoint failed:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: `GPT-5-mini test endpoint failed: ${error.message}`,
+      model: process.env.SONORA_MODEL || 'gpt-5-mini',
+      error: error.message
+    });
   }
 });
 

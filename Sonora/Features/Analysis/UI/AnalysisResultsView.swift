@@ -10,7 +10,7 @@ struct AnalysisResultsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Header with model info
-                if let env = envelope as? AnalyzeEnvelope<TLDRData> {
+                if let env = envelope as? AnalyzeEnvelope<DistillData> {
                     HeaderInfoView(envelope: env)
                 } else if let env = envelope as? AnalyzeEnvelope<AnalysisData> {
                     HeaderInfoView(envelope: env)
@@ -36,10 +36,13 @@ struct AnalysisResultsView: View {
                 
                 // Mode-specific content
                 switch mode {
-                case .tldr, .analysis:
-                    if let data = result as? TLDRData {
-                        TLDRResultView(data: data)
-                    } else if let data = result as? AnalysisData {
+                case .distill:
+                    if let data = result as? DistillData,
+                       let env = envelope as? AnalyzeEnvelope<DistillData> {
+                        DistillResultView(data: data, envelope: env)
+                    }
+                case .analysis:
+                    if let data = result as? AnalysisData {
                         AnalysisResultView(data: data)
                     }
                 case .themes:
@@ -57,7 +60,7 @@ struct AnalysisResultsView: View {
     }
 
     private func isModerationFlagged(_ anyEnvelope: Any) -> Bool {
-        if let e = anyEnvelope as? AnalyzeEnvelope<TLDRData> { return e.moderation?.flagged ?? false }
+        if let e = anyEnvelope as? AnalyzeEnvelope<DistillData> { return e.moderation?.flagged ?? false }
         if let e = anyEnvelope as? AnalyzeEnvelope<AnalysisData> { return e.moderation?.flagged ?? false }
         if let e = anyEnvelope as? AnalyzeEnvelope<ThemesData> { return e.moderation?.flagged ?? false }
         if let e = anyEnvelope as? AnalyzeEnvelope<TodosData> { return e.moderation?.flagged ?? false }
@@ -113,8 +116,10 @@ struct HeaderInfoView<T: Codable>: View {
     }
 }
 
-struct TLDRResultView: View {
-    let data: TLDRData
+// TLDRResultView removed - functionality moved to DistillResultView
+
+struct AnalysisResultView: View {
+    let data: AnalysisData
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -150,14 +155,6 @@ struct TLDRResultView: View {
         .background(Color.semantic(.bgSecondary))
         .cornerRadius(12)
         .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
-    }
-}
-
-struct AnalysisResultView: View {
-    let data: AnalysisData
-    
-    var body: some View {
-        TLDRResultView(data: TLDRData(summary: data.summary, key_points: data.key_points))
     }
 }
 

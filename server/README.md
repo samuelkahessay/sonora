@@ -26,6 +26,77 @@ Transcribes audio files using OpenAI Whisper.
 }
 ```
 
+### GET /keycheck
+
+Tests GPT-5-mini API key validity and basic functionality.
+
+**Response:**
+```json
+{
+  "ok": true,
+  "message": "GPT-5-mini key valid",
+  "model": "gpt-5-mini",
+  "performance": {
+    "responseTime": "1240ms",
+    "tokens": {
+      "input": 25,
+      "output": 12,
+      "reasoning": 5
+    }
+  },
+  "raw": { "ok": true, "model": "gpt-5-mini", "test": "keycheck" }
+}
+```
+
+### GET /test-gpt5
+
+Comprehensive test of all GPT-5-mini analysis modes with performance metrics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "GPT-5-mini comprehensive test completed: 4/4 modes successful",
+  "model": "gpt-5-mini",
+  "testSummary": {
+    "totalTime": "8340ms",
+    "averageTimePerMode": "2085ms",
+    "successRate": "4/4 (100%)",
+    "totalTokensUsed": 1250,
+    "averageTokensPerMode": 313
+  },
+  "tests": [
+    {
+      "mode": "distill",
+      "success": true,
+      "responseTime": "2340ms",
+      "settings": {
+        "verbosity": "medium",
+        "reasoningEffort": "high",
+        "schemaUsed": "distill_response"
+      },
+      "tokens": {
+        "input": 245,
+        "output": 156,
+        "reasoning": 89,
+        "total": 490
+      },
+      "validation": {
+        "valid": true,
+        "error": null,
+        "keys": ["summary", "key_themes", "reflection_questions"]
+      }
+    }
+  ],
+  "diagnostics": {
+    "timestamp": "2025-01-XX...",
+    "structuredOutputEnabled": true,
+    "reasoningCapabilityEnabled": true,
+    "supportedModes": ["distill", "analysis", "themes", "todos"]
+  }
+}
+```
+
 ### POST /analyze
 
 Analyzes transcripts with different modes.
@@ -50,7 +121,7 @@ Supported modes:
 {
   "mode": "analysis",
   "data": { "summary": "...", "key_points": ["..."] },
-  "model": "gpt-5-nano",
+  "model": "gpt-4o-mini",
   "tokens": { "input": 123, "output": 45 },
   "latency_ms": 850
 }
@@ -84,7 +155,7 @@ curl -s https://sonora.fly.dev/analyze \
 
 ```bash
 fly launch --name sonora --no-deploy
-fly secrets set OPENAI_API_KEY=sk-... CORS_ORIGIN=https://sonora.app SONORA_MODEL=gpt-5-nano
+fly secrets set OPENAI_API_KEY=sk-... CORS_ORIGIN=https://sonora.app SONORA_MODEL=gpt-5-mini
 fly deploy
 ```
 

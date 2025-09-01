@@ -112,7 +112,7 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
         guard let modeStr = obj["mode"] as? String, modeStr == expectedMode.rawValue else { return false }
         guard let payload = obj["data"] as? [String: Any] else { return false }
         switch expectedMode {
-        case .tldr, .analysis:
+        case .distill, .analysis:
             guard let summary = payload["summary"] as? String, !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
             guard let keyPoints = payload["key_points"] as? [Any] else { return false }
             // Ensure all key points are strings

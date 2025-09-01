@@ -350,8 +350,8 @@ public struct OperationSummary {
             return "Converting speech to text"
         case .analysis(_, let analysisType):
             switch analysisType {
-            case .tldr:
-                return "Generating summary"
+            case .distill:
+                return "Generating comprehensive analysis"
             case .themes:
                 return "Analyzing themes"
             case .todos:

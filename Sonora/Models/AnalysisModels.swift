@@ -1,20 +1,20 @@
 import Foundation
 
 public enum AnalysisMode: String, Codable, CaseIterable {
-    case tldr, analysis, themes, todos
+    case distill, analysis, themes, todos
     
     var displayName: String {
         switch self {
-        case .tldr: return "TLDR"
+        case .distill: return "Distill"
         case .analysis: return "Analysis"
         case .themes: return "Themes"
-        case .todos: return "Todos"
+        case .todos: return "To Do"
         }
     }
     
     var iconName: String {
         switch self {
-        case .tldr: return "text.quote"
+        case .distill: return "drop.fill"
         case .analysis: return "magnifyingglass.circle"
         case .themes: return "tag.circle"
         case .todos: return "checkmark.circle.fill"
@@ -36,10 +36,30 @@ public struct TokenUsage: Codable {
     public let output: Int
 }
 
-public struct TLDRData: Codable {
+public struct DistillData: Codable {
     public let summary: String
-    public let key_points: [String]
+    public let action_items: [ActionItem]?
+    public let key_themes: [String]
+    public let reflection_questions: [String]
+    
+    public struct ActionItem: Codable {
+        public let text: String
+        public let priority: Priority
+        
+        public enum Priority: String, Codable {
+            case high, medium, low
+            
+            var color: String {
+                switch self {
+                case .high: return "red"
+                case .medium: return "orange"
+                case .low: return "green"
+                }
+            }
+        }
+    }
 }
+
 
 public struct AnalysisData: Codable {
     public let summary: String

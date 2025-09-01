@@ -212,6 +212,7 @@ public enum DomainTranscriptionStatus: Codable, Equatable, Hashable {
 
 /// Domain model for analysis types
 public enum DomainAnalysisType: String, CaseIterable, Codable, Hashable {
+    case distill = "distill"
     case summary = "summary"
     case themes = "themes"
     case actionItems = "action_items"
@@ -219,6 +220,7 @@ public enum DomainAnalysisType: String, CaseIterable, Codable, Hashable {
     
     public var displayName: String {
         switch self {
+        case .distill: return "Distill"
         case .summary: return "Summary"
         case .themes: return "Themes"
         case .actionItems: return "Action Items"
@@ -228,6 +230,7 @@ public enum DomainAnalysisType: String, CaseIterable, Codable, Hashable {
     
     public var iconName: String {
         switch self {
+        case .distill: return "drop.fill"
         case .summary: return "text.quote"
         case .themes: return "tag.circle"
         case .actionItems: return "checkmark.circle.fill"

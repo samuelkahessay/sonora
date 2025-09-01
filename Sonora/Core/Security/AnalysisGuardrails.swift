@@ -25,13 +25,6 @@ enum AnalysisGuardrails {
     }
 
     // MARK: - Validation
-    static func validate(tldr: TLDRData) -> Bool {
-        guard !tldr.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
-        guard tldr.summary.count <= 10_000 else { return false }
-        guard tldr.key_points.count <= 50 else { return false }
-        return tldr.key_points.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 2000 }
-    }
-
     static func validate(analysis: AnalysisData) -> Bool {
         guard !analysis.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
         guard analysis.summary.count <= 10_000 else { return false }
@@ -58,6 +51,31 @@ enum AnalysisGuardrails {
             if td.text.count > 2000 { return false }
             if let due = td.due, due.count > 1000 { return false }
         }
+        return true
+    }
+    
+    static func validate(distill: DistillData) -> Bool {
+        // Validate summary
+        guard !distill.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        guard distill.summary.count <= 10_000 else { return false }
+        
+        // Validate action items (optional)
+        if let actionItems = distill.action_items {
+            guard actionItems.count <= 50 else { return false }
+            for item in actionItems {
+                if item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
+                if item.text.count > 2000 { return false }
+            }
+        }
+        
+        // Validate key themes
+        guard distill.key_themes.count > 0 && distill.key_themes.count <= 10 else { return false }
+        guard distill.key_themes.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 500 }) else { return false }
+        
+        // Validate reflection questions
+        guard distill.reflection_questions.count > 0 && distill.reflection_questions.count <= 5 else { return false }
+        guard distill.reflection_questions.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 1000 }) else { return false }
+        
         return true
     }
 }
