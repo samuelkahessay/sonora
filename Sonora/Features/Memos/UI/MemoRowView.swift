@@ -26,6 +26,8 @@ struct MemoRowView: View {
     let memo: Memo
     @ObservedObject var viewModel: MemoListViewModel
     @State private var pulsePhase = false
+    @State private var editedTitle: String = ""
+    @FocusState private var isEditingFocused: Bool
 
     // Recomputed each render; drives color/animation
     private var transcriptionState: TranscriptionState {
@@ -177,6 +179,26 @@ struct MemoRowView: View {
         .accessibilityLabel(accessibilityDescription)
         .accessibilityAddTraits(.isButton)
         .accessibilityHint(AccessibilityStrings.rowHint)
+        // Context menu for long press
+        .contextMenu {
+            Button {
+                startRename()
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+            
+            Button {
+                shareMemo()
+            } label: {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            
+            Button(role: .destructive) {
+                deleteMemo()
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
     
     // MARK: - Subviews
@@ -196,14 +218,38 @@ struct MemoRowView: View {
     
     /// **Title View**
     /// Displays the memo name with prominence and proper line handling
+    /// Shows inline TextField when editing
     @ViewBuilder
     private var titleView: some View {
-        Text(memo.displayName)
+        if viewModel.isEditing(memo: memo) {
+            // Inline editing mode
+            TextField("Memo Title", text: $editedTitle, onCommit: {
+                submitRename()
+            })
             .font(Typography.titleFont)
             .foregroundColor(Colors.titleText)
-            .lineLimit(Layout.titleLineLimit)
-            .multilineTextAlignment(.leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .textFieldStyle(PlainTextFieldStyle())
+            .focused($isEditingFocused)
+            .onAppear {
+                // Auto-focus and select text when editing starts
+                editedTitle = memo.displayName
+                isEditingFocused = true
+            }
+            .onDisappear {
+                // Clean up when view disappears
+                if viewModel.isEditing(memo: memo) {
+                    viewModel.stopEditing()
+                }
+            }
+        } else {
+            // Normal display mode
+            Text(memo.displayName)
+                .font(Typography.titleFont)
+                .foregroundColor(Colors.titleText)
+                .lineLimit(Layout.titleLineLimit)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
     
     /// **Metadata Row View**
@@ -285,5 +331,48 @@ struct MemoRowView: View {
     /// Localization-ready accessibility strings
     private enum AccessibilityStrings {
         static let rowHint = "Double tap to view memo details"
+    }
+    
+    // MARK: - Helper Methods
+    
+    /// Start renaming the memo
+    private func startRename() {
+        HapticManager.shared.playSelection()
+        viewModel.startEditing(memo: memo)
+    }
+    
+    /// Share the memo using native iOS share sheet
+    private func shareMemo() {
+        HapticManager.shared.playSelection()
+        viewModel.shareMemo(memo)
+    }
+    
+    /// Delete the memo with haptic feedback
+    private func deleteMemo() {
+        HapticManager.shared.playDeletionFeedback()
+        if let index = viewModel.memos.firstIndex(where: { $0.id == memo.id }) {
+            viewModel.deleteMemo(at: index)
+        }
+    }
+    
+    /// Submit the rename operation
+    private func submitRename() {
+        let trimmedTitle = editedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Revert to original if empty
+        if trimmedTitle.isEmpty {
+            editedTitle = memo.displayName
+            viewModel.stopEditing()
+            return
+        }
+        
+        // Only rename if changed
+        if trimmedTitle != memo.displayName {
+            Task {
+                await viewModel.renameMemo(memo, newTitle: trimmedTitle)
+            }
+        } else {
+            viewModel.stopEditing()
+        }
     }
 }

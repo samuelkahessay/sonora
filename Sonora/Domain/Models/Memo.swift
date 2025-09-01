@@ -8,6 +8,8 @@ public struct Memo: Identifiable, Equatable, Hashable {
     public let creationDate: Date
     public let transcriptionStatus: DomainTranscriptionStatus
     public let analysisResults: [DomainAnalysisResult]
+    public let customTitle: String?
+    public let shareableFileName: String?
     
     public init(
         id: UUID = UUID(),
@@ -15,7 +17,9 @@ public struct Memo: Identifiable, Equatable, Hashable {
         fileURL: URL,
         creationDate: Date,
         transcriptionStatus: DomainTranscriptionStatus = .notStarted,
-        analysisResults: [DomainAnalysisResult] = []
+        analysisResults: [DomainAnalysisResult] = [],
+        customTitle: String? = nil,
+        shareableFileName: String? = nil
     ) {
         self.id = id
         self.filename = filename
@@ -23,12 +27,20 @@ public struct Memo: Identifiable, Equatable, Hashable {
         self.creationDate = creationDate
         self.transcriptionStatus = transcriptionStatus
         self.analysisResults = analysisResults
+        self.customTitle = customTitle
+        self.shareableFileName = shareableFileName
     }
     
     // MARK: - Computed Properties
     
-    /// Human-readable display name based on creation date
+    /// Human-readable display name - uses custom title if available, otherwise date-based
     public var displayName: String {
+        // Use custom title if available
+        if let customTitle = customTitle, !customTitle.isEmpty {
+            return customTitle
+        }
+        
+        // Fallback to date and time format (e.g., "Jan 2, 2025 at 9:18 PM")
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
@@ -76,6 +88,16 @@ public struct Memo: Identifiable, Equatable, Hashable {
         analysisResults.filter { $0.isCompleted }.count
     }
     
+    /// Filename for sharing - uses sanitized custom title or fallback
+    public var preferredShareableFileName: String {
+        if let shareableFileName = shareableFileName {
+            return shareableFileName
+        }
+        
+        // Fallback: generate from displayName
+        return FileNameSanitizer.sanitize(displayName)
+    }
+    
     // MARK: - Business Logic Methods
     
     /// Creates a copy with updated transcription status
@@ -86,7 +108,24 @@ public struct Memo: Identifiable, Equatable, Hashable {
             fileURL: fileURL,
             creationDate: creationDate,
             transcriptionStatus: status,
-            analysisResults: analysisResults
+            analysisResults: analysisResults,
+            customTitle: customTitle,
+            shareableFileName: shareableFileName
+        )
+    }
+    
+    /// Creates a copy with a custom title
+    public func withCustomTitle(_ title: String?) -> Memo {
+        let newShareableFileName = title != nil ? FileNameSanitizer.sanitize(title!) : nil
+        return Memo(
+            id: id,
+            filename: filename,
+            fileURL: fileURL,
+            creationDate: creationDate,
+            transcriptionStatus: transcriptionStatus,
+            analysisResults: analysisResults,
+            customTitle: title,
+            shareableFileName: newShareableFileName
         )
     }
     
@@ -101,7 +140,9 @@ public struct Memo: Identifiable, Equatable, Hashable {
             fileURL: fileURL,
             creationDate: creationDate,
             transcriptionStatus: transcriptionStatus,
-            analysisResults: updatedResults
+            analysisResults: updatedResults,
+            customTitle: customTitle,
+            shareableFileName: shareableFileName
         )
     }
     

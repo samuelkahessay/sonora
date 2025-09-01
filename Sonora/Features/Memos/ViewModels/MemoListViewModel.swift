@@ -15,6 +15,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     private let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
     private let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
     private let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
+    private let renameMemoUseCase: RenameMemoUseCaseProtocol
     private let memoRepository: any MemoRepository // Still needed for state updates
     private let transcriptionRepository: any TranscriptionRepository // For transcription states
     private var cancellables = Set<AnyCancellable>()
@@ -32,6 +33,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     @Published var transcriptionStates: [String: TranscriptionState] = [:]
     @Published var error: SonoraError?
     @Published var isLoading: Bool = false
+    @Published var editingMemoId: UUID? // Track which memo is being edited
     // Force SwiftUI refresh when needed (not read by UI directly)
     @Published private var refreshTrigger: Int = 0
     
@@ -66,6 +68,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         startTranscriptionUseCase: StartTranscriptionUseCaseProtocol,
         retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol,
         getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
+        renameMemoUseCase: RenameMemoUseCaseProtocol,
         memoRepository: any MemoRepository,
         transcriptionRepository: any TranscriptionRepository
     ) {
@@ -75,6 +78,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         self.startTranscriptionUseCase = startTranscriptionUseCase
         self.retryTranscriptionUseCase = retryTranscriptionUseCase
         self.getTranscriptionStateUseCase = getTranscriptionStateUseCase
+        self.renameMemoUseCase = renameMemoUseCase
         self.memoRepository = memoRepository
         self.transcriptionRepository = transcriptionRepository
         
@@ -107,6 +111,9 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(
             transcriptionRepository: transcriptionRepository
         )
+        let renameMemoUseCase = RenameMemoUseCase(
+            memoRepository: memoRepository
+        )
         
         self.init(
             loadMemosUseCase: LoadMemosUseCase(memoRepository: memoRepository),
@@ -120,6 +127,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             startTranscriptionUseCase: startTranscriptionUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase,
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
+            renameMemoUseCase: renameMemoUseCase,
             memoRepository: memoRepository,
             transcriptionRepository: transcriptionRepository
         )
@@ -399,6 +407,117 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     /// Get transcription state for a memo
     func getTranscriptionState(for memo: Memo) -> TranscriptionState {
         return getTranscriptionStateUseCase.execute(memo: memo)
+    }
+    
+    // MARK: - Rename Methods
+    
+    /// Start editing a memo's title
+    func startEditing(memo: Memo) {
+        print("📝 MemoListViewModel: Starting edit for memo: \(memo.displayName)")
+        editingMemoId = memo.id
+    }
+    
+    /// Stop editing (clear editing state)
+    func stopEditing() {
+        print("📝 MemoListViewModel: Stopping edit mode")
+        editingMemoId = nil
+    }
+    
+    /// Check if a memo is currently being edited
+    func isEditing(memo: Memo) -> Bool {
+        return editingMemoId == memo.id
+    }
+    
+    /// Rename a memo with the given title
+    func renameMemo(_ memo: Memo, newTitle: String) async {
+        print("📝 MemoListViewModel: Renaming memo to: \(newTitle)")
+        
+        do {
+            try await renameMemoUseCase.execute(memo: memo, newTitle: newTitle)
+            await MainActor.run {
+                self.stopEditing()
+                self.error = nil
+            }
+        } catch {
+            await MainActor.run {
+                self.error = ErrorMapping.mapError(error)
+                self.stopEditing()
+            }
+        }
+    }
+    
+    /// Share a memo using native iOS share sheet with user-friendly filename
+    func shareMemo(_ memo: Memo, from sourceView: UIView? = nil) {
+        print("📤 MemoListViewModel: Sharing memo: \(memo.displayName)")
+        
+        guard FileManager.default.fileExists(atPath: memo.fileURL.path) else {
+            print("❌ MemoListViewModel: Cannot share memo - file not found at \(memo.fileURL.path)")
+            self.error = SonoraError.storageFileNotFound(memo.fileURL.path)
+            return
+        }
+        
+        // Create temporary copy with user-friendly filename
+        let tempDirectory = FileManager.default.temporaryDirectory
+        let shareableFilename = memo.preferredShareableFileName
+        let tempURL = tempDirectory.appendingPathComponent(shareableFilename)
+        
+        do {
+            // Remove existing temp file if it exists
+            if FileManager.default.fileExists(atPath: tempURL.path) {
+                try FileManager.default.removeItem(at: tempURL)
+            }
+            
+            // Copy original file to temp location with friendly name
+            try FileManager.default.copyItem(at: memo.fileURL, to: tempURL)
+            
+            print("📤 MemoListViewModel: Created temporary share file: \(shareableFilename)")
+            
+            let activityVC = UIActivityViewController(
+                activityItems: [tempURL],
+                applicationActivities: nil
+            )
+            
+            // Clean up temp file after sharing
+            activityVC.completionWithItemsHandler = { _, _, _, _ in
+                DispatchQueue.main.async {
+                    do {
+                        if FileManager.default.fileExists(atPath: tempURL.path) {
+                            try FileManager.default.removeItem(at: tempURL)
+                            print("📤 MemoListViewModel: Cleaned up temporary share file")
+                        }
+                    } catch {
+                        print("⚠️ MemoListViewModel: Failed to clean up temporary file: \(error)")
+                    }
+                }
+            }
+            
+            // Configure for iPad presentation
+            if let popover = activityVC.popoverPresentationController {
+                if let sourceView = sourceView {
+                    popover.sourceView = sourceView
+                    popover.sourceRect = sourceView.bounds
+                } else {
+                    // Fallback to center of screen
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let window = windowScene.windows.first {
+                        popover.sourceView = window
+                        popover.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.midY, width: 0, height: 0)
+                        popover.permittedArrowDirections = []
+                    }
+                }
+            }
+            
+            // Present the share sheet
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first,
+               let rootViewController = window.rootViewController {
+                rootViewController.present(activityVC, animated: true)
+            }
+            
+        } catch {
+            print("❌ MemoListViewModel: Failed to create temporary share file: \(error)")
+            self.error = SonoraError.storageWriteFailed("Failed to create shareable copy")
+        }
     }
     
     /// Pop navigation to root

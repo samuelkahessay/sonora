@@ -20,4 +20,5 @@ protocol MemoRepository: ObservableObject {
     func getMemo(by url: URL) -> Memo?
     func handleNewRecording(at url: URL)
     func updateMemoMetadata(_ memo: Memo, metadata: [String: Any])
+    func renameMemo(_ memo: Memo, newTitle: String)
 }

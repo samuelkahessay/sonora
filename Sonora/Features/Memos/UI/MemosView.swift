@@ -65,6 +65,10 @@ struct MemosView: View {
                         Color.clear.frame(height: 8)
                     }
                     .refreshable { viewModel.refreshMemos() } // Pull-to-refresh support
+                    // Stop editing when tapping outside
+                    .onTapGesture {
+                        viewModel.stopEditing()
+                    }
                 }
             }
             .navigationTitle("Memos")

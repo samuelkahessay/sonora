@@ -10,6 +10,8 @@ struct MemoFileMetadata: Codable {
     let audioPath: String // relative path to audio file
     let fileSize: Int64?
     let duration: TimeInterval?
+    var customTitle: String?
+    var shareableFileName: String? // User-friendly filename for sharing
     
     init(memo: Memo, audioPath: String, fileSize: Int64? = nil, duration: TimeInterval? = nil) {
         self.id = memo.id.uuidString
@@ -18,6 +20,10 @@ struct MemoFileMetadata: Codable {
         self.audioPath = audioPath
         self.fileSize = fileSize
         self.duration = duration
+        self.customTitle = memo.customTitle
+        self.shareableFileName = memo.customTitle != nil 
+            ? FileNameSanitizer.sanitize(memo.customTitle!) 
+            : nil
     }
 }
 
@@ -243,7 +249,11 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                     id: memoId,  // Use the ID from the index/filename, which matches metadata.id
                     filename: metadata.filename,
                     fileURL: audioPath,
-                    creationDate: metadata.createdAt
+                    creationDate: metadata.createdAt,
+                    transcriptionStatus: .notStarted,
+                    analysisResults: [],
+                    customTitle: metadata.customTitle,
+                    shareableFileName: metadata.shareableFileName
                 )
                 
                 // Verify memo ID matches metadata (should always be true now)
@@ -327,7 +337,11 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                     id: memo.id,  // Preserve the original ID
                     filename: memo.filename,
                     fileURL: audioDestination,
-                    creationDate: memo.creationDate
+                    creationDate: memo.creationDate,
+                    transcriptionStatus: memo.transcriptionStatus,
+                    analysisResults: memo.analysisResults,
+                    customTitle: memo.customTitle,
+                    shareableFileName: memo.shareableFileName
                 )
                 memos.append(savedMemo)
                 memos.sort { $0.creationDate > $1.creationDate }
@@ -442,6 +456,46 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 // Don't fail the entire recording process if transcription fails
                 // Just log the error and continue
             }
+        }
+    }
+    
+    func renameMemo(_ memo: Memo, newTitle: String) {
+        do {
+            let metadataPath = metadataFilePath(for: memo.id)
+            
+            // Load existing metadata
+            guard fileExists(at: metadataPath) else {
+                print("⚠️ MemoRepository: No metadata file found for memo \(memo.filename)")
+                return
+            }
+            
+            var metadata = try atomicRead(MemoFileMetadata.self, from: metadataPath)
+            
+            // Update custom title and shareable filename in metadata
+            let sanitizedTitle = newTitle.isEmpty ? nil : newTitle
+            metadata.customTitle = sanitizedTitle
+            metadata.shareableFileName = sanitizedTitle != nil 
+                ? FileNameSanitizer.sanitize(sanitizedTitle!)
+                : nil
+            
+            // Save updated metadata
+            try atomicWrite(metadata, to: metadataPath)
+            
+            // Update in-memory memo with both custom title and shareable filename
+            if let index = memos.firstIndex(where: { $0.id == memo.id }) {
+                let updatedMemo = memos[index].withCustomTitle(sanitizedTitle)
+                memos[index] = updatedMemo
+                
+                // Trigger UI update
+                objectWillChange.send()
+                
+                let displayText = sanitizedTitle ?? "default"
+                let shareableText = metadata.shareableFileName ?? "default filename"
+                print("✅ MemoRepository: Successfully renamed memo to '\(displayText)' with shareable filename '\(shareableText)'")
+            }
+            
+        } catch {
+            print("❌ MemoRepository: Failed to rename memo \(memo.filename): \(error)")
         }
     }
     
