@@ -135,16 +135,16 @@ struct MemoRowView: View {
     /// Adjust these values to fine-tune text appearance and hierarchy
     private enum Typography {
         /// Primary title font - prominent but not overwhelming
-        /// Default: .callout with semibold weight for strong hierarchy
-        static let titleFont: Font = .system(.callout, design: .default, weight: .semibold)
+        /// 1.75x size: .title3 with semibold weight for strong hierarchy
+        static let titleFont: Font = .system(.title3, design: .default, weight: .semibold)
         
         /// Metadata font for duration and date information
-        /// Default: .caption for subtle, readable secondary information
-        static let metadataFont: Font = .system(.caption, design: .default, weight: .regular)
+        /// 1.75x size: .subheadline for better readability
+        static let metadataFont: Font = .system(.subheadline, design: .default, weight: .regular)
         
         /// Clock icon font size - should complement metadata text
-        /// Default: .caption2 with medium weight for optical balance
-        static let iconFont: Font = .system(.caption2, design: .default, weight: .medium)
+        /// 1.75x size: .footnote with medium weight for better visibility
+        static let iconFont: Font = .system(.footnote, design: .default, weight: .medium)
     }
     
     /// **Color Configuration**
@@ -163,25 +163,25 @@ struct MemoRowView: View {
     /// **Layout Configuration - FIXED VALUES**
     /// These follow iOS Human Interface Guidelines spacing standards
     private enum Layout {
-        /// Vertical padding - REDUCED from 12 to 8
-        /// iOS lists work best with minimal custom padding
-        static let verticalPadding: CGFloat = 8
+        /// Vertical padding - 1.75x size increase (8 × 1.75 = 14)
+        /// Larger padding for more generous card appearance
+        static let verticalPadding: CGFloat = 14
         
         /// Horizontal padding - REMOVED (let list handle it)
         /// List row insets will handle horizontal spacing properly
         // static let horizontalPadding: CGFloat = 16 // REMOVED
         
-        /// Title to metadata spacing - REDUCED from 8 to 4
-        /// Smaller spacing creates tighter, more cohesive rows
-        static let titleToMetadataSpacing: CGFloat = 4
+        /// Title to metadata spacing - 1.75x size increase (4 × 1.75 = 7)
+        /// Proportional spacing for larger typography
+        static let titleToMetadataSpacing: CGFloat = 7
         
-        /// Metadata spacing - REDUCED from 16 to 12
-        /// More reasonable horizontal spacing between elements  
-        static let metadataElementSpacing: CGFloat = 12
+        /// Metadata spacing - 1.75x size increase (12 × 1.75 = 21)
+        /// Generous horizontal spacing for larger cards
+        static let metadataElementSpacing: CGFloat = 21
         
-        /// Icon to text spacing - REDUCED from 4 to 3
-        /// Tighter icon-text relationship
-        static let iconToTextSpacing: CGFloat = 3
+        /// Icon to text spacing - 1.75x size increase (3 × 1.75 = 5)
+        /// Proportional spacing for larger icons and text
+        static let iconToTextSpacing: CGFloat = 5
         
         /// Line limit stays the same
         static let titleLineLimit: Int = 2
