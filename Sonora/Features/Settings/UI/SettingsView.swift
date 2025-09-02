@@ -8,6 +8,7 @@ struct SettingsView: View {
                 VStack(spacing: Spacing.lg) {
                     OnboardingSectionView()
                     LanguageSectionView()
+                    WhisperKitSectionView()
                     AIDisclosureSectionView()
                     PrivacySectionView()
                 }
