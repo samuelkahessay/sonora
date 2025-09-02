@@ -2,29 +2,41 @@ import SwiftUI
 
 struct WhisperKitSectionView: View {
     @State private var showingModelSelection = false
+    @StateObject private var downloadManager = ModelDownloadManager()
     
     private var selectedModel: WhisperModelInfo {
         UserDefaults.standard.selectedWhisperModelInfo
     }
     
+    private var selectedModelDownloadState: ModelDownloadState {
+        downloadManager.getDownloadState(for: selectedModel.id)
+    }
+    
     var body: some View {
         SettingsCard {
             VStack(alignment: .leading, spacing: Spacing.lg) {
+                // Transcription service toggle
+                TranscriptionServiceToggle(downloadManager: downloadManager)
+                
+                Divider()
+                    .background(Color.semantic(.separator))
+                
+                // Model selection section header
                 HStack {
                     Image(systemName: "brain.head.profile")
                         .foregroundColor(.semantic(.brandPrimary))
                         .font(.title3)
                     
-                    Text("Local Transcription")
+                    Text("WhisperKit Models")
                         .font(.headline)
                         .fontWeight(.semibold)
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Local Transcription")
+                .accessibilityLabel("WhisperKit Models")
                 .accessibilityAddTraits(.isHeader)
 
                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("Use offline AI models for private, local transcription without sending audio to external servers.")
+                    Text("Download and manage local AI models for offline transcription. Models provide different trade-offs between speed, accuracy, and storage size.")
                         .font(.subheadline)
                         .foregroundColor(.semantic(.textSecondary))
                         .fixedSize(horizontal: false, vertical: true)
@@ -50,6 +62,19 @@ struct WhisperKitSectionView: View {
                                 Text("(\(selectedModel.size))")
                                     .font(.caption)
                                     .foregroundColor(.semantic(.textSecondary))
+                                
+                                Spacer()
+                                
+                                // Download status indicator
+                                HStack(spacing: 4) {
+                                    Image(systemName: downloadStatusIcon)
+                                        .font(.caption)
+                                        .foregroundColor(downloadStatusColor)
+                                    
+                                    Text(selectedModelDownloadState.displayName)
+                                        .font(.caption)
+                                        .foregroundColor(downloadStatusColor)
+                                }
                             }
                         }
                         
@@ -75,19 +100,39 @@ struct WhisperKitSectionView: View {
                         .accessibilityHidden(true)
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Local processing keeps your audio private and works offline, but may be slower than cloud transcription.")
+                        Text("Models are downloaded when first used. You can manage downloaded models and view storage usage in the model selection screen.")
                             .font(.caption)
                             .foregroundColor(.semantic(.textSecondary))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Information: Local processing keeps your audio private and works offline, but may be slower than cloud transcription.")
+                .accessibilityLabel("Information: Models are downloaded when first used. You can manage downloaded models and view storage usage in the model selection screen.")
                 .accessibilityAddTraits(.isStaticText)
             }
         }
         .sheet(isPresented: $showingModelSelection) {
             WhisperModelSelectionView()
+        }
+    }
+    
+    // MARK: - Download Status Properties
+    
+    private var downloadStatusIcon: String {
+        switch selectedModelDownloadState {
+        case .notDownloaded: return "arrow.down.circle"
+        case .downloading: return "arrow.down.circle.fill"
+        case .downloaded: return "checkmark.circle.fill"
+        case .failed: return "exclamationmark.triangle.fill"
+        }
+    }
+    
+    private var downloadStatusColor: Color {
+        switch selectedModelDownloadState {
+        case .notDownloaded: return .semantic(.textSecondary)
+        case .downloading: return .semantic(.brandPrimary)
+        case .downloaded: return .semantic(.success)
+        case .failed: return .semantic(.error)
         }
     }
 }

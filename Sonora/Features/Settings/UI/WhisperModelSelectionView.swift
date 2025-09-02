@@ -3,6 +3,7 @@ import SwiftUI
 struct WhisperModelSelectionView: View {
     @State private var selectedModelId: String = UserDefaults.standard.selectedWhisperModel
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @StateObject private var downloadManager = ModelDownloadManager()
     
     var body: some View {
         NavigationView {
@@ -82,7 +83,8 @@ struct WhisperModelSelectionView: View {
                     ForEach(WhisperModelInfo.availableModels, id: \.id) { model in
                         ModelRowView(
                             model: model,
-                            isSelected: selectedModelId == model.id
+                            isSelected: selectedModelId == model.id,
+                            downloadManager: downloadManager
                         ) {
                             selectModel(model)
                         }
@@ -107,78 +109,85 @@ struct WhisperModelSelectionView: View {
 private struct ModelRowView: View {
     let model: WhisperModelInfo
     let isSelected: Bool
+    @ObservedObject var downloadManager: ModelDownloadManager
     let onSelect: () -> Void
     
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: Spacing.md) {
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    HStack {
-                        Text(model.displayName)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.semantic(.textPrimary))
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            // Model selection row
+            Button(action: onSelect) {
+                HStack(spacing: Spacing.md) {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        HStack {
+                            Text(model.displayName)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.semantic(.textPrimary))
+                            
+                            Spacer()
+                            
+                            Text(model.size)
+                                .font(.caption)
+                                .foregroundColor(.semantic(.textSecondary))
+                        }
                         
-                        Spacer()
-                        
-                        Text(model.size)
+                        Text(model.description)
                             .font(.caption)
                             .foregroundColor(.semantic(.textSecondary))
-                    }
-                    
-                    Text(model.description)
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                    
-                    HStack(spacing: Spacing.lg) {
-                        PerformanceIndicator(
-                            label: "Speed",
-                            rating: model.speedRating,
-                            icon: "speedometer"
-                        )
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                         
-                        PerformanceIndicator(
-                            label: "Accuracy", 
-                            rating: model.accuracyRating,
-                            icon: "target"
-                        )
+                        HStack(spacing: Spacing.lg) {
+                            PerformanceIndicator(
+                                label: "Speed",
+                                rating: model.speedRating,
+                                icon: "speedometer"
+                            )
+                            
+                            PerformanceIndicator(
+                                label: "Accuracy", 
+                                rating: model.accuracyRating,
+                                icon: "target"
+                            )
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.semantic(.brandPrimary))
+                            .font(.title3)
+                            .accessibilityLabel("Selected")
+                    } else {
+                        Image(systemName: "circle")
+                            .foregroundColor(.semantic(.separator))
+                            .font(.title3)
+                            .accessibilityHidden(true)
                     }
                 }
-                
-                Spacer()
-                
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.semantic(.brandPrimary))
-                        .font(.title3)
-                        .accessibilityLabel("Selected")
-                } else {
-                    Image(systemName: "circle")
-                        .foregroundColor(.semantic(.separator))
-                        .font(.title3)
-                        .accessibilityHidden(true)
-                }
+                .padding(Spacing.md)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isSelected ? Color.semantic(.brandPrimary).opacity(0.1) : Color.semantic(.fillSecondary))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(
+                            isSelected ? Color.semantic(.brandPrimary).opacity(0.3) : Color.semantic(.separator).opacity(0.2),
+                            lineWidth: isSelected ? 2 : 1
+                        )
+                )
             }
-            .padding(Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.semantic(.brandPrimary).opacity(0.1) : Color.semantic(.fillSecondary))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(
-                        isSelected ? Color.semantic(.brandPrimary).opacity(0.3) : Color.semantic(.separator).opacity(0.2),
-                        lineWidth: isSelected ? 2 : 1
-                    )
-            )
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(model.displayName) model, \(model.size), \(model.description)")
+            .accessibilityHint("Double tap to select this model for local transcription")
+            .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+            
+            // Download button
+            ModelDownloadButton(model: model, downloadManager: downloadManager)
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(model.displayName) model, \(model.size), \(model.description)")
-        .accessibilityHint("Double tap to select this model for local transcription")
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 
