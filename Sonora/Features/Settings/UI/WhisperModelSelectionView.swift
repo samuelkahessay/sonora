@@ -3,14 +3,26 @@ import SwiftUI
 struct WhisperModelSelectionView: View {
     @State private var selectedModelId: String = UserDefaults.standard.selectedWhisperModel
     @SwiftUI.Environment(\.dismiss) private var dismiss
-    @StateObject private var downloadManager = ModelDownloadManager()
+    @StateObject private var downloadManager: ModelDownloadManager
+    @State private var models: [WhisperModelInfo] = []
+    @State private var isLoadingModels: Bool = true
+
+    init() {
+        let manager = DIContainer.shared.modelDownloadManager()
+        _downloadManager = StateObject(wrappedValue: manager)
+    }
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: Spacing.lg) {
                     headerSection
-                    modelListSection
+                    if isLoadingModels {
+                        ProgressView("Loading models...")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        modelListSection
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.top, Spacing.lg)
@@ -26,6 +38,10 @@ struct WhisperModelSelectionView: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+        .task {
+            await loadModels()
+            downloadManager.reconcileInstallStates()
         }
     }
     
@@ -80,7 +96,7 @@ struct WhisperModelSelectionView: View {
                     .accessibilityAddTraits(.isHeader)
                 
                 VStack(spacing: Spacing.md) {
-                    ForEach(WhisperModelInfo.availableModels, id: \.id) { model in
+                    ForEach(models, id: \.id) { model in
                         ModelRowView(
                             model: model,
                             isSelected: selectedModelId == model.id,
@@ -101,6 +117,53 @@ struct WhisperModelSelectionView: View {
         selectedModelId = model.id
         UserDefaults.standard.selectedWhisperModel = model.id
         Logger.shared.info("Selected WhisperKit model: \(model.displayName) (\(model.id))")
+    }
+
+    // MARK: - Load Models
+    private func loadModels() async {
+        isLoadingModels = true
+        defer { isLoadingModels = false }
+        let provider = DIContainer.shared.whisperKitModelProvider()
+        do {
+            let available = try await provider.listAvailableModels()
+            let mapped = available.map { mapToUIModel($0) }
+            await MainActor.run { self.models = mapped }
+        } catch {
+            Logger.shared.error("Failed to load WhisperKit models: \(error.localizedDescription)", category: .system, context: nil, error: error)
+            let curated = WhisperKitModelProvider.curatedModels.map { mapToUIModel($0) }
+            await MainActor.run { self.models = curated }
+        }
+    }
+
+    private func mapToUIModel(_ model: WhisperModel) -> WhisperModelInfo {
+        let sizeString: String
+        if let bytes = model.sizeBytes {
+            sizeString = ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+        } else {
+            sizeString = "Unknown size"
+        }
+        let idLower = model.id.lowercased()
+        let speed: WhisperModelInfo.ModelPerformance
+        let accuracy: WhisperModelInfo.ModelPerformance
+        if idLower.contains("tiny") {
+            speed = .veryHigh; accuracy = .low
+        } else if idLower.contains("base") {
+            speed = .high; accuracy = .medium
+        } else if idLower.contains("small") {
+            speed = .medium; accuracy = .high
+        } else if idLower.contains("medium") || idLower.contains("large") {
+            speed = .low; accuracy = .veryHigh
+        } else {
+            speed = .medium; accuracy = .medium
+        }
+        return WhisperModelInfo(
+            id: model.id,
+            displayName: model.displayName,
+            size: sizeString,
+            description: model.description,
+            speedRating: speed,
+            accuracyRating: accuracy
+        )
     }
 }
 

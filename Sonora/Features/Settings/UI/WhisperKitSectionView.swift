@@ -2,10 +2,11 @@ import SwiftUI
 
 struct WhisperKitSectionView: View {
     @State private var showingModelSelection = false
-    @StateObject private var downloadManager = ModelDownloadManager()
+    @StateObject private var downloadManager = DIContainer.shared.modelDownloadManager()
+    @State private var selectedModelId: String = UserDefaults.standard.selectedWhisperModel
     
     private var selectedModel: WhisperModelInfo {
-        UserDefaults.standard.selectedWhisperModelInfo
+        WhisperModelInfo.model(withId: selectedModelId) ?? UserDefaults.standard.selectedWhisperModelInfo
     }
     
     private var selectedModelDownloadState: ModelDownloadState {
@@ -111,6 +112,10 @@ struct WhisperKitSectionView: View {
                 .accessibilityAddTraits(.isStaticText)
             }
         }
+        .onAppear { selectedModelId = UserDefaults.standard.selectedWhisperModel }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            selectedModelId = UserDefaults.standard.selectedWhisperModel
+        }
         .sheet(isPresented: $showingModelSelection) {
             WhisperModelSelectionView()
         }
@@ -124,6 +129,7 @@ struct WhisperKitSectionView: View {
         case .downloading: return "arrow.down.circle.fill"
         case .downloaded: return "checkmark.circle.fill"
         case .failed: return "exclamationmark.triangle.fill"
+        case .stale: return "exclamationmark.triangle.circle"
         }
     }
     
@@ -133,6 +139,7 @@ struct WhisperKitSectionView: View {
         case .downloading: return .semantic(.brandPrimary)
         case .downloaded: return .semantic(.success)
         case .failed: return .semantic(.error)
+        case .stale: return .semantic(.error)
         }
     }
 }

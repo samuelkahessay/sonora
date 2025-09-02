@@ -8,6 +8,7 @@ public final class MemoEventHandler {
     // MARK: - Dependencies
     private let logger: any LoggerProtocol
     private let eventBus: any EventBusProtocol
+    private let transcriptionRepository: any TranscriptionRepository
     private let subscriptionManager: EventSubscriptionManager
     
     // MARK: - Analytics Tracking
@@ -20,12 +21,14 @@ public final class MemoEventHandler {
     private let maxAuditTrailEvents = 100
     
     // MARK: - Initialization
-    public init(
+    init(
         logger: any LoggerProtocol = Logger.shared,
-        eventBus: any EventBusProtocol = EventBus.shared
+        eventBus: any EventBusProtocol = EventBus.shared,
+        transcriptionRepository: any TranscriptionRepository
     ) {
         self.logger = logger
         self.eventBus = eventBus
+        self.transcriptionRepository = transcriptionRepository
         self.subscriptionManager = EventSubscriptionManager(eventBus: eventBus)
         
         // Subscribe to all memo-related events
@@ -155,18 +158,37 @@ public final class MemoEventHandler {
             wordsPerMinute = 0
         }
         
+        // Fetch transcription metadata to report the service used (local WhisperKit vs Cloud API)
+        let serviceMeta: (serviceKey: String, serviceLabel: String, whisperModel: String?) = {
+            let meta = transcriptionRepository.getTranscriptionMetadata(for: memoId)
+            let key = (meta?["transcriptionService"] as? String) ?? "unknown"
+            let label: String
+            switch key {
+            case "local_whisperkit": label = "WhisperKit (local)"
+            case "cloud_api": label = "Cloud API"
+            default: label = "unknown"
+            }
+            let model = meta?["whisperModel"] as? String
+            return (key, label, model)
+        }()
+
+        var info: [String: Any] = [
+            "memoId": memoId.uuidString,
+            "textLength": text.count,
+            "transcriptionDurationSeconds": duration?.rounded() ?? 0,
+            "wordsPerMinute": wordsPerMinute,
+            "service": serviceMeta.serviceLabel,
+            "serviceKey": serviceMeta.serviceKey
+        ]
+        if let model = serviceMeta.whisperModel { info["whisperModel"] = model }
+
         let context = LogContext(
             correlationId: correlationId,
-            additionalInfo: [
-                "memoId": memoId.uuidString,
-                "textLength": text.count,
-                "transcriptionDurationSeconds": duration?.rounded() ?? 0,
-                "wordsPerMinute": wordsPerMinute
-            ]
+            additionalInfo: info
         )
-        
-        logger.info("Transcription completed for memo: \(memoId)", 
-                   category: .transcription, 
+
+        logger.info("Transcription completed via \(serviceMeta.serviceLabel) for memo: \(memoId)",
+                   category: .transcription,
                    context: context)
         
         // Log transcription performance metrics

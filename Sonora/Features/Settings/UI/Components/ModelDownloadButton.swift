@@ -35,8 +35,7 @@ struct ModelDownloadButton: View {
     
     @ViewBuilder
     private var mainButton: some View {
-        Button(action: handleButtonAction) {
-            HStack(spacing: Spacing.sm) {
+        HStack(spacing: Spacing.sm) {
                 buttonIcon
                 
                 VStack(alignment: .leading, spacing: 2) {
@@ -49,6 +48,10 @@ struct ModelDownloadButton: View {
                         Text("\(Int(downloadProgress * 100))% complete")
                             .font(.caption)
                             .foregroundColor(.semantic(.textSecondary))
+                    } else if downloadState == .stale {
+                        Text("Stuck - tap to refresh")
+                            .font(.caption)
+                            .foregroundColor(.semantic(.error))
                     }
                 }
                 
@@ -62,18 +65,27 @@ struct ModelDownloadButton: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Cancel download")
+                } else if downloadState == .stale {
+                    Button(action: { downloadManager.checkDownloadHealth() }) {
+                        Image(systemName: "arrow.clockwise")
+                            .foregroundColor(.semantic(.textSecondary))
+                            .font(.title3)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Check status")
                 }
-            }
-            .padding(Spacing.md)
-            .background(buttonBackground)
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(buttonBorderColor, lineWidth: 1)
-            )
         }
-        .buttonStyle(.plain)
-        .disabled(!downloadState.isActionable && downloadState != .downloaded)
+        .padding(Spacing.md)
+        .background(buttonBackground)
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(buttonBorderColor, lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            handleButtonAction()
+        }
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
     }
@@ -143,6 +155,7 @@ struct ModelDownloadButton: View {
         case .downloading: return "arrow.down.circle.fill"
         case .downloaded: return "checkmark.circle.fill"
         case .failed: return "arrow.clockwise.circle"
+        case .stale: return "exclamationmark.triangle.circle"
         }
     }
     
@@ -152,6 +165,7 @@ struct ModelDownloadButton: View {
         case .downloading: return .semantic(.brandPrimary)
         case .downloaded: return .semantic(.success)
         case .failed: return .semantic(.warning)
+        case .stale: return .semantic(.error)
         }
     }
     
@@ -161,6 +175,7 @@ struct ModelDownloadButton: View {
         case .downloading: return "Downloading..."
         case .downloaded: return "Downloaded"
         case .failed: return "Retry Download"
+        case .stale: return "Force Retry"
         }
     }
     
@@ -170,6 +185,7 @@ struct ModelDownloadButton: View {
         case .downloading: return .semantic(.brandPrimary)
         case .downloaded: return .semantic(.success)
         case .failed: return .semantic(.warning)
+        case .stale: return .semantic(.error)
         }
     }
     
@@ -179,6 +195,7 @@ struct ModelDownloadButton: View {
         case .downloading: return .semantic(.brandPrimary).opacity(0.1)
         case .downloaded: return .semantic(.success).opacity(0.1)
         case .failed: return .semantic(.warning).opacity(0.1)
+        case .stale: return .semantic(.error).opacity(0.1)
         }
     }
     
@@ -188,6 +205,7 @@ struct ModelDownloadButton: View {
         case .downloading: return .semantic(.brandPrimary).opacity(0.3)
         case .downloaded: return .semantic(.success).opacity(0.3)
         case .failed: return .semantic(.warning).opacity(0.3)
+        case .stale: return .semantic(.error).opacity(0.3)
         }
     }
     
@@ -199,6 +217,7 @@ struct ModelDownloadButton: View {
         case .downloading: return "Downloading \(model.displayName) model, \(Int(downloadProgress * 100)) percent complete"
         case .downloaded: return "\(model.displayName) model downloaded"
         case .failed: return "Retry downloading \(model.displayName) model"
+        case .stale: return "Force retry downloading \(model.displayName) model"
         }
     }
     
@@ -208,6 +227,7 @@ struct ModelDownloadButton: View {
         case .downloading: return "Download in progress"
         case .downloaded: return "Model is ready for use"
         case .failed: return "Double tap to retry the download"
+        case .stale: return "Double tap to force retry and clear cached state"
         }
     }
     
@@ -227,6 +247,8 @@ struct ModelDownloadButton: View {
             break
         case .failed:
             downloadManager.retryDownload(for: model.id)
+        case .stale:
+            downloadManager.forceRetryDownload(for: model.id)
         }
     }
 }
@@ -236,12 +258,12 @@ struct ModelDownloadButton: View {
         // Preview different states
         ModelDownloadButton(
             model: WhisperModelInfo.availableModels[0],
-            downloadManager: ModelDownloadManager()
+            downloadManager: ModelDownloadManager(provider: WhisperKitModelProvider())
         )
         
         ModelDownloadButton(
             model: WhisperModelInfo.availableModels[1], 
-            downloadManager: ModelDownloadManager()
+            downloadManager: ModelDownloadManager(provider: WhisperKitModelProvider())
         )
     }
     .padding()

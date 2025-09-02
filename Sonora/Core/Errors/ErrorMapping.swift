@@ -44,6 +44,14 @@ public final class ErrorMapping {
         if let transcriptionError = error as? TranscriptionError {
             return mapTranscriptionError(transcriptionError)
         }
+
+        // WhisperKit integration errors
+        if let wkError = error as? WhisperKitTranscriptionError {
+            return mapWhisperKitError(wkError)
+        }
+        if let dlError = error as? ModelDownloadError {
+            return mapModelDownloadError(dlError)
+        }
         
         // Fallback for unknown errors (apply simple heuristics)
         let message = error.localizedDescription
@@ -439,6 +447,35 @@ public final class ErrorMapping {
             return .transcriptionFailed("No speech detected")
         case .transcriptionFailed(let reason):
             return .transcriptionFailed(reason)
+        }
+    }
+
+    // MARK: - WhisperKit Error Mapping
+    private static func mapWhisperKitError(_ error: WhisperKitTranscriptionError) -> SonoraError {
+        switch error {
+        case .notInitialized(let message):
+            return .transcriptionServiceUnavailable
+        case .initializationFailed(let message):
+            return .transcriptionServiceUnavailable
+        case .modelNotAvailable(let message):
+            return .configurationInvalid(message)
+        case .transcriptionFailed(let message):
+            return .transcriptionFailed(message)
+        case .audioProcessingFailed(let message):
+            return .audioFileProcessingFailed(message)
+        }
+    }
+
+    private static func mapModelDownloadError(_ error: ModelDownloadError) -> SonoraError {
+        switch error {
+        case .networkError(let message):
+            return .networkServerError(0, message)
+        case .storageError(let message):
+            return .storageWriteFailed(message)
+        case .modelNotFound(let model):
+            return .configurationInvalid("Model not found: \(model)")
+        case .cancelled:
+            return .uiOperationCancelled
         }
     }
 }

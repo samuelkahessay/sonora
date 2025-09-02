@@ -21,9 +21,6 @@ struct TranscriptionServiceToggle: View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             headerSection
             toggleSection
-            if selectedService == .localWhisperKit && !isLocalServiceAvailable {
-                unavailableLocalServiceSection
-            }
         }
     }
     
@@ -111,18 +108,15 @@ struct TranscriptionServiceToggle: View {
         case .downloaded:
             // This shouldn't happen if isLocalServiceAvailable is working correctly
             return "Local model is downloaded but not available. Please try selecting a different model."
+        case .stale:
+            return "Download of the \(selectedModel.displayName) model appears stuck. Falling back to Cloud API."
         }
     }
     
     // MARK: - Helper Methods
     
     private func isServiceEnabled(_ service: TranscriptionServiceType) -> Bool {
-        switch service {
-        case .cloudAPI:
-            return true
-        case .localWhisperKit:
-            return isLocalServiceAvailable
-        }
+        true
     }
     
     private func selectService(_ service: TranscriptionServiceType) {
@@ -233,6 +227,6 @@ private struct ServiceOptionRow: View {
 }
 
 #Preview {
-    TranscriptionServiceToggle(downloadManager: ModelDownloadManager())
+    TranscriptionServiceToggle(downloadManager: ModelDownloadManager(provider: WhisperKitModelProvider()))
         .padding()
 }

@@ -21,6 +21,8 @@ final class DIContainer: ObservableObject, Resolver {
     
     // MARK: - Private Service Instances
     private var _transcriptionAPI: (any TranscriptionAPI)?
+    private var _transcriptionServiceFactory: TranscriptionServiceFactory?
+    private var _modelDownloadManager: ModelDownloadManager?
     private var _analysisService: AnalysisService!
     private var _memoRepository: MemoRepositoryImpl!
     private var _transcriptionRepository: (any TranscriptionRepository)?
@@ -38,6 +40,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _eventHandlerRegistry: (any EventHandlerRegistryProtocol)?
     private var _moderationService: (any ModerationServiceProtocol)?
     private var _spotlightIndexer: (any SpotlightIndexing)?
+    private var _whisperKitModelProvider: WhisperKitModelProvider?
     
     // MARK: - Initialization
     private init() {
@@ -123,6 +126,11 @@ final class DIContainer: ObservableObject, Resolver {
         self._systemNavigator = resolve((any SystemNavigator).self)!
         self._liveActivityService = resolve((any LiveActivityServiceProtocol).self)!
         
+        // Initialize model management and transcription factory
+        self._whisperKitModelProvider = WhisperKitModelProvider()
+        self._modelDownloadManager = ModelDownloadManager(provider: self._whisperKitModelProvider!)
+        self._transcriptionServiceFactory = TranscriptionServiceFactory(downloadManager: self._modelDownloadManager!, modelProvider: self._whisperKitModelProvider!)
+        
         // Initialize external API services  
         self._transcriptionAPI = TranscriptionService()
         self._analysisService = analysisService ?? AnalysisService()
@@ -132,12 +140,16 @@ final class DIContainer: ObservableObject, Resolver {
         self._eventHandlerRegistry = EventHandlerRegistry.shared
         
         // Initialize MemoRepository with Use Case dependencies
-        guard let trRepo = _transcriptionRepository, let trAPI = _transcriptionAPI else {
+        guard let trRepo = _transcriptionRepository, let trFactory = _transcriptionServiceFactory else {
             fatalError("DIContainer not fully configured: missing transcription dependencies")
         }
+        
+        // Create transcription service from factory
+        let transcriptionService = trFactory.createTranscriptionService()
+        
         let startTranscriptionUseCase = StartTranscriptionUseCase(
             transcriptionRepository: trRepo,
-            transcriptionAPI: trAPI,
+            transcriptionAPI: transcriptionService,
             eventBus: self._eventBus!,
             operationCoordinator: self._operationCoordinator,
             moderationService: self._moderationService!
@@ -147,7 +159,7 @@ final class DIContainer: ObservableObject, Resolver {
         )
         let retryTranscriptionUseCase = RetryTranscriptionUseCase(
             transcriptionRepository: trRepo,
-            transcriptionAPI: trAPI
+            transcriptionAPI: transcriptionService
         )
         
         self._memoRepository = MemoRepositoryImpl(
@@ -186,11 +198,37 @@ final class DIContainer: ObservableObject, Resolver {
     
     
     
-    /// Get transcription API service
+    /// Get transcription API service (legacy - prefer using factory)
     func transcriptionAPI() -> any TranscriptionAPI {
         ensureConfigured()
         guard let api = _transcriptionAPI else { fatalError("DIContainer not configured: transcriptionAPI") }
         return api
+    }
+    
+    /// Get transcription service factory (modern approach)
+    func transcriptionServiceFactory() -> TranscriptionServiceFactory {
+        ensureConfigured()
+        guard let factory = _transcriptionServiceFactory else { fatalError("DIContainer not configured: transcriptionServiceFactory") }
+        return factory
+    }
+    
+    /// Get model download manager
+    func modelDownloadManager() -> ModelDownloadManager {
+        ensureConfigured()
+        guard let manager = _modelDownloadManager else { fatalError("DIContainer not configured: modelDownloadManager") }
+        return manager
+    }
+
+    /// WhisperKit model provider
+    func whisperKitModelProvider() -> WhisperKitModelProvider {
+        ensureConfigured()
+        guard let provider = _whisperKitModelProvider else { fatalError("DIContainer not configured: whisperKitModelProvider") }
+        return provider
+    }
+    
+    /// Create a transcription service based on current user preferences
+    func createTranscriptionService() -> any TranscriptionAPI {
+        return transcriptionServiceFactory().createTranscriptionService()
     }
     
     /// Get analysis service

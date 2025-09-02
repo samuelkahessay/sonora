@@ -81,7 +81,8 @@ public final class EventHandlerRegistry {
         let isEnabled = enabledHandlers.contains(handlerName)
         
         if isEnabled {
-            memoEventHandler = MemoEventHandler(logger: logger, eventBus: eventBus)
+            let trRepo = DIContainer.shared.transcriptionRepository()
+            memoEventHandler = MemoEventHandler(logger: logger, eventBus: eventBus, transcriptionRepository: trRepo)
             registeredHandlers[handlerName] = memoEventHandler
             handlerStatus[handlerName] = true
             

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A633F682E66B8B600E6AB88 /* whisperkit-cli in Frameworks */ = {isa = PBXBuildFile; productRef = 0A633F672E66B8B600E6AB88 /* whisperkit-cli */; };
 		0A875D9D2E600B7100245D4A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9C2E600B7100245D4A /* WidgetKit.framework */; };
 		0A875D9F2E600B7100245D4A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9E2E600B7100245D4A /* SwiftUI.framework */; };
 		0A875DAC2E600B7300245D4A /* SonoraLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0A875D9A2E600B7100245D4A /* SonoraLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -131,6 +132,7 @@
 			files = (
 				0AA6FA0D2E6370F000C8BF7A /* WhisperKit in Frameworks */,
 				0AA6FA102E63710600C8BF7A /* ZIPFoundation in Frameworks */,
+				0A633F682E66B8B600E6AB88 /* whisperkit-cli in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -217,6 +219,7 @@
 			packageProductDependencies = (
 				0AA6FA0C2E6370F000C8BF7A /* WhisperKit */,
 				0AA6FA0F2E63710600C8BF7A /* ZIPFoundation */,
+				0A633F672E66B8B600E6AB88 /* whisperkit-cli */,
 			);
 			productName = Sonora;
 			productReference = 0A39740A2E5A6CA400F27D16 /* Sonora.app */;
@@ -826,6 +829,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		0A633F672E66B8B600E6AB88 /* whisperkit-cli */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0AA6FA0B2E6370F000C8BF7A /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = "whisperkit-cli";
+		};
 		0AA6FA0C2E6370F000C8BF7A /* WhisperKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 0AA6FA0B2E6370F000C8BF7A /* XCRemoteSwiftPackageReference "WhisperKit" */;
