@@ -124,7 +124,7 @@ public enum SonoraError: LocalizedError, Equatable {
         case .analysisProcessingFailed(let reason):
             return "Analysis processing failed: \(reason)"
         case .analysisTimeout:
-            return "Analysis timed out. Please try again."
+            return "AI analysis is taking longer than expected. This can happen with longer recordings."
         case .analysisModelUnavailable(let model):
             return "Analysis model unavailable: \(model)"
         case .analysisInsufficientContent:
@@ -249,6 +249,8 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Configure a valid API key in the app settings."
         case .transcriptionQuotaExceeded, .analysisQuotaExceeded:
             return "Wait for your quota to reset or upgrade your plan."
+        case .analysisTimeout:
+            return "Try again, or consider breaking longer recordings into shorter segments."
         default:
             return "Please try again. If the problem persists, contact support."
         }

@@ -19,7 +19,7 @@ struct AnalysisSectionView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 12) {
-                ForEach(AnalysisMode.allCases, id: \.self) { mode in
+                ForEach(AnalysisMode.uiVisibleCases, id: \.self) { mode in
                     Button(action: {
                         HapticManager.shared.playSelection()
                         viewModel.performAnalysis(mode: mode, transcript: transcript)
@@ -69,37 +69,25 @@ struct AnalysisSectionView: View {
                 .cornerRadius(8)
             }
             
-            // Error State
-            if let error = viewModel.analysisError {
-                HStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.semantic(.error))
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Analysis Failed")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.semantic(.error))
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(.semantic(.textSecondary))
-                    }
-                    Spacer()
-                }
-                .padding()
-                .background(Color.semantic(.error).opacity(0.05))
-                .cornerRadius(8)
-            }
             
             // Results with AI disclaimer
-            if let mode = viewModel.selectedAnalysisMode,
-               let result = viewModel.analysisResult,
-               let envelope = viewModel.analysisEnvelope {
+            if let mode = viewModel.selectedAnalysisMode {
                 VStack(alignment: .leading, spacing: 12) {
-                    AnalysisResultsView(
-                        mode: mode,
-                        result: result,
-                        envelope: envelope
-                    )
+                    // Show progressive results for parallel distill or final results
+                    if mode == .distill && viewModel.isParallelDistillEnabled,
+                       let partialData = viewModel.partialDistillData,
+                       let progress = viewModel.distillProgress {
+                        DistillResultView(partialData: partialData, progress: progress)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                            .animation(.easeInOut(duration: 0.3), value: progress.completedComponents)
+                    } else if let result = viewModel.analysisResult,
+                              let envelope = viewModel.analysisEnvelope {
+                        AnalysisResultsView(
+                            mode: mode,
+                            result: result,
+                            envelope: envelope
+                        )
+                    }
                     
 //                     AI Disclaimer for analysis results
                     AIDisclaimerView.analysis()
@@ -112,5 +100,6 @@ struct AnalysisSectionView: View {
         .background(Color.semantic(.bgSecondary))
         .cornerRadius(12)
         .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
+        .frame(maxWidth: .infinity)
     }
 }

@@ -115,22 +115,8 @@ struct LoadingStateModifier: ViewModifier {
                 LoadingStateView(message: loadingMessage)
                     .transition(.opacity)
             }
-            
-            if let error = error, !isLoading {
-                UnifiedStateView.error(
-                    error,
-                    onRetry: onRetry ?? {},
-                    onDismiss: {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            self.error = nil
-                        }
-                    }
-                )
-                .transition(.opacity)
-            }
         }
         .animation(.easeInOut(duration: 0.3), value: isLoading)
-        .animation(.easeInOut(duration: 0.3), value: error != nil)
     }
 }
 

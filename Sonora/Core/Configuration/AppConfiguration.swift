@@ -89,7 +89,7 @@ public final class AppConfiguration {
     
     /// Timeout for Distill analysis operations
     /// Can be overridden with SONORA_DISTILL_TIMEOUT environment variable
-    public private(set) var distillAnalysisTimeout: TimeInterval = 15.0
+    public private(set) var distillAnalysisTimeout: TimeInterval = 35.0
     
     /// Timeout for content analysis operations
     /// Can be overridden with SONORA_CONTENT_TIMEOUT environment variable
@@ -228,13 +228,13 @@ public final class AppConfiguration {
         // Analysis Configuration - Build-specific timeouts
         if buildConfig.isDebug {
             // Debug builds get longer timeouts for easier debugging
-            distillAnalysisTimeout = 25.0
+            distillAnalysisTimeout = 35.0
             contentAnalysisTimeout = 35.0
             themesAnalysisTimeout = 30.0
             todosAnalysisTimeout = 28.0
         } else {
             // Release builds use optimized timeouts
-            distillAnalysisTimeout = 15.0
+            distillAnalysisTimeout = 35.0
             contentAnalysisTimeout = 20.0
             themesAnalysisTimeout = 18.0
             todosAnalysisTimeout = 16.0
@@ -458,6 +458,9 @@ public final class AppConfiguration {
         switch mode {
         case .distill:
             return distillAnalysisTimeout
+        // Distill component modes use shorter timeouts since they're focused
+        case .distillSummary, .distillActions, .distillThemes, .distillReflection:
+            return min(distillAnalysisTimeout / 2, 15.0) // Half the distill timeout or 15s, whichever is lower
         case .analysis:
             return contentAnalysisTimeout
         case .themes:

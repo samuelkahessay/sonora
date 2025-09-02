@@ -41,6 +41,10 @@ struct AnalysisResultsView: View {
                        let env = envelope as? AnalyzeEnvelope<DistillData> {
                         DistillResultView(data: data, envelope: env)
                     }
+                // Distill component modes (used internally for parallel processing)
+                case .distillSummary, .distillActions, .distillThemes, .distillReflection:
+                    // These modes are handled internally and shouldn't appear in the UI
+                    EmptyView()
                 case .analysis:
                     if let data = result as? AnalysisData {
                         AnalysisResultView(data: data)

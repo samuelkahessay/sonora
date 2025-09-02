@@ -117,6 +117,19 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             guard let keyPoints = payload["key_points"] as? [Any] else { return false }
             // Ensure all key points are strings
             return keyPoints.allSatisfy { ($0 as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
+        // Distill component modes (for parallel processing)
+        case .distillSummary:
+            guard let summary = payload["summary"] as? String, !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+            return true
+        case .distillActions:
+            guard let actionItems = payload["action_items"] as? [Any] else { return false }
+            return true
+        case .distillThemes:
+            guard let themes = payload["key_themes"] as? [Any] else { return false }
+            return true
+        case .distillReflection:
+            guard let questions = payload["reflection_questions"] as? [Any] else { return false }
+            return true
         case .themes:
             guard let themes = payload["themes"] as? [Any], let sentiment = payload["sentiment"] as? String else { return false }
             guard ["positive","neutral","mixed","negative"].contains(sentiment.lowercased()) else { return false }

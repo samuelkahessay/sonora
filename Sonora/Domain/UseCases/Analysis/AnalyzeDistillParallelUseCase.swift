@@ -1,0 +1,334 @@
+import Foundation
+
+/// Parallel implementation of Distill analysis for improved performance
+/// Executes 4 component analyses concurrently and combines results
+/// Provides progressive UI updates as components complete
+protocol AnalyzeDistillParallelUseCaseProtocol {
+    func execute(transcript: String, memoId: UUID, progressHandler: @escaping (DistillProgressUpdate) -> Void) async throws -> AnalyzeEnvelope<DistillData>
+}
+
+/// Progress update for parallel distill processing
+public struct DistillProgressUpdate: Sendable {
+    public let completedComponents: Int
+    public let totalComponents: Int
+    public let completedResults: PartialDistillData
+    public let latestComponent: AnalysisMode?
+    
+    public var progress: Double {
+        return Double(completedComponents) / Double(totalComponents)
+    }
+}
+
+/// Partial distill data that gets built up progressively
+public struct PartialDistillData: Sendable {
+    public var summary: String?
+    public var actionItems: [DistillData.ActionItem]?
+    public var keyThemes: [String]?
+    public var reflectionQuestions: [String]?
+    
+    /// Convert to complete DistillData if all components are present
+    public func toDistillData() -> DistillData? {
+        guard let summary = summary,
+              let keyThemes = keyThemes,
+              let reflectionQuestions = reflectionQuestions else {
+            return nil
+        }
+        
+        return DistillData(
+            summary: summary,
+            action_items: actionItems,
+            key_themes: keyThemes,
+            reflection_questions: reflectionQuestions
+        )
+    }
+}
+
+final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol {
+    
+    // MARK: - Dependencies
+    private let analysisService: any AnalysisServiceProtocol
+    private let analysisRepository: any AnalysisRepository
+    private let logger: any LoggerProtocol
+    private let eventBus: any EventBusProtocol
+    private let operationCoordinator: any OperationCoordinatorProtocol
+    
+    // MARK: - Constants
+    private let componentModes: [AnalysisMode] = [.distillSummary, .distillActions, .distillThemes, .distillReflection]
+    
+    // MARK: - Initialization
+    init(
+        analysisService: any AnalysisServiceProtocol,
+        analysisRepository: any AnalysisRepository,
+        logger: any LoggerProtocol = Logger.shared,
+        eventBus: any EventBusProtocol,
+        operationCoordinator: any OperationCoordinatorProtocol
+    ) {
+        self.analysisService = analysisService
+        self.analysisRepository = analysisRepository
+        self.logger = logger
+        self.eventBus = eventBus
+        self.operationCoordinator = operationCoordinator
+    }
+    
+    // MARK: - Use Case Execution
+    func execute(transcript: String, memoId: UUID, progressHandler: @escaping (DistillProgressUpdate) -> Void) async throws -> AnalyzeEnvelope<DistillData> {
+        let correlationId = UUID().uuidString
+        let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
+        
+        logger.analysis("Starting parallel Distill analysis", context: context)
+        
+        // Register analysis operation
+        guard let operationId = await operationCoordinator.registerOperation(.analysis(memoId: memoId, analysisType: .distill)) else {
+            logger.warning("Parallel Distill analysis rejected by operation coordinator", category: .analysis, context: context, error: nil)
+            throw AnalysisError.systemBusy
+        }
+        
+        do {
+            // Validate inputs
+            guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                await operationCoordinator.failOperation(operationId, error: AnalysisError.emptyTranscript)
+                throw AnalysisError.emptyTranscript
+            }
+            
+            guard transcript.count >= 10 else {
+                await operationCoordinator.failOperation(operationId, error: AnalysisError.transcriptTooShort)
+                throw AnalysisError.transcriptTooShort
+            }
+            
+            // Check if complete distill result exists in cache
+            if let cachedResult = await MainActor.run(body: {
+                analysisRepository.getAnalysisResult(for: memoId, mode: .distill, responseType: DistillData.self)
+            }) {
+                logger.analysis("Found complete cached Distill analysis", level: .info, context: context)
+                await operationCoordinator.completeOperation(operationId)
+                return cachedResult
+            }
+            
+            // Execute parallel component analysis
+            let result = try await executeParallelComponents(
+                transcript: transcript,
+                memoId: memoId,
+                progressHandler: progressHandler,
+                context: context
+            )
+            
+            // Save complete result to cache
+            await MainActor.run {
+                analysisRepository.saveAnalysisResult(result, for: memoId, mode: .distill)
+            }
+            
+            // Publish completion event
+            await MainActor.run { [eventBus] in
+                eventBus.publish(.analysisCompleted(memoId: memoId, type: .distill, result: result.data.summary))
+            }
+            
+            await operationCoordinator.completeOperation(operationId)
+            
+            logger.analysis("Parallel Distill analysis completed successfully", context: context)
+            return result
+            
+        } catch {
+            await operationCoordinator.failOperation(operationId, error: error)
+            throw error
+        }
+    }
+    
+    // MARK: - Private Implementation
+    
+    private func executeParallelComponents(
+        transcript: String,
+        memoId: UUID,
+        progressHandler: @escaping (DistillProgressUpdate) -> Void,
+        context: LogContext
+    ) async throws -> AnalyzeEnvelope<DistillData> {
+        
+        var partialData = PartialDistillData()
+        var completedCount = 0
+        var combinedLatency = 0
+        var model = "gpt-5-nano"
+        var combinedTokens = TokenUsage(input: 0, output: 0)
+        
+        // Send initial progress
+        await MainActor.run {
+            progressHandler(DistillProgressUpdate(
+                completedComponents: 0,
+                totalComponents: componentModes.count,
+                completedResults: partialData,
+                latestComponent: nil
+            ))
+        }
+        
+        logger.analysis("Starting parallel execution of \(componentModes.count) components", context: context)
+        
+        // Execute all components in parallel using TaskGroup
+        try await withThrowingTaskGroup(of: (AnalysisMode, Any, Int, TokenUsage).self) { group in
+            
+            // Add tasks for each component
+            for mode in componentModes {
+                group.addTask { [self] in
+                    // Check cache first
+                    if let cached = await checkComponentCache(mode: mode, memoId: memoId) {
+                        logger.debug("Cache hit for component \(mode.rawValue)", category: .analysis, context: context)
+                        return (mode, cached.data, cached.latency_ms, cached.tokens)
+                    }
+                    
+                    // Execute API call for component
+                    logger.debug("Executing API call for component \(mode.rawValue)", category: .analysis, context: context)
+                    let result = try await executeComponentAnalysis(mode: mode, transcript: transcript, memoId: memoId)
+                    
+                    // Save component to cache
+                    await saveComponentCache(data: result.data, latency: result.latency_ms, tokens: result.tokens, mode: mode, memoId: memoId)
+                    
+                    return (mode, result.data, result.latency_ms, result.tokens)
+                }
+            }
+            
+            // Collect results as they complete
+            for try await (mode, data, latency, tokens) in group {
+                combinedLatency = max(combinedLatency, latency) // Use max since parallel
+                combinedTokens = TokenUsage(
+                    input: combinedTokens.input + tokens.input,
+                    output: combinedTokens.output + tokens.output
+                )
+                
+                // Update partial data based on component type
+                await updatePartialData(&partialData, mode: mode, data: data)
+                
+                completedCount += 1
+                
+                // Send progress update on main actor
+                await MainActor.run {
+                    progressHandler(DistillProgressUpdate(
+                        completedComponents: completedCount,
+                        totalComponents: componentModes.count,
+                        completedResults: partialData,
+                        latestComponent: mode
+                    ))
+                }
+                
+                logger.debug("Component \(mode.rawValue) completed (\(completedCount)/\(componentModes.count))", 
+                           category: .analysis, context: context)
+            }
+        }
+        
+        // Combine results into final DistillData
+        guard let finalData = partialData.toDistillData() else {
+            logger.error("Failed to combine parallel component results", category: .analysis, context: context, error: nil)
+            throw AnalysisError.invalidResponse
+        }
+        
+        logger.analysis("Parallel component execution completed", 
+                       context: LogContext(correlationId: context.correlationId, additionalInfo: [
+                           "combinedLatency": combinedLatency,
+                           "totalInputTokens": combinedTokens.input,
+                           "totalOutputTokens": combinedTokens.output
+                       ]))
+        
+        // Create final envelope
+        return AnalyzeEnvelope(
+            mode: .distill,
+            data: finalData,
+            model: model,
+            tokens: combinedTokens,
+            latency_ms: combinedLatency,
+            moderation: nil
+        )
+    }
+    
+    private func checkComponentCache(mode: AnalysisMode, memoId: UUID) async -> (data: Any, latency_ms: Int, tokens: TokenUsage)? {
+        return await MainActor.run {
+            switch mode {
+            case .distillSummary:
+                if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillSummaryData.self) {
+                    return (result.data, result.latency_ms, result.tokens)
+                }
+            case .distillActions:
+                if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillActionsData.self) {
+                    return (result.data, result.latency_ms, result.tokens)
+                }
+            case .distillThemes:
+                if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillThemesData.self) {
+                    return (result.data, result.latency_ms, result.tokens)
+                }
+            case .distillReflection:
+                if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillReflectionData.self) {
+                    return (result.data, result.latency_ms, result.tokens)
+                }
+            default:
+                break
+            }
+            return nil
+        }
+    }
+    
+    private func executeComponentAnalysis(mode: AnalysisMode, transcript: String, memoId: UUID) async throws -> (data: Any, latency_ms: Int, tokens: TokenUsage) {
+        switch mode {
+        case .distillSummary:
+            let envelope = try await analysisService.analyzeDistillSummary(transcript: transcript)
+            return (envelope.data, envelope.latency_ms, envelope.tokens)
+        case .distillActions:
+            let envelope = try await analysisService.analyzeDistillActions(transcript: transcript)
+            return (envelope.data, envelope.latency_ms, envelope.tokens)
+        case .distillThemes:
+            let envelope = try await analysisService.analyzeDistillThemes(transcript: transcript)
+            return (envelope.data, envelope.latency_ms, envelope.tokens)
+        case .distillReflection:
+            let envelope = try await analysisService.analyzeDistillReflection(transcript: transcript)
+            return (envelope.data, envelope.latency_ms, envelope.tokens)
+        default:
+            throw AnalysisError.invalidResponse
+        }
+    }
+    
+    private func saveComponentCache(data: Any, latency: Int, tokens: TokenUsage, mode: AnalysisMode, memoId: UUID) async {
+        await MainActor.run {
+            switch mode {
+            case .distillSummary:
+                if let summaryData = data as? DistillSummaryData {
+                    let envelope = AnalyzeEnvelope(mode: mode, data: summaryData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+                    analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+                }
+            case .distillActions:
+                if let actionsData = data as? DistillActionsData {
+                    let envelope = AnalyzeEnvelope(mode: mode, data: actionsData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+                    analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+                }
+            case .distillThemes:
+                if let themesData = data as? DistillThemesData {
+                    let envelope = AnalyzeEnvelope(mode: mode, data: themesData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+                    analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+                }
+            case .distillReflection:
+                if let reflectionData = data as? DistillReflectionData {
+                    let envelope = AnalyzeEnvelope(mode: mode, data: reflectionData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+                    analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+                }
+            default:
+                break
+            }
+        }
+    }
+    
+    private func updatePartialData(_ partialData: inout PartialDistillData, mode: AnalysisMode, data: Any) async {
+        switch mode {
+        case .distillSummary:
+            if let summaryData = data as? DistillSummaryData {
+                partialData.summary = summaryData.summary
+            }
+        case .distillActions:
+            if let actionsData = data as? DistillActionsData {
+                partialData.actionItems = actionsData.action_items
+            }
+        case .distillThemes:
+            if let themesData = data as? DistillThemesData {
+                partialData.keyThemes = themesData.key_themes
+            }
+        case .distillReflection:
+            if let reflectionData = data as? DistillReflectionData {
+                partialData.reflectionQuestions = reflectionData.reflection_questions
+            }
+        default:
+            break
+        }
+    }
+}

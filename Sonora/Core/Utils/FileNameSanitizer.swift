@@ -121,19 +121,32 @@ struct FileNameSanitizer {
             "🎯": "target"
         ]
         
-        var result = input
+        var intermediate = input
         for (emoji, text) in emojiMappings {
-            result = result.replacingOccurrences(of: emoji, with: text)
+            intermediate = intermediate.replacingOccurrences(of: emoji, with: text)
+        }
+
+        // Replace remaining emoji grapheme clusters with a generic placeholder,
+        // but do NOT replace ASCII digits or characters that can participate in
+        // keycap sequences unless they form an actual emoji presentation.
+        var output = String()
+        output.reserveCapacity(intermediate.count)
+        
+        for ch in intermediate { // iterate by grapheme cluster
+            let scalars = ch.unicodeScalars
+            let hasEmojiScalar = scalars.contains(where: { scalar in
+                let props = scalar.properties
+                // Replace only true emoji presentations or emoji scalars that are not ASCII
+                return props.isEmojiPresentation || (props.isEmoji && scalar.value >= 0x80)
+            })
+            if hasEmojiScalar {
+                output.append("emoji")
+            } else {
+                output.append(ch)
+            }
         }
         
-        // For any remaining emojis, convert to generic placeholder
-        // This regex matches emoji characters
-        let emojiRange = NSRange(location: 0, length: result.utf16.count)
-        if let regex = try? NSRegularExpression(pattern: "[\\p{Emoji}]", options: []) {
-            result = regex.stringByReplacingMatches(in: result, options: [], range: emojiRange, withTemplate: "emoji")
-        }
-        
-        return result
+        return output
     }
     
     /// Validates if a filename is safe without modification

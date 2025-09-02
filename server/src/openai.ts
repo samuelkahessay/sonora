@@ -1,7 +1,7 @@
 import { AnalysisJsonSchemas } from './schema.js';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const MODEL = process.env.SONORA_MODEL || 'gpt-5-mini';
+const MODEL = process.env.SONORA_MODEL || 'gpt-5-nano';
 
 if (!OPENAI_API_KEY) {
   throw new Error('OPENAI_API_KEY environment variable is required');
@@ -25,13 +25,13 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Enhanced logging for GPT-5-mini debugging
+// Enhanced logging for GPT-5-nano debugging
 function logResponseDetails(data: any, startTime: number, requestParams: any) {
   const isDev = process.env.NODE_ENV === 'development';
   const responseTime = Date.now() - startTime;
   
   if (isDev) {
-    console.log('🔍 GPT-5-mini Response Debug:', {
+    console.log('🔍 GPT-5-nano Response Debug:', {
       responseTime: `${responseTime}ms`,
       requestParams: {
         model: requestParams.model,
@@ -53,7 +53,7 @@ function logResponseDetails(data: any, startTime: number, requestParams: any) {
   }
   
   // Always log performance metrics
-  console.log('⏱️  GPT-5-mini Performance:', {
+  console.log('⏱️  GPT-5-nano Performance:', {
     responseTime: `${responseTime}ms`,
     reasoning: requestParams.reasoning?.effort,
     inputTokens: data?.usage?.input_tokens || 0,
@@ -133,7 +133,7 @@ export async function createChatJSON({
       
       if (!response.ok) {
         const text = await response.text().catch(() => '');
-        const errorMessage = `GPT-5-mini Responses API error: ${response.status} - ${text || 'Unknown error'}`;
+        const errorMessage = `GPT-5-nano Responses API error: ${response.status} - ${text || 'Unknown error'}`;
         console.error('🚨 Responses API Error:', {
           status: response.status,
           statusText: response.statusText,
@@ -158,7 +158,7 @@ export async function createChatJSON({
       let extractionMethod = '';
       
       try {
-        // Strategy 1: GPT-5-mini with reasoning - output[1] is message object
+        // Strategy 1: GPT-5-nano with reasoning - output[1] is message object
         if (Array.isArray(data?.output) && data.output.length > 1) {
           const messageObj = data.output[1];
           if (messageObj?.type === 'message' && Array.isArray(messageObj?.content)) {
@@ -170,7 +170,7 @@ export async function createChatJSON({
           }
         }
         
-        // Strategy 2: GPT-5-mini without reasoning - output[0] is direct message
+        // Strategy 2: GPT-5-nano without reasoning - output[0] is direct message
         if (!text && Array.isArray(data?.output) && data.output.length === 1) {
           const messageObj = data.output[0];
           if (messageObj?.type === 'message' && Array.isArray(messageObj?.content)) {
@@ -218,7 +218,7 @@ export async function createChatJSON({
         
       } catch (parseError) {
         console.error('🚨 Error during response parsing:', parseError);
-        throw new Error(`Failed to parse GPT-5-mini response structure: ${parseError}`);
+        throw new Error(`Failed to parse GPT-5-nano response structure: ${parseError}`);
       }
 
       // Enhanced error handling for missing text response
@@ -233,10 +233,10 @@ export async function createChatJSON({
           verbosity: verbosity
         };
         
-        console.error('🚨 GPT-5-mini Response Parsing Failed:', debugInfo);
+        console.error('🚨 GPT-5-nano Response Parsing Failed:', debugInfo);
         console.error('📋 Full response data:', JSON.stringify(data, null, 2));
         
-        throw new Error(`No text content found in GPT-5-mini Responses API response. Debug info: ${JSON.stringify(debugInfo)}`);
+        throw new Error(`No text content found in GPT-5-nano Responses API response. Debug info: ${JSON.stringify(debugInfo)}`);
       }
 
       // Enhanced token usage tracking with reasoning breakdown

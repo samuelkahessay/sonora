@@ -26,6 +26,26 @@ export function buildPrompt(mode: string, transcript: string): { system: string;
         `4. "reflection_questions": Array of 2-3 insightful coaching questions to help the user think deeper\n` +
         `IMPORTANT: Always include action_items field. Use empty array [] if no clear tasks are mentioned.`;
       break;
+    case 'distill-summary':
+      user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
+        `Create a brief 2-3 sentence overview of this voice memo. Be concise but capture the essence.\n` +
+        `Return JSON: {"summary": "..."}`;
+      break;
+    case 'distill-actions':
+      user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
+        `Extract actionable tasks from this voice memo. If no clear tasks are mentioned, return empty array.\n` +
+        `Return JSON: {"action_items": [{"text":"...","priority":"high|medium|low"}]}`;
+      break;
+    case 'distill-themes':
+      user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
+        `Identify 2-4 main themes or topics discussed in this voice memo.\n` +
+        `Return JSON: {"key_themes": ["theme1", "theme2", "theme3"]}`;
+      break;
+    case 'distill-reflection':
+      user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
+        `Act as a thoughtful mentor. Generate 2-3 insightful coaching questions to help the user reflect deeper on their thoughts.\n` +
+        `Return JSON: {"reflection_questions": ["question1?", "question2?", "question3?"]}`;
+      break;
     case 'themes':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\nReturn {"themes":[{"name":"...","evidence":["..."]}], "sentiment":"positive|neutral|mixed|negative"}`;
       break;

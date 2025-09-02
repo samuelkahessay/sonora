@@ -244,6 +244,18 @@ app.post('/analyze', async (req, res) => {
         case 'distill':
           validatedData = DistillDataSchema.parse(parsedData);
           break;
+        case 'distill-summary':
+          validatedData = { summary: parsedData.summary };
+          break;
+        case 'distill-actions':
+          validatedData = { action_items: parsedData.action_items || [] };
+          break;
+        case 'distill-themes':
+          validatedData = { key_themes: parsedData.key_themes || [] };
+          break;
+        case 'distill-reflection':
+          validatedData = { reflection_questions: parsedData.reflection_questions || [] };
+          break;
         case 'themes':
           validatedData = ThemesDataSchema.parse(parsedData);
           break;
@@ -271,6 +283,18 @@ app.post('/analyze', async (req, res) => {
         case 'distill':
           textForModeration = `${vd.summary}\n${(vd.action_items || []).map((a: any) => a.text).join(' \n')}\n${(vd.key_themes || []).join(' \n')}\n${(vd.reflection_questions || []).join(' \n')}`;
           break;
+        case 'distill-summary':
+          textForModeration = vd.summary || '';
+          break;
+        case 'distill-actions':
+          textForModeration = (vd.action_items || []).map((a: any) => a.text).join(' \n');
+          break;
+        case 'distill-themes':
+          textForModeration = (vd.key_themes || []).join(' \n');
+          break;
+        case 'distill-reflection':
+          textForModeration = (vd.reflection_questions || []).join(' \n');
+          break;
         case 'themes':
           textForModeration = `${vd.sentiment}\n${vd.themes.map((t: any) => `${t.name}: ${(t.evidence || []).join(' ')}`).join(' \n')}`;
           break;
@@ -287,7 +311,7 @@ app.post('/analyze', async (req, res) => {
     res.json({
       mode,
       data: validatedData,
-      model: process.env.SONORA_MODEL || 'gpt-5-mini',
+      model: process.env.SONORA_MODEL || 'gpt-5-nano',
       tokens: {
         input: usage.input,
         output: usage.output,
@@ -332,8 +356,8 @@ app.get('/keycheck', async (_req, res) => {
     
     const startTime = Date.now();
     const { jsonText, usage } = await createChatJSON({
-      system: 'You are a GPT-5-mini validation service. Respond with valid JSON exactly as requested.',
-      user: 'Respond with this JSON object: {"ok":true,"model":"gpt-5-mini","test":"keycheck"}',
+      system: 'You are a GPT-5-nano validation service. Respond with valid JSON exactly as requested.',
+      user: 'Respond with this JSON object: {"ok":true,"model":"gpt-5-nano","test":"keycheck"}',
       verbosity: 'low',
       reasoningEffort: 'low'
     });
@@ -344,8 +368,8 @@ app.get('/keycheck', async (_req, res) => {
     
     return res.json({ 
       ok: isValid, 
-      message: isValid ? 'GPT-5-mini key valid' : 'Invalid response from GPT-5-mini',
-      model: process.env.SONORA_MODEL || 'gpt-5-mini',
+      message: isValid ? 'GPT-5-nano key valid' : 'Invalid response from GPT-5-nano',
+      model: process.env.SONORA_MODEL || 'gpt-5-nano',
       performance: {
         responseTime: `${responseTime}ms`,
         tokens: {
@@ -360,7 +384,7 @@ app.get('/keycheck', async (_req, res) => {
     console.error('🚨 Keycheck failed:', e?.message);
     return res.status(502).json({ 
       ok: false, 
-      message: `GPT-5-mini test failed: ${e?.message || 'Unknown error'}`,
+      message: `GPT-5-nano test failed: ${e?.message || 'Unknown error'}`,
       model: process.env.SONORA_MODEL || 'gpt-5-mini'
     });
   }
@@ -382,12 +406,12 @@ app.get('/test-gpt5', async (_req, res) => {
     const overallStartTime = Date.now();
     
     // Test all analysis modes
-    const modes = ['distill', 'analysis', 'themes', 'todos'] as const;
+    const modes = ['distill', 'distill-summary', 'distill-actions', 'distill-themes', 'distill-reflection', 'analysis', 'themes', 'todos'] as const;
     
     for (const mode of modes) {
       const testStartTime = Date.now();
       try {
-        console.log(`🧪 Testing GPT-5-mini mode: ${mode}`);
+        console.log(`🧪 Testing GPT-5-nano mode: ${mode}`);
         
         // Get settings and schema for this mode
         const settings = ModelSettings[mode] || { verbosity: 'low', reasoningEffort: 'medium' };
@@ -417,6 +441,18 @@ app.get('/test-gpt5', async (_req, res) => {
           switch (mode) {
             case 'distill':
               validationResult.valid = !!(parsedData.summary && parsedData.key_themes && parsedData.reflection_questions);
+              break;
+            case 'distill-summary':
+              validationResult.valid = !!(parsedData.summary);
+              break;
+            case 'distill-actions':
+              validationResult.valid = Array.isArray(parsedData.action_items);
+              break;
+            case 'distill-themes':
+              validationResult.valid = Array.isArray(parsedData.key_themes);
+              break;
+            case 'distill-reflection':
+              validationResult.valid = Array.isArray(parsedData.reflection_questions);
               break;
             case 'analysis':
               validationResult.valid = !!(parsedData.summary && parsedData.key_points);
@@ -477,8 +513,8 @@ app.get('/test-gpt5', async (_req, res) => {
     
     return res.json({
       success: successfulTests === modes.length,
-      message: `GPT-5-mini comprehensive test completed: ${successfulTests}/${modes.length} modes successful`,
-      model: process.env.SONORA_MODEL || 'gpt-5-mini',
+      message: `GPT-5-nano comprehensive test completed: ${successfulTests}/${modes.length} modes successful`,
+      model: process.env.SONORA_MODEL || 'gpt-5-nano',
       testSummary: {
         totalTime: `${totalTime}ms`,
         averageTimePerMode: `${Math.round(totalTime / modes.length)}ms`,
@@ -507,8 +543,8 @@ app.get('/test-gpt5', async (_req, res) => {
     console.error('🚨 GPT-5 test endpoint failed:', error.message);
     return res.status(500).json({
       success: false,
-      message: `GPT-5-mini test endpoint failed: ${error.message}`,
-      model: process.env.SONORA_MODEL || 'gpt-5-mini',
+      message: `GPT-5-nano test endpoint failed: ${error.message}`,
+      model: process.env.SONORA_MODEL || 'gpt-5-nano',
       error: error.message
     });
   }

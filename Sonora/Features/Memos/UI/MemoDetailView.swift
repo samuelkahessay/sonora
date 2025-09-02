@@ -43,11 +43,30 @@ struct MemoDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                RenameButton()
+                HStack(spacing: 16) {
+                    Button(action: {
+                        HapticManager.shared.playSelection()
+                        viewModel.showShareSheet = true
+                    }) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                    .accessibilityLabel("Share memo")
+                    .accessibilityHint("Share voice recording, transcription, or analysis")
+                    
+                    RenameButton()
+                }
             }
         }
         .renameAction {
             viewModel.startRenaming()
+        }
+        .sheet(isPresented: $viewModel.showShareSheet, onDismiss: {
+            viewModel.presentPendingShareIfReady()
+        }) {
+            ShareMemoSheet(memo: memo, viewModel: viewModel) {
+                viewModel.showShareSheet = false
+            }
         }
         .onAppear {
             viewModel.configure(with: memo)
@@ -320,38 +339,32 @@ struct MemoDetailView: View {
             .cornerRadius(8)
         }
         VStack(alignment: .leading, spacing: 12) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    ForEach(Array(formatTranscriptParagraphs(text).enumerated()), id: \.offset) { index, paragraph in
-                        Text(paragraph)
-                            .font(.body)
-                            .lineSpacing(6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .textSelection(.enabled)
-                    }
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(Array(formatTranscriptParagraphs(text).enumerated()), id: \.offset) { index, paragraph in
+                    Text(paragraph)
+                        .font(.body)
+                        .lineSpacing(6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
                 }
-                .padding()
-                .background(Color.semantic(.fillSecondary))
-                .cornerRadius(8)
-                .accessibilityLabel("Transcription text")
-                .accessibilityValue(text)
-                .accessibilityHint("Swipe to scroll through transcribed text. Text is formatted in paragraphs for better readability.")
-                .accessibilityFocused($focusedElement, equals: .transcriptionText)
             }
+            .padding()
+            .background(Color.semantic(.fillSecondary))
+            .cornerRadius(8)
             .frame(minHeight: 120)
+            .accessibilityLabel("Transcription text")
+            .accessibilityValue(text)
+            .accessibilityHint("Transcribed text formatted in paragraphs for better readability.")
+            .accessibilityFocused($focusedElement, equals: .transcriptionText)
             AIDisclaimerView.transcription()
             HStack {
-                Button("Share Text") {
-                    HapticManager.shared.playSelection()
-                    shareText(text)
-                }
-                .buttonStyle(.bordered)
-                .accessibilityLabel("Share transcription text")
-                .accessibilityHint("Double tap to share the transcribed text")
                 Spacer()
-                Button("Copy") {
+                Button(action: {
                     HapticManager.shared.playLightImpact()
                     copyText(text)
+                }) {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 16, weight: .medium))
                 }
                 .buttonStyle(.bordered)
                 .accessibilityLabel("Copy transcription text")

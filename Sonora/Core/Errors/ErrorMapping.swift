@@ -50,6 +50,9 @@ public final class ErrorMapping {
         if message.lowercased().contains("no speech detected") {
             return .transcriptionFailed("No speech detected")
         }
+        if message.contains("Analysis service error") && message.contains("timed out") {
+            return .analysisTimeout
+        }
         return .unknown(message)
     }
     
@@ -74,6 +77,9 @@ public final class ErrorMapping {
             let message = nsError.localizedDescription
             if message.lowercased().contains("no speech detected") {
                 return .transcriptionFailed("No speech detected")
+            }
+            if message.contains("Analysis service error") && message.contains("timed out") {
+                return .analysisTimeout
             }
             return .unknown("System error: \(message)")
         }

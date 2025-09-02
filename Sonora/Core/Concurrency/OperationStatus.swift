@@ -352,6 +352,15 @@ public struct OperationSummary {
             switch analysisType {
             case .distill:
                 return "Generating comprehensive analysis"
+            // Distill component operations
+            case .distillSummary:
+                return "Generating summary"
+            case .distillActions:
+                return "Extracting action items"
+            case .distillThemes:
+                return "Identifying themes"
+            case .distillReflection:
+                return "Creating reflection questions"
             case .themes:
                 return "Analyzing themes"
             case .todos:

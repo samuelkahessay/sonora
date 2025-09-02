@@ -29,6 +29,8 @@ final class DIContainer: ObservableObject, Resolver {
     private var _operationCoordinator: (any OperationCoordinatorProtocol)!
     private var _backgroundAudioService: BackgroundAudioService!
     private var _audioRepository: (any AudioRepository)?
+    private var _transcriptExporter: (any TranscriptExporting)?
+    private var _analysisExporter: (any AnalysisExporting)?
     private var _startRecordingUseCase: StartRecordingUseCase!
     private var _systemNavigator: (any SystemNavigator)?
     private var _liveActivityService: (any LiveActivityServiceProtocol)?
@@ -256,6 +258,24 @@ final class DIContainer: ObservableObject, Resolver {
         guard let logger = _logger else { fatalError("DIContainer not configured: logger") }
         return logger
     }
+
+    /// Get transcript exporter service
+    func transcriptExporter() -> any TranscriptExporting {
+        ensureConfigured()
+        if _transcriptExporter == nil {
+            _transcriptExporter = TranscriptExportService()
+        }
+        return _transcriptExporter!
+    }
+
+    /// Get analysis exporter service
+    func analysisExporter() -> any AnalysisExporting {
+        ensureConfigured()
+        if _analysisExporter == nil {
+            _analysisExporter = AnalysisExportService()
+        }
+        return _analysisExporter!
+    }
     
     /// Get operation coordinator service
     func operationCoordinator() -> any OperationCoordinatorProtocol {
@@ -289,6 +309,25 @@ final class DIContainer: ObservableObject, Resolver {
         ensureConfigured()
         guard let idx = _spotlightIndexer else { fatalError("DIContainer not configured: spotlightIndexer") }
         return idx
+    }
+    
+    /// Factory: CreateTranscriptShareFileUseCase
+    func createTranscriptShareFileUseCase() -> CreateTranscriptShareFileUseCase {
+        ensureConfigured()
+        return CreateTranscriptShareFileUseCase(
+            exporter: transcriptExporter(),
+            logger: logger()
+        )
+    }
+
+    /// Factory: CreateAnalysisShareFileUseCase
+    func createAnalysisShareFileUseCase() -> CreateAnalysisShareFileUseCase {
+        ensureConfigured()
+        return CreateAnalysisShareFileUseCase(
+            analysisRepository: analysisRepository(),
+            exporter: analysisExporter(),
+            logger: logger()
+        )
     }
     
 }
