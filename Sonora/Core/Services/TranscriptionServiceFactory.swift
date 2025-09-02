@@ -28,9 +28,23 @@ final class TranscriptionServiceFactory {
     /// - Returns: A transcription service ready for use
     func createTranscriptionService() -> TranscriptionAPI {
         let userPreference = UserDefaults.standard.selectedTranscriptionService
-        let effectiveService = UserDefaults.standard.getEffectiveTranscriptionService(downloadManager: downloadManager)
+        // Reconcile install states before computing availability
+        downloadManager.reconcileInstallStates()
+        let selectedModel = UserDefaults.standard.selectedWhisperModelInfo
+        let state = downloadManager.getDownloadState(for: selectedModel.id)
+        let isSelectedInstalled = downloadManager.isModelAvailable(selectedModel.id)
+        let installedIds = modelProvider.installedModelIds()
+        let anyInstalled = !installedIds.isEmpty
+        var effectiveService = UserDefaults.standard.getEffectiveTranscriptionService(downloadManager: downloadManager)
+        
+        // If user prefers local, allow any installed model to enable local service even when selected differs
+        if userPreference == .localWhisperKit && effectiveService == .cloudAPI && anyInstalled {
+            effectiveService = .localWhisperKit
+            logger.warning("Selected local model not installed (id=\(selectedModel.id)); using available installed model(s): \(installedIds)")
+        }
         
         logger.info("Creating transcription service - Preference: \(userPreference.displayName), Effective: \(effectiveService.displayName)")
+        logger.debug("Local model availability — selectedId=\(selectedModel.id), state=\(state.displayName), selectedInstalled=\(isSelectedInstalled), installedIds=\(installedIds)")
         
         switch effectiveService {
         case .cloudAPI:

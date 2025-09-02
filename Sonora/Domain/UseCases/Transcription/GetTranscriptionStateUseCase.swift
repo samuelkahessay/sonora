@@ -11,6 +11,7 @@ final class GetTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol {
     
     // MARK: - Dependencies
     private let transcriptionRepository: any TranscriptionRepository
+    private let logger: any LoggerProtocol = Logger.shared
     
     // MARK: - Initialization
     init(transcriptionRepository: any TranscriptionRepository) {
@@ -23,8 +24,10 @@ final class GetTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol {
         // Get current transcription state from repository
         let state = transcriptionRepository.getTranscriptionState(for: memo.id)
         
-        // Log state retrieval for debugging
-        print("📊 GetTranscriptionStateUseCase: Retrieved state for \(memo.filename): \(state.statusText)")
+        // Log state retrieval at debug level (reduces console noise)
+        logger.debug("Retrieved transcription state for \(memo.filename): \(state.statusText)",
+                     category: .transcription,
+                     context: LogContext(additionalInfo: ["memoId": memo.id.uuidString]))
         
         return state
     }

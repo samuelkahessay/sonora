@@ -36,9 +36,12 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
     
     func transcribe(url: URL, language: String?) async throws -> TranscriptionResponse {
         logger.info("Starting WhisperKit transcription for: \(url.lastPathComponent)")
+        let totalStartTime = Date()
         
         // Ensure WhisperKit is initialized with the correct model
         try await ensureWhisperKitInitialized()
+        let initTimeMs = Int(Date().timeIntervalSince(totalStartTime) * 1000)
+        logger.info("⏱️ WhisperKit initialization: \(initTimeMs)ms")
         
         guard let whisperKit = self.whisperKit else {
             throw WhisperKitTranscriptionError.notInitialized("WhisperKit instance is nil after initialization")
@@ -46,11 +49,14 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
         
         do {
             // Load and prepare audio
+            let audioLoadStart = Date()
             let audioData = try await loadAudioData(from: url)
+            let audioLoadMs = Int(Date().timeIntervalSince(audioLoadStart) * 1000)
+            logger.info("⏱️ Audio loading: \(audioLoadMs)ms for \(audioData.count) samples")
             logger.debug("Loaded audio data: \(audioData.count) samples")
             
             // Perform transcription
-            let startTime = Date()
+            let transcribeStart = Date()
             #if canImport(WhisperKit)
             // Build decoding options per v0.13.1 API (task must precede language)
             let options = DecodingOptions(
@@ -66,21 +72,25 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
             #else
             let results = try await whisperKit.transcribe(audioArray: audioData)
             #endif
-            let latency = Date().timeIntervalSince(startTime) * 1000 // Convert to milliseconds
+            let transcribeMs = Int(Date().timeIntervalSince(transcribeStart) * 1000)
+            logger.info("⏱️ WhisperKit transcribe: \(transcribeMs)ms")
+            let totalMs = Int(Date().timeIntervalSince(totalStartTime) * 1000)
+            logger.info("⏱️ Total WhisperKit path: \(totalMs)ms")
             
             // Process results
             let transcriptionText = extractTextFromResults(results)
             let detectedLanguage = extractLanguageFromResults(results)
             let confidence = extractConfidenceFromResults(results)
             
-            logger.info("WhisperKit transcription completed in \(Int(latency))ms")
+            logger.info("WhisperKit transcription completed")
             
+            let transcribeSec = Double(transcribeMs) / 1000.0
             return TranscriptionResponse(
                 text: transcriptionText,
                 detectedLanguage: detectedLanguage,
                 confidence: confidence,
                 avgLogProb: nil, // WhisperKit doesn't provide this directly
-                duration: latency / 1000.0
+                duration: transcribeSec
             )
             
         } catch {
@@ -180,11 +190,32 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
         
         logger.info("Initializing WhisperKit with selected model")
         
-        let selectedModel = UserDefaults.standard.selectedWhisperModelInfo
+        var selectedModel = UserDefaults.standard.selectedWhisperModelInfo
         
-        // Check if model is already downloaded
-        guard (try? WhisperKitInstall.isInstalled(model: selectedModel.id)) == true else {
-            throw WhisperKitTranscriptionError.modelNotAvailable("Model \(selectedModel.displayName) is not downloaded. Please download it first.")
+        // Check if selected model is downloaded; if not, fallback to any installed model
+        let isSelectedInstalled = modelProvider.isInstalled(selectedModel.id)
+        if !isSelectedInstalled {
+            let installedIds = modelProvider.installedModelIds()
+            if let fallbackId = installedIds.first {
+                logger.warning("Selected Whisper model not installed: \(selectedModel.id). Falling back to installed model: \(fallbackId)")
+                // Update selection to reduce future mismatch
+                UserDefaults.standard.selectedWhisperModel = fallbackId
+                if let info = WhisperModelInfo.model(withId: fallbackId) {
+                    selectedModel = info
+                } else {
+                    // Construct a minimal info object when not in curated list
+                    selectedModel = WhisperModelInfo(
+                        id: fallbackId,
+                        displayName: fallbackId,
+                        size: "",
+                        description: "Installed model",
+                        speedRating: .medium,
+                        accuracyRating: .medium
+                    )
+                }
+            } else {
+                throw WhisperKitTranscriptionError.modelNotAvailable("No installed WhisperKit models found. Please download one in Settings.")
+            }
         }
         
         do {

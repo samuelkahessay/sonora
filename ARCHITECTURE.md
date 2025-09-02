@@ -97,7 +97,14 @@ Data
   - `AudioRepositoryImpl` → Recording via `BackgroundAudioService`
   - `MemoRepositoryImpl` → Filesystem persistence and memo lifecycle
   - `TranscriptionRepositoryImpl`, `AnalysisRepositoryImpl`
-- Services encapsulate system and transport logic: `BackgroundAudioService`, `TranscriptionService`, `AnalysisService`, `LiveActivityService`, `SystemNavigatorImpl`.
+- Services are organized by capability to keep folders small and discoverable:
+  - `Data/Services/Transcription/*` — Cloud and local WhisperKit transcription, VAD splitting, chunking, client language detection
+  - `Data/Services/Transcription/ModelManagement/*` — WhisperKit model provider, installer, download manager
+  - `Data/Services/Audio/*` — Background audio/recording integration
+  - `Data/Services/Analysis/*` — Analysis runtime
+  - `Data/Services/Export/*` — Exporters for transcripts and analyses
+  - `Data/Services/Moderation/*` — Moderation services (and no-op variant)
+  - `Data/Services/System/*` — System-facing helpers (Live Activities, navigation, metadata)
 
 Core
 - `DIContainer`: composition root; provides protocol-based access to implementations.

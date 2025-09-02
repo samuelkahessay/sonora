@@ -210,7 +210,6 @@ final class ModelDownloadManager: ObservableObject {
     /// Reconcile persisted states with actual installed files
     func reconcileInstallStates() {
         loadDownloadStates()
-        objectWillChange.send()
     }
     
     /// Starts periodic health checking

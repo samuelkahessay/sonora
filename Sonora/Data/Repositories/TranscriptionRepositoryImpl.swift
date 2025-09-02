@@ -7,6 +7,7 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
     
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private let metadataManager = MemoMetadataManager()
+    private let logger: any LoggerProtocol = Logger.shared
     
     private func transcriptionURL(for memoId: UUID) -> URL {
         let filename = "\(memoId.uuidString)_transcription.json"
@@ -49,9 +50,9 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
         do {
             let data = try JSONEncoder().encode(transcriptionData)
             try data.write(to: url)
-            print("💾 TranscriptionRepository: Saved transcription state \(state.statusText) for memo \(memoId)")
+            logger.debug("Saved transcription state \(state.statusText) for memo", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
         } catch {
-            print("❌ TranscriptionRepository: Failed to save transcription state: \(error)")
+            logger.error("Failed to save transcription state", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error)
         }
     }
     
@@ -59,7 +60,7 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
         let key = memoIdKey(for: memoId)
         
         if let cached = transcriptionStates[key] {
-            print("🎯 TranscriptionRepository: Found cached transcription state for memo \(memoId)")
+            logger.debug("Found cached transcription state", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "state": cached.statusText]))
             return cached
         }
         
@@ -67,13 +68,13 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
         guard FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url),
               let transcriptionData = try? JSONDecoder().decode(TranscriptionData.self, from: data) else {
-            print("🔍 TranscriptionRepository: No saved transcription found for memo \(memoId)")
+            logger.debug("No saved transcription found", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
             transcriptionStates[key] = .notStarted
             return .notStarted
         }
         
         transcriptionStates[key] = transcriptionData.state
-        print("💾 TranscriptionRepository: Loaded transcription state from disk for memo \(memoId)")
+        logger.debug("Loaded transcription state from disk", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "state": transcriptionData.state.statusText]))
         return transcriptionData.state
     }
     
@@ -84,7 +85,7 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
         transcriptionStates.removeValue(forKey: key)
         try? FileManager.default.removeItem(at: url)
         
-        print("🗑️ TranscriptionRepository: Deleted transcription data for memo \(memoId)")
+        logger.info("Deleted transcription data for memo", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
     }
     
     func hasTranscriptionData(for memoId: UUID) -> Bool {
@@ -137,15 +138,15 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
         do {
             let data = try JSONSerialization.data(withJSONObject: metadata, options: [.prettyPrinted])
             try data.write(to: url)
-            print("📝 TranscriptionRepository: Saved metadata for memo \(memoId) at \(url.lastPathComponent)")
+            logger.debug("Saved transcription metadata", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "file": url.lastPathComponent]))
         } catch {
-            print("❌ TranscriptionRepository: Failed to save metadata: \(error)")
+            logger.error("Failed to save transcription metadata", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error)
         }
     }
     
     func clearTranscriptionCache() {
         transcriptionStates.removeAll()
-        print("🧹 TranscriptionRepository: Cleared transcription cache")
+        logger.debug("Cleared transcription cache", category: .repository, context: LogContext())
     }
     
     func getAllTranscriptionStates() -> [UUID: TranscriptionState] {

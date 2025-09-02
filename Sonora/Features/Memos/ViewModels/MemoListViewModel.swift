@@ -25,6 +25,11 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     private var eventSubscriptionId: UUID?
     private var pollingTimer: AnyCancellable?
     private let eventBus = EventBus.shared
+    private let logger: any LoggerProtocol = Logger.shared
+    // Throttle bookkeeping for "no change" poll logs
+    private var noChangeCounter: Int = 0
+    private var lastNoChangeLogAt: Date? = nil
+    private let noChangeLogInterval: TimeInterval = 15 // seconds
     
     // MARK: - Published Properties
     @Published var memos: [Memo] = []
@@ -86,7 +91,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         setupBindings()
         loadMemos()
         
-        print("📱 MemoListViewModel: Initialized with dependency injection")
+        logger.debug("MemoListViewModel initialized", category: .viewModel, context: LogContext())
     }
     
     /// Convenience initializer using DIContainer
@@ -95,7 +100,8 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         let container = DIContainer.shared
         let memoRepository = container.memoRepository()
         let transcriptionRepository = container.transcriptionRepository()
-        let transcriptionAPI = container.transcriptionAPI()
+        // Use routed transcription service from factory (respects preference + availability)
+        let transcriptionAPI = container.createTranscriptionService()
         
         // Use direct repository initialization to ensure real persistence
         let startTranscriptionUseCase = StartTranscriptionUseCase(
@@ -199,15 +205,15 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         }()
 
         if !changedKeys.isEmpty {
-            print("📱 MemoListViewModel: Repo state change detected for keys: \(changedKeys)")
+            logger.debug("Repo state change detected: \(changedKeys)", category: .viewModel, context: LogContext())
             // Explicitly notify before mutation to guarantee UI refresh
             objectWillChange.send()
             transcriptionStates = newStates
             refreshTrigger &+= 1
-            print("📱 MemoListViewModel: UI refresh triggered (refreshTrigger=\(refreshTrigger))")
+            logger.debug("UI refresh triggered (refreshTrigger=\(refreshTrigger))", category: .viewModel, context: LogContext())
         } else {
             // No-op but keep logs for debugging
-            print("📱 MemoListViewModel: Repo objectWillChange with no effective state diff")
+            logger.debug("Repo objectWillChange with no effective state diff", category: .viewModel, context: LogContext())
         }
 
         startPollingIfNeeded() // Check if polling should start based on new states
@@ -227,7 +233,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                 .sink { [weak self] _ in
                     self?.pollTranscriptionStates()
                 }
-            print("📱 MemoListViewModel: Started polling for transcription updates")
+            logger.debug("Started polling for transcription updates", category: .viewModel, context: LogContext())
         } else if !hasActiveTranscriptions && pollingTimer != nil {
             // Stop polling when no active transcriptions
             stopPolling()
@@ -238,7 +244,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     private func stopPolling() {
         pollingTimer?.cancel()
         pollingTimer = nil
-        print("📱 MemoListViewModel: Stopped polling")
+        logger.debug("Stopped polling", category: .viewModel, context: LogContext())
     }
     
     /// Poll transcription states for all in-progress memos
@@ -255,7 +261,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                 let newState = getTranscriptionStateUseCase.execute(memo: memo)
 
                 if newState != currentState {
-                    print("📱 MemoListViewModel: Poll detected change for \(memo.filename): \(currentState?.statusText ?? "nil") → \(newState.statusText)")
+                    logger.debug("Poll change for \(memo.filename): \(currentState?.statusText ?? "nil") → \(newState.statusText)", category: .viewModel, context: LogContext())
                     // Explicitly send before mutation to ensure observers refresh
                     objectWillChange.send()
                     transcriptionStates[key] = newState
@@ -267,9 +273,25 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
 
         if hasChanges {
             refreshTrigger &+= 1
-            print("📱 MemoListViewModel: Poll applied updates for memos: \(changedMemos). refreshTrigger=\(refreshTrigger)")
+            logger.debug("Poll applied updates: \(changedMemos). refreshTrigger=\(refreshTrigger)", category: .viewModel, context: LogContext())
+            // Reset throttle counters on actual change
+            noChangeCounter = 0
+            lastNoChangeLogAt = nil
         } else {
-            print("📱 MemoListViewModel: Poll found no changes")
+            noChangeCounter &+= 1
+            let now = Date()
+            if let last = lastNoChangeLogAt {
+                if now.timeIntervalSince(last) >= noChangeLogInterval {
+                    logger.debug("Poll found no changes (\(noChangeCounter) cycles)", category: .viewModel, context: LogContext())
+                    lastNoChangeLogAt = now
+                    noChangeCounter = 0
+                }
+            } else {
+                // Log first time, then throttle
+                logger.debug("Poll found no changes", category: .viewModel, context: LogContext())
+                lastNoChangeLogAt = now
+                noChangeCounter = 0
+            }
         }
 
         // Start/stop polling based on latest states
@@ -287,7 +309,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             objectWillChange.send()
             transcriptionStates[key] = newState
             refreshTrigger &+= 1
-            print("📱 MemoListViewModel: Event-driven update for \(memo.filename): \(newState.statusText). refreshTrigger=\(refreshTrigger)")
+            logger.debug("Event update for \(memo.filename): \(newState.statusText). refreshTrigger=\(refreshTrigger)", category: .viewModel, context: LogContext())
         }
         
         // Restart or stop polling based on current states
@@ -298,7 +320,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     
     /// Load memos from repository
     func loadMemos() {
-        print("📱 MemoListViewModel: Loading memos")
+        logger.debug("Loading memos", category: .viewModel, context: LogContext())
         Task {
             do {
                 isLoading = true

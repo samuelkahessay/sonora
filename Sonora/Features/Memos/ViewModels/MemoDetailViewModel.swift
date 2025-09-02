@@ -189,7 +189,8 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         let analysisService = container.analysisService()
         let analysisRepository = container.analysisRepository()
         let transcriptionRepository = container.transcriptionRepository()
-        let transcriptionAPI = container.transcriptionAPI()
+        // Use routed transcription service from factory (respects preference + availability)
+        let transcriptionAPI = container.createTranscriptionService()
         let logger = container.logger()
         
         // Use direct repository initialization to ensure real persistence

@@ -3,6 +3,7 @@ import AVFoundation
 
 final class TranscriptionService: TranscriptionAPI {
     private let config = AppConfiguration.shared
+    private let logger: any LoggerProtocol = Logger.shared
     
     struct APIError: LocalizedError { 
         let message: String
@@ -16,8 +17,8 @@ final class TranscriptionService: TranscriptionAPI {
     }
 
     func transcribe(url: URL, language: String?) async throws -> TranscriptionResponse {
-        print("🎙️ Starting transcription for: \(url.lastPathComponent)")
-        print("🎯 Language hint: \(language ?? "auto")")
+        let context = LogContext(additionalInfo: ["file": url.lastPathComponent, "language": language ?? "auto"])
+        logger.debug("Starting cloud transcription", category: .transcription, context: context)
 
         // Validate language code if provided (Whisper-supported code)
         if let language = language, !language.isEmpty {
@@ -34,7 +35,7 @@ final class TranscriptionService: TranscriptionAPI {
             if let apiErr = error as? APIError,
                let language = language, !language.isEmpty,
                Self.shouldFallbackWithoutLanguage(apiError: apiErr) {
-                print("↩️ Fallback: retrying transcription without language hint")
+                logger.debug("Fallback: retrying without language hint", category: .transcription, context: context)
                 return try await sendTranscriptionRequest(url: url, language: nil)
             }
             throw error
@@ -91,7 +92,7 @@ final class TranscriptionService: TranscriptionAPI {
         do {
             exported = try await exportChunk(from: audioURL, to: chunkURL, segment: segment)
         } catch {
-            print("❌ TranscriptionService: exportChunk failed for index=\(index): \(error)")
+            logger.warning("exportChunk failed for index=\(index)", category: .service, context: LogContext(additionalInfo: ["file": audioURL.lastPathComponent]), error: error)
         }
 
         defer {
@@ -111,7 +112,7 @@ final class TranscriptionService: TranscriptionAPI {
                 let resp = try await transcribe(url: readyURL, language: language)
                 return ChunkTranscriptionResult(segment: segment, response: resp)
             } catch {
-                print("⚠️ TranscriptionService: chunk transcribe failed (attempt \(attempt)/\(attempts)) index=\(index): \(error)")
+                logger.warning("Chunk transcribe failed (attempt \(attempt)/\(attempts)) index=\(index)", category: .service, context: LogContext(additionalInfo: ["file": readyURL.lastPathComponent]), error: error)
                 if attempt == attempts { break }
                 try? await Task.sleep(nanoseconds: UInt64(500_000_000 * attempt)) // backoff: 0.5s, 1.0s
             }
@@ -198,19 +199,19 @@ final class TranscriptionService: TranscriptionAPI {
         req.httpBody = body
         req.timeoutInterval = config.transcriptionTimeoutInterval
 
-        print("🔧 TranscriptionService: Using API URL: \(transcribeURL.absoluteString)")
-        print("🔧 TranscriptionService: Using timeout: \(req.timeoutInterval)s")
-        print("🌐 Making request to: \(req.url?.absoluteString ?? "unknown")")
+        logger.debug("Using API URL: \(transcribeURL.absoluteString)", category: .network, context: nil)
+        logger.debug("Timeout: \(req.timeoutInterval)s", category: .network, context: nil)
+        logger.debug("Making request: \(req.url?.absoluteString ?? "unknown")", category: .network, context: nil)
 
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else {
             throw APIError(message: "No HTTP response")
         }
-        print("📡 Response status: \(http.statusCode)")
+        logger.debug("Response status: \(http.statusCode)", category: .network, context: nil)
 
         guard (200...299).contains(http.statusCode) else {
             let text = String(data: data, encoding: .utf8) ?? ""
-            print("❌ Server error: \(text)")
+            logger.error("Server error \(http.statusCode): \(text)", category: .network, context: nil, error: APIError(message: text))
             throw APIError(message: "Server error \(http.statusCode): \(text)")
         }
 
@@ -241,7 +242,7 @@ final class TranscriptionService: TranscriptionAPI {
                 avgLogProb: payload.avgLogProb,
                 duration: payload.duration
             )
-            print("✅ Transcription completed: \(text.prefix(50))...")
+            logger.info("Cloud transcription completed", category: .transcription, context: LogContext(additionalInfo: ["preview": String(text.prefix(50))]))
             return response
         } catch {
             // Fallback to permissive JSON parsing if structure changes
@@ -258,12 +259,12 @@ final class TranscriptionService: TranscriptionAPI {
                     avgLogProb: avgLogProb,
                     duration: duration
                 )
-                print("✅ Transcription (fallback parse) completed: \(text.prefix(50))...")
+                logger.info("Cloud transcription completed (fallback parse)", category: .transcription, context: LogContext(additionalInfo: ["preview": String(text.prefix(50))]))
                 return response
             }
             // As last resort, just treat body as text
             let text = String(data: data, encoding: .utf8) ?? ""
-            print("✅ Transcription (raw text) completed: \(text.prefix(50))...")
+            logger.info("Cloud transcription completed (raw text)", category: .transcription, context: LogContext(additionalInfo: ["preview": String(text.prefix(50))]))
             return TranscriptionResponse(text: text, detectedLanguage: nil, confidence: nil, avgLogProb: nil, duration: nil)
         }
     }

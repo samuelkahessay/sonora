@@ -144,8 +144,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     let qualityToSave = eval.overallScore
                     let textLen = textToSave.count
                     await MainActor.run {
-                        let completedState = TranscriptionState.completed(textToSave)
-                        transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
+                        // Save final text (also sets state to completed)
                         transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
                         transcriptionRepository.saveTranscriptionMetadata([
                             "detectedLanguage": langToSave,
@@ -166,7 +165,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                         "serviceKey": serviceKey
                     ]
                     if let model = meta?["whisperModel"] as? String { info["whisperModel"] = model }
-                    logger.info("Transcription completed (single, preferred language)", category: .transcription, context: LogContext(additionalInfo: info))
+                    // Lower to debug; MemoEventHandler will emit the single info-level summary
+                    logger.debug("Transcription completed (single, preferred language)", category: .transcription, context: LogContext(additionalInfo: info))
                     await MainActor.run { [eventBus, textToSave] in
                         eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
                     }
@@ -189,8 +189,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 let textLen = textToSave.count
                 await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
                 await MainActor.run {
-                    let completedState = TranscriptionState.completed(textToSave)
-                    transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
+                    // Save final text (also sets state to completed)
                     transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
                     transcriptionRepository.saveTranscriptionMetadata([
                         "detectedLanguage": langToSave,
@@ -211,7 +210,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     "serviceKey": serviceKey
                 ]
                 if let model = meta?["whisperModel"] as? String { info["whisperModel"] = model }
-                logger.info("Transcription completed (chunked, preferred language)", category: .transcription, context: LogContext(additionalInfo: info))
+                logger.debug("Transcription completed (chunked, preferred language)", category: .transcription, context: LogContext(additionalInfo: info))
                 await MainActor.run { [eventBus, textToSave] in
                     eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
                 }
@@ -253,8 +252,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 let qualityToSave = finalEval.overallScore
                 let textLen = textToSave.count
                 await MainActor.run {
-                    let completedState = TranscriptionState.completed(textToSave)
-                    transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
+                    // Save final text (also sets state to completed)
                     transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
                     transcriptionRepository.saveTranscriptionMetadata([
                         "detectedLanguage": langToSave,
@@ -274,7 +272,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     "serviceKey": serviceKey
                 ]
                 if let model = meta?["whisperModel"] as? String { info["whisperModel"] = model }
-                logger.info("Transcription completed (single, auto)", category: .transcription, context: LogContext(additionalInfo: info))
+                logger.debug("Transcription completed (single, auto)", category: .transcription, context: LogContext(additionalInfo: info))
                 await MainActor.run { [eventBus, textToSave] in
                     eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
                 }
@@ -333,15 +331,14 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             let langToSave = finalLanguage
             let qualityToSave = finalEval.overallScore
             let textLen = textToSave.count
-            await MainActor.run {
-                let completedState = TranscriptionState.completed(textToSave)
-                transcriptionRepository.saveTranscriptionState(completedState, for: memo.id)
-                transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                transcriptionRepository.saveTranscriptionMetadata([
-                    "detectedLanguage": langToSave,
-                    "qualityScore": qualityToSave
-                ], for: memo.id)
-            }
+                await MainActor.run {
+                    // Save final text (also sets state to completed)
+                    transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
+                    transcriptionRepository.saveTranscriptionMetadata([
+                        "detectedLanguage": langToSave,
+                        "qualityScore": qualityToSave
+                    ], for: memo.id)
+                }
             await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
 
             logger.info("Transcription completed successfully (chunked)", category: .transcription, context: LogContext(
@@ -477,8 +474,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
     private func saveAndComplete(operationId: UUID, memoId: UUID, text: String, context: LogContext) async {
         await MainActor.run {
-            let completedState = TranscriptionState.completed(text)
-            transcriptionRepository.saveTranscriptionState(completedState, for: memoId)
+            // Save final text (also sets state to completed)
             transcriptionRepository.saveTranscriptionText(text, for: memoId)
         }
 

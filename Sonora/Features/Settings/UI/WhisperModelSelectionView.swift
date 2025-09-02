@@ -41,7 +41,12 @@ struct WhisperModelSelectionView: View {
         }
         .task {
             await loadModels()
-            downloadManager.reconcileInstallStates()
+        }
+        .onAppear {
+            // Perform reconciliation after view appears to avoid publishing during view updates
+            DispatchQueue.main.async {
+                downloadManager.reconcileInstallStates()
+            }
         }
     }
     
