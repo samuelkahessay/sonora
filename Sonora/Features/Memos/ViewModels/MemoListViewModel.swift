@@ -735,6 +735,23 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             selectMemo(memo)
         }
     }
+
+    /// Whether the memo at the given index is selected
+    func isIndexSelected(_ index: Int) -> Bool {
+        guard index >= 0 && index < memos.count else { return false }
+        return selectedMemoIds.contains(memos[index].id)
+    }
+
+    /// Set selection state for item at index without heavy animations (used during drag)
+    func setSelection(forIndex index: Int, selected: Bool) {
+        guard index >= 0 && index < memos.count else { return }
+        let id = memos[index].id
+        if selected {
+            if !selectedMemoIds.contains(id) { selectedMemoIds.insert(id) }
+        } else {
+            if selectedMemoIds.contains(id) { selectedMemoIds.remove(id) }
+        }
+    }
     
     /// Select all memos
     func selectAll() {

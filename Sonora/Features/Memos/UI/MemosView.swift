@@ -12,6 +12,7 @@ struct MemosView: View {
     @StateObject private var dragCoordinator = DragSelectionCoordinator()
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var velocityTracker = DragVelocityTracker()
+    @State private var autoScrollTimer: Timer? = nil
     let popToRoot: (() -> Void)?
     
     init(popToRoot: (() -> Void)? = nil) {
@@ -77,62 +78,85 @@ struct MemosView: View {
 
     @ViewBuilder
     private var memoListView: some View {
-        List {
-            ForEach(Array(viewModel.memos.enumerated()), id: \.element.id) { index, memo in
-                let separatorConfig = separatorConfiguration(for: memo)
-                let rowContent = MemoRowView(memo: memo, viewModel: viewModel)
-                    .dragSelectionAccessibility(
-                        memo: memo,
-                        viewModel: viewModel,
-                        isSelected: viewModel.isMemoSelected(memo)
-                    )
-                    .background(
-                        // Measure row height for the first row
-                        index == 0 ? GeometryReader { geometry in
+        ScrollViewReader { proxy in
+            List {
+                ForEach(viewModel.memos, id: \.id) { memo in
+                    let separatorConfig = separatorConfiguration(for: memo)
+                    let rowContent = MemoRowView(memo: memo, viewModel: viewModel)
+                        .dragSelectionAccessibility(
+                            memo: memo,
+                            viewModel: viewModel,
+                            isSelected: viewModel.isMemoSelected(memo)
+                        )
+                        .background(
+                        // Measure row height using the first visible row
+                        viewModel.memos.first?.id == memo.id ? GeometryReader { geometry in
                             Color.clear.onAppear {
                                 viewModel.updateRowHeight(geometry.size.height)
                             }
                         } : nil
-                    )
+                        )
                 
-                if viewModel.isEditMode {
-                    rowContent
-                        .contentShape(Rectangle())
-                        .onTapGesture { viewModel.toggleMemoSelection(memo) }
-                        .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            MemoSwipeActionsView(memo: memo, viewModel: viewModel)
-                        }
-                } else {
-                    NavigationLink(value: memo) { rowContent }
-                        .buttonStyle(.plain)
-                        .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            MemoSwipeActionsView(memo: memo, viewModel: viewModel)
-                        }
+                    if viewModel.isEditMode {
+                        rowContent
+                            .contentShape(Rectangle())
+                            .onTapGesture { viewModel.toggleMemoSelection(memo) }
+                            .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                MemoSwipeActionsView(memo: memo, viewModel: viewModel)
+                            }
+                    } else {
+                        NavigationLink(value: memo) { rowContent }
+                            .buttonStyle(.plain)
+                            .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                MemoSwipeActionsView(memo: memo, viewModel: viewModel)
+                            }
+                    }
+                }
+                .onDelete { offsets in
+                    HapticManager.shared.playDeletionFeedback()
+                    viewModel.deleteMemos(at: offsets)
                 }
             }
-            .onDelete { offsets in
-                HapticManager.shared.playDeletionFeedback()
-                viewModel.deleteMemos(at: offsets)
+            .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
+            .listStyle(MemoListConstants.listStyle)
+            .scrollContentBackground(.hidden)
+            .background(MemoListColors.containerBackground(for: colorScheme))
+            .coordinateSpace(name: "memoList")
+            .safeAreaInset(edge: .top) { Color.clear.frame(height: 8) }
+            .refreshable { viewModel.refreshMemos() }
+            // Leading selection lane overlay to capture drag selection like Apple apps
+            .overlay(alignment: .leading) {
+                if viewModel.isEditMode {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .frame(width: 44) // Selection lane width
+                        .gesture(selectionDragGesture)
+                }
+            }
+            // Auto-scroll while dragging near edges
+            .onChange(of: dragCoordinator.edgeScrollDirection) { _, direction in
+                guard viewModel.isEditMode else { return }
+                stopAutoScroll()
+                guard let direction else { return }
+                autoScrollTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { _ in
+                    guard dragCoordinator.isDragSelecting else { stopAutoScroll(); return }
+                    if let nextIndex = dragCoordinator.advanceSelection(direction: direction, viewModel: viewModel) {
+                        let memoId = viewModel.memos[nextIndex].id
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            proxy.scrollTo(memoId, anchor: direction == .up ? .top : .bottom)
+                        }
+                    }
+                }
             }
         }
-        .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
-        .listStyle(MemoListConstants.listStyle)
-        .scrollContentBackground(.hidden)
-        .background(MemoListColors.containerBackground(for: colorScheme))
-        .coordinateSpace(name: "memoList")
-        .simultaneousGesture(
-            viewModel.isEditMode ? selectionDragGesture : nil
-        )
-        .safeAreaInset(edge: .top) { Color.clear.frame(height: 8) }
-        .refreshable { viewModel.refreshMemos() }
     }
 
     private var selectionDragGesture: some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .named("memoList"))
             .onChanged { value in handleDragChanged(value) }
-            .onEnded { _ in handleDragEnded() }
+            .onEnded { value in handleDragEnded(value) }
     }
     
     /// Position-specific separator configuration for clean design
@@ -217,52 +241,52 @@ extension MemosView {
     private func handleDragChanged(_ value: DragGesture.Value) {
         // Update velocity tracking
         velocityTracker.addSample(point: value.location)
-        
+
         // Get list bounds for edge detection
         let listBounds = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
-        
-        // Handle drag through coordinator
+
+        // Handle drag through coordinator (selection lane only)
         dragCoordinator.handleDragChanged(
             value: value,
             viewModel: viewModel,
             listBounds: listBounds,
             rowHeight: viewModel.measuredRowHeight
         )
-        
-        // If coordinator determined this is selection intent, update view model
-        if dragCoordinator.currentIntent == .selecting {
-            let wasSelecting = viewModel.isDragSelecting
-            
-            viewModel.handleDragSelection(
-                at: value.location,
-                velocity: velocityTracker.velocityVector
-            )
-            
-            // Announce start of selection for accessibility
-            if !wasSelecting && viewModel.isDragSelecting {
-                DragSelectionAccessibility.announceSelectionStart()
-            }
-            
-            // Announce progress for accessibility
-            DragSelectionAccessibility.announceSelectionProgress(
-                count: viewModel.selectedCount,
-                total: viewModel.memos.count
-            )
-        }
+
+        // Accessibility progress
+        DragSelectionAccessibility.announceSelectionProgress(
+            count: viewModel.selectedCount,
+            total: viewModel.memos.count
+        )
     }
     
     /// Handle end of drag gesture with cleanup
-    private func handleDragEnded() {
+    private func handleDragEnded(_ value: DragGesture.Value? = nil) {
         let selectionCount = viewModel.selectedCount
         
+        // If no drag selection started (quick tap in the lane), toggle the tapped row
+        if !(dragCoordinator.isDragSelecting || viewModel.isDragSelecting), let value {
+            let adjustedY = value.location.y - 8
+            let index = max(0, min(Int(adjustedY / max(viewModel.measuredRowHeight, 1)), viewModel.memos.count - 1))
+            if index >= 0 && index < viewModel.memos.count {
+                viewModel.toggleMemoSelection(viewModel.memos[index])
+            }
+        }
+
         dragCoordinator.handleDragEnded(viewModel: viewModel)
         viewModel.endDragSelection()
         velocityTracker.reset()
+        stopAutoScroll()
         
         // Announce completion for accessibility
         if selectionCount > 0 {
             DragSelectionAccessibility.announceSelectionComplete(count: selectionCount)
         }
+    }
+
+    private func stopAutoScroll() {
+        autoScrollTimer?.invalidate()
+        autoScrollTimer = nil
     }
 }
 

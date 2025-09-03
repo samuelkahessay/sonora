@@ -16,6 +16,12 @@ enum DragIntent {
     case selecting
 }
 
+/// Selection behavior for the current drag gesture
+private enum DragSelectionMode {
+    case select
+    case deselect
+}
+
 /// Performance-optimized coordinator for Apple Voice Memos style drag-to-select
 /// Handles gesture conflicts with List scrolling and provides smooth selection updates
 @MainActor
@@ -25,6 +31,8 @@ final class DragSelectionCoordinator: ObservableObject {
     
     @Published var isDragSelecting: Bool = false
     @Published var currentIntent: DragIntent = .undetermined
+    /// Published edge scroll direction to integrate with ScrollViewReader
+    @Published var edgeScrollDirection: ScrollDirection? = nil
     
     // MARK: - Internal State
     
@@ -33,6 +41,8 @@ final class DragSelectionCoordinator: ObservableObject {
     private var dragVelocity: CGPoint = .zero
     private var lastDragLocation: CGPoint = .zero
     private var gestureHistory: [CGPoint] = []
+    private var visitedIndices: Set<Int> = []
+    private var dragMode: DragSelectionMode? = nil
     
     // MARK: - Configuration Constants
     
@@ -69,26 +79,17 @@ final class DragSelectionCoordinator: ObservableObject {
         
         let horizontalDistance = abs(translation.width)
         let verticalDistance = abs(translation.height)
-        
-        // Clear selection intent if horizontal movement dominates in edit mode
-        if isEditMode && horizontalDistance > Config.horizontalThreshold && 
-           horizontalDistance > verticalDistance * 0.7 {
-            return .selecting
-        }
-        
-        // Clear scroll intent if vertical movement dominates and not in edit mode
-        if !isEditMode && verticalDistance > Config.verticalScrollThreshold &&
-           verticalDistance > horizontalDistance * 1.5 {
+
+        // In edit mode, the caller attaches the drag to a narrow leading lane.
+        // In that case, we bias strongly toward selecting to avoid scroll conflicts.
+        if isEditMode { return .selecting }
+
+        // Otherwise prefer scrolling for vertical drag, selecting for horizontal.
+        if verticalDistance > Config.verticalScrollThreshold &&
+            verticalDistance > horizontalDistance * 1.5 {
             return .scrolling
         }
-        
-        // In edit mode, bias toward selection
-        if isEditMode {
-            return .selecting
-        }
-        
-        // Default to scrolling for vertical lists
-        return verticalDistance > horizontalDistance ? .scrolling : .selecting
+        return .selecting
     }
     
     // MARK: - Drag Handling
@@ -134,7 +135,7 @@ final class DragSelectionCoordinator: ObservableObject {
         )
     }
     
-    /// Initialize drag selection mode
+    /// Initialize drag selection mode and determine select/deselect behavior
     private func startDragSelection(
         at location: CGPoint,
         viewModel: MemoListViewModel,
@@ -143,15 +144,24 @@ final class DragSelectionCoordinator: ObservableObject {
         dragStartLocation = location
         isDragSelecting = true
         gestureHistory = [location]
-        
+
         // Calculate starting row index
         let startIndex = calculateRowIndex(for: location, rowHeight: rowHeight)
-        viewModel.dragStartIndex = startIndex
-        
-        // Play initial haptic
+        let clampedStart = max(0, min(startIndex, viewModel.memos.count - 1))
+        viewModel.dragStartIndex = clampedStart
+        viewModel.dragCurrentIndex = clampedStart
+        viewModel.isDragSelecting = true
+
+        // Determine drag mode based on start row state
+        let initiallySelected = viewModel.isIndexSelected(clampedStart)
+        dragMode = initiallySelected ? .deselect : .select
+        visitedIndices = [clampedStart]
+
+        // Apply initial state change
+        applySelection(at: clampedStart, in: viewModel)
+
+        // Haptic and accessibility
         HapticManager.shared.playSelection()
-        
-        // Announce for accessibility
         announceSelectionStart()
     }
     
@@ -171,18 +181,8 @@ final class DragSelectionCoordinator: ObservableObject {
         // Clamp to valid range
         let clampedIndex = max(0, min(currentIndex, viewModel.memos.count - 1))
         
-        // Handle fast drag interpolation
-        let interpolatedRange = interpolateSelection(
-            from: viewModel.dragCurrentIndex ?? viewModel.dragStartIndex ?? 0,
-            to: clampedIndex,
-            maxItems: viewModel.memos.count
-        )
-        
-        // Update selection with interpolated range
-        updateSelectionRange(
-            range: interpolatedRange,
-            viewModel: viewModel
-        )
+        // Visit each crossed row exactly once and apply current drag mode
+        updateSelectionPath(to: clampedIndex, viewModel: viewModel)
         
         // Update current index
         viewModel.dragCurrentIndex = clampedIndex
@@ -206,11 +206,7 @@ final class DragSelectionCoordinator: ObservableObject {
         viewModel.dragStartIndex = nil
         viewModel.dragCurrentIndex = nil
         
-        // Play completion haptic
-        HapticManager.shared.playSelection()
-        
-        // Announce completion for accessibility
-        announceSelectionComplete(count: viewModel.selectedCount)
+        // Haptic and announcements handled by caller
     }
     
     // MARK: - Helper Methods
@@ -241,36 +237,34 @@ final class DragSelectionCoordinator: ObservableObject {
         }
     }
     
-    /// Interpolate selection range for fast drags to prevent skipping rows
-    private func interpolateSelection(from startIndex: Int, to endIndex: Int, maxItems: Int) -> Range<Int> {
-        let clampedStart = max(0, min(startIndex, maxItems - 1))
-        let clampedEnd = max(0, min(endIndex, maxItems - 1))
-        
-        let lower = min(clampedStart, clampedEnd)
-        let upper = max(clampedStart, clampedEnd)
-        
-        return lower..<(upper + 1)
-    }
-    
-    /// Update selection range in view model with haptic feedback
-    private func updateSelectionRange(range: Range<Int>, viewModel: MemoListViewModel) {
-        let memosToSelect = Array(viewModel.memos[range])
-        let previousCount = viewModel.selectedCount
-        
-        // Update selection
-        withAnimation(.easeOut(duration: 0.1)) {
-            for memo in memosToSelect {
-                viewModel.selectedMemoIds.insert(memo.id)
+    /// Visit the path between the last index and the provided one, applying the drag mode once per index
+    private func updateSelectionPath(to newIndex: Int, viewModel: MemoListViewModel) {
+        guard let _ = dragMode else { return }
+        let lastIndex = viewModel.dragCurrentIndex ?? viewModel.dragStartIndex ?? newIndex
+        if newIndex == lastIndex { return }
+        let step = newIndex > lastIndex ? 1 : -1
+        var idx = lastIndex + step
+        while (step > 0 && idx <= newIndex) || (step < 0 && idx >= newIndex) {
+            if !visitedIndices.contains(idx) {
+                applySelection(at: idx, in: viewModel)
+                visitedIndices.insert(idx)
+                HapticManager.shared.playSelection()
             }
+            idx += step
         }
-        
-        // Provide haptic feedback if selection meaningfully changed
-        if hapticDebouncer.shouldFireHaptic(newCount: viewModel.selectedCount) {
-            HapticManager.shared.playSelection()
-        }
-        
-        // Update accessibility announcement
         announceSelectionUpdate(count: viewModel.selectedCount)
+    }
+
+    /// Apply selection/deselection at a specific index according to current drag mode
+    private func applySelection(at index: Int, in viewModel: MemoListViewModel) {
+        guard let dragMode else { return }
+        guard index >= 0 && index < viewModel.memos.count else { return }
+        switch dragMode {
+        case .select:
+            viewModel.setSelection(forIndex: index, selected: true)
+        case .deselect:
+            viewModel.setSelection(forIndex: index, selected: false)
+        }
     }
     
     /// Handle auto-scrolling when dragging near list edges
@@ -278,16 +272,13 @@ final class DragSelectionCoordinator: ObservableObject {
         let distanceFromTop = currentLocation.y - listBounds.minY
         let distanceFromBottom = listBounds.maxY - currentLocation.y
         
-        // Auto-scroll logic would go here
-        // This would require integration with ScrollView or List scrolling APIs
-        // For now, we'll track the need but implementation depends on the ScrollView setup
-        
+        // Publish desired direction for the view layer to act on
         if distanceFromTop < Config.edgeScrollThreshold {
-            // Should scroll up
-            requestScrollDirection(.up)
+            edgeScrollDirection = .up
         } else if distanceFromBottom < Config.edgeScrollThreshold {
-            // Should scroll down
-            requestScrollDirection(.down)
+            edgeScrollDirection = .down
+        } else {
+            edgeScrollDirection = nil
         }
     }
     
@@ -295,9 +286,21 @@ final class DragSelectionCoordinator: ObservableObject {
         case up, down
     }
     
-    private func requestScrollDirection(_ direction: ScrollDirection) {
-        // This would be implemented when integrating with ScrollViewReader
-        // For now, we just track the intent
+    private func requestScrollDirection(_ direction: ScrollDirection) { }
+
+    /// Advance selection one row in the given direction (used by auto-scroll)
+    func advanceSelection(direction: ScrollDirection, viewModel: MemoListViewModel) -> Int? {
+        let current = viewModel.dragCurrentIndex ?? viewModel.dragStartIndex ?? 0
+        var next = current + (direction == .down ? 1 : -1)
+        next = max(0, min(next, viewModel.memos.count - 1))
+        if next == current { return current }
+        if !visitedIndices.contains(next) {
+            applySelection(at: next, in: viewModel)
+            visitedIndices.insert(next)
+            HapticManager.shared.playSelection()
+        }
+        viewModel.dragCurrentIndex = next
+        return next
     }
 }
 
