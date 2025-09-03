@@ -129,7 +129,32 @@ struct MemoRowView: View {
         }
     }
     
-    // MARK: - Accent Line Component
+    // MARK: - Selection & Accent Components
+    
+    /// **Selection Indicator**
+    /// Shows selection state in edit mode
+    @ViewBuilder
+    private var selectionIndicator: some View {
+        Button(action: {
+            viewModel.toggleMemoSelection(memo)
+        }) {
+            Image(systemName: viewModel.isMemoSelected(memo) 
+                ? "checkmark.circle.fill" 
+                : "circle")
+                .foregroundColor(viewModel.isMemoSelected(memo)
+                    ? .semantic(.brandPrimary)
+                    : .semantic(.textSecondary))
+                .imageScale(.large)
+                .font(.title2)
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .buttonStyle(.plain)
+        .animation(.spring(response: 0.3), value: viewModel.isMemoSelected(memo))
+        .accessibilityLabel(viewModel.isMemoSelected(memo) 
+            ? "Selected \(memo.displayName)" 
+            : "Select \(memo.displayName)")
+        .accessibilityHint("Tap to toggle selection")
+    }
     
     /// **Accent Line View**
     /// Color-coded status indicator with animated pulse for in-progress states
@@ -199,6 +224,17 @@ struct MemoRowView: View {
             }
         }
         .padding(.vertical, Layout.verticalPadding)
+        .background(
+            // Selected state background highlight
+            viewModel.isEditMode && viewModel.isMemoSelected(memo)
+                ? Color.semantic(.brandPrimary).opacity(0.1)
+                : Color.clear,
+            in: RoundedRectangle(cornerRadius: 8)
+        )
+        .scaleEffect(
+            viewModel.isEditMode && viewModel.isMemoSelected(memo) ? 0.98 : 1.0
+        )
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.isMemoSelected(memo))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
         .accessibilityHint(AccessibilityStrings.rowHint)
@@ -209,6 +245,11 @@ struct MemoRowView: View {
     @ViewBuilder
     private var normalContent: some View {
         HStack(spacing: Layout.accentLineSpacing) {
+            // Selection indicator (only visible in edit mode)
+            if viewModel.isEditMode {
+                selectionIndicator
+            }
+            
             // Color-coded accent line
             accentLineView
             
@@ -223,6 +264,11 @@ struct MemoRowView: View {
     @ViewBuilder
     private var editingContent: some View {
         HStack(spacing: Layout.accentLineSpacing) {
+            // Selection indicator (only visible in edit mode)
+            if viewModel.isEditMode {
+                selectionIndicator
+            }
+            
             // Color-coded accent line
             accentLineView
             

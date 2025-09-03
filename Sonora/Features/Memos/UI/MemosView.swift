@@ -18,68 +18,98 @@ struct MemosView: View {
 
     var body: some View {
         NavigationStack(path: $viewModel.navigationPath) {
-            Group {
-                if viewModel.isEmpty {
-                    UnifiedStateView.noMemos()
-                    .accessibilityLabel("No memos yet. Start recording to see your audio memos here.")
-                } else {
-                    // MARK: - Memos List
-                    /// **Polished List Configuration**
-                    /// Optimized for readability, navigation, and modern iOS appearance
-                    List {
-                        ForEach(viewModel.memos) { memo in
-                            // MARK: Navigation Row Configuration
-                            let separatorConfig = separatorConfiguration(for: memo)
-                            NavigationLink(value: memo) {
-                                MemoRowView(memo: memo, viewModel: viewModel)
-                            }
-                            .buttonStyle(.plain)
-                            // **Row Visual Configuration**
-                            .listRowSeparator(separatorConfig.visibility, edges: separatorConfig.edges)
-                            .listRowInsets(MemoListConstants.rowInsets)
-                            .memoRowBackground(colorScheme)
-                            // MARK: - Swipe Actions Configuration
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                deleteButton(for: memo)
-                                contextualTranscriptionActions(for: memo)
-                            }
-                        }
-                        // **Bulk Operations**
-                        .onDelete { offsets in
-                            HapticManager.shared.playDeletionFeedback()
-                            viewModel.deleteMemos(at: offsets)
-                        }
+            mainContent
+                .navigationTitle("Memos")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        MemoListTopBarView(
+                            isEmpty: viewModel.isEmpty,
+                            isEditMode: viewModel.isEditMode,
+                            onToggleEdit: { viewModel.toggleEditMode() }
+                        )
                     }
-                    // **List Styling Configuration**
-                    .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
-                    .listStyle(MemoListConstants.listStyle) // Modern grouped appearance
-                    .scrollContentBackground(.hidden) // Clean background
-                    .background(MemoListColors.containerBackground(for: colorScheme)) // Unified color management
-                    // Add a small top inset so first row doesn't touch nav bar hairline
-                    .safeAreaInset(edge: .top) {
-                        Color.clear.frame(height: 8)
+                }
+                .navigationDestination(for: Memo.self) { memo in
+                    MemoDetailView(memo: memo)
+                }
+                .errorAlert($viewModel.error) { viewModel.retryLastOperation() }
+                .loadingState(isLoading: viewModel.isLoading, message: "Loading memos...")
+                .onReceive(NotificationCenter.default.publisher(for: .openMemoByID)) { note in
+                    guard let idStr = note.userInfo?["memoId"] as? String, let id = UUID(uuidString: idStr) else { return }
+                    if let memo = DIContainer.shared.memoRepository().getMemo(by: id) {
+                        viewModel.navigationPath.append(memo)
                     }
-                    .refreshable { viewModel.refreshMemos() } // Pull-to-refresh support
                 }
-            }
-            .navigationTitle("Memos")
-            .navigationDestination(for: Memo.self) { memo in
-                MemoDetailView(memo: memo)
-            }
-            .errorAlert($viewModel.error) {
-                viewModel.retryLastOperation()
-            }
-            .loadingState(
-                isLoading: viewModel.isLoading,
-                message: "Loading memos..."
-            )
-            .onReceive(NotificationCenter.default.publisher(for: .openMemoByID)) { note in
-                guard let idStr = note.userInfo?["memoId"] as? String, let id = UUID(uuidString: idStr) else { return }
-                if let memo = DIContainer.shared.memoRepository().getMemo(by: id) {
-                    viewModel.navigationPath.append(memo)
-                }
+        }
+        .overlay(alignment: .bottom) {
+            // Bottom delete bar (only visible when in edit mode with selections)
+            if viewModel.isEditMode && viewModel.hasSelection {
+                MemoBottomDeleteBar(selectedCount: viewModel.selectedCount) { viewModel.deleteSelectedMemos() }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.spring(response: 0.3), value: viewModel.hasSelection)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            // Drag selection indicator
+            if viewModel.isDragSelecting {
+                DragSelectionIndicatorView()
+                    .transition(.scale.combined(with: .opacity))
+                    .animation(.spring(response: 0.2), value: viewModel.isDragSelecting)
+            }
+        }
+    }
+
+    // MARK: - Composed Content
+    @ViewBuilder
+    private var mainContent: some View {
+        if viewModel.isEmpty {
+            MemoEmptyStateView()
+        } else {
+            memoListView
+        }
+    }
+
+    @ViewBuilder
+    private var memoListView: some View {
+        List {
+            ForEach(viewModel.memos) { memo in
+                let separatorConfig = separatorConfiguration(for: memo)
+                if viewModel.isEditMode {
+                    MemoRowView(memo: memo, viewModel: viewModel)
+                        .contentShape(Rectangle())
+                        .onTapGesture { viewModel.toggleMemoSelection(memo) }
+                        .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            MemoSwipeActionsView(memo: memo, viewModel: viewModel)
+                        }
+                } else {
+                    NavigationLink(value: memo) { MemoRowView(memo: memo, viewModel: viewModel) }
+                        .buttonStyle(.plain)
+                        .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            MemoSwipeActionsView(memo: memo, viewModel: viewModel)
+                        }
+                }
+            }
+            .onDelete { offsets in
+                HapticManager.shared.playDeletionFeedback()
+                viewModel.deleteMemos(at: offsets)
+            }
+        }
+        .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
+        .listStyle(MemoListConstants.listStyle)
+        .scrollContentBackground(.hidden)
+        .background(MemoListColors.containerBackground(for: colorScheme))
+        .simultaneousGesture(selectionDragGesture)
+        .safeAreaInset(edge: .top) { Color.clear.frame(height: 8) }
+        .refreshable { viewModel.refreshMemos() }
+    }
+
+    private var selectionDragGesture: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onChanged { value in dragSelectionChanged(value: value) }
+            .onEnded { _ in dragSelectionEnded() }
     }
     
     /// Position-specific separator configuration for clean design
@@ -109,69 +139,88 @@ extension MemosView {
     /// - Visual hierarchy: Primary action (transcribe) vs secondary (delete)
     /// - Accessibility: Full VoiceOver support with descriptive labels
     @ViewBuilder
-    private func contextualTranscriptionActions(for memo: Memo) -> some View {
-        let transcriptionState = viewModel.getTranscriptionState(for: memo)
-        
-        // **Transcription Actions**
-        // Show transcription-related actions based on current state
-        if transcriptionState.isNotStarted {
-            transcribeButton(for: memo)
-        } else if transcriptionState.isFailed {
-            retryTranscriptionButton(for: memo)
-        }
-    }
+    private func contextualTranscriptionActions(for memo: Memo) -> some View { EmptyView() }
     
     // MARK: Transcription Actions
     
     /// **Transcribe Button**
     /// Primary action for unprocessed memos
     @ViewBuilder
-    private func transcribeButton(for memo: Memo) -> some View {
-        Button {
-            HapticManager.shared.playSelection()
-            viewModel.startTranscription(for: memo)
-        } label: {
-            Label(MemoListConstants.SwipeActions.transcribeTitle, 
-                  systemImage: MemoListConstants.SwipeActions.transcribeIcon)
-        }
-        .tint(.semantic(.brandPrimary))
-        .accessibilityLabel("Transcribe \(memo.displayName)")
-        .accessibilityHint(MemoListConstants.AccessibilityLabels.transcribeHint)
-    }
+    private func transcribeButton(for memo: Memo) -> some View { EmptyView() }
     
     /// **Retry Transcription Button**
     /// Recovery action for failed transcriptions
     @ViewBuilder
-    private func retryTranscriptionButton(for memo: Memo) -> some View {
-        Button {
-            HapticManager.shared.playSelection()
-            viewModel.retryTranscription(for: memo)
-        } label: {
-            Label(MemoListConstants.SwipeActions.retryTitle,
-                  systemImage: MemoListConstants.SwipeActions.retryIcon)
-        }
-        .tint(.semantic(.warning))
-        .accessibilityLabel("Retry transcription for \(memo.displayName)")
-        .accessibilityHint(MemoListConstants.AccessibilityLabels.retryHint)
-    }
+    private func retryTranscriptionButton(for memo: Memo) -> some View { EmptyView() }
     
     // MARK: Destructive Actions
     
     /// **Delete Button**
     /// Destructive action with appropriate styling and feedback
     @ViewBuilder
-    private func deleteButton(for memo: Memo) -> some View {
-        Button(role: .destructive) {
-            HapticManager.shared.playDeletionFeedback()
-            if let idx = viewModel.memos.firstIndex(where: { $0.id == memo.id }) {
-                viewModel.deleteMemo(at: idx)
-            }
-        } label: {
-            Label(MemoListConstants.SwipeActions.deleteTitle,
-                  systemImage: MemoListConstants.SwipeActions.deleteIcon)
+    private func deleteButton(for memo: Memo) -> some View { EmptyView() }
+    
+    // MARK: - Bottom Delete Bar
+    
+    /// Bottom delete bar for bulk deletion
+    @ViewBuilder
+    private var bottomDeleteBar: some View { EmptyView() }
+    
+    // MARK: - Drag Selection Indicator
+    
+    /// Visual indicator during drag selection
+    @ViewBuilder
+    private var dragSelectionIndicator: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "hand.draw")
+                .font(.title2)
+                .foregroundColor(.semantic(.brandPrimary))
+            
+            Text("Drag to select")
+                .font(.caption)
+                .foregroundColor(.semantic(.textSecondary))
         }
-        .accessibilityLabel("Delete \(memo.displayName)")
-        .accessibilityHint(MemoListConstants.AccessibilityLabels.deleteHint)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.thinMaterial, in: Capsule())
+        .shadow(radius: 4, y: 2)
+        .padding(.top, 8)
+        .padding(.trailing, 16)
+    }
+    
+    // MARK: - Drag Selection Methods
+    
+    /// Handle drag selection gesture changes
+    private func dragSelectionChanged(value: DragGesture.Value) {
+        guard viewModel.isEditMode else { return }
+        
+        // Calculate which row we're over based on drag location
+        // Note: This is an approximation - actual row height may vary
+        let approximateRowHeight: CGFloat = 80
+        let topInset: CGFloat = 8 // From safeAreaInset
+        let adjustedY = value.location.y - topInset
+        let currentIndex = max(0, Int(adjustedY / approximateRowHeight))
+        
+        // Initialize drag selection on first movement
+        if viewModel.dragStartIndex == nil {
+            viewModel.dragStartIndex = currentIndex
+            viewModel.isDragSelecting = true
+        }
+        
+        // Update selection range
+        viewModel.updateDragSelection(to: currentIndex)
+    }
+    
+    /// Handle end of drag selection gesture
+    private func dragSelectionEnded() {
+        guard viewModel.isEditMode else { return }
+        
+        viewModel.isDragSelecting = false
+        viewModel.dragStartIndex = nil
+        viewModel.dragCurrentIndex = nil
+        
+        // Play completion haptic
+        HapticManager.shared.playSelection()
     }
 }
 

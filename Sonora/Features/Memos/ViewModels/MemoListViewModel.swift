@@ -43,6 +43,13 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     // Force SwiftUI refresh when needed (not read by UI directly)
     @Published private var refreshTrigger: Int = 0
     
+    // MARK: - Multi-Select Edit Mode
+    @Published var isEditMode: Bool = false
+    @Published var selectedMemoIds: Set<UUID> = []
+    @Published var isDragSelecting: Bool = false
+    @Published var dragStartIndex: Int? = nil
+    @Published var dragCurrentIndex: Int? = nil
+    
     // MARK: - Computed Properties
     
     /// Whether the memo list is empty
@@ -63,6 +70,23 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     /// Empty state icon name
     var emptyStateIcon: String {
         "mic.slash"
+    }
+    
+    // MARK: - Multi-Select Computed Properties
+    
+    /// Whether any memos are selected
+    var hasSelection: Bool {
+        !selectedMemoIds.isEmpty
+    }
+    
+    /// Number of selected memos
+    var selectedCount: Int {
+        selectedMemoIds.count
+    }
+    
+    /// Whether delete action can be performed
+    var canDelete: Bool {
+        hasSelection
     }
     
     // MARK: - Initialization
@@ -650,6 +674,144 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     
     func onViewDisappear() {
         print("📱 MemoListViewModel: View disappeared")
+    }
+    
+    // MARK: - Multi-Select Methods
+    
+    /// Toggle edit mode on/off
+    func toggleEditMode() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isEditMode.toggle()
+            
+            // Clear selection when exiting edit mode
+            if !isEditMode {
+                selectedMemoIds.removeAll()
+                isDragSelecting = false
+                dragStartIndex = nil
+                dragCurrentIndex = nil
+            }
+        }
+        
+        HapticManager.shared.playSelection()
+        logger.debug("Edit mode toggled: \(isEditMode ? "ON" : "OFF")", category: .viewModel, context: LogContext())
+    }
+    
+    /// Select a specific memo
+    func selectMemo(_ memo: Memo) {
+        guard isEditMode else { return }
+        
+        withAnimation(Animation.easeInOut(duration: 0.2)) {
+            selectedMemoIds.insert(memo.id)
+        }
+        
+        HapticManager.shared.playSelection()
+        logger.debug("Selected memo: \(memo.filename)", category: .viewModel, context: LogContext())
+    }
+    
+    /// Deselect a specific memo
+    func deselectMemo(_ memo: Memo) {
+        guard isEditMode else { return }
+        
+        withAnimation(Animation.easeInOut(duration: 0.2)) {
+            selectedMemoIds.remove(memo.id)
+        }
+        
+        HapticManager.shared.playSelection()
+    }
+    
+    /// Toggle selection state of a memo
+    func toggleMemoSelection(_ memo: Memo) {
+        guard isEditMode else { return }
+        
+        if selectedMemoIds.contains(memo.id) {
+            deselectMemo(memo)
+        } else {
+            selectMemo(memo)
+        }
+    }
+    
+    /// Select all memos
+    func selectAll() {
+        guard isEditMode else { return }
+        
+        withAnimation(Animation.easeInOut(duration: 0.2)) {
+            selectedMemoIds = Set(memos.map { $0.id })
+        }
+        
+        HapticManager.shared.playSelection()
+        logger.debug("Selected all \(memos.count) memos", category: .viewModel, context: LogContext())
+    }
+    
+    /// Deselect all memos
+    func deselectAll() {
+        guard isEditMode else { return }
+        
+        withAnimation(.spring(response: 0.3)) {
+            selectedMemoIds.removeAll()
+        }
+        
+        HapticManager.shared.playSelection()
+        logger.debug("Deselected all memos", category: .viewModel, context: LogContext())
+    }
+    
+    /// Delete selected memos with confirmation
+    func deleteSelectedMemos() {
+        guard isEditMode && hasSelection else { return }
+        
+        let memosToDelete = memos.filter { selectedMemoIds.contains($0.id) }
+        let count = memosToDelete.count
+        
+        logger.debug("Deleting \(count) selected memos", category: .viewModel, context: LogContext())
+        
+        Task {
+            for memo in memosToDelete {
+                do {
+                    try await deleteMemoUseCase.execute(memo: memo)
+                } catch {
+                    await MainActor.run {
+                        self.error = ErrorMapping.mapError(error)
+                        return
+                    }
+                }
+            }
+            
+            await MainActor.run {
+                // Clear selection and exit edit mode after successful deletion
+                self.selectedMemoIds.removeAll()
+                self.isEditMode = false
+                HapticManager.shared.playDeletionFeedback()
+            }
+        }
+    }
+    
+    /// Update drag selection to a specific index
+    func updateDragSelection(to index: Int) {
+        guard isEditMode && isDragSelecting else { return }
+        guard index >= 0 && index < memos.count else { return }
+        
+        dragCurrentIndex = index
+        
+        // Select range from start to current
+        if let startIndex = dragStartIndex {
+            let range = min(startIndex, index)...max(startIndex, index)
+            let memosInRange = Array(memos[range])
+            
+            withAnimation(.easeOut(duration: 0.1)) {
+                for memo in memosInRange {
+                    selectedMemoIds.insert(memo.id)
+                }
+            }
+            
+            // Provide light haptic feedback during drag
+            if range.count > 1 {
+                HapticManager.shared.playSelection()
+            }
+        }
+    }
+    
+    /// Check if a memo is selected
+    func isMemoSelected(_ memo: Memo) -> Bool {
+        return selectedMemoIds.contains(memo.id)
     }
 }
 

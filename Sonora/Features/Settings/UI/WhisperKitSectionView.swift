@@ -115,30 +115,35 @@ struct WhisperKitSectionView: View {
                 .accessibilityAddTraits(.isStaticText)
 
                 // Health check + Diagnostics + Advanced + Strict local toggle
-                HStack {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
                     Button(action: verifyLocalSetup) {
                         Label("Verify Local Setup", systemImage: "stethoscope")
                     }
                     .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                     Button(action: { showingModelDiagnostics = true }) {
                         Label("Diagnostics", systemImage: "wrench.and.screwdriver")
                     }
                     .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                     Button(action: { showingAdvanced = true }) {
                         Label("Advanced", systemImage: "gearshape")
                     }
                     .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                    Spacer()
-
-                    Toggle("Disable Cloud Fallback", isOn: Binding(
-                        get: { AppConfiguration.shared.strictLocalWhisper },
-                        set: { AppConfiguration.shared.strictLocalWhisper = $0 }
-                    ))
-                    .toggleStyle(SwitchToggleStyle(tint: .semantic(.brandPrimary)))
-                    .font(.caption)
+                    HStack {
+                        Toggle("Disable Cloud Fallback", isOn: Binding(
+                            get: { AppConfiguration.shared.strictLocalWhisper },
+                            set: { AppConfiguration.shared.strictLocalWhisper = $0 }
+                        ))
+                        .toggleStyle(SwitchToggleStyle(tint: .semantic(.brandPrimary)))
+                        .font(.caption)
+                        
+                        Spacer()
+                    }
                 }
             }
         }
