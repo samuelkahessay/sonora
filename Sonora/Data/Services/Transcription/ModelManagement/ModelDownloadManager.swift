@@ -205,21 +205,33 @@ final class ModelDownloadManager: ObservableObject {
     
     /// Periodically checks for download timeouts
     func checkDownloadHealth() {
+        var staleIds: [String] = []
+        var messages: [String: String] = [:]
         for (modelId, metadata) in downloadMetadata {
             if metadata.state == .downloading {
                 let timeStuck = Date().timeIntervalSince(metadata.lastProgressUpdate)
                 if timeStuck > 3 * 60 { // 3 minutes without progress
-                    logger.warning("Download timeout detected for \(modelId), marking as stale")
-                    downloadStates[modelId] = .stale
-                    downloadErrors[modelId] = "Download timeout (no progress for \(Int(timeStuck/60)) minutes)"
+                    staleIds.append(modelId)
+                    messages[modelId] = "Download timeout (no progress for \(Int(timeStuck/60)) minutes)"
                 }
+            }
+        }
+        if !staleIds.isEmpty {
+            logger.warning("Download timeout detected for: \(staleIds)")
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                for id in staleIds { self.downloadStates[id] = .stale }
+                for (id, msg) in messages { self.downloadErrors[id] = msg }
             }
         }
     }
 
-    /// Reconcile persisted states with actual installed files
+    /// Reconcile persisted states with actual installed files.
+    /// Schedules state mutations to the next runloop tick to avoid publishing during view updates.
     func reconcileInstallStates() {
-        loadDownloadStates()
+        DispatchQueue.main.async { [weak self] in
+            self?.loadDownloadStates()
+        }
     }
     
     /// Starts periodic health checking
@@ -235,18 +247,26 @@ final class ModelDownloadManager: ObservableObject {
     private func cleanupStaleDownloads() {
         let staleThreshold: TimeInterval = 5 * 60 // 5 minutes
         var cleanedCount = 0
-        
+        var resetIds: [String] = []
         for (modelId, metadata) in downloadMetadata {
             if metadata.state == .downloading {
                 let timeSinceStart = Date().timeIntervalSince(metadata.startedAt)
                 if timeSinceStart > staleThreshold {
                     logger.info("Cleaning up stale download for \(modelId) (started \(Int(timeSinceStart/60)) minutes ago)")
-                    downloadStates[modelId] = .notDownloaded
-                    downloadProgress.removeValue(forKey: modelId)
-                    downloadErrors.removeValue(forKey: modelId)
-                    downloadMetadata.removeValue(forKey: modelId)
-                    clearDownloadState(for: modelId)
+                    resetIds.append(modelId)
                     cleanedCount += 1
+                }
+            }
+        }
+        if !resetIds.isEmpty {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                for id in resetIds {
+                    self.downloadStates[id] = .notDownloaded
+                    self.downloadProgress.removeValue(forKey: id)
+                    self.downloadErrors.removeValue(forKey: id)
+                    self.downloadMetadata.removeValue(forKey: id)
+                    self.clearDownloadState(for: id)
                 }
             }
         }
@@ -288,6 +308,7 @@ final class ModelDownloadManager: ObservableObject {
                     downloadErrors.removeValue(forKey: id)
                     let key = downloadStateKey(for: id)
                     userDefaults.set(ModelDownloadState.notDownloaded.rawValue, forKey: key)
+                    self.removeDownloadMetadata(for: id)
                 }
                 cleaned.append(id)
             }
@@ -523,6 +544,12 @@ final class ModelDownloadManager: ObservableObject {
             userDefaults.set(data, forKey: key)
             logger.debug("Saved download metadata for \(metadata.modelId)")
         }
+    }
+
+    private func removeDownloadMetadata(for modelId: String) {
+        downloadMetadata.removeValue(forKey: modelId)
+        userDefaults.removeObject(forKey: downloadMetadataKey(for: modelId))
+        logger.debug("Removed download metadata for \(modelId)")
     }
     
     private func clearDownloadState(for modelId: String) {

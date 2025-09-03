@@ -9,9 +9,12 @@ struct WhisperKitDiagnosticsView: View {
     @State private var mlmodelcItems: [String] = []
     @State private var tokenizerItems: [String] = []
     @State private var installedIds: [String] = []
+    @State private var invalidIds: [String] = []
+    @State private var tokenizerMissingIds: [String] = []
     @State private var healthStatus: String? = nil
     @State private var healthOK: Bool? = nil
     @State private var isRunningHealthCheck = false
+    @State private var isRepairingAll = false
 
     private let modelProvider = DIContainer.shared.whisperKitModelProvider()
     private let downloadManager = DIContainer.shared.modelDownloadManager()
@@ -23,6 +26,7 @@ struct WhisperKitDiagnosticsView: View {
                     header
                     diagnosticsCard
                     actions
+                    modelsSection
                 }
                 .padding(.horizontal)
                 .padding(.top, Spacing.lg)
@@ -155,29 +159,25 @@ struct WhisperKitDiagnosticsView: View {
     }
 
     @ViewBuilder private var actions: some View {
-        HStack {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
             Button(action: runHealthCheck) {
                 if isRunningHealthCheck {
-                    ProgressView().progressViewStyle(.circular)
+                    HStack { ProgressView().progressViewStyle(.circular); Text("Running Health Check...") }
                 } else {
                     Label("Run Health Check", systemImage: "stethoscope")
                 }
             }
             .buttonStyle(.bordered)
 
-            Spacer()
-
             Button(role: .destructive, action: repairSelected) {
                 Label("Repair Selected Model", systemImage: "wrench.and.screwdriver")
             }
             .buttonStyle(.bordered)
-        }
-        HStack {
+
             Button(action: refresh) {
                 Label("Rescan Folders", systemImage: "arrow.clockwise")
             }
             .buttonStyle(.bordered)
-            Spacer()
         }
     }
 
@@ -188,6 +188,8 @@ struct WhisperKitDiagnosticsView: View {
         folderItems = []
         mlmodelcItems = []
         tokenizerItems = []
+        invalidIds = installedIds.filter { !modelProvider.isModelValid(id: $0) }
+        tokenizerMissingIds = []
         if let folder = resolvedFolder {
             if let items = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
                 folderItems = items.map { $0.lastPathComponent }
@@ -202,6 +204,21 @@ struct WhisperKitDiagnosticsView: View {
                         tokenizerItems.append(n)
                     }
                 }
+            }
+        }
+        // Detect tokenizer-missing ids (quick heuristic per installed id)
+        for id in installedIds {
+            if let folder = modelProvider.installedModelFolder(id: id) {
+                var hasTok = false
+                if let en = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+                    while let obj = en.nextObject() as? URL {
+                        let l = obj.lastPathComponent.lowercased()
+                        if l == "tokenizer.json" || l == "tokenizer.model" || l == "vocabulary.json" || l.contains("merges") || l.contains("vocab") || l.contains("tokenizer") {
+                            hasTok = true; break
+                        }
+                    }
+                }
+                if !hasTok { tokenizerMissingIds.append(id) }
             }
         }
     }
@@ -221,6 +238,69 @@ struct WhisperKitDiagnosticsView: View {
 
     private func repairSelected() {
         downloadManager.repairModel(selectedModelId)
+    }
+
+    @ViewBuilder private var modelsSection: some View {
+        SettingsCard {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack {
+                    Text("Installed Models (") + Text("\(installedIds.count)") + Text(")")
+                        .font(.headline)
+                    Spacer()
+                    Button(action: repairAll) {
+                        if isRepairingAll { ProgressView().progressViewStyle(.circular) } else { Label("Repair All", systemImage: "arrow.triangle.2.circlepath") }
+                    }
+                    .buttonStyle(.bordered)
+                }
+                ForEach(installedIds, id: \.self) { id in
+                    HStack {
+                        Text(id)
+                            .font(.subheadline)
+                            .foregroundColor(.semantic(.textPrimary))
+                        if invalidIds.contains(id) {
+                            Text(tokenizerMissingIds.contains(id) ? "Tokenizer missing" : "Invalid")
+                                .font(.caption2)
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(Color.semantic(.warning).opacity(0.15))
+                                .foregroundColor(.semantic(.warning)).cornerRadius(4)
+                            Spacer()
+                            Button(action: { fixTokenizer(id) }) { Label("Fix Tokenizer", systemImage: "wrench") }
+                                .buttonStyle(.bordered)
+                            Button(role: .destructive, action: { downloadManager.repairModel(id) }) { Label("Repair", systemImage: "arrow.triangle.2.circlepath") }
+                                .buttonStyle(.bordered)
+                        } else {
+                            Text("Healthy").font(.caption2).foregroundColor(.semantic(.success))
+                            Spacer()
+                        }
+                    }
+                }
+                // Telemetry
+                let m = TokenizerFetcher.metrics
+                HStack(spacing: 12) {
+                    Text("Tokenizer fetch: argmax=\(m.successArgmax) openai=\(m.successOpenAI) failures=\(m.failures)")
+                        .font(.caption2)
+                        .foregroundColor(.semantic(.textSecondary))
+                }
+            }
+        }
+    }
+
+    private func fixTokenizer(_ id: String) {
+        Task { @MainActor in
+            guard let folder = modelProvider.installedModelFolder(id: id) else { return }
+            let ok = await TokenizerFetcher().fetch(for: id, into: folder)
+            if ok { refresh() }
+        }
+    }
+
+    private func repairAll() {
+        isRepairingAll = true
+        Task { @MainActor in
+            for id in installedIds where !modelProvider.isModelValid(id: id) {
+                downloadManager.repairModel(id)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { isRepairingAll = false }
+        }
     }
 }
 

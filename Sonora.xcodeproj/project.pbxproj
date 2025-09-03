@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0A633F682E66B8B600E6AB88 /* whisperkit-cli in Frameworks */ = {isa = PBXBuildFile; productRef = 0A633F672E66B8B600E6AB88 /* whisperkit-cli */; };
+		0A633FA42E68BD9600E6AB88 /* Transformers in Frameworks */ = {isa = PBXBuildFile; productRef = 0A633FA32E68BD9600E6AB88 /* Transformers */; };
 		0A875D9D2E600B7100245D4A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9C2E600B7100245D4A /* WidgetKit.framework */; };
 		0A875D9F2E600B7100245D4A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9E2E600B7100245D4A /* SwiftUI.framework */; };
 		0A875DAC2E600B7300245D4A /* SonoraLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0A875D9A2E600B7100245D4A /* SonoraLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -132,7 +132,7 @@
 			files = (
 				0AA6FA0D2E6370F000C8BF7A /* WhisperKit in Frameworks */,
 				0AA6FA102E63710600C8BF7A /* ZIPFoundation in Frameworks */,
-				0A633F682E66B8B600E6AB88 /* whisperkit-cli in Frameworks */,
+				0A633FA42E68BD9600E6AB88 /* Transformers in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,7 +219,7 @@
 			packageProductDependencies = (
 				0AA6FA0C2E6370F000C8BF7A /* WhisperKit */,
 				0AA6FA0F2E63710600C8BF7A /* ZIPFoundation */,
-				0A633F672E66B8B600E6AB88 /* whisperkit-cli */,
+				0A633FA32E68BD9600E6AB88 /* Transformers */,
 			);
 			productName = Sonora;
 			productReference = 0A39740A2E5A6CA400F27D16 /* Sonora.app */;
@@ -331,6 +331,7 @@
 			packageReferences = (
 				0AA6FA0B2E6370F000C8BF7A /* XCRemoteSwiftPackageReference "WhisperKit" */,
 				0AA6FA0E2E63710600C8BF7A /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+				0A633FA22E68BD9600E6AB88 /* XCRemoteSwiftPackageReference "swift-transformers" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0A39740B2E5A6CA400F27D16 /* Products */;
@@ -560,11 +561,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Sonora/Sonora.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 9XWM5T8A87;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Sonora/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Sonora;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs access to the microphone to record audio memos.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
@@ -598,11 +601,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Sonora/Sonora.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 9XWM5T8A87;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Sonora/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Sonora;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs access to the microphone to record audio memos.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
@@ -708,7 +713,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = SonoraLiveActivityExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 9XWM5T8A87;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SonoraLiveActivity/Info.plist;
@@ -737,7 +742,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = SonoraLiveActivityExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 9XWM5T8A87;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SonoraLiveActivity/Info.plist;
@@ -810,12 +815,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		0A633FA22E68BD9600E6AB88 /* XCRemoteSwiftPackageReference "swift-transformers" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-transformers.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.1.17;
+			};
+		};
 		0AA6FA0B2E6370F000C8BF7A /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/argmaxinc/WhisperKit";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = exactVersion;
+				version = 0.13.1;
 			};
 		};
 		0AA6FA0E2E63710600C8BF7A /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
@@ -829,10 +842,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		0A633F672E66B8B600E6AB88 /* whisperkit-cli */ = {
+		0A633FA32E68BD9600E6AB88 /* Transformers */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 0AA6FA0B2E6370F000C8BF7A /* XCRemoteSwiftPackageReference "WhisperKit" */;
-			productName = "whisperkit-cli";
+			package = 0A633FA22E68BD9600E6AB88 /* XCRemoteSwiftPackageReference "swift-transformers" */;
+			productName = Transformers;
 		};
 		0AA6FA0C2E6370F000C8BF7A /* WhisperKit */ = {
 			isa = XCSwiftPackageProductDependency;

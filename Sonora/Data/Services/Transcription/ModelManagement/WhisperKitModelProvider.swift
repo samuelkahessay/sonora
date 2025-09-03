@@ -175,6 +175,10 @@ final class WhisperKitModelProvider {
             try? fm.createDirectory(at: hfBaseCaches, withIntermediateDirectories: true)
             try? fm.createDirectory(at: hfAnalyticsCaches, withIntermediateDirectories: true)
 
+            // Also ensure per-model folder exists to avoid CFNetwork move/rename failures
+            let modelDir = hfModelsDocs.appendingPathComponent(id, isDirectory: true)
+            try? fm.createDirectory(at: modelDir, withIntermediateDirectories: true)
+
             var downloadedFolder: URL? = nil
             if AppConfiguration.shared.whisperBackgroundDownloads {
                 logger.info("Using background download session for Whisper model: \(id)")
@@ -216,7 +220,16 @@ final class WhisperKitModelProvider {
                 }
             }
 
-            guard validateModelAtPath(downloadedFolder) else {
+            var eval = evaluateModelAtPath(downloadedFolder)
+            if !eval.hasTokenizerAssets && eval.hasCompiled {
+                // Attempt to fetch tokenizers from canonical sources
+                let fetcher = TokenizerFetcher()
+                let ok = await fetcher.fetch(for: id, into: downloadedFolder)
+                if ok {
+                    eval = evaluateModelAtPath(downloadedFolder)
+                }
+            }
+            guard eval.hasCompiled && eval.hasTokenizerAssets else {
                 throw ModelDownloadError.storageError("Model validation failed at \(downloadedFolder.path)")
             }
             // Persist the exact folder path for future resolution
@@ -241,8 +254,19 @@ final class WhisperKitModelProvider {
     
     // Validate the actual download path returned by WhisperKit
     private func validateModelAtPath(_ path: URL) -> Bool {
+        let eval = evaluateModelAtPath(path)
+        if !eval.hasCompiled {
+            logger.warning("WhisperKitModelProvider: No compiled .mlmodelc found under \(path.path)")
+        }
+        if !eval.hasTokenizerAssets {
+            logger.warning("WhisperKitModelProvider: No tokenizer assets detected under \(path.lastPathComponent)")
+        }
+        return eval.hasCompiled && eval.hasTokenizerAssets
+    }
+
+    private func evaluateModelAtPath(_ path: URL) -> (hasCompiled: Bool, hasTokenizerAssets: Bool) {
         var isDir: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: path.path, isDirectory: &isDir), isDir.boolValue else { return false }
+        guard FileManager.default.fileExists(atPath: path.path, isDirectory: &isDir), isDir.boolValue else { return (false, false) }
         // Scan recursively (shallow) for compiled models and tokenizer assets
         var hasCompiled = false
         var hasTokenizerAssets = false
@@ -257,13 +281,7 @@ final class WhisperKitModelProvider {
             if name.contains("tokenizer") { hasTokenizerAssets = true }
             if hasCompiled && hasTokenizerAssets { break }
         }
-        if !hasCompiled {
-            logger.warning("WhisperKitModelProvider: No compiled .mlmodelc found under \(path.path)")
-        }
-        if !hasTokenizerAssets {
-            logger.warning("WhisperKitModelProvider: No tokenizer assets detected under \(path.lastPathComponent)")
-        }
-        return hasCompiled && hasTokenizerAssets
+        return (hasCompiled, hasTokenizerAssets)
     }
 
     /// Clear persisted folder mapping for a model id (used when folder becomes invalid/stale)
