@@ -88,20 +88,19 @@ struct MemosView: View {
                             viewModel: viewModel,
                             isSelected: viewModel.isMemoSelected(memo)
                         )
-                        .background(
-                        // Measure row height using the first visible row
-                        viewModel.memos.first?.id == memo.id ? GeometryReader { geometry in
-                            Color.clear.onAppear {
-                                viewModel.updateRowHeight(geometry.size.height)
-                            }
-                        } : nil
-                        )
+                        .reportRowFrame(id: memo.id, inNamedCoordinateSpace: "memoList")
                 
                     if viewModel.isEditMode {
                         rowContent
                             .contentShape(Rectangle())
                             .onTapGesture { viewModel.toggleMemoSelection(memo) }
                             .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
+                            .listRowBackground(
+                                SelectedRowBackground(
+                                    selected: viewModel.isMemoSelected(memo),
+                                    colorScheme: colorScheme
+                                )
+                            )
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 MemoSwipeActionsView(memo: memo, viewModel: viewModel)
                             }
@@ -109,6 +108,12 @@ struct MemosView: View {
                         NavigationLink(value: memo) { rowContent }
                             .buttonStyle(.plain)
                             .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
+                            .listRowBackground(
+                                SelectedRowBackground(
+                                    selected: false,
+                                    colorScheme: colorScheme
+                                )
+                            )
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 MemoSwipeActionsView(memo: memo, viewModel: viewModel)
                             }
@@ -122,17 +127,39 @@ struct MemosView: View {
             .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
             .listStyle(MemoListConstants.listStyle)
             .scrollContentBackground(.hidden)
+            .scrollDisabled(dragCoordinator.isDragSelecting)
             .background(MemoListColors.containerBackground(for: colorScheme))
             .coordinateSpace(name: "memoList")
             .safeAreaInset(edge: .top) { Color.clear.frame(height: 8) }
-            .refreshable { viewModel.refreshMemos() }
+            .conditionalRefreshable(!viewModel.isEditMode) {
+                await MainActor.run { viewModel.refreshMemos() }
+            }
+            .onPreferenceChange(RowFramesPreferenceKey.self) { frames in
+                dragCoordinator.resolveIndex = { point in
+                    // Prefer frame containment
+                    if let idx = viewModel.memos.firstIndex(where: { memo in
+                        if let frame = frames[memo.id] { return frame.contains(point) }
+                        return false
+                    }) { return idx }
+                    // Fallback to nearest midY
+                    var bestIndex: Int? = nil
+                    var bestDistance = CGFloat.greatestFiniteMagnitude
+                    for (i, memo) in viewModel.memos.enumerated() {
+                        if let frame = frames[memo.id] {
+                            let d = abs(frame.midY - point.y)
+                            if d < bestDistance { bestDistance = d; bestIndex = i }
+                        }
+                    }
+                    return bestIndex
+                }
+            }
             // Leading selection lane overlay to capture drag selection like Apple apps
             .overlay(alignment: .leading) {
                 if viewModel.isEditMode {
                     Color.clear
                         .contentShape(Rectangle())
                         .frame(width: 44) // Selection lane width
-                        .gesture(selectionDragGesture)
+                        .highPriorityGesture(selectionDragGesture)
                 }
             }
             // Auto-scroll while dragging near edges

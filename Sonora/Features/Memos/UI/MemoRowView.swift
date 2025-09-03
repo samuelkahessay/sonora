@@ -224,16 +224,8 @@ struct MemoRowView: View {
             }
         }
         .padding(.vertical, Layout.verticalPadding)
-        .background(
-            // Selected state background highlight
-            viewModel.isEditMode && viewModel.isMemoSelected(memo)
-                ? Color.semantic(.brandPrimary).opacity(0.1)
-                : Color.clear,
-            in: RoundedRectangle(cornerRadius: 8)
-        )
-        .scaleEffect(
-            viewModel.isEditMode && viewModel.isMemoSelected(memo) ? 0.98 : 1.0
-        )
+        // Selection background is now applied at the List row level for full-width coverage
+        .scaleEffect(viewModel.isEditMode && viewModel.isMemoSelected(memo) ? 0.98 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.isMemoSelected(memo))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)

@@ -33,6 +33,8 @@ final class DragSelectionCoordinator: ObservableObject {
     @Published var currentIntent: DragIntent = .undetermined
     /// Published edge scroll direction to integrate with ScrollViewReader
     @Published var edgeScrollDirection: ScrollDirection? = nil
+    /// Optional index resolver that maps a point in list coordinates -> row index
+    var resolveIndex: ((CGPoint) -> Int?)? = nil
     
     // MARK: - Internal State
     
@@ -213,6 +215,10 @@ final class DragSelectionCoordinator: ObservableObject {
     
     /// Calculate row index for a given point, accounting for list offset
     private func calculateRowIndex(for point: CGPoint, rowHeight: CGFloat) -> Int {
+        // Prefer a precise resolver when available (uses measured row frames)
+        if let idx = resolveIndex?(point) {
+            return idx
+        }
         // Adjust for safe area inset (8pt from MemosView)
         let adjustedY = point.y - 8
         return max(0, Int(adjustedY / rowHeight))

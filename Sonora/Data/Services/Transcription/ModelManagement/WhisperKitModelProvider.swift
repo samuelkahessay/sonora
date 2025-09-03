@@ -8,8 +8,9 @@ final class WhisperKitModelProvider {
     private let fm = FileManager.default
     private let logger = Logger.shared
     private lazy var cacheURL: URL = {
+        // Bump cache filename to force refresh when curated set changes
         let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        return caches.appendingPathComponent("WhisperKit/models_cache.json")
+        return caches.appendingPathComponent("WhisperKit/models_cache_v2.json")
     }()
     private lazy var foldersURL: URL = {
         let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
@@ -380,30 +381,6 @@ final class WhisperKitModelProvider {
     }
     static let curatedModels: [WhisperModel] = [
         WhisperModel(
-            id: WKModel.tiny.rawValue,
-            displayName: "Tiny",
-            sizeBytes: 39 * 1024 * 1024,
-            description: "Fastest processing, basic accuracy."
-        ),
-        WhisperModel(
-            id: WKModel.tinyEN.rawValue,
-            displayName: "Tiny (EN)",
-            sizeBytes: 39 * 1024 * 1024,
-            description: "English-only tiny model."
-        ),
-        WhisperModel(
-            id: WKModel.base.rawValue,
-            displayName: "Base",
-            sizeBytes: 142 * 1024 * 1024,
-            description: "Balanced speed and accuracy."
-        ),
-        WhisperModel(
-            id: WKModel.baseEN.rawValue,
-            displayName: "Base (EN)",
-            sizeBytes: 142 * 1024 * 1024,
-            description: "English-only base model."
-        ),
-        WhisperModel(
             id: WKModel.small.rawValue,
             displayName: "Small",
             sizeBytes: 488 * 1024 * 1024,
@@ -414,15 +391,18 @@ final class WhisperKitModelProvider {
             displayName: "Medium",
             sizeBytes: 1_550 * 1024 * 1024,
             description: "High accuracy. Heavier model; slower and larger."
+        ),
+        WhisperModel(
+            id: WKModel.largeV3.rawValue,
+            displayName: "Large v3",
+            sizeBytes: 2_900 * 1024 * 1024,
+            description: "Maximum accuracy. Largest local model."
         )
     ]
     enum WKModel: String {
-        case tiny = "openai_whisper-tiny"
-        case tinyEN = "openai_whisper-tiny.en"
-        case base = "openai_whisper-base"
-        case baseEN = "openai_whisper-base.en"
         case small = "openai_whisper-small"
         case medium = "openai_whisper-medium"
+        case largeV3 = "openai_whisper-large-v3"
     }
 }
 
