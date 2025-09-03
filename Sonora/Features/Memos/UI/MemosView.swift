@@ -9,7 +9,9 @@ import SwiftUI
 
 struct MemosView: View {
     @StateObject private var viewModel = MemoListViewModel()
+    @StateObject private var dragCoordinator = DragSelectionCoordinator()
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
+    @State private var velocityTracker = DragVelocityTracker()
     let popToRoot: (() -> Void)?
     
     init(popToRoot: (() -> Void)? = nil) {
@@ -18,9 +20,12 @@ struct MemosView: View {
 
     var body: some View {
         NavigationStack(path: $viewModel.navigationPath) {
-            mainContent
-                .navigationTitle("Memos")
-                .navigationBarTitleDisplayMode(.large)
+            VStack(spacing: 0) {
+                AlternativeSelectionControls(viewModel: viewModel)
+                mainContent
+            }
+            .navigationTitle("Memos")
+            .navigationBarTitleDisplayMode(.large)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         MemoListTopBarView(
@@ -47,15 +52,15 @@ struct MemosView: View {
             if viewModel.isEditMode && viewModel.hasSelection {
                 MemoBottomDeleteBar(selectedCount: viewModel.selectedCount) { viewModel.deleteSelectedMemos() }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.spring(response: 0.3), value: viewModel.hasSelection)
+                    .selectionAnimation(value: viewModel.hasSelection)
             }
         }
         .overlay(alignment: .topTrailing) {
             // Drag selection indicator
-            if viewModel.isDragSelecting {
+            if dragCoordinator.isDragSelecting {
                 DragSelectionIndicatorView()
                     .transition(.scale.combined(with: .opacity))
-                    .animation(.spring(response: 0.2), value: viewModel.isDragSelecting)
+                    .selectionAnimation(value: dragCoordinator.isDragSelecting)
             }
         }
     }
@@ -73,10 +78,25 @@ struct MemosView: View {
     @ViewBuilder
     private var memoListView: some View {
         List {
-            ForEach(viewModel.memos) { memo in
+            ForEach(Array(viewModel.memos.enumerated()), id: \.element.id) { index, memo in
                 let separatorConfig = separatorConfiguration(for: memo)
+                let rowContent = MemoRowView(memo: memo, viewModel: viewModel)
+                    .dragSelectionAccessibility(
+                        memo: memo,
+                        viewModel: viewModel,
+                        isSelected: viewModel.isMemoSelected(memo)
+                    )
+                    .background(
+                        // Measure row height for the first row
+                        index == 0 ? GeometryReader { geometry in
+                            Color.clear.onAppear {
+                                viewModel.updateRowHeight(geometry.size.height)
+                            }
+                        } : nil
+                    )
+                
                 if viewModel.isEditMode {
-                    MemoRowView(memo: memo, viewModel: viewModel)
+                    rowContent
                         .contentShape(Rectangle())
                         .onTapGesture { viewModel.toggleMemoSelection(memo) }
                         .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
@@ -84,7 +104,7 @@ struct MemosView: View {
                             MemoSwipeActionsView(memo: memo, viewModel: viewModel)
                         }
                 } else {
-                    NavigationLink(value: memo) { MemoRowView(memo: memo, viewModel: viewModel) }
+                    NavigationLink(value: memo) { rowContent }
                         .buttonStyle(.plain)
                         .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -101,15 +121,18 @@ struct MemosView: View {
         .listStyle(MemoListConstants.listStyle)
         .scrollContentBackground(.hidden)
         .background(MemoListColors.containerBackground(for: colorScheme))
-        .simultaneousGesture(selectionDragGesture)
+        .coordinateSpace(name: "memoList")
+        .simultaneousGesture(
+            viewModel.isEditMode ? selectionDragGesture : nil
+        )
         .safeAreaInset(edge: .top) { Color.clear.frame(height: 8) }
         .refreshable { viewModel.refreshMemos() }
     }
 
     private var selectionDragGesture: some Gesture {
-        DragGesture(minimumDistance: 20)
-            .onChanged { value in dragSelectionChanged(value: value) }
-            .onEnded { _ in dragSelectionEnded() }
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("memoList"))
+            .onChanged { value in handleDragChanged(value) }
+            .onEnded { _ in handleDragEnded() }
     }
     
     /// Position-specific separator configuration for clean design
@@ -188,39 +211,58 @@ extension MemosView {
         .padding(.trailing, 16)
     }
     
-    // MARK: - Drag Selection Methods
+    // MARK: - Performance-Optimized Drag Selection Methods
     
-    /// Handle drag selection gesture changes
-    private func dragSelectionChanged(value: DragGesture.Value) {
-        guard viewModel.isEditMode else { return }
+    /// Handle drag gesture changes with performance optimization and gesture conflict resolution
+    private func handleDragChanged(_ value: DragGesture.Value) {
+        // Update velocity tracking
+        velocityTracker.addSample(point: value.location)
         
-        // Calculate which row we're over based on drag location
-        // Note: This is an approximation - actual row height may vary
-        let approximateRowHeight: CGFloat = 80
-        let topInset: CGFloat = 8 // From safeAreaInset
-        let adjustedY = value.location.y - topInset
-        let currentIndex = max(0, Int(adjustedY / approximateRowHeight))
+        // Get list bounds for edge detection
+        let listBounds = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
         
-        // Initialize drag selection on first movement
-        if viewModel.dragStartIndex == nil {
-            viewModel.dragStartIndex = currentIndex
-            viewModel.isDragSelecting = true
+        // Handle drag through coordinator
+        dragCoordinator.handleDragChanged(
+            value: value,
+            viewModel: viewModel,
+            listBounds: listBounds,
+            rowHeight: viewModel.measuredRowHeight
+        )
+        
+        // If coordinator determined this is selection intent, update view model
+        if dragCoordinator.currentIntent == .selecting {
+            let wasSelecting = viewModel.isDragSelecting
+            
+            viewModel.handleDragSelection(
+                at: value.location,
+                velocity: velocityTracker.velocityVector
+            )
+            
+            // Announce start of selection for accessibility
+            if !wasSelecting && viewModel.isDragSelecting {
+                DragSelectionAccessibility.announceSelectionStart()
+            }
+            
+            // Announce progress for accessibility
+            DragSelectionAccessibility.announceSelectionProgress(
+                count: viewModel.selectedCount,
+                total: viewModel.memos.count
+            )
         }
-        
-        // Update selection range
-        viewModel.updateDragSelection(to: currentIndex)
     }
     
-    /// Handle end of drag selection gesture
-    private func dragSelectionEnded() {
-        guard viewModel.isEditMode else { return }
+    /// Handle end of drag gesture with cleanup
+    private func handleDragEnded() {
+        let selectionCount = viewModel.selectedCount
         
-        viewModel.isDragSelecting = false
-        viewModel.dragStartIndex = nil
-        viewModel.dragCurrentIndex = nil
+        dragCoordinator.handleDragEnded(viewModel: viewModel)
+        viewModel.endDragSelection()
+        velocityTracker.reset()
         
-        // Play completion haptic
-        HapticManager.shared.playSelection()
+        // Announce completion for accessibility
+        if selectionCount > 0 {
+            DragSelectionAccessibility.announceSelectionComplete(count: selectionCount)
+        }
     }
 }
 
