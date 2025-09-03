@@ -71,6 +71,13 @@ public final class RemindersEventHandler {
         case .transcriptionCompleted(let memoId, let text):
             await handleTranscriptionCompleted(memoId: memoId, text: text)
             
+        case .transcriptionProgress:
+            // Not relevant for reminders integration
+            break
+            
+        case .transcriptionRouteDecided:
+            // Not relevant for reminders integration
+            break
         case .memoCreated, .recordingStarted, .recordingCompleted:
             // Not directly relevant for reminders integration
             break

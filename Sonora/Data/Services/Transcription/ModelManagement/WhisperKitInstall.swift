@@ -63,18 +63,18 @@ struct WhisperKitInstall {
 
         // Debug logging to verify what WhisperKit is being configured with
         let exists = FileManager.default.fileExists(atPath: modelPath.path)
-        Logger.shared.info("🔧 WhisperKit config for \(id):")
-        Logger.shared.info("🔧   modelPath exists: \(exists)")
-        Logger.shared.info("🔧   modelPath: \(modelPath.path)")
+        Logger.shared.info("WhisperKit config for \(id):")
+        Logger.shared.info("  modelPath exists: \(exists)")
+        Logger.shared.info("  modelPath: \(modelPath.path)")
 
         // Log folder contents to verify expected files are present
         if let items = try? FileManager.default.contentsOfDirectory(at: modelPath, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
-            Logger.shared.info("🔧   folder contents (\(items.count)):")
+            Logger.shared.info("  folder contents (\(items.count)):")
             for entry in items {
-                Logger.shared.info("🔧     - \(entry.lastPathComponent)")
+                Logger.shared.info("    - \(entry.lastPathComponent)")
             }
         } else {
-            Logger.shared.info("🔧   folder contents: <unreadable or empty>")
+            Logger.shared.info("  folder contents: <unreadable or empty>")
         }
 
         // Use the exact model folder path so WhisperKit can load the local model

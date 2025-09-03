@@ -2,8 +2,11 @@ import SwiftUI
 
 struct WhisperKitSectionView: View {
     @State private var showingModelSelection = false
+    @State private var showingModelDiagnostics = false
+    @State private var showingAdvanced = false
     @StateObject private var downloadManager = DIContainer.shared.modelDownloadManager()
     @State private var selectedModelId: String = UserDefaults.standard.selectedWhisperModel
+    @State private var normalizationMessage: String? = nil
     
     private var selectedModel: WhisperModelInfo {
         WhisperModelInfo.model(withId: selectedModelId) ?? UserDefaults.standard.selectedWhisperModelInfo
@@ -110,14 +113,70 @@ struct WhisperKitSectionView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Information: Models are downloaded when first used. You can manage downloaded models and view storage usage in the model selection screen.")
                 .accessibilityAddTraits(.isStaticText)
+
+                // Health check + Diagnostics + Advanced + Strict local toggle
+                HStack {
+                    Button(action: verifyLocalSetup) {
+                        Label("Verify Local Setup", systemImage: "stethoscope")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(action: { showingModelDiagnostics = true }) {
+                        Label("Diagnostics", systemImage: "wrench.and.screwdriver")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(action: { showingAdvanced = true }) {
+                        Label("Advanced", systemImage: "gearshape")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Spacer()
+
+                    Toggle("Disable Cloud Fallback", isOn: Binding(
+                        get: { AppConfiguration.shared.strictLocalWhisper },
+                        set: { AppConfiguration.shared.strictLocalWhisper = $0 }
+                    ))
+                    .toggleStyle(SwitchToggleStyle(tint: .semantic(.brandPrimary)))
+                    .font(.caption)
+                }
             }
         }
         .onAppear { selectedModelId = UserDefaults.standard.selectedWhisperModel }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
             selectedModelId = UserDefaults.standard.selectedWhisperModel
         }
-        .sheet(isPresented: $showingModelSelection) {
-            WhisperModelSelectionView()
+        .onReceive(NotificationCenter.default.publisher(for: .whisperModelNormalized)) { note in
+            if let info = note.userInfo as? [String: String],
+               let prev = info["previous"], let norm = info["normalized"], prev != norm {
+                normalizationMessage = "Selected model changed to installed: \(WhisperModelInfo.model(withId: norm)?.displayName ?? norm)"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { normalizationMessage = nil }
+            }
+        }
+        .sheet(isPresented: $showingModelSelection) { WhisperModelSelectionView() }
+        .sheet(isPresented: $showingModelDiagnostics) { WhisperKitDiagnosticsView() }
+        .sheet(isPresented: $showingAdvanced) { WhisperKitAdvancedView() }
+        .overlay(alignment: .top) {
+            if let msg = normalizationMessage {
+                Text(msg)
+                    .font(.caption)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.semantic(.brandPrimary).opacity(0.9))
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                    .padding(.top, 8)
+            }
+        }
+    }
+
+    // MARK: - Actions
+    @MainActor private func verifyLocalSetup() {
+        Task {
+            let checker = WhisperKitHealthChecker()
+            let report = await checker.checkSelectedModel()
+            normalizationMessage = report.ok ? "WhisperKit OK: \(report.details)" : "WhisperKit Issue: \(report.details)"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) { normalizationMessage = nil }
         }
     }
     

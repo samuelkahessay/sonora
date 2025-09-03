@@ -37,9 +37,14 @@ final class SpotlightEventHandler {
             await indexer.index(memoID: memo.id)
         case .transcriptionCompleted(let memoId, _):
             await indexer.index(memoID: memoId)
+        case .transcriptionProgress:
+            // Spotlight doesn't index transient progress
+            break
         case .analysisCompleted(let memoId, _, _):
             // Summary may have updated; re-index
             await indexer.index(memoID: memoId)
+        case .transcriptionRouteDecided:
+            break
         case .recordingStarted, .recordingCompleted:
             break
         }

@@ -43,7 +43,7 @@ final class DeleteAllUserDataUseCase: DeleteAllUserDataUseCaseProtocol {
                 try fm.createDirectory(at: trash, withIntermediateDirectories: true)
             }
         } catch {
-            logger.error("Failed to create Trash directory", category: .repository, context: LogContext(additionalInfo: ["path": trash.path]), error: error)
+            logger.error("Failed to create Trash directory", category: .useCase, context: LogContext(additionalInfo: ["path": trash.path]), error: error)
             throw error
         }
 
@@ -58,7 +58,7 @@ final class DeleteAllUserDataUseCase: DeleteAllUserDataUseCaseProtocol {
             }
         } catch {
             // Rollback any staged moves
-            logger.warning("Staging move failed; rolling back", category: .repository, context: nil, error: error)
+            logger.warning("Staging move failed; rolling back", category: .useCase, context: nil, error: error)
             for (from, to) in moves.reversed() {
                 if fm.fileExists(atPath: to.path) {
                     try? fm.moveItem(at: to, to: from)
@@ -74,7 +74,7 @@ final class DeleteAllUserDataUseCase: DeleteAllUserDataUseCaseProtocol {
             try fm.removeItem(at: trash)
         } catch {
             // Deletion failed; rollback for atomicity
-            logger.warning("Trash delete failed; rolling back", category: .repository, context: LogContext(additionalInfo: ["trash": trash.path]), error: error)
+            logger.warning("Trash delete failed; rolling back", category: .useCase, context: LogContext(additionalInfo: ["trash": trash.path]), error: error)
             for (from, to) in moves.reversed() {
                 if fm.fileExists(atPath: to.path) {
                     try? fm.moveItem(at: to, to: from)
@@ -91,4 +91,3 @@ final class DeleteAllUserDataUseCase: DeleteAllUserDataUseCaseProtocol {
         analysisRepository.clearCache()
     }
 }
-

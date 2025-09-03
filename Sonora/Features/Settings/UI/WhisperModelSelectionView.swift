@@ -253,8 +253,30 @@ private struct ModelRowView: View {
             .accessibilityHint("Double tap to select this model for local transcription")
             .accessibilityAddTraits(isSelected ? [.isSelected] : [])
             
-            // Download button
-            ModelDownloadButton(model: model, downloadManager: downloadManager)
+            // Installed badge + Download button
+            HStack {
+                if downloadManager.getDownloadState(for: model.id) == .downloaded {
+                    Text("Installed")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(Color.semantic(.success).opacity(0.15))
+                        .foregroundColor(.semantic(.success))
+                        .cornerRadius(6)
+                        .accessibilityLabel("Installed")
+                }
+                if downloadManager.getDownloadState(for: model.id) == .downloaded && !downloadManager.isLocalModelValid(model.id) {
+                    Button(action: { downloadManager.repairModel(model.id) }) {
+                        Label("Repair", systemImage: "wrench.and.screwdriver")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.semantic(.warning))
+                    .accessibilityHint("Deletes and re-downloads the model")
+                }
+                Spacer()
+                ModelDownloadButton(model: model, downloadManager: downloadManager)
+            }
         }
     }
 }

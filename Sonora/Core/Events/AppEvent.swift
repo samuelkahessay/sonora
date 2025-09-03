@@ -22,6 +22,14 @@ public enum AppEvent: Equatable {
     /// Published when transcription completes successfully
     case transcriptionCompleted(memoId: UUID, text: String)
     
+    /// Published when a route is decided for a transcription request
+    /// route: "local" or "cloud"; reason: optional description for fallback
+    case transcriptionRouteDecided(memoId: UUID, route: String, reason: String?)
+
+    /// Published when transcription makes progress (0.0 ... 1.0)
+    /// step is an optional human-readable status message
+    case transcriptionProgress(memoId: UUID, fraction: Double, step: String?)
+    
     // MARK: - Analysis Events
     
     /// Published when any analysis type completes successfully
@@ -37,6 +45,8 @@ public enum AppEvent: Equatable {
         case .recordingStarted(let memoId), 
              .recordingCompleted(let memoId),
              .transcriptionCompleted(let memoId, _),
+             .transcriptionRouteDecided(let memoId, _, _),
+             .transcriptionProgress(let memoId, _, _),
              .analysisCompleted(let memoId, _, _):
             return memoId
         }
@@ -53,6 +63,18 @@ public enum AppEvent: Equatable {
             return "Recording completed for memo: \(memoId)"
         case .transcriptionCompleted(let memoId, _):
             return "Transcription completed for memo: \(memoId)"
+        case .transcriptionRouteDecided(let memoId, let route, let reason):
+            if let reason, !reason.isEmpty {
+                return "Transcription route decided for memo: \(memoId) — \(route.uppercased()) (\(reason))"
+            } else {
+                return "Transcription route decided for memo: \(memoId) — \(route.uppercased())"
+            }
+        case .transcriptionProgress(let memoId, let fraction, let step):
+            if let step = step, !step.isEmpty {
+                return String(format: "Transcription progress for memo: %@ — %.0f%% (%@)", memoId.uuidString, fraction * 100, step)
+            } else {
+                return String(format: "Transcription progress for memo: %@ — %.0f%%", memoId.uuidString, fraction * 100)
+            }
         case .analysisCompleted(let memoId, let type, _):
             return "\(type.displayName) analysis completed for memo: \(memoId)"
         }
@@ -65,7 +87,7 @@ public enum AppEvent: Equatable {
             return .memo
         case .recordingStarted, .recordingCompleted:
             return .recording
-        case .transcriptionCompleted:
+        case .transcriptionCompleted, .transcriptionProgress, .transcriptionRouteDecided:
             return .transcription
         case .analysisCompleted:
             return .analysis

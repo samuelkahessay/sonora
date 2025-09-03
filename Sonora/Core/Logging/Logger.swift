@@ -189,8 +189,10 @@ public final class Logger: LoggerProtocol {
         
         #if DEBUG
         currentLogLevel = .verbose
+        destinations = [.console, .osLog]
         #else
-        currentLogLevel = .info
+        currentLogLevel = .warning  // Reduced from .info to reduce production noise
+        destinations = [.osLog]     // Remove console in production
         #endif
     }
     

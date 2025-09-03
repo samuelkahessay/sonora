@@ -134,6 +134,20 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 if totalDurationSec < 90.0 {
                     // Single-shot for short recordings
                     await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (\(lang.uppercased()))...")
+                    // Wire fine-grained engine progress if supported
+                    if let progressSvc = transcriptionAPI as? TranscriptionProgressReporting {
+                        await progressSvc.setProgressHandler { [weak self] fraction in
+                            guard let self = self else { return }
+                            // Map engine fraction into overall (0.2 -> 0.95)
+                            let mapped = 0.2 + 0.75 * max(0.0, min(1.0, fraction))
+                            Task { await self.updateProgress(operationId: operationId, fraction: mapped, step: "Transcribing...") }
+                        }
+                    }
+                    defer {
+                        Task { @MainActor in
+                            (transcriptionAPI as? TranscriptionProgressReporting)?.clearProgressHandler()
+                        }
+                    }
                     let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang)
                     let eval = qualityEvaluator.evaluateQuality(resp, text: resp.text)
 
@@ -222,6 +236,19 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             if totalDurationSec < 60.0 {
                 // Single-shot auto with fallback if needed
                 await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (auto)...")
+                // Wire fine-grained engine progress if supported
+                if let progressSvc = transcriptionAPI as? TranscriptionProgressReporting {
+                    await progressSvc.setProgressHandler { [weak self] fraction in
+                        guard let self = self else { return }
+                        let mapped = 0.2 + 0.75 * max(0.0, min(1.0, fraction))
+                        Task { await self.updateProgress(operationId: operationId, fraction: mapped, step: "Transcribing...") }
+                    }
+                }
+                defer {
+                    Task { @MainActor in
+                        (transcriptionAPI as? TranscriptionProgressReporting)?.clearProgressHandler()
+                    }
+                }
                 let primaryResp = try await transcriptionAPI.transcribe(url: audioURL, language: nil)
                 let primaryEval = qualityEvaluator.evaluateQuality(primaryResp, text: primaryResp.text)
 

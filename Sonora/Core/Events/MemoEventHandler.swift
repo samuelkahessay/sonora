@@ -88,6 +88,12 @@ public final class MemoEventHandler {
             
         case .analysisCompleted(let memoId, let type, let result):
             await handleAnalysisCompleted(memoId: memoId, type: type, result: result, correlationId: correlationId)
+        case .transcriptionRouteDecided:
+            // Audit only; UI reacts elsewhere
+            break
+        case .transcriptionProgress:
+            // Progress is handled by UI; keep audit only
+            break
         }
         
         // Update analytics

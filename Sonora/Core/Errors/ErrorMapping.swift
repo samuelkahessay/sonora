@@ -453,9 +453,9 @@ public final class ErrorMapping {
     // MARK: - WhisperKit Error Mapping
     private static func mapWhisperKitError(_ error: WhisperKitTranscriptionError) -> SonoraError {
         switch error {
-        case .notInitialized(let message):
+        case .notInitialized:
             return .transcriptionServiceUnavailable
-        case .initializationFailed(let message):
+        case .initializationFailed:
             return .transcriptionServiceUnavailable
         case .modelNotAvailable(let message):
             return .configurationInvalid(message)

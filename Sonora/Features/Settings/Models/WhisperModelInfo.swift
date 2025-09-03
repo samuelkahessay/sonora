@@ -75,6 +75,14 @@ extension WhisperModelInfo {
             description: "Higher accuracy with moderate speed. Better for important transcriptions.",
             speedRating: .medium,
             accuracyRating: .high
+        ),
+        WhisperModelInfo(
+            id: "openai_whisper-medium",
+            displayName: "Medium",
+            size: "~1.5 GB",
+            description: "High accuracy. Heavier and slower; use on newer devices.",
+            speedRating: .low,
+            accuracyRating: .veryHigh
         )
     ]
     

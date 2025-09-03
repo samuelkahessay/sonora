@@ -145,15 +145,16 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         var partialData = PartialDistillData()
         var completedCount = 0
         var combinedLatency = 0
-        var model = "gpt-5-nano"
+        let model = "gpt-5-nano"
         var combinedTokens = TokenUsage(input: 0, output: 0)
         
         // Send initial progress
+        let initialPartial = partialData
         await MainActor.run {
             progressHandler(DistillProgressUpdate(
                 completedComponents: 0,
                 totalComponents: componentModes.count,
-                completedResults: partialData,
+                completedResults: initialPartial,
                 latestComponent: nil
             ))
         }
@@ -192,16 +193,18 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                 )
                 
                 // Update partial data based on component type
-                await updatePartialData(&partialData, mode: mode, data: data)
+                updatePartialData(&partialData, mode: mode, data: data)
                 
                 completedCount += 1
+                let currentCompleted = completedCount
+                let currentPartial = partialData
                 
                 // Send progress update on main actor
                 await MainActor.run {
                     progressHandler(DistillProgressUpdate(
-                        completedComponents: completedCount,
+                        completedComponents: currentCompleted,
                         totalComponents: componentModes.count,
-                        completedResults: partialData,
+                        completedResults: currentPartial,
                         latestComponent: mode
                     ))
                 }
@@ -309,7 +312,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         }
     }
     
-    private func updatePartialData(_ partialData: inout PartialDistillData, mode: AnalysisMode, data: Any) async {
+    private func updatePartialData(_ partialData: inout PartialDistillData, mode: AnalysisMode, data: Any) {
         switch mode {
         case .distillSummary:
             if let summaryData = data as? DistillSummaryData {

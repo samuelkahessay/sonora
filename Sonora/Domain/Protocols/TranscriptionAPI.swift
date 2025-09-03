@@ -24,6 +24,13 @@ protocol TranscriptionAPI {
     func transcribeChunks(segments: [VoiceSegment], audioURL: URL, language: String?) async throws -> [ChunkTranscriptionResult]
 }
 
+/// Optional progress reporting for long-running transcriptions.
+/// Implemented by local engines to surface fine-grained progress.
+protocol TranscriptionProgressReporting {
+    @MainActor func setProgressHandler(_ handler: @escaping (Double) -> Void)
+    @MainActor func clearProgressHandler()
+}
+
 /// Detailed transcription response, optionally including detected language and confidences
 struct TranscriptionResponse: Equatable {
     let text: String

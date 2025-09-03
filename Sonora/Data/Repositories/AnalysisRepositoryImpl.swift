@@ -122,13 +122,13 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             guard let summary = payload["summary"] as? String, !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
             return true
         case .distillActions:
-            guard let actionItems = payload["action_items"] as? [Any] else { return false }
+            guard let _ = payload["action_items"] as? [Any] else { return false }
             return true
         case .distillThemes:
-            guard let themes = payload["key_themes"] as? [Any] else { return false }
+            guard let _ = payload["key_themes"] as? [Any] else { return false }
             return true
         case .distillReflection:
-            guard let questions = payload["reflection_questions"] as? [Any] else { return false }
+            guard let _ = payload["reflection_questions"] as? [Any] else { return false }
             return true
         case .themes:
             guard let themes = payload["themes"] as? [Any], let sentiment = payload["sentiment"] as? String else { return false }

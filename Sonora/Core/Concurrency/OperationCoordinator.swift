@@ -174,6 +174,15 @@ public actor OperationCoordinator {
 
         // Notify status delegate with a detailed progress update
         await notifyProgressDelegate(operation: operation, previousProgress: previous)
+
+        // Also publish progress via the event bus for UI layers that consume AppEvents
+        if operation.type.category == .transcription {
+            let memoId = operation.type.memoId
+            let fraction = max(0.0, min(1.0, progress.percentage))
+            await MainActor.run { [eventBus] in
+                eventBus.publish(.transcriptionProgress(memoId: memoId, fraction: fraction, step: progress.currentStep))
+            }
+        }
     }
     
     /// Cancel all operations for a specific memo

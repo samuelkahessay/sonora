@@ -1,6 +1,6 @@
 import Foundation
 
-public enum AnalysisMode: String, Codable, CaseIterable {
+public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
     case distill, analysis, themes, todos
     
     // Individual Distill Components (used internally for parallel processing)
@@ -75,7 +75,7 @@ public struct DistillData: Codable {
         public let text: String
         public let priority: Priority
         
-        public enum Priority: String, Codable {
+        public enum Priority: String, Codable, Sendable {
             case high, medium, low
             
             var color: String {

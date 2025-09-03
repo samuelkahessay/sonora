@@ -14,6 +14,8 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
     private var whisperKit: WhisperKit?
     private var isInitialized = false
     private let initializationQueue = DispatchQueue(label: "whisperkit.initialization", qos: .userInitiated)
+    // Optional progress callback for long-running transcriptions (0.0 ... 1.0)
+    var onProgress: ((Double) -> Void)?
     
     // MARK: - Initialization
     
@@ -36,12 +38,12 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
     
     func transcribe(url: URL, language: String?) async throws -> TranscriptionResponse {
         logger.info("Starting WhisperKit transcription for: \(url.lastPathComponent)")
-        let totalStartTime = Date()
+        let totalTimer = PerformanceTimer(operation: "WhisperKit transcription", category: .transcription)
         
         // Ensure WhisperKit is initialized with the correct model
+        let initTimer = PerformanceTimer(operation: "WhisperKit initialization", category: .transcription)
         try await ensureWhisperKitInitialized()
-        let initTimeMs = Int(Date().timeIntervalSince(totalStartTime) * 1000)
-        logger.info("⏱️ WhisperKit initialization: \(initTimeMs)ms")
+        _ = initTimer.finish()
         
         guard let whisperKit = self.whisperKit else {
             throw WhisperKitTranscriptionError.notInitialized("WhisperKit instance is nil after initialization")
@@ -49,33 +51,33 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
         
         do {
             // Load and prepare audio
-            let audioLoadStart = Date()
+            let audioTimer = PerformanceTimer(operation: "Audio loading", category: .audio)
             let audioData = try await loadAudioData(from: url)
-            let audioLoadMs = Int(Date().timeIntervalSince(audioLoadStart) * 1000)
-            logger.info("⏱️ Audio loading: \(audioLoadMs)ms for \(audioData.count) samples")
-            logger.debug("Loaded audio data: \(audioData.count) samples")
+            _ = audioTimer.finish(additionalInfo: "\(audioData.count) samples")
             
             // Perform transcription
-            let transcribeStart = Date()
+            let transcribeTimer = PerformanceTimer(operation: "WhisperKit transcribe", category: .transcription)
             #if canImport(WhisperKit)
-            // Build decoding options per v0.13.1 API (task must precede language)
-            let options = DecodingOptions(
-                task: .transcribe,
-                language: language,
-                wordTimestamps: false,
-                chunkingStrategy: .vad
-            )
-            let results = try await whisperKit.transcribe(
+            let options = buildDecodingOptions(language: language)
+            // Attempt to use progress-enabled API if available
+            let results: [TranscriptionResult]
+            #if compiler(>=6)
+            results = try await whisperKit.transcribe(audioArray: audioData, decodeOptions: options) { [weak self] _ in
+                guard let self = self else { return nil }
+                let fraction = self.whisperKit?.progress.fractionCompleted ?? 0.0
+                Task { @MainActor in self.onProgress?(fraction) }
+                return Task.isCancelled ? false : nil
+            }
+            #else
+            results = try await whisperKit.transcribe(
                 audioArray: audioData,
                 decodeOptions: options
             )
+            #endif
             #else
             let results = try await whisperKit.transcribe(audioArray: audioData)
             #endif
-            let transcribeMs = Int(Date().timeIntervalSince(transcribeStart) * 1000)
-            logger.info("⏱️ WhisperKit transcribe: \(transcribeMs)ms")
-            let totalMs = Int(Date().timeIntervalSince(totalStartTime) * 1000)
-            logger.info("⏱️ Total WhisperKit path: \(totalMs)ms")
+            _ = transcribeTimer.finish()
             
             // Process results
             let transcriptionText = extractTextFromResults(results)
@@ -84,17 +86,29 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
             
             logger.info("WhisperKit transcription completed")
             
-            let transcribeSec = Double(transcribeMs) / 1000.0
-            return TranscriptionResponse(
+            let totalDuration = totalTimer.finish()
+            let response = TranscriptionResponse(
                 text: transcriptionText,
                 detectedLanguage: detectedLanguage,
                 confidence: confidence,
                 avgLogProb: nil, // WhisperKit doesn't provide this directly
-                duration: transcribeSec
+                duration: totalDuration
             )
+
+            if AppConfiguration.shared.releaseLocalModelAfterTranscription {
+                await whisperKit.unloadModels()
+                self.isInitialized = false
+                self.whisperKit = nil
+                logger.info("WhisperKit models unloaded after transcription (per setting)")
+            }
+
+            return response
             
         } catch {
-            logger.error("WhisperKit transcription failed: \(error.localizedDescription)")
+            logger.error("WhisperKit transcription failed",
+                        category: .transcription,
+                        context: LogContext(additionalInfo: ["audioFile": url.lastPathComponent]),
+                        error: error)
             throw WhisperKitTranscriptionError.transcriptionFailed(error.localizedDescription)
         }
     }
@@ -129,16 +143,21 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
                     
                     // Transcribe segment
                     #if canImport(WhisperKit)
-                    let options = DecodingOptions(
-                        task: .transcribe,
-                        language: language,
-                        wordTimestamps: false,
-                        chunkingStrategy: .vad
-                    )
-                    let segmentResults = try await whisperKit.transcribe(
+                    let options = buildDecodingOptions(language: language)
+                    let segmentResults: [TranscriptionResult]
+                    #if compiler(>=6)
+                    segmentResults = try await whisperKit.transcribe(audioArray: segmentData, decodeOptions: options) { [weak self] _ in
+                        guard let self = self else { return nil }
+                        let fraction = self.whisperKit?.progress.fractionCompleted ?? 0.0
+                        Task { @MainActor in self.onProgress?(fraction) }
+                        return Task.isCancelled ? false : nil
+                    }
+                    #else
+                    segmentResults = try await whisperKit.transcribe(
                         audioArray: segmentData,
                         decodeOptions: options
                     )
+                    #endif
                     #else
                     let segmentResults = try await whisperKit.transcribe(audioArray: segmentData)
                     #endif
@@ -173,10 +192,19 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
             }
             
             logger.info("WhisperKit chunk transcription completed: \(results.count) segments processed")
+            if AppConfiguration.shared.releaseLocalModelAfterTranscription {
+                await whisperKit.unloadModels()
+                self.isInitialized = false
+                self.whisperKit = nil
+                logger.info("WhisperKit models unloaded after chunk transcription (per setting)")
+            }
             return results
             
         } catch {
-            logger.error("WhisperKit chunk transcription failed: \(error.localizedDescription)")
+            logger.error("WhisperKit chunk transcription failed",
+                        category: .transcription,
+                        context: LogContext(additionalInfo: ["audioFile": audioURL.lastPathComponent, "segmentCount": "\(segments.count)"]),
+                        error: error)
             throw WhisperKitTranscriptionError.transcriptionFailed(error.localizedDescription)
         }
     }
@@ -191,19 +219,21 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
         logger.info("Initializing WhisperKit with selected model")
         
         var selectedModel = UserDefaults.standard.selectedWhisperModelInfo
-        
-        // Check if selected model is downloaded; if not, fallback to any installed model
-        let isSelectedInstalled = modelProvider.isInstalled(selectedModel.id)
-        if !isSelectedInstalled {
+
+        // Resolve concrete folder for the selected model, or fall back to any resolvable installed model
+        var resolvedFolder: URL? = modelProvider.installedModelFolder(id: selectedModel.id)
+        if resolvedFolder == nil {
             let installedIds = modelProvider.installedModelIds()
-            if let fallbackId = installedIds.first {
-                logger.warning("Selected Whisper model not installed: \(selectedModel.id). Falling back to installed model: \(fallbackId)")
-                // Update selection to reduce future mismatch
+            if let (fallbackId, folder) = installedIds.compactMap({ id -> (String, URL)? in
+                if let url = self.modelProvider.installedModelFolder(id: id) { return (id, url) }
+                return nil
+            }).first {
+                logger.warning("Selected Whisper model not installed or folder not found: \(selectedModel.id). Falling back to installed model: \(fallbackId)")
                 UserDefaults.standard.selectedWhisperModel = fallbackId
+                resolvedFolder = folder
                 if let info = WhisperModelInfo.model(withId: fallbackId) {
                     selectedModel = info
                 } else {
-                    // Construct a minimal info object when not in curated list
                     selectedModel = WhisperModelInfo(
                         id: fallbackId,
                         displayName: fallbackId,
@@ -213,27 +243,94 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
                         accuracyRating: .medium
                     )
                 }
-            } else {
-                throw WhisperKitTranscriptionError.modelNotAvailable("No installed WhisperKit models found. Please download one in Settings.")
             }
         }
-        
+
+        guard let modelFolder = resolvedFolder else {
+            throw WhisperKitTranscriptionError.modelNotAvailable("No installed WhisperKit models found or model folder not resolvable. Please download one in Settings.")
+        }
+
         do {
-            // Initialize with download:false to use existing model only
-            let cfg = try WhisperKitInstall.makeConfig(
-                model: selectedModel.id, 
-                background: true, 
-                autoDownload: false  // Don't auto-download during initialization
-            )
-            whisperKit = try await WhisperKit(cfg)
-            
+            try await initializeWhisperKitWithFolder(modelId: selectedModel.id, folder: modelFolder, allowRedownload: true)
             isInitialized = true
-            logger.info("WhisperKit initialized successfully with model: \(selectedModel.displayName)")
-            
+            // Enhanced init logs: resolved folder and contents
+            logger.info("WhisperKit resolved model folder: \(modelFolder.path)")
+            if let items = try? FileManager.default.contentsOfDirectory(at: modelFolder, includingPropertiesForKeys: nil) {
+                let names = items.map { $0.lastPathComponent }
+                logger.info("WhisperKit model folder contents (\(names.count)): \(names.joined(separator: ", "))")
+            } else {
+                logger.warning("WhisperKit: Unable to list model folder contents at: \(modelFolder.path)")
+            }
+            logger.info("WhisperKit initialized successfully with model: \(selectedModel.displayName) at \(modelFolder.path)")
         } catch {
             logger.error("Failed to initialize WhisperKit: \(error.localizedDescription)")
             throw WhisperKitTranscriptionError.initializationFailed("Failed to initialize WhisperKit with model \(selectedModel.displayName): \(error.localizedDescription)")
         }
+    }
+
+    /// Initialize WhisperKit, set modelFolder, prewarm and load. If prewarm fails and allowed, re-download once and retry.
+    private func initializeWhisperKitWithFolder(modelId: String, folder: URL, allowRedownload: Bool) async throws {
+        // Initialize without auto-loading or downloading; we will set the folder explicitly
+        whisperKit = try await WhisperKit(
+            prewarm: false,
+            load: false,
+            download: false
+        )
+
+        guard let wk = whisperKit else {
+            throw WhisperKitTranscriptionError.initializationFailed("WhisperKit instance is nil after creation")
+        }
+
+        // Set the actual model folder
+        wk.modelFolder = folder
+
+        do {
+            try await wk.prewarmModels()
+        } catch {
+            logger.warning("Prewarm failed for \(modelId): \(error.localizedDescription)")
+            // Retry once with a fresh download if allowed
+            guard allowRedownload else { throw error }
+            do {
+                logger.info("Re-downloading model \(modelId) due to prewarm failure")
+                try await modelProvider.download(id: modelId, progress: { _ in })
+                // Resolve folder again after download
+                guard let refreshedFolder = modelProvider.installedModelFolder(id: modelId) else {
+                    throw WhisperKitTranscriptionError.modelNotAvailable("Model folder not found after re-download for \(modelId)")
+                }
+                // Retry init with the refreshed folder, without further redownload
+                try await initializeWhisperKitWithFolder(modelId: modelId, folder: refreshedFolder, allowRedownload: false)
+                return
+            } catch {
+                logger.error("Re-download failed for \(modelId): \(error.localizedDescription)")
+                throw error
+            }
+        }
+        // Validate tokenizer assets with a broader heuristic; if missing, re-download once, then retry
+        var hasAssets = false
+        let fm = FileManager.default
+        if let enumerator = fm.enumerator(at: folder, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
+            while let obj = enumerator.nextObject() as? URL {
+                let n = obj.lastPathComponent.lowercased()
+                if n == "tokenizer.json" || n == "tokenizer.model" || n == "vocabulary.json" || n.contains("merges") || n.contains("vocab") || n.contains("tokenizer") {
+                    hasAssets = true
+                    break
+                }
+            }
+        }
+        if !hasAssets {
+            logger.warning("Tokenizer assets missing for \(modelId) at \(folder.path); re-downloading")
+            guard allowRedownload else {
+                throw WhisperKitTranscriptionError.initializationFailed("Tokenizer assets missing; re-download required")
+            }
+            try await modelProvider.download(id: modelId, progress: { _ in })
+            guard let refreshedFolder = modelProvider.installedModelFolder(id: modelId) else {
+                throw WhisperKitTranscriptionError.modelNotAvailable("Model folder not found after re-download for \(modelId)")
+            }
+            try await initializeWhisperKitWithFolder(modelId: modelId, folder: refreshedFolder, allowRedownload: false)
+            return
+        }
+
+        try await wk.loadModels()
     }
     
     // MARK: - Audio Processing
@@ -242,38 +339,70 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
-                    // Load audio file
-                    let audioFile = try AVAudioFile(forReading: url)
-                    let audioFormat = audioFile.processingFormat
-                    let audioFrameCount = AVAudioFrameCount(audioFile.length)
-                    
-                    // Create buffer
-                    guard let audioBuffer = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: audioFrameCount) else {
-                        continuation.resume(throwing: WhisperKitTranscriptionError.audioProcessingFailed("Failed to create audio buffer"))
+                    // Stream-convert the source file to Float32 mono @ 16kHz using AVAudioConverter
+                    let file = try AVAudioFile(forReading: url)
+                    let srcFormat = file.processingFormat
+                    guard let dstFormat = AVAudioFormat(
+                        commonFormat: .pcmFormatFloat32,
+                        sampleRate: 16000.0,
+                        channels: 1,
+                        interleaved: false
+                    ) else {
+                        continuation.resume(throwing: WhisperKitTranscriptionError.audioProcessingFailed("Failed to create destination audio format"))
                         return
                     }
-                    
-                    // Read audio data
-                    try audioFile.read(into: audioBuffer)
-                    
-                    // Convert to Float array for WhisperKit
-                    guard let channelData = audioBuffer.floatChannelData else {
-                        continuation.resume(throwing: WhisperKitTranscriptionError.audioProcessingFailed("Failed to get audio channel data"))
+                    guard let converter = AVAudioConverter(from: srcFormat, to: dstFormat) else {
+                        continuation.resume(throwing: WhisperKitTranscriptionError.audioProcessingFailed("Failed to create audio converter"))
                         return
                     }
-                    
-                    let frameLength = Int(audioBuffer.frameLength)
-                    let audioArray = Array(UnsafeBufferPointer(start: channelData[0], count: frameLength))
-                    
-                    // Resample to 16kHz if necessary
-                    let resampledAudio = try self.resampleAudioIfNeeded(
-                        audioArray,
-                        fromSampleRate: audioFormat.sampleRate,
-                        toSampleRate: 16000.0
-                    )
-                    
-                    continuation.resume(returning: resampledAudio)
-                    
+
+                    let srcCapacity: AVAudioFrameCount = 4096
+                    let srcBuffer = AVAudioPCMBuffer(pcmFormat: srcFormat, frameCapacity: srcCapacity)!
+                    let outChunk: AVAudioFrameCount = 1024
+                    var finished = false
+                    var output: [Float] = []
+                    output.reserveCapacity(Int(file.length))
+
+                    while !finished {
+                        guard let outBuffer = AVAudioPCMBuffer(pcmFormat: dstFormat, frameCapacity: outChunk) else {
+                            continuation.resume(throwing: WhisperKitTranscriptionError.audioProcessingFailed("Failed to allocate output buffer"))
+                            return
+                        }
+                        var convError: NSError?
+                        let status = converter.convert(to: outBuffer, error: &convError, withInputFrom: { requestedPackets, outStatus in
+                            if finished {
+                                outStatus.pointee = .noDataNow
+                                return nil
+                            }
+                            let framesToRead = min(srcCapacity, requestedPackets)
+                            do {
+                                try file.read(into: srcBuffer, frameCount: framesToRead)
+                            } catch {
+                                finished = true
+                                outStatus.pointee = .endOfStream
+                                return nil
+                            }
+                            if srcBuffer.frameLength == 0 {
+                                finished = true
+                                outStatus.pointee = .endOfStream
+                                return nil
+                            }
+                            outStatus.pointee = .haveData
+                            return srcBuffer
+                        })
+                        if status == .error {
+                            continuation.resume(throwing: WhisperKitTranscriptionError.audioProcessingFailed(convError?.localizedDescription ?? "Conversion error"))
+                            return
+                        }
+                        let frames = Int(outBuffer.frameLength)
+                        if frames > 0, let ch = outBuffer.floatChannelData {
+                            output.append(contentsOf: UnsafeBufferPointer(start: ch[0], count: frames))
+                        } else if status == .endOfStream || finished {
+                            break
+                        }
+                    }
+
+                    continuation.resume(returning: output)
                 } catch {
                     continuation.resume(throwing: WhisperKitTranscriptionError.audioProcessingFailed("Failed to load audio: \(error.localizedDescription)"))
                 }
@@ -281,31 +410,7 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
         }
     }
     
-    nonisolated private func resampleAudioIfNeeded(_ audio: [Float], fromSampleRate: Double, toSampleRate: Double) throws -> [Float] {
-        // If sample rates match, no resampling needed
-        if abs(fromSampleRate - toSampleRate) < 0.1 {
-            return audio
-        }
-        
-        // Simple resampling using linear interpolation
-        // For production, consider using a more sophisticated resampling algorithm
-        let ratio = fromSampleRate / toSampleRate
-        let newLength = Int(Double(audio.count) / ratio)
-        var resampled: [Float] = []
-        resampled.reserveCapacity(newLength)
-        
-        for i in 0..<newLength {
-            let sourceIndex = Double(i) * ratio
-            let lowerIndex = Int(sourceIndex)
-            let upperIndex = min(lowerIndex + 1, audio.count - 1)
-            let fraction = Float(sourceIndex - Double(lowerIndex))
-            
-            let sample = audio[lowerIndex] * (1.0 - fraction) + audio[upperIndex] * fraction
-            resampled.append(sample)
-        }
-        
-        return resampled
-    }
+    // Linear resampler removed in favor of AVAudioConverter-based path above.
     
     private func extractAudioSegment(from audioData: [Float], startSample: Int, endSample: Int) -> [Float] {
         let safeStart = max(0, startSample)
@@ -332,6 +437,55 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
         // WhisperKit may not provide direct confidence scores
         // Return a reasonable default for now
         return 0.8
+    }
+
+    #if canImport(WhisperKit)
+    /// Build decoding options with language mapping and VAD chunking.
+    /// Extend here with temperature/thresholds when supported by the SDK version in use.
+    private func buildDecodingOptions(language: String?) -> DecodingOptions {
+        let mapped = mapLanguageCode(language) ?? AppConfiguration.shared.preferredTranscriptionLanguage
+        let timestamps = AppConfiguration.shared.whisperWordTimestamps
+        let chunkingRaw = AppConfiguration.shared.whisperChunkingStrategy
+        let chunking: ChunkingStrategy = (chunkingRaw == "none") ? .none : .vad
+        return DecodingOptions(
+            task: .transcribe,
+            language: mapped,
+            wordTimestamps: timestamps,
+            chunkingStrategy: chunking
+        )
+    }
+
+    /// Map human-readable language names to ISO codes expected by WhisperKit.
+    private func mapLanguageCode(_ input: String?) -> String? {
+        guard let raw = input?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
+        let lower = raw.lowercased()
+        // If already an ISO-like code (e.g., "en", "en-us"), normalize
+        if lower.range(of: "^[a-z]{2}(-[a-z]{2})?$", options: .regularExpression) != nil {
+            return lower
+        }
+        let map: [String: String] = [
+            "english": "en",
+            "spanish": "es",
+            "french": "fr",
+            "german": "de",
+            "italian": "it",
+            "portuguese": "pt",
+            "japanese": "ja",
+            "korean": "ko",
+            "chinese": "zh"
+        ]
+        return map[lower] ?? lower
+    }
+    #endif
+}
+
+// MARK: - TranscriptionProgressReporting
+extension WhisperKitTranscriptionService: TranscriptionProgressReporting {
+    @MainActor func setProgressHandler(_ handler: @escaping (Double) -> Void) {
+        self.onProgress = handler
+    }
+    @MainActor func clearProgressHandler() {
+        self.onProgress = nil
     }
 }
 

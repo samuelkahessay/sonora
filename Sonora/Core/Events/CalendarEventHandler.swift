@@ -71,6 +71,11 @@ public final class CalendarEventHandler {
                 await handleTodosAnalysisCompleted(memoId: memoId, result: result)
             }
             
+        case .transcriptionProgress:
+            // Not relevant for calendar integration
+            break
+        case .transcriptionRouteDecided:
+            break
         case .recordingStarted, .recordingCompleted:
             // Not relevant for calendar integration
             break

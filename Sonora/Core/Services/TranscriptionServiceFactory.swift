@@ -34,17 +34,30 @@ final class TranscriptionServiceFactory {
         let state = downloadManager.getDownloadState(for: selectedModel.id)
         let isSelectedInstalled = downloadManager.isModelAvailable(selectedModel.id)
         let installedIds = modelProvider.installedModelIds()
-        let anyInstalled = !installedIds.isEmpty
+        let validInstalledIds = installedIds.filter { modelProvider.isModelValid(id: $0) }
+        let anyInstalled = !validInstalledIds.isEmpty
         var effectiveService = UserDefaults.standard.getEffectiveTranscriptionService(downloadManager: downloadManager)
         
         // If user prefers local, allow any installed model to enable local service even when selected differs
         if userPreference == .localWhisperKit && effectiveService == .cloudAPI && anyInstalled {
             effectiveService = .localWhisperKit
-            logger.warning("Selected local model not installed (id=\(selectedModel.id)); using available installed model(s): \(installedIds)")
+            logger.warning("Selected local model not installed (id=\(selectedModel.id)); using available installed model(s): \(validInstalledIds)")
+        }
+
+        // If user prefers local but selected model is not installed, eagerly normalize the selection
+        // to the first installed model to reduce confusion and align UI with actual behavior.
+        if userPreference == .localWhisperKit && !isSelectedInstalled, let fallbackId = validInstalledIds.first {
+            let previous = UserDefaults.standard.selectedWhisperModel
+            UserDefaults.standard.selectedWhisperModel = fallbackId
+            logger.info("Normalized selected Whisper model to installed fallback: \(fallbackId)")
+            NotificationCenter.default.post(name: .whisperModelNormalized, object: nil, userInfo: [
+                "previous": previous,
+                "normalized": fallbackId
+            ])
         }
         
         logger.info("Creating transcription service - Preference: \(userPreference.displayName), Effective: \(effectiveService.displayName)")
-        logger.debug("Local model availability — selectedId=\(selectedModel.id), state=\(state.displayName), selectedInstalled=\(isSelectedInstalled), installedIds=\(installedIds)")
+        logger.debug("Local model availability — selectedId=\(selectedModel.id), state=\(state.displayName), selectedInstalled=\(isSelectedInstalled), installedIds=\(installedIds), validInstalledIds=\(validInstalledIds)")
         
         switch effectiveService {
         case .cloudAPI:
@@ -227,6 +240,11 @@ final class RoutedTranscriptionService: TranscriptionAPI {
         
         let targetService = determineTargetService()
         logger.debug("Target service determined: \(targetService.displayName)")
+        // Publish initial route decision
+        if let memoId = CurrentTranscriptionContext.memoId {
+            let bus = DIContainer.shared.eventBus()
+            await MainActor.run { bus.publish(.transcriptionRouteDecided(memoId: memoId, route: targetService == .localWhisperKit ? "local" : "cloud", reason: nil)) }
+        }
         
         do {
             let service = createServiceForType(targetService)
@@ -240,6 +258,15 @@ final class RoutedTranscriptionService: TranscriptionAPI {
             
             // Attempt fallback if primary was local
             if targetService == .localWhisperKit && shouldFallbackToCloud(error: error) {
+                if AppConfiguration.shared.strictLocalWhisper {
+                    logger.warning("Strict local whisper enabled; not falling back to Cloud API")
+                    throw error
+                }
+                // Publish fallback route change
+                if let memoId = CurrentTranscriptionContext.memoId {
+                    let bus = DIContainer.shared.eventBus()
+                    await MainActor.run { bus.publish(.transcriptionRouteDecided(memoId: memoId, route: "cloud", reason: error.localizedDescription)) }
+                }
                 logger.info("Attempting fallback to Cloud API")
                 
                 do {

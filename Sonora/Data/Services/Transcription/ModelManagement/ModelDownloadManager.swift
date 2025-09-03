@@ -30,6 +30,7 @@ final class ModelDownloadManager: ObservableObject {
         self.modelProvider = provider
         loadDownloadStates()
         loadDownloadMetadata()
+        cleanupInvalidInstalledModels() // Remove incomplete/invalid local models
         cleanupStaleDownloads()  // Clean up before checking
         checkForStaleDownloads()
         setupPrefetchMonitorIfNeeded()
@@ -46,7 +47,17 @@ final class ModelDownloadManager: ObservableObject {
     
     /// Gets the current download state for a model
     func getDownloadState(for modelId: String) -> ModelDownloadState {
-        if modelProvider.isInstalled(modelId) { return .downloaded }
+        // Honor active states while downloading/failed/stale
+        if let state = downloadStates[modelId] {
+            switch state {
+            case .downloading, .failed, .stale:
+                return state
+            case .notDownloaded, .downloaded:
+                break
+            }
+        }
+        // Only report downloaded when the install validates
+        if modelProvider.isModelValid(id: modelId) { return .downloaded }
         return downloadStates[modelId] ?? .notDownloaded
     }
     
@@ -70,8 +81,7 @@ final class ModelDownloadManager: ObservableObject {
         logger.info("Starting download for model: \(modelId)")
         logger.warning("WhisperKit downloads may pause if app backgrounds; keep Sonora in foreground until complete.")
         
-        // Get expected size from model info
-        let expectedSize = WhisperModelInfo.model(withId: modelId)?.size
+        // Get expected size from curated model info
         let expectedBytes = estimatedSizeBytes(for: modelId)
         
         // Clear any previous errors
@@ -146,7 +156,7 @@ final class ModelDownloadManager: ObservableObject {
                 downloadErrors[modelId] = "Download appears stuck (no progress for \(Int(metadata.timeElapsed/60)) minutes)"
             } else if metadata.state == .downloading {
                 // Check if model was actually completed
-                if modelProvider.isInstalled(modelId) {
+                if modelProvider.isModelValid(id: modelId) {
                     logger.info("Found completed download that wasn't marked as finished: \(modelId)")
                     downloadStates[modelId] = .downloaded
                     downloadProgress[modelId] = 1.0
@@ -263,6 +273,52 @@ final class ModelDownloadManager: ObservableObject {
         loadDownloadStates()
     }
 
+    /// Validate installed model folders and remove any invalid models (e.g., missing tokenizer merges)
+    private func cleanupInvalidInstalledModels() {
+        let ids = modelProvider.installedModelIds()
+        var cleaned: [String] = []
+        for id in ids {
+            if !modelProvider.isModelValid(id: id) {
+                logger.warning("Found invalid/incomplete model folder; deleting: \(id)")
+                Task { @MainActor in
+                    try? await modelProvider.delete(id: id)
+                    modelProvider.clearPersistedFolder(for: id)
+                    downloadStates[id] = .notDownloaded
+                    downloadProgress.removeValue(forKey: id)
+                    downloadErrors.removeValue(forKey: id)
+                    let key = downloadStateKey(for: id)
+                    userDefaults.set(ModelDownloadState.notDownloaded.rawValue, forKey: key)
+                }
+                cleaned.append(id)
+            }
+        }
+        if !cleaned.isEmpty {
+            logger.info("Cleaned invalid models: \(cleaned)")
+        }
+    }
+
+    /// Check whether a local model appears valid
+    func isLocalModelValid(_ modelId: String) -> Bool {
+        return modelProvider.isModelValid(id: modelId)
+    }
+
+    /// Delete and re-download a model in one step (repair)
+    func repairModel(_ modelId: String) {
+        logger.info("Repairing model: \(modelId) — deleting and re-downloading")
+        Task {
+            do { try await modelProvider.delete(id: modelId) } catch {
+                logger.warning("Repair: delete failed for \(modelId): \(error.localizedDescription)")
+            }
+            await MainActor.run {
+                self.clearDownloadState(for: modelId)
+                self.downloadStates[modelId] = .notDownloaded
+                self.downloadProgress.removeValue(forKey: modelId)
+                self.downloadErrors.removeValue(forKey: modelId)
+                self.downloadModel(modelId)
+            }
+        }
+    }
+
     /// Optionally prefetch the default model when on Wi‑Fi
     func maybePrefetchDefaultModelOnWiFi() {
         guard UserDefaults.standard.prefetchWhisperModelOnWiFi else { return }
@@ -314,7 +370,7 @@ final class ModelDownloadManager: ObservableObject {
     
     /// Checks if a model is available for use
     func isModelAvailable(_ modelId: String) -> Bool {
-        return modelProvider.isInstalled(modelId)
+        return modelProvider.isModelValid(id: modelId)
     }
     
     // MARK: - Private Methods
@@ -329,7 +385,7 @@ final class ModelDownloadManager: ObservableObject {
                     self.downloadProgress[modelId] = p
                     
                     // Update metadata with progress
-                    if var metadata = self.downloadMetadata[modelId] {
+                    if let metadata = self.downloadMetadata[modelId] {
                         let updatedMetadata = ModelDownloadMetadata(
                             modelId: metadata.modelId,
                             state: .downloading,
@@ -354,7 +410,7 @@ final class ModelDownloadManager: ObservableObject {
                 self.downloadProgress[modelId] = 1.0
                 
                 // Update metadata for completion
-                if var metadata = self.downloadMetadata[modelId] {
+                if let metadata = self.downloadMetadata[modelId] {
                     let completedMetadata = ModelDownloadMetadata(
                         modelId: metadata.modelId,
                         state: .downloaded,
@@ -381,7 +437,7 @@ final class ModelDownloadManager: ObservableObject {
                 self.downloadErrors[modelId] = error.localizedDescription
                 
                 // Update metadata for failure
-                if var metadata = self.downloadMetadata[modelId] {
+                if let metadata = self.downloadMetadata[modelId] {
                     let failedMetadata = ModelDownloadMetadata(
                         modelId: metadata.modelId,
                         state: .failed,
@@ -409,7 +465,7 @@ final class ModelDownloadManager: ObservableObject {
     private func loadDownloadStates() {
         let ids = WhisperKitModelProvider.curatedModels.map { $0.id }
         for id in ids {
-            if modelProvider.isInstalled(id) {
+            if modelProvider.isModelValid(id: id) {
                 downloadStates[id] = .downloaded
                 saveDownloadState(modelId: id, state: .downloaded)
             } else {
