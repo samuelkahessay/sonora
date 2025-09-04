@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(WhisperKit)
-import WhisperKit
+@preconcurrency import WhisperKit
 #endif
 
 @MainActor
@@ -154,10 +154,10 @@ final class WhisperKitModelProvider {
               let root = try? WhisperKitInstall.modelRoot() else { return nil }
         return root.appendingPathComponent(id, isDirectory: true)
     }
-    func download(id: String, progress: @escaping (Double) -> Void) async throws {
+    func download(id: String, progress: @escaping @MainActor @Sendable (Double) -> Void) async throws {
         #if canImport(WhisperKit)
         logger.info("Starting WhisperKit download for model: \(id)")
-        progress(0.0)
+        await progress(0.0)
 
         do {
             // Proactively ensure common HuggingFace directories exist to avoid CFNetwork move errors
@@ -200,10 +200,12 @@ final class WhisperKitModelProvider {
                 downloadedFolder = try await WhisperKit.download(
                     variant: id,
                     from: "argmaxinc/whisperkit-coreml",
-                    progressCallback: { progressObject in
+                    progressCallback: { @Sendable progressObject in
                         let fractionCompleted = progressObject.fractionCompleted
-                        progress(fractionCompleted)
-                        self.logger.debug("Download progress for \(id): \(Int(fractionCompleted * 100))%")
+                        Task { @MainActor in
+                            await progress(fractionCompleted)
+                        }
+                        Logger.shared.debug("Download progress for \(id): \(Int(fractionCompleted * 100))%")
                     }
                 )
             }
@@ -236,7 +238,7 @@ final class WhisperKitModelProvider {
             // Persist the exact folder path for future resolution
             savePersistedFolder(downloadedFolder, for: id)
             
-            progress(1.0)
+            await progress(1.0)
             logger.info("WhisperKitModelProvider: Successfully downloaded and validated model: \(id)")
 
         } catch let e as ModelDownloadError {
@@ -406,7 +408,7 @@ final class WhisperKitModelProvider {
     }
 }
 
-struct WhisperModel: Equatable, Hashable, Codable {
+struct WhisperModel: Equatable, Hashable, Codable, Sendable {
     let id: String
     let displayName: String
     let sizeBytes: Int64?

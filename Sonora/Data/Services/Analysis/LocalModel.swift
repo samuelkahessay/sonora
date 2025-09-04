@@ -206,7 +206,8 @@ enum LocalModel: String, CaseIterable {
     
     /// Check if the current device is compatible with this model
     var isDeviceCompatible: Bool {
-        let deviceRAM = UIDevice.current.estimatedRAMCapacity
+        // Avoid main-actor UIDevice; use physicalMemory
+        let deviceRAM = ProcessInfo.processInfo.physicalMemory
         return deviceRAM >= minRAMRequired
     }
     
@@ -214,7 +215,7 @@ enum LocalModel: String, CaseIterable {
     var incompatibilityReason: String? {
         guard !isDeviceCompatible else { return nil }
         
-        let deviceRAM = UIDevice.current.estimatedRAMCapacity
+        let deviceRAM = ProcessInfo.processInfo.physicalMemory
         let requiredGB = Int(minRAMRequired / 1_000_000_000)
         let deviceGB = Int(deviceRAM / 1_000_000_000)
         

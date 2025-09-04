@@ -2,7 +2,7 @@ import Foundation
 
 /// Types of operations that can be performed on memos
 /// Used for conflict detection and resource coordination
-public enum OperationType: Hashable, CustomStringConvertible {
+public enum OperationType: Hashable, CustomStringConvertible, Sendable {
     case recording(memoId: UUID)
     case transcription(memoId: UUID)
     case analysis(memoId: UUID, analysisType: AnalysisMode)
@@ -37,7 +37,7 @@ public enum OperationType: Hashable, CustomStringConvertible {
 }
 
 /// Broad categories of operations for conflict detection
-public enum OperationCategory: String, CaseIterable {
+public enum OperationCategory: String, CaseIterable, Sendable {
     case recording = "recording"
     case transcription = "transcription"
     case analysis = "analysis"
@@ -62,7 +62,7 @@ public enum OperationCategory: String, CaseIterable {
 }
 
 /// Priority levels for operation scheduling
-public enum OperationPriority: Int, Comparable, CaseIterable {
+public enum OperationPriority: Int, Comparable, CaseIterable, Sendable {
     case low = 0        // Analysis operations
     case medium = 1     // Transcription operations
     case high = 2       // Recording operations (user-interactive)
@@ -93,7 +93,7 @@ public enum OperationPriority: Int, Comparable, CaseIterable {
 }
 
 /// Current status of an operation
-public enum OperationStatus: String, CaseIterable {
+public enum OperationStatus: String, CaseIterable, Sendable {
     case pending = "pending"        // Queued but not started
     case active = "active"          // Currently running
     case completed = "completed"    // Successfully finished
@@ -121,7 +121,7 @@ public enum OperationStatus: String, CaseIterable {
 }
 
 /// Complete operation information for tracking
-public struct Operation: Hashable, CustomStringConvertible {
+public struct Operation: Hashable, CustomStringConvertible, Sendable {
     public let id: UUID
     public let type: OperationType
     public let priority: OperationPriority
@@ -129,7 +129,7 @@ public struct Operation: Hashable, CustomStringConvertible {
     public var status: OperationStatus
     public var startedAt: Date?
     public var completedAt: Date?
-    public var error: Error?
+    public var errorDescription: String?
     public var progress: OperationProgress?
     
     public init(
@@ -172,12 +172,12 @@ public struct Operation: Hashable, CustomStringConvertible {
 }
 
 /// Conflict detection and resolution strategies
-public struct OperationConflict {
+public struct OperationConflict: Sendable {
     public let conflictingOperation: Operation
     public let requestedOperation: OperationType
     public let resolutionStrategy: ConflictResolutionStrategy
     
-    public enum ConflictResolutionStrategy {
+    public enum ConflictResolutionStrategy: Sendable {
         case queue          // Queue the new operation until conflict resolves
         case cancel         // Cancel the new operation
         case replace        // Cancel existing operation and start new one
@@ -229,7 +229,7 @@ public struct OperationConflict {
 }
 
 /// Performance and diagnostic information
-public struct OperationMetrics {
+public struct OperationMetrics: Sendable {
     public let totalOperations: Int
     public let activeOperations: Int
     public let queuedOperations: Int

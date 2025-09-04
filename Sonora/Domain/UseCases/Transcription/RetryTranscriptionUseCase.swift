@@ -2,11 +2,11 @@ import Foundation
 
 /// Use case for retrying transcription of a memo
 /// Encapsulates the business logic for retrying failed transcriptions
-protocol RetryTranscriptionUseCaseProtocol {
+protocol RetryTranscriptionUseCaseProtocol: Sendable {
     func execute(memo: Memo) async throws
 }
 
-final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
+final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let transcriptionRepository: any TranscriptionRepository
@@ -19,6 +19,7 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
+    @MainActor
     func execute(memo: Memo) async throws {
         print("🔄 RetryTranscriptionUseCase: Retrying transcription for memo: \(memo.filename)")
         

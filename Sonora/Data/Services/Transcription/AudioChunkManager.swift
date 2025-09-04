@@ -31,7 +31,7 @@ enum AudioChunkError: LocalizedError {
 }
 
 /// Utility class for creating and cleaning up audio chunks referenced by VoiceSegments.
-final class AudioChunkManager {
+final class AudioChunkManager: @unchecked Sendable {
     private let fileManager = FileManager.default
     private let chunkRoot: URL
     private let preferredTimescale: CMTimeScale = 600

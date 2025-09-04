@@ -2,10 +2,12 @@ import Foundation
 
 /// Use case for starting audio recording
 /// Encapsulates the business logic for initiating recording sessions with background support
+@MainActor
 protocol StartRecordingUseCaseProtocol {
     func execute() async throws -> UUID?
 }
 
+@MainActor
 final class StartRecordingUseCase: StartRecordingUseCaseProtocol {
     
     // MARK: - Dependencies
@@ -28,15 +30,13 @@ final class StartRecordingUseCase: StartRecordingUseCaseProtocol {
     
     // MARK: - Use Case Execution
     func execute() async throws -> UUID? {
-        // Pre-checks on main actor (iOS requirement)
-        try await MainActor.run {
-            guard !audioRepository.isRecording else {
-                throw RecordingError.alreadyRecording
-            }
-            guard audioRepository.hasMicrophonePermission else {
-                audioRepository.checkMicrophonePermissions()
-                throw RecordingError.permissionDenied
-            }
+        // Pre-checks (already on MainActor)
+        guard !audioRepository.isRecording else {
+            throw RecordingError.alreadyRecording
+        }
+        guard audioRepository.hasMicrophonePermission else {
+            audioRepository.checkMicrophonePermissions()
+            throw RecordingError.permissionDenied
         }
 
         // Start recording via repository; repository returns the actual memoId
@@ -49,9 +49,7 @@ final class StartRecordingUseCase: StartRecordingUseCaseProtocol {
             logger.debug("Recording operation registered with ID: \(operationId)", category: .audio, context: context)
             return memoId
         } else {
-            await MainActor.run {
-                self.audioRepository.stopRecording()
-            }
+            self.audioRepository.stopRecording()
             logger.warning("Recording rejected by operation coordinator (at capacity or conflicting operation)",
                            category: .audio, context: context, error: nil)
             throw RecordingError.recordingFailed("Unable to start recording - system busy or conflicting operation")

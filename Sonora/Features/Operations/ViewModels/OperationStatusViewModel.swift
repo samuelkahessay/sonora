@@ -84,9 +84,7 @@ final class OperationStatusViewModel: ObservableObject, OperationStatusDelegate 
     }
     
     private func setupStatusDelegate() {
-        Task {
-            await operationCoordinator.setStatusDelegate(self)
-        }
+        operationCoordinator.setStatusDelegate(self)
     }
     
     // MARK: - Data Management
@@ -196,8 +194,8 @@ final class OperationStatusViewModel: ObservableObject, OperationStatusDelegate 
             details.append("ETA: \(formatDate(estimatedCompletion))")
         }
         
-        if let error = op.error {
-            details.append("Error: \(error.localizedDescription)")
+        if let error = op.errorDescription {
+            details.append("Error: \(error)")
         }
         
         return details.joined(separator: "\n")

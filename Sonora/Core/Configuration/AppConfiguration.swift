@@ -658,6 +658,10 @@ public final class AppConfiguration: ObservableObject {
     }
 }
 
+// AppConfiguration is a shared configuration holder accessed primarily on the main actor.
+// Mark it as unchecked Sendable to silence static 'shared' diagnostics under strict concurrency.
+extension AppConfiguration: @unchecked Sendable {}
+
 // MARK: - AnalysisMode Extension
 
 extension AnalysisMode {

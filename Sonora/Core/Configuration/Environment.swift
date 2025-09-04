@@ -3,7 +3,7 @@ import UIKit
 
 /// Environment configuration management for build-specific settings
 /// Handles debug/release configurations, feature toggles, and development tools
-public final class Environment {
+public final class Environment: @unchecked Sendable {
     
     // MARK: - Singleton
     
@@ -207,7 +207,8 @@ public final class Environment {
     
     /// iOS version
     public var iosVersion: String {
-        return UIDevice.current.systemVersion
+        let ver = ProcessInfo.processInfo.operatingSystemVersion
+        return "\(ver.majorVersion).\(ver.minorVersion).\(ver.patchVersion)"
     }
     
     /// Whether device supports Dynamic Island

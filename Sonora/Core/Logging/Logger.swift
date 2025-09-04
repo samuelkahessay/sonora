@@ -115,7 +115,7 @@ public enum LogDestination: Hashable {
 }
 
 /// Context information for error logging
-public struct LogContext {
+public struct LogContext: @unchecked Sendable {
     public let file: String
     public let line: Int
     public let function: String
@@ -156,7 +156,7 @@ public protocol LoggerProtocol {
 }
 
 /// High-performance, thread-safe logging system following Clean Architecture
-public final class Logger: LoggerProtocol {
+public final class Logger: LoggerProtocol, @unchecked Sendable {
     
     // MARK: - Singleton
     public static let shared = Logger()

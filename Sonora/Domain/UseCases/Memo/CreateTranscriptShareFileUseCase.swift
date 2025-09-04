@@ -3,11 +3,11 @@ import Foundation
 /// Use case for creating a shareable transcript file for a memo.
 /// Writes a UTF-8 `.txt` file to the temporary directory using a sanitized
 /// filename derived from `memo.preferredShareableFileName`.
-protocol CreateTranscriptShareFileUseCaseProtocol {
+protocol CreateTranscriptShareFileUseCaseProtocol: Sendable {
     func execute(memo: Memo, text: String) async throws -> URL
 }
 
-final class CreateTranscriptShareFileUseCase: CreateTranscriptShareFileUseCaseProtocol {
+final class CreateTranscriptShareFileUseCase: CreateTranscriptShareFileUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let exporter: any TranscriptExporting

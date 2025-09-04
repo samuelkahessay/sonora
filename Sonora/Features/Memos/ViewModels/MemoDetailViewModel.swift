@@ -243,7 +243,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         // Set self as progress/status delegate to get live updates
         Task { [weak self] in
             guard let self else { return }
-            await operationCoordinator.setStatusDelegate(self)
+            operationCoordinator.setStatusDelegate(self)
         }
 
         // Update operation summaries every 2 seconds (fallback/debug)
@@ -292,12 +292,11 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
 
         // Update language detection + moderation from metadata if available
         if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
-            if let lang = meta["detectedLanguage"] as? String,
-               let score = meta["qualityScore"] as? Double {
+            if let lang = meta.detectedLanguage, let score = meta.qualityScore {
                 updateLanguageDetection(language: lang, qualityScore: score)
             }
-            if let flagged = meta["moderationFlagged"] as? Bool { transcriptionModerationFlagged = flagged }
-            if let cats = meta["moderationCategories"] as? [String: Bool] { transcriptionModerationCategories = cats }
+            if let flagged = meta.moderationFlagged { transcriptionModerationFlagged = flagged }
+            if let cats = meta.moderationCategories { transcriptionModerationCategories = cats }
         }
     }
     
@@ -623,8 +622,8 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         
         // Attempt to load language metadata to show banner if needed
         if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id),
-           let lang = meta["detectedLanguage"] as? String,
-           let score = meta["qualityScore"] as? Double {
+           let lang = meta.detectedLanguage,
+           let score = meta.qualityScore {
             updateLanguageDetection(language: lang, qualityScore: score)
         }
     }
@@ -633,7 +632,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         print("📝 MemoDetailViewModel: View disappeared")
         Task { [weak self] in
             guard let self else { return }
-            await operationCoordinator.setStatusDelegate(nil)
+            operationCoordinator.setStatusDelegate(nil)
         }
     }
 
@@ -663,12 +662,11 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             self.transcriptionProgressStep = nil
             // Refresh language metadata and banner on completion
             if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
-                if let lang = meta["detectedLanguage"] as? String,
-                   let score = meta["qualityScore"] as? Double {
+                if let lang = meta.detectedLanguage, let score = meta.qualityScore {
                     self.updateLanguageDetection(language: lang, qualityScore: score)
                 }
-                if let flagged = meta["moderationFlagged"] as? Bool { self.transcriptionModerationFlagged = flagged }
-                if let cats = meta["moderationCategories"] as? [String: Bool] { self.transcriptionModerationCategories = cats }
+                if let flagged = meta.moderationFlagged { self.transcriptionModerationFlagged = flagged }
+                if let cats = meta.moderationCategories { self.transcriptionModerationCategories = cats }
             }
         }
     }

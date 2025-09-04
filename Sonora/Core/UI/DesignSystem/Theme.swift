@@ -1,6 +1,6 @@
 import SwiftUI
 
-protocol AppTheme {
+protocol AppTheme: Sendable {
     var palette: ColorPalette { get }
     var typography: Typography { get }
     var glassIntensity: GlassIntensity { get }

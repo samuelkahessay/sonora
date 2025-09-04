@@ -3,8 +3,8 @@ import Foundation
 /// Parallel implementation of Distill analysis for improved performance
 /// Executes 4 component analyses concurrently and combines results
 /// Provides progressive UI updates as components complete
-protocol AnalyzeDistillParallelUseCaseProtocol {
-    func execute(transcript: String, memoId: UUID, progressHandler: @escaping (DistillProgressUpdate) -> Void) async throws -> AnalyzeEnvelope<DistillData>
+protocol AnalyzeDistillParallelUseCaseProtocol: Sendable {
+    func execute(transcript: String, memoId: UUID, progressHandler: @MainActor @escaping (DistillProgressUpdate) -> Void) async throws -> AnalyzeEnvelope<DistillData>
 }
 
 /// Progress update for parallel distill processing
@@ -43,7 +43,14 @@ public struct PartialDistillData: Sendable {
     }
 }
 
-final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol {
+enum DistillComponentData: Sendable {
+    case summary(DistillSummaryData)
+    case actions(DistillActionsData)
+    case themes(DistillThemesData)
+    case reflection(DistillReflectionData)
+}
+
+final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
@@ -71,7 +78,8 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     }
     
     // MARK: - Use Case Execution
-    func execute(transcript: String, memoId: UUID, progressHandler: @escaping (DistillProgressUpdate) -> Void) async throws -> AnalyzeEnvelope<DistillData> {
+    @MainActor
+    func execute(transcript: String, memoId: UUID, progressHandler: @MainActor @escaping (DistillProgressUpdate) -> Void) async throws -> AnalyzeEnvelope<DistillData> {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
         
@@ -86,12 +94,12 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         do {
             // Validate inputs
             guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                await operationCoordinator.failOperation(operationId, error: AnalysisError.emptyTranscript)
+                await operationCoordinator.failOperation(operationId, errorDescription: AnalysisError.emptyTranscript.errorDescription ?? "Empty transcript")
                 throw AnalysisError.emptyTranscript
             }
             
             guard transcript.count >= 10 else {
-                await operationCoordinator.failOperation(operationId, error: AnalysisError.transcriptTooShort)
+                await operationCoordinator.failOperation(operationId, errorDescription: AnalysisError.transcriptTooShort.errorDescription ?? "Transcript too short")
                 throw AnalysisError.transcriptTooShort
             }
             
@@ -118,8 +126,8 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             }
             
             // Publish completion event
-            await MainActor.run { [eventBus] in
-                eventBus.publish(.analysisCompleted(memoId: memoId, type: .distill, result: result.data.summary))
+            await MainActor.run {
+                EventBus.shared.publish(.analysisCompleted(memoId: memoId, type: .distill, result: result.data.summary))
             }
             
             await operationCoordinator.completeOperation(operationId)
@@ -128,7 +136,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             return result
             
         } catch {
-            await operationCoordinator.failOperation(operationId, error: error)
+            await operationCoordinator.failOperation(operationId, errorDescription: error.localizedDescription)
             throw error
         }
     }
@@ -138,7 +146,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     private func executeParallelComponents(
         transcript: String,
         memoId: UUID,
-        progressHandler: @escaping (DistillProgressUpdate) -> Void,
+        progressHandler: @MainActor @escaping (DistillProgressUpdate) -> Void,
         context: LogContext
     ) async throws -> AnalyzeEnvelope<DistillData> {
         
@@ -162,7 +170,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         logger.analysis("Starting parallel execution of \(componentModes.count) components", context: context)
         
         // Execute all components in parallel using TaskGroup
-        try await withThrowingTaskGroup(of: (AnalysisMode, Any, Int, TokenUsage).self) { group in
+        try await withThrowingTaskGroup(of: (AnalysisMode, DistillComponentData, Int, TokenUsage).self) { group in
             
             // Add tasks for each component
             for mode in componentModes {
@@ -238,24 +246,24 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         )
     }
     
-    private func checkComponentCache(mode: AnalysisMode, memoId: UUID) async -> (data: Any, latency_ms: Int, tokens: TokenUsage)? {
+    private func checkComponentCache(mode: AnalysisMode, memoId: UUID) async -> (data: DistillComponentData, latency_ms: Int, tokens: TokenUsage)? {
         return await MainActor.run {
             switch mode {
             case .distillSummary:
                 if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillSummaryData.self) {
-                    return (result.data, result.latency_ms, result.tokens)
+                    return (.summary(result.data), result.latency_ms, result.tokens)
                 }
             case .distillActions:
                 if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillActionsData.self) {
-                    return (result.data, result.latency_ms, result.tokens)
+                    return (.actions(result.data), result.latency_ms, result.tokens)
                 }
             case .distillThemes:
                 if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillThemesData.self) {
-                    return (result.data, result.latency_ms, result.tokens)
+                    return (.themes(result.data), result.latency_ms, result.tokens)
                 }
             case .distillReflection:
                 if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillReflectionData.self) {
-                    return (result.data, result.latency_ms, result.tokens)
+                    return (.reflection(result.data), result.latency_ms, result.tokens)
                 }
             default:
                 break
@@ -264,74 +272,54 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         }
     }
     
-    private func executeComponentAnalysis(mode: AnalysisMode, transcript: String, memoId: UUID) async throws -> (data: Any, latency_ms: Int, tokens: TokenUsage) {
+    private func executeComponentAnalysis(mode: AnalysisMode, transcript: String, memoId: UUID) async throws -> (data: DistillComponentData, latency_ms: Int, tokens: TokenUsage) {
         switch mode {
         case .distillSummary:
             let envelope = try await analysisService.analyzeDistillSummary(transcript: transcript)
-            return (envelope.data, envelope.latency_ms, envelope.tokens)
+            return (.summary(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillActions:
             let envelope = try await analysisService.analyzeDistillActions(transcript: transcript)
-            return (envelope.data, envelope.latency_ms, envelope.tokens)
+            return (.actions(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillThemes:
             let envelope = try await analysisService.analyzeDistillThemes(transcript: transcript)
-            return (envelope.data, envelope.latency_ms, envelope.tokens)
+            return (.themes(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillReflection:
             let envelope = try await analysisService.analyzeDistillReflection(transcript: transcript)
-            return (envelope.data, envelope.latency_ms, envelope.tokens)
+            return (.reflection(envelope.data), envelope.latency_ms, envelope.tokens)
         default:
             throw AnalysisError.invalidResponse
         }
     }
     
-    private func saveComponentCache(data: Any, latency: Int, tokens: TokenUsage, mode: AnalysisMode, memoId: UUID) async {
+    private func saveComponentCache(data: DistillComponentData, latency: Int, tokens: TokenUsage, mode: AnalysisMode, memoId: UUID) async {
         await MainActor.run {
-            switch mode {
-            case .distillSummary:
-                if let summaryData = data as? DistillSummaryData {
-                    let envelope = AnalyzeEnvelope(mode: mode, data: summaryData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
-                    analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
-                }
-            case .distillActions:
-                if let actionsData = data as? DistillActionsData {
-                    let envelope = AnalyzeEnvelope(mode: mode, data: actionsData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
-                    analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
-                }
-            case .distillThemes:
-                if let themesData = data as? DistillThemesData {
-                    let envelope = AnalyzeEnvelope(mode: mode, data: themesData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
-                    analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
-                }
-            case .distillReflection:
-                if let reflectionData = data as? DistillReflectionData {
-                    let envelope = AnalyzeEnvelope(mode: mode, data: reflectionData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
-                    analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
-                }
-            default:
-                break
+            switch data {
+            case .summary(let summaryData):
+                let envelope = AnalyzeEnvelope(mode: mode, data: summaryData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+                analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+            case .actions(let actionsData):
+                let envelope = AnalyzeEnvelope(mode: mode, data: actionsData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+                analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+            case .themes(let themesData):
+                let envelope = AnalyzeEnvelope(mode: mode, data: themesData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+                analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+            case .reflection(let reflectionData):
+                let envelope = AnalyzeEnvelope(mode: mode, data: reflectionData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+                analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
             }
         }
     }
     
-    private func updatePartialData(_ partialData: inout PartialDistillData, mode: AnalysisMode, data: Any) {
-        switch mode {
-        case .distillSummary:
-            if let summaryData = data as? DistillSummaryData {
-                partialData.summary = summaryData.summary
-            }
-        case .distillActions:
-            if let actionsData = data as? DistillActionsData {
-                partialData.actionItems = actionsData.action_items
-            }
-        case .distillThemes:
-            if let themesData = data as? DistillThemesData {
-                partialData.keyThemes = themesData.key_themes
-            }
-        case .distillReflection:
-            if let reflectionData = data as? DistillReflectionData {
-                partialData.reflectionQuestions = reflectionData.reflection_questions
-            }
-        default:
-            break
+    private func updatePartialData(_ partialData: inout PartialDistillData, mode: AnalysisMode, data: DistillComponentData) {
+        switch data {
+        case .summary(let summaryData):
+            partialData.summary = summaryData.summary
+        case .actions(let actionsData):
+            partialData.actionItems = actionsData.action_items
+        case .themes(let themesData):
+            partialData.keyThemes = themesData.key_themes
+        case .reflection(let reflectionData):
+            partialData.reflectionQuestions = reflectionData.reflection_questions
         }
     }
 }

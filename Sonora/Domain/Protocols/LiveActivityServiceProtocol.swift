@@ -3,6 +3,7 @@ import Combine
 
 /// Protocol defining the interface for Live Activity management
 /// Abstraction for ActivityKit-backed Live Activities without coupling Domain to ActivityKit.
+@MainActor
 public protocol LiveActivityServiceProtocol {
     // Current state
     var isActivityActive: Bool { get }
@@ -17,7 +18,7 @@ public protocol LiveActivityServiceProtocol {
 }
 
 /// Represents the current state of Live Activity management
-public enum LiveActivityState {
+public enum LiveActivityState: Sendable {
     case inactive
     case starting
     case active(id: String)
@@ -27,14 +28,14 @@ public enum LiveActivityState {
 }
 
 /// Policy for how Live Activities should be dismissed
-public enum ActivityDismissalPolicy {
+public enum ActivityDismissalPolicy: Sendable {
     case immediate                // Dismiss immediately
     case afterDelay(TimeInterval) // Dismiss after specified seconds
     case userDismissal            // Let user dismiss manually
 }
 
 /// Errors that can occur during Live Activity operations
-public enum LiveActivityError: LocalizedError {
+public enum LiveActivityError: LocalizedError, Sendable {
     case notSupported
     case alreadyActive
     case notActive

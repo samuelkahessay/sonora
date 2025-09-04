@@ -223,7 +223,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     private func setupOperationStatusMonitoring() {
         // Set up delegation for operation status updates and fetch initial metrics once
         Task { @MainActor in
-            await operationCoordinator.setStatusDelegate(self)
+            operationCoordinator.setStatusDelegate(self)
             await updateOperationStatus()
         }
     }

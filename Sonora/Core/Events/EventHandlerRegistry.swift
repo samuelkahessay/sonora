@@ -322,9 +322,6 @@ public final class EventHandlerRegistry {
     deinit {
         // Handler cleanup is automatic via ARC since handlers clean up their own subscriptions
         // unregisterAllHandlers() is @MainActor isolated and cannot be called from deinit
-        logger.debug("EventHandlerRegistry deallocated", 
-                    category: .system, 
-                    context: LogContext())
     }
 }
 

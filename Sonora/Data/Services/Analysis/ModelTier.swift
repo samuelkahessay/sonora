@@ -70,7 +70,7 @@ enum ModelTier: String, CaseIterable, Identifiable {
     
     /// Check if the current device supports this tier
     var isDeviceCompatible: Bool {
-        let deviceRAM = UIDevice.current.estimatedRAMCapacity
+        let deviceRAM = ProcessInfo.processInfo.physicalMemory
         return deviceRAM >= minRAMRequired
     }
     

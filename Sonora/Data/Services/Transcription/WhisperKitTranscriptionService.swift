@@ -1,6 +1,8 @@
 import Foundation
 import AVFoundation
-import WhisperKit
+#if canImport(WhisperKit)
+@preconcurrency import WhisperKit
+#endif
 
 /// WhisperKit-based local transcription service
 @MainActor
@@ -62,10 +64,12 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
             // Attempt to use progress-enabled API if available
             let results: [TranscriptionResult]
             #if compiler(>=6)
-            results = try await whisperKit.transcribe(audioArray: audioData, decodeOptions: options) { [weak self] _ in
+            results = try await whisperKit.transcribe(audioArray: audioData, decodeOptions: options) { @Sendable [weak self] _ in
                 guard let self = self else { return nil }
-                let fraction = self.whisperKit?.progress.fractionCompleted ?? 0.0
-                Task { @MainActor in self.onProgress?(fraction) }
+                Task { @MainActor in
+                    let fraction = self.whisperKit?.progress.fractionCompleted ?? 0.0
+                    self.onProgress?(fraction)
+                }
                 return Task.isCancelled ? false : nil
             }
             #else
@@ -146,10 +150,12 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
                     let options = buildDecodingOptions(language: language)
                     let segmentResults: [TranscriptionResult]
                     #if compiler(>=6)
-                    segmentResults = try await whisperKit.transcribe(audioArray: segmentData, decodeOptions: options) { [weak self] _ in
+                    segmentResults = try await whisperKit.transcribe(audioArray: segmentData, decodeOptions: options) { @Sendable [weak self] _ in
                         guard let self = self else { return nil }
-                        let fraction = self.whisperKit?.progress.fractionCompleted ?? 0.0
-                        Task { @MainActor in self.onProgress?(fraction) }
+                        Task { @MainActor in
+                            let fraction = self.whisperKit?.progress.fractionCompleted ?? 0.0
+                            self.onProgress?(fraction)
+                        }
                         return Task.isCancelled ? false : nil
                     }
                     #else

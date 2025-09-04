@@ -1,6 +1,6 @@
 import Foundation
 
-protocol CreateAnalysisShareFileUseCaseProtocol {
+protocol CreateAnalysisShareFileUseCaseProtocol: Sendable {
     /// Creates a shareable text file containing AI analysis for the memo.
     /// - Parameters:
     ///   - memo: The memo to gather analysis for.
@@ -9,7 +9,7 @@ protocol CreateAnalysisShareFileUseCaseProtocol {
     func execute(memo: Memo, includeTypes: Set<DomainAnalysisType>?) async throws -> URL
 }
 
-final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtocol {
+final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtocol, @unchecked Sendable {
     // MARK: - Dependencies
     private let analysisRepository: any AnalysisRepository
     private let exporter: any AnalysisExporting
@@ -25,6 +25,7 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
         self.logger = logger
     }
 
+    @MainActor
     func execute(memo: Memo, includeTypes: Set<DomainAnalysisType>?) async throws -> URL {
         let corr = UUID().uuidString
         let context = LogContext(correlationId: corr, additionalInfo: [

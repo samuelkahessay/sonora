@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 // MARK: - Protocol
 
+@MainActor
 protocol SpotlightIndexing: AnyObject {
     func index(memoID: UUID) async
     func delete(memoID: UUID) async
@@ -88,16 +89,19 @@ final class SpotlightIndexer: SpotlightIndexing {
         var idx = 0
         while idx < all.count {
             let chunk = Array(all[idx..<min(idx+chunkSize, all.count)])
-            do {
-                var items: [CSSearchableItem] = []
-                for memo in chunk {
-                    if let item = await self.buildSearchableItem(for: memo) {
-                        items.append(item)
-                    }
+            var items: [CSSearchableItem] = []
+            for memo in chunk {
+                if let item = await self.buildSearchableItem(for: memo) {
+                    items.append(item)
                 }
-                try await CSSearchableIndex.default().indexSearchableItems(items)
-            } catch {
-                logger.warning("Spotlight batch index failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "batchStart": idx]), error: error)
+            }
+            await withCheckedContinuation { [weak self] continuation in
+                CSSearchableIndex.default().indexSearchableItems(items) { error in
+                    if let error = error {
+                        self?.logger.warning("Spotlight batch index failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "batchStart": idx]), error: error)
+                    }
+                    continuation.resume()
+                }
             }
             idx += chunkSize
         }
@@ -123,16 +127,21 @@ final class SpotlightIndexer: SpotlightIndexing {
             return
         }
         // Respect privacy flag if provided via metadata; skip if isPrivate == true
-        if let meta = transcriptionRepository.getTranscriptionMetadata(for: memoID), let isPrivate = meta["isPrivate"] as? Bool, isPrivate {
+        if let meta = transcriptionRepository.getTranscriptionMetadata(for: memoID), let isPrivate = meta.isPrivate, isPrivate {
             logger.info("Spotlight: skipping private memo", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]))
             return
         }
         guard let item = await buildSearchableItem(for: memo) else { return }
-        do {
-            try await CSSearchableIndex.default().indexSearchableItems([item])
-            logger.info("Spotlight: indexed memo \(memoID)", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]))
-        } catch {
-            logger.warning("Spotlight index failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]), error: error)
+        
+        await withCheckedContinuation { continuation in
+            CSSearchableIndex.default().indexSearchableItems([item]) { [weak self] error in
+                if let error = error {
+                    self?.logger.warning("Spotlight index failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]), error: error)
+                } else {
+                    self?.logger.info("Spotlight: indexed memo \(memoID)", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]))
+                }
+                continuation.resume()
+            }
         }
     }
 
@@ -146,7 +155,7 @@ final class SpotlightIndexer: SpotlightIndexing {
         attrs.contentCreationDate = memo.creationDate
         attrs.contentModificationDate = memo.creationDate
         // lastUsedDate best-effort from metadata if present
-        if let meta = transcriptionRepository.getTranscriptionMetadata(for: memo.id), let last = meta["lastOpenedAt"] as? Date {
+        if let meta = transcriptionRepository.getTranscriptionMetadata(for: memo.id), let last = meta.lastOpenedAt {
             attrs.lastUsedDate = last
         }
         return CSSearchableItem(uniqueIdentifier: idStr, domainIdentifier: "memo", attributeSet: attrs)

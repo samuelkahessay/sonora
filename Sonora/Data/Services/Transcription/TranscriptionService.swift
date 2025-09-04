@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 
+@MainActor
 final class TranscriptionService: TranscriptionAPI {
     private let config = AppConfiguration.shared
     private let logger: any LoggerProtocol = Logger.shared

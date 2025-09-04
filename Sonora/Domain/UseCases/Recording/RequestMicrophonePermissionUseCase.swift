@@ -2,12 +2,12 @@ import Foundation
 
 /// Use case for requesting microphone permission
 /// Encapsulates the business logic for handling microphone permissions with proper async support
-protocol RequestMicrophonePermissionUseCaseProtocol {
+protocol RequestMicrophonePermissionUseCaseProtocol: Sendable {
     func execute() async -> MicrophonePermissionStatus
     func getCurrentStatus() -> MicrophonePermissionStatus
 }
 
-final class RequestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCaseProtocol {
+final class RequestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let logger: any LoggerProtocol

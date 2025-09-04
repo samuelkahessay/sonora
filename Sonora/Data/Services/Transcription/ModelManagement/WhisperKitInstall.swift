@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(WhisperKit)
-import WhisperKit
+@preconcurrency import WhisperKit
 #endif
 
 struct WhisperKitInstall {

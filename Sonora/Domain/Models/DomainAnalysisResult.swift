@@ -1,7 +1,7 @@
 import Foundation
 
 /// Domain model representing the result of an analysis operation
-public struct DomainAnalysisResult: Identifiable, Codable, Equatable, Hashable {
+public struct DomainAnalysisResult: Identifiable, Codable, Equatable, Hashable, Sendable {
     public let id: UUID
     public let type: DomainAnalysisType
     public let status: DomainAnalysisStatus
@@ -108,7 +108,7 @@ public struct DomainAnalysisResult: Identifiable, Codable, Equatable, Hashable {
 // MARK: - Supporting Domain Types
 
 /// Status of an analysis operation
-public enum DomainAnalysisStatus: Codable, Equatable, Hashable {
+public enum DomainAnalysisStatus: Codable, Equatable, Hashable, Sendable {
     case notStarted
     case inProgress
     case completed
@@ -180,7 +180,7 @@ public enum DomainAnalysisStatus: Codable, Equatable, Hashable {
 }
 
 /// Content of an analysis result
-public struct DomainAnalysisContent: Codable, Equatable, Hashable {
+public struct DomainAnalysisContent: Codable, Equatable, Hashable, Sendable {
     public let summary: String?
     public let keyPoints: [String]
     public let themes: [DomainTheme]
@@ -233,7 +233,7 @@ public struct DomainAnalysisContent: Codable, Equatable, Hashable {
 }
 
 /// Theme identified in analysis
-public struct DomainTheme: Codable, Equatable, Identifiable, Hashable {
+public struct DomainTheme: Codable, Equatable, Identifiable, Hashable, Sendable {
     public let id: UUID
     public let name: String
     public let evidence: [String]
@@ -264,7 +264,7 @@ public struct DomainTheme: Codable, Equatable, Identifiable, Hashable {
 }
 
 /// Action item identified in analysis
-public struct DomainActionItem: Codable, Equatable, Identifiable, Hashable {
+public struct DomainActionItem: Codable, Equatable, Identifiable, Hashable, Sendable {
     public let id: UUID
     public let text: String
     public let priority: DomainPriority?
@@ -302,7 +302,7 @@ public struct DomainActionItem: Codable, Equatable, Identifiable, Hashable {
 }
 
 /// Priority levels for action items
-public enum DomainPriority: String, Codable, CaseIterable, Hashable {
+public enum DomainPriority: String, Codable, CaseIterable, Hashable, Sendable {
     case low = "low"
     case medium = "medium"
     case high = "high"
@@ -332,7 +332,7 @@ public enum DomainPriority: String, Codable, CaseIterable, Hashable {
 }
 
 /// Metadata about an analysis operation
-public struct DomainAnalysisMetadata: Codable, Equatable, Hashable {
+public struct DomainAnalysisMetadata: Codable, Equatable, Hashable, Sendable {
     public let modelUsed: String?
     public let tokensConsumed: Int?
     public let processingTimeMs: Int?

@@ -2,11 +2,11 @@ import Foundation
 
 /// Use case for stopping audio recording
 /// Encapsulates the business logic for stopping recording sessions with background support
-protocol StopRecordingUseCaseProtocol {
+protocol StopRecordingUseCaseProtocol: Sendable {
     func execute(memoId: UUID) async throws
 }
 
-final class StopRecordingUseCase: StopRecordingUseCaseProtocol {
+final class StopRecordingUseCase: StopRecordingUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let audioRepository: any AudioRepository

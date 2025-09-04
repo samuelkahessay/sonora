@@ -72,7 +72,7 @@ struct AnalysisResultsView: View {
     }
 }
 
-struct HeaderInfoView<T: Codable>: View {
+struct HeaderInfoView<T: Codable & Sendable>: View {
     let envelope: AnalyzeEnvelope<T>
     
     var body: some View {

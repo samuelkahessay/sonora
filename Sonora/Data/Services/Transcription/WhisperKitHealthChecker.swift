@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(WhisperKit)
-import WhisperKit
+@preconcurrency import WhisperKit
 #endif
 
 @MainActor
@@ -14,7 +14,7 @@ final class WhisperKitHealthChecker {
         self.logger = logger
     }
     
-    struct Report {
+    struct Report: Sendable {
         let ok: Bool
         let details: String
     }
@@ -29,7 +29,7 @@ final class WhisperKitHealthChecker {
             #if canImport(WhisperKit)
             let timeout = AppConfiguration.shared.healthCheckTimeoutInterval
             let result = try await withThrowingTaskGroup(of: Report.self) { group -> Report in
-                group.addTask { [logger] in
+                group.addTask {
                     let urls = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
                     // Validate compiled models exist
                     guard urls.contains(where: { $0.pathExtension == "mlmodelc" }) else {
@@ -70,7 +70,6 @@ final class WhisperKitHealthChecker {
                     }
 
                     await wk.unloadModels()
-                    logger.info("HealthCheck: Successfully prewarmed, loaded, and transcribed with model \(selectedId)", category: .system, context: LogContext())
                     return Report(ok: true, details: "Model is healthy and decodes correctly.")
                 }
                 group.addTask {
@@ -80,6 +79,9 @@ final class WhisperKitHealthChecker {
                 let report = try await group.next()!
                 group.cancelAll()
                 return report
+            }
+            if result.ok {
+                logger.info("HealthCheck: Successfully prewarmed, loaded, and transcribed with model \(selectedId)", category: .system, context: LogContext())
             }
             return result
             #else

@@ -51,7 +51,7 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
     }
 }
 
-public struct AnalyzeEnvelope<T: Codable>: Codable {
+public struct AnalyzeEnvelope<T: Codable & Sendable>: Codable, Sendable {
     public let mode: AnalysisMode
     public let data: T
     public let model: String
@@ -60,12 +60,12 @@ public struct AnalyzeEnvelope<T: Codable>: Codable {
     public let moderation: ModerationResult?
 }
 
-public struct TokenUsage: Codable {
+public struct TokenUsage: Codable, Sendable {
     public let input: Int
     public let output: Int
 }
 
-public struct DistillData: Codable {
+public struct DistillData: Codable, Sendable {
     public let summary: String
     public let action_items: [ActionItem]?
     public let key_themes: [String]
@@ -90,30 +90,30 @@ public struct DistillData: Codable {
 }
 
 // Individual Distill Component Data Models for Parallel Processing
-public struct DistillSummaryData: Codable {
+public struct DistillSummaryData: Codable, Sendable {
     public let summary: String
 }
 
-public struct DistillActionsData: Codable {
+public struct DistillActionsData: Codable, Sendable {
     public let action_items: [DistillData.ActionItem]
 }
 
-public struct DistillThemesData: Codable {
+public struct DistillThemesData: Codable, Sendable {
     public let key_themes: [String]
 }
 
-public struct DistillReflectionData: Codable {
+public struct DistillReflectionData: Codable, Sendable {
     public let reflection_questions: [String]
 }
 
 
-public struct AnalysisData: Codable {
+public struct AnalysisData: Codable, Sendable {
     public let summary: String
     public let key_points: [String]
 }
 
-public struct ThemesData: Codable {
-    public struct Theme: Codable {
+public struct ThemesData: Codable, Sendable {
+    public struct Theme: Codable, Sendable {
         public let name: String
         public let evidence: [String]
     }
@@ -130,8 +130,8 @@ public struct ThemesData: Codable {
     }
 }
 
-public struct TodosData: Codable {
-    public struct Todo: Codable {
+public struct TodosData: Codable, Sendable {
+    public struct Todo: Codable, Sendable {
         public let text: String
         public let due: String?
         

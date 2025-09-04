@@ -16,7 +16,8 @@ import Combine
 /// - Background task management to continue recording when app enters background
 /// - Single AVAudioRecorder instance lifecycle management
 /// - Thread-safe operations and state management
-final class BackgroundAudioService: NSObject, ObservableObject {
+@MainActor
+final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Sendable {
     
     // MARK: - Published Properties
     @Published var isRecording = false
@@ -31,7 +32,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
     
     // MARK: - Private Properties
     private var audioRecorder: AVAudioRecorder?
-    private var recordingTimer: Timer?
+    private var recordingTimerTask: Task<Void, Never>?
     private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private var wasInterrupted: Bool = false
@@ -72,7 +73,10 @@ final class BackgroundAudioService: NSObject, ObservableObject {
     }
     
     deinit {
-        cleanup()
+        // Only clean up non-UI resources in deinit
+        recordingTimerTask?.cancel()
+        audioRecorder?.delegate = nil
+        audioRecorder = nil
         NotificationCenter.default.removeObserver(self)
         print("🎵 BackgroundAudioService: Deinitialized")
     }
@@ -121,10 +125,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             
             // Activate the session
             try audioSession.setActive(true)
-            
-            DispatchQueue.main.async {
-                self.isSessionActive = true
-            }
+            self.isSessionActive = true
             
             print("🎵 BackgroundAudioService: Audio session configured successfully")
             print("   - Category: .playAndRecord")
@@ -135,9 +136,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             logAudioSessionRoute("post-config")
             
         } catch {
-            DispatchQueue.main.async {
-                self.isSessionActive = false
-            }
+            self.isSessionActive = false
             print("❌ BackgroundAudioService: Failed to configure audio session: \(error)")
             throw AudioServiceError.sessionConfigurationFailed(error)
         }
@@ -171,9 +170,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
         
         do {
             try audioSession.setActive(false)
-            DispatchQueue.main.async {
-                self.isSessionActive = false
-            }
+            self.isSessionActive = false
             print("🎵 BackgroundAudioService: Audio session deactivated")
         } catch {
             print("⚠️ BackgroundAudioService: Failed to deactivate audio session: \(error)")
@@ -259,10 +256,8 @@ final class BackgroundAudioService: NSObject, ObservableObject {
             }
             
             // Update state and start timer
-            DispatchQueue.main.async {
-                self.isRecording = true
-                self.recordingTime = 0
-            }
+            self.isRecording = true
+            self.recordingTime = 0
             
             startRecordingTimer()
             
@@ -291,9 +286,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
         audioRecorder?.stop()
         
         // Update state
-        DispatchQueue.main.async {
-            self.isRecording = false
-        }
+        self.isRecording = false
         
         // Note: Cleanup of session and background task happens in delegate method
         print("🎵 BackgroundAudioService: Recording stop initiated")
@@ -302,7 +295,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
     /// Checks microphone permissions
     func checkMicrophonePermissions() {
         requestMicrophonePermission { [weak self] granted in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 self?.hasPermission = granted
             }
         }
@@ -319,13 +312,13 @@ final class BackgroundAudioService: NSObject, ObservableObject {
         
         backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(withName: "AudioRecording") { [weak self] in
             print("⏰ BackgroundAudioService: Background task expired, cleaning up...")
-            self?.handleBackgroundTaskExpiration()
+            Task { @MainActor in
+                self?.handleBackgroundTaskExpiration()
+            }
         }
         
         if backgroundTaskIdentifier != .invalid {
-            DispatchQueue.main.async {
-                self.backgroundTaskActive = true
-            }
+            self.backgroundTaskActive = true
             print("🔄 BackgroundAudioService: Background task started (ID: \(backgroundTaskIdentifier.rawValue))")
         } else {
             print("❌ BackgroundAudioService: Failed to start background task")
@@ -342,10 +335,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
         
         UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
         backgroundTaskIdentifier = .invalid
-        
-        DispatchQueue.main.async {
-            self.backgroundTaskActive = false
-        }
+        self.backgroundTaskActive = false
     }
     
     /// Handles background task expiration
@@ -401,15 +391,21 @@ final class BackgroundAudioService: NSObject, ObservableObject {
     private func startRecordingTimer() {
         stopRecordingTimer() // Ensure no existing timer
         
-        recordingTimer = Timer.scheduledTimer(withTimeInterval: AudioConfiguration.timerInterval, repeats: true) { [weak self] _ in
-            self?.updateRecordingTime()
+        recordingTimerTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(AudioConfiguration.timerInterval * 1_000_000_000))
+                guard !Task.isCancelled else { break }
+                await MainActor.run {
+                    self?.updateRecordingTime()
+                }
+            }
         }
     }
     
     /// Stops the recording timer
     private func stopRecordingTimer() {
-        recordingTimer?.invalidate()
-        recordingTimer = nil
+        recordingTimerTask?.cancel()
+        recordingTimerTask = nil
     }
     
     /// Updates the recording time from the audio recorder
@@ -422,7 +418,6 @@ final class BackgroundAudioService: NSObject, ObservableObject {
         let cap = config.effectiveRecordingCapSeconds
         let remaining = cap != nil ? max(0, cap! - elapsed) : .infinity
         
-        DispatchQueue.main.async {
             // Update elapsed time
             self.recordingTime = elapsed
             
@@ -445,7 +440,6 @@ final class BackgroundAudioService: NSObject, ObservableObject {
                 // Stop recording to trigger delegate callbacks
                 self.stopRecording()
             }
-        }
     }
 
     private static func formatDuration(_ seconds: TimeInterval) -> String {
@@ -523,7 +517,7 @@ final class BackgroundAudioService: NSObject, ObservableObject {
                         let resumed = recorder.record()
                         print("🔄 BackgroundAudioService: Resuming recorder after interruption: \(resumed)")
                         if resumed {
-                            DispatchQueue.main.async { self.isRecording = true }
+                            self.isRecording = true
                         }
                     }
                 } else {
@@ -563,12 +557,10 @@ final class BackgroundAudioService: NSObject, ObservableObject {
         endBackgroundTask()
         
         // Reset state
-        DispatchQueue.main.async {
-            self.isRecording = false
-            self.recordingTime = 0
-            self.isSessionActive = false
-            self.backgroundTaskActive = false
-        }
+        self.isRecording = false
+        self.recordingTime = 0
+        self.isSessionActive = false
+        self.backgroundTaskActive = false
         
         print("🧹 BackgroundAudioService: Cleanup completed")
     }
@@ -578,28 +570,32 @@ final class BackgroundAudioService: NSObject, ObservableObject {
 
 extension BackgroundAudioService: AVAudioRecorderDelegate {
     
-    func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
+    nonisolated func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
         print("🎵 BackgroundAudioService: Recording finished successfully: \(flag)")
         
-        // Clean up resources
-        cleanup()
-        
-        if flag {
-            print("✅ BackgroundAudioService: Calling onRecordingFinished for \(recorder.url.lastPathComponent)")
-            onRecordingFinished?(recorder.url)
-        } else {
-            let error = AudioServiceError.recordingFailed("Recording completed unsuccessfully")
-            print("❌ BackgroundAudioService: Recording failed")
-            onRecordingFailed?(error)
+        // Clean up resources on MainActor
+        Task { @MainActor in
+            self.cleanup()
+            
+            if flag {
+                print("✅ BackgroundAudioService: Calling onRecordingFinished for \(recorder.url.lastPathComponent)")
+                self.onRecordingFinished?(recorder.url)
+            } else {
+                let error = AudioServiceError.recordingFailed("Recording completed unsuccessfully")
+                print("❌ BackgroundAudioService: Recording failed")
+                self.onRecordingFailed?(error)
+            }
         }
     }
     
-    func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {
+    nonisolated func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {
         let serviceError = AudioServiceError.encodingError(error)
         print("❌ BackgroundAudioService: Encoding error occurred: \(serviceError)")
         
-        cleanup()
-        onRecordingFailed?(serviceError)
+        Task { @MainActor in
+            self.cleanup()
+            self.onRecordingFailed?(serviceError)
+        }
     }
 }
 

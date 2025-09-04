@@ -11,6 +11,7 @@ import UIKit
 
 /// Accessibility coordinator for drag-to-select functionality
 /// Handles VoiceOver announcements, reduced motion support, and alternative selection methods
+@MainActor
 struct DragSelectionAccessibility {
     
     // MARK: - Accessibility State Tracking
@@ -160,6 +161,7 @@ extension View {
 extension View {
     
     /// Apply appropriate animation based on reduced motion preference
+    @MainActor
     func adaptiveAnimation<V: Equatable>(
         _ animation: Animation?,
         value: V
@@ -172,6 +174,7 @@ extension View {
     }
     
     /// Apply selection animation with reduced motion support
+    @MainActor
     func selectionAnimation<V: Equatable>(value: V) -> some View {
         adaptiveAnimation(
             DragSelectionAccessibility.isReducedMotionEnabled

@@ -2,10 +2,12 @@ import Foundation
 
 /// Use case for deleting a memo
 /// Encapsulates the business logic for memo deletion
+@MainActor
 protocol DeleteMemoUseCaseProtocol {
     func execute(memo: Memo) async throws
 }
 
+@MainActor
 final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     
     // MARK: - Dependencies
@@ -40,6 +42,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
+    @MainActor
     func execute(memo: Memo) async throws {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: [
@@ -51,10 +54,10 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
         
         do {
             // Validate memo exists in repository
-            try await validateMemoExists(memo)
+            try validateMemoExists(memo)
             
             // Check if memo is currently playing and stop if needed
-            try await handlePlaybackIfNeeded(memo)
+            try handlePlaybackIfNeeded(memo)
             
             // Validate file system state before deletion
             try validateFileSystemState(memo)
@@ -64,12 +67,12 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
             await deleteTranscription(for: memo, correlationId: correlationId)
             
             // Delete memo from repository
-            await memoRepository.deleteMemo(memo)
+            memoRepository.deleteMemo(memo)
             logger.useCase("Memo deleted from repository", 
                          context: LogContext(correlationId: correlationId, additionalInfo: ["memoId": memo.id.uuidString]))
             
             // Verify deletion was successful
-            try await verifyDeletion(memo)
+            try verifyDeletion(memo)
 
             logger.useCase("Memo deletion completed successfully", 
                          level: .info,
@@ -80,7 +83,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
                          ]))
 
             // Update Spotlight index (best-effort)
-            Task.detached(priority: .background) {
+            Task {
                 await DIContainer.shared.spotlightIndexer().delete(memoID: memo.id)
             }
             
@@ -118,7 +121,6 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     // MARK: - Private Methods
     
     /// Validates that the memo exists in the repository
-    @MainActor
     private func validateMemoExists(_ memo: Memo) throws {
         guard memoRepository.memos.contains(where: { $0.id == memo.id }) else {
             print("⚠️ DeleteMemoUseCase: Memo not found in repository: \(memo.filename)")
@@ -129,7 +131,6 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     }
     
     /// Handles playback state if the memo is currently playing
-    @MainActor
     private func handlePlaybackIfNeeded(_ memo: Memo) throws {
         if memoRepository.playingMemo?.id == memo.id && memoRepository.isPlaying {
             print("⏸️ DeleteMemoUseCase: Stopping playback before deletion")
@@ -157,7 +158,6 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     }
     
     /// Verifies that the deletion was successful
-    @MainActor
     private func verifyDeletion(_ memo: Memo) throws {
         // Check that memo is no longer in repository
         if memoRepository.memos.contains(where: { $0.id == memo.id }) {

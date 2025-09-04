@@ -2,11 +2,11 @@ import Foundation
 
 /// Use case for performing general content analysis on transcript with repository caching
 /// Encapsulates the business logic for detailed content analysis with persistence
-protocol AnalyzeContentUseCaseProtocol {
+protocol AnalyzeContentUseCaseProtocol: Sendable {
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<AnalysisData>
 }
 
-final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol {
+final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
@@ -28,6 +28,7 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
+    @MainActor
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<AnalysisData> {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
@@ -100,8 +101,8 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol {
             
             // Publish analysisCompleted event on main actor
             print("📡 AnalyzeContentUseCase: Publishing analysisCompleted event for memo \(memoId)")
-            await MainActor.run { [eventBus] in
-                eventBus.publish(.analysisCompleted(memoId: memoId, type: .analysis, result: result.data.summary))
+            await MainActor.run {
+                EventBus.shared.publish(.analysisCompleted(memoId: memoId, type: .analysis, result: result.data.summary))
             }
             
             return result

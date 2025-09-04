@@ -1,10 +1,11 @@
 import Foundation
 
-protocol EndLiveActivityUseCaseProtocol {
+protocol EndLiveActivityUseCaseProtocol: Sendable {
     func execute(dismissalPolicy: ActivityDismissalPolicy) async throws
 }
 
-final class EndLiveActivityUseCase: EndLiveActivityUseCaseProtocol {
+@MainActor
+final class EndLiveActivityUseCase: EndLiveActivityUseCaseProtocol, @unchecked Sendable {
     private let liveActivityService: any LiveActivityServiceProtocol
     
     init(liveActivityService: any LiveActivityServiceProtocol) {

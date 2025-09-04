@@ -143,6 +143,7 @@ struct ExportOptions: OptionSet {
     static let analysis     = ExportOptions(rawValue: 1 << 2)
 }
 
+@MainActor
 protocol DataExporting {
     func export(options: ExportOptions) async throws -> URL
 }
@@ -159,6 +160,7 @@ enum PrivacyControllerError: LocalizedError {
 }
 
 /// Basic export stub that writes a small file with a .zip extension
+@MainActor
 struct StubDataExportService: DataExporting {
     func export(options: ExportOptions) async throws -> URL {
         try await Task.sleep(nanoseconds: 1_000_000_000) // Simulate work

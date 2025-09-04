@@ -123,9 +123,9 @@ enum Guardrails {
     ///   - operation: The async operation to execute
     /// - Returns: Result of the operation
     /// - Throws: GuardrailError.timeout or the operation's error
-    static func withTimeout<T>(
+    static func withTimeout<T: Sendable>(
         _ seconds: TimeInterval = Limits.defaultTimeoutSeconds,
-        operation: @escaping () async throws -> T
+        operation: @escaping @Sendable () async throws -> T
     ) async throws -> T {
         
         try await withThrowingTaskGroup(of: T.self) { group in

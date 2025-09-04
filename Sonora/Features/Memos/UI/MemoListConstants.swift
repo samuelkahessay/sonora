@@ -42,7 +42,7 @@ enum MemoListConstants {
     enum ListStyling {
         /// List style - affects visual presentation and grouping
         /// Options: .insetGrouped (modern cards), .grouped (traditional), .plain (minimal)
-        static let preferredStyle = InsetGroupedListStyle()
+        static var preferredStyle: some ListStyle { InsetGroupedListStyle() }
         
         /// Background color for the list container
         /// Uses semantic color for automatic light/dark adaptation
@@ -61,7 +61,7 @@ enum MemoListConstants {
     
     /// Current list style setting
     /// List style - keep insetGrouped but ensure proper setup
-    static let listStyle = InsetGroupedListStyle()
+    static var listStyle: some ListStyle { InsetGroupedListStyle() }
     
     /// **Swipe Actions Configuration**
     /// Text and icons for swipe gesture actions

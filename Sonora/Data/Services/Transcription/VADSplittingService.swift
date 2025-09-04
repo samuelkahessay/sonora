@@ -4,13 +4,13 @@ import Accelerate
 
 // MARK: - Voice Activity Types
 
-struct VoiceSegment: Equatable {
+struct VoiceSegment: Equatable, Sendable {
     let startTime: TimeInterval
     let endTime: TimeInterval
     let confidence: Double // 0.0 – 1.0 (derived from average dB above threshold)
 }
 
-struct VADConfig {
+struct VADConfig: Sendable {
     /// Energy threshold below which audio is considered silence (in dBFS)
     let silenceThreshold: Float
     /// Minimum duration for a voiced segment to be emitted
@@ -60,13 +60,13 @@ enum VADError: LocalizedError {
 
 // MARK: - Protocol
 
-protocol VADSplittingService {
+protocol VADSplittingService: Sendable {
     func detectVoiceSegments(audioURL: URL) async throws -> [VoiceSegment]
 }
 
 // MARK: - Implementation (Energy-based VAD)
 
-final class DefaultVADSplittingService: VADSplittingService {
+final class DefaultVADSplittingService: VADSplittingService, @unchecked Sendable {
     private let config: VADConfig
 
     init(config: VADConfig = VADConfig()) {

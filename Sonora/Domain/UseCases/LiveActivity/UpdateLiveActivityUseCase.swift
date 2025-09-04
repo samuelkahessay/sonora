@@ -1,10 +1,11 @@
 import Foundation
 
-protocol UpdateLiveActivityUseCaseProtocol {
+protocol UpdateLiveActivityUseCaseProtocol: Sendable {
     func execute(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?) async throws
 }
 
-final class UpdateLiveActivityUseCase: UpdateLiveActivityUseCaseProtocol {
+@MainActor
+final class UpdateLiveActivityUseCase: UpdateLiveActivityUseCaseProtocol, @unchecked Sendable {
     private let liveActivityService: any LiveActivityServiceProtocol
     
     init(liveActivityService: any LiveActivityServiceProtocol) {

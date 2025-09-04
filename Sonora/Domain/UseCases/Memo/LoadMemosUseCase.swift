@@ -2,11 +2,11 @@ import Foundation
 
 /// Use case for loading memos from storage
 /// Encapsulates the business logic for memo retrieval
-protocol LoadMemosUseCaseProtocol {
+protocol LoadMemosUseCaseProtocol: Sendable {
     func execute() async throws -> [Memo]
 }
 
-final class LoadMemosUseCase: LoadMemosUseCaseProtocol {
+final class LoadMemosUseCase: LoadMemosUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let memoRepository: any MemoRepository
@@ -17,14 +17,15 @@ final class LoadMemosUseCase: LoadMemosUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
+    @MainActor
     func execute() async throws -> [Memo] {
         print("📂 LoadMemosUseCase: Starting memo loading operation")
         
         do {
             // Load memos from repository
-            await memoRepository.loadMemos()
+            memoRepository.loadMemos()
             
-            let loadedMemos = await memoRepository.memos
+            let loadedMemos = memoRepository.memos
             print("📂 LoadMemosUseCase: Successfully loaded \(loadedMemos.count) memos")
             
             // Validate loaded data

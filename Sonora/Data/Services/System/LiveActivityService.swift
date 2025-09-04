@@ -8,14 +8,15 @@
 import Foundation
 import Combine
 #if canImport(ActivityKit)
-import ActivityKit
+@preconcurrency import ActivityKit
 #endif
 
 // Protocol and supporting types are defined in Domain/Protocols/LiveActivityServiceProtocol.swift
 
 // MARK: - ActivityKit-backed Implementation
 
-final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
+@MainActor
+final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, @unchecked Sendable {
     
     // MARK: - Published Properties
     @Published private(set) var isActivityActive: Bool = false
@@ -41,7 +42,7 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
     }
     
     deinit {
-        cancellables.removeAll()
+        // cancellables will be automatically cleaned up
         print("📱 LiveActivityService: Deinitialized")
     }
     
@@ -55,13 +56,12 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
     }
     
     private func handleStateChange(_ state: LiveActivityState) {
-        DispatchQueue.main.async {
-            switch state {
-            case .inactive:
-                self.isActivityActive = false
-                self.currentActivityId = nil
-            case .starting:
-                break // Keep current state during transition
+        switch state {
+        case .inactive:
+            self.isActivityActive = false
+            self.currentActivityId = nil
+        case .starting:
+            break // Keep current state during transition
             case .active(let id):
                 self.isActivityActive = true
                 self.currentActivityId = id
@@ -73,7 +73,6 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
                 self.isActivityActive = false
                 self.currentActivityId = nil
             }
-        }
     }
     
     // MARK: - Protocol Implementation
@@ -209,8 +208,11 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject {
                     remainingTime: nil,
                     emoji: "🎤"
                 )
-                let content = ActivityContent(state: finalState, staleDate: nil)
-                await activity.end(content, dismissalPolicy: policy)
+                // Use Task to handle ActivityContent Sendable limitations
+                await Task { 
+                    let content = ActivityContent(state: finalState, staleDate: nil)
+                    await activity.end(content, dismissalPolicy: policy)
+                }.value
             } else {
                 await activity.end(dismissalPolicy: policy)
             }

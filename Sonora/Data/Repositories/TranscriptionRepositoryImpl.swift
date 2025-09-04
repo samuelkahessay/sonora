@@ -109,12 +109,12 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
         saveTranscriptionState(state, for: memoId)
     }
     
-    func getTranscriptionMetadata(for memoId: UUID) -> [String: Any]? {
+    func getTranscriptionMetadata(for memoId: UUID) -> TranscriptionMetadata? {
         // Prefer separate metadata file if available
         let metaURL = metadataURL(for: memoId)
         if FileManager.default.fileExists(atPath: metaURL.path),
            let data = try? Data(contentsOf: metaURL),
-           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+           let obj = try? JSONDecoder().decode(TranscriptionMetadata.self, from: data) {
             return obj
         }
 
@@ -125,52 +125,24 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
               let transcriptionData = try? JSONDecoder().decode(TranscriptionData.self, from: data) else {
             return nil
         }
-        return [
-            "memoId": transcriptionData.memoId.uuidString,
-            "state": transcriptionData.state.statusText,
-            "text": transcriptionData.text ?? "",
-            "lastUpdated": transcriptionData.lastUpdated
-        ]
+        return TranscriptionMetadata(
+            memoId: transcriptionData.memoId,
+            state: transcriptionData.state.statusText,
+            text: transcriptionData.text ?? "",
+            lastUpdated: transcriptionData.lastUpdated
+        )
     }
     
-    func saveTranscriptionMetadata(_ metadata: [String: Any], for memoId: UUID) {
+    func saveTranscriptionMetadata(_ metadata: TranscriptionMetadata, for memoId: UUID) {
         let url = metadataURL(for: memoId)
         do {
-            // Merge with any existing metadata to avoid overwriting keys from other layers (e.g., service source)
-            var merged: [String: Any] = getTranscriptionMetadata(for: memoId) ?? [:]
-            metadata.forEach { merged[$0.key] = $0.value }
-            // Normalize values for JSON (convert Date, URL, nested structures)
-            let normalized = Self.normalizeForJSON(merged)
-            let data = try JSONSerialization.data(withJSONObject: normalized, options: [.prettyPrinted])
+            let existing = getTranscriptionMetadata(for: memoId)
+            let merged = existing?.merging(metadata) ?? metadata
+            let data = try JSONEncoder().encode(merged)
             try data.write(to: url)
             logger.debug("Saved transcription metadata", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "file": url.lastPathComponent]))
         } catch {
             logger.error("Failed to save transcription metadata", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error)
-        }
-    }
-
-    // Convert mixed-type dictionaries to JSON-safe structures
-    private static func normalizeForJSON(_ value: Any) -> Any {
-        switch value {
-        case let date as Date:
-            return ISO8601DateFormatter().string(from: date)
-        case let url as URL:
-            return url.absoluteString
-        case let dict as [String: Any]:
-            var out: [String: Any] = [:]
-            for (k, v) in dict { out[k] = normalizeForJSON(v) }
-            return out
-        case let array as [Any]:
-            return array.map { normalizeForJSON($0) }
-        case let num as NSNumber:
-            return num
-        case let str as String:
-            return str
-        case is NSNull:
-            return NSNull()
-        default:
-            // Fallback to string description for unsupported types
-            return String(describing: value)
         }
     }
     

@@ -30,8 +30,15 @@ public actor OperationCoordinator {
     /// Delegate for operation status updates
     public weak var statusDelegate: (any OperationStatusDelegate)?
     
-    /// Set the status delegate (thread-safe method)
-    public func setStatusDelegate(_ delegate: (any OperationStatusDelegate)?) async {
+    /// Set the status delegate (called from MainActor; bridge into actor)
+    @MainActor
+    public func setStatusDelegate(_ delegate: (any OperationStatusDelegate)?) {
+        Task { [weak self] in
+            await self?._setStatusDelegate(delegate)
+        }
+    }
+
+    private func _setStatusDelegate(_ delegate: (any OperationStatusDelegate)?) {
         statusDelegate = delegate
     }
     
@@ -148,17 +155,17 @@ public actor OperationCoordinator {
     
     /// Complete an operation (success)
     public func completeOperation(_ operationId: UUID) async {
-        await finishOperation(operationId, status: .completed, error: nil)
+        await finishOperation(operationId, status: .completed, errorDescription: nil)
     }
     
     /// Fail an operation
-    public func failOperation(_ operationId: UUID, error: Error) async {
-        await finishOperation(operationId, status: .failed, error: error)
+    public func failOperation(_ operationId: UUID, errorDescription: String) async {
+        await finishOperation(operationId, status: .failed, errorDescription: errorDescription)
     }
     
     /// Cancel an operation
     public func cancelOperation(_ operationId: UUID) async {
-        await finishOperation(operationId, status: .cancelled, error: nil)
+        await finishOperation(operationId, status: .cancelled, errorDescription: nil)
     }
 
     /// Update progress for a running operation
@@ -179,8 +186,8 @@ public actor OperationCoordinator {
         if operation.type.category == .transcription {
             let memoId = operation.type.memoId
             let fraction = max(0.0, min(1.0, progress.percentage))
-            await MainActor.run { [eventBus] in
-                eventBus.publish(.transcriptionProgress(memoId: memoId, fraction: fraction, step: progress.currentStep))
+            await MainActor.run {
+                EventBus.shared.publish(.transcriptionProgress(memoId: memoId, fraction: fraction, step: progress.currentStep))
             }
         }
     }
@@ -238,12 +245,12 @@ public actor OperationCoordinator {
     
     // MARK: - Private Implementation
     
-    private func finishOperation(_ operationId: UUID, status: OperationStatus, error: Error?) async {
+    private func finishOperation(_ operationId: UUID, status: OperationStatus, errorDescription: String?) async {
         guard var operation = operations[operationId] else {
             logger.error("Cannot finish operation: not found", 
                         category: .system, 
                         context: LogContext(additionalInfo: ["operationId": operationId.uuidString]), 
-                        error: error)
+                        error: errorDescription.map { NSError(domain: "OperationError", code: -1, userInfo: [NSLocalizedDescriptionKey: $0]) })
             return
         }
         
@@ -253,7 +260,7 @@ public actor OperationCoordinator {
         // Update operation state
         operation.status = status
         operation.completedAt = Date()
-        operation.error = error
+        operation.errorDescription = errorDescription
         operations[operationId] = operation
         
         // Remove from active tracking
@@ -275,7 +282,7 @@ public actor OperationCoordinator {
                   category: .system, 
                   message: "Operation finished: \(operation.type.description) - \(status.displayName)", 
                   context: context, 
-                  error: error)
+                  error: errorDescription.map { NSError(domain: "OperationError", code: -1, userInfo: [NSLocalizedDescriptionKey: $0]) })
         
         // Notify via event bus
         await notifyOperationStateChange(operation)
@@ -406,8 +413,8 @@ public actor OperationCoordinator {
         case .completed:
             await delegate.operationDidComplete(operation.id, memoId: operation.type.memoId, operationType: operation.type)
         case .failed:
-            let error = operation.error ?? NSError(domain: "OperationError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"])
-            await delegate.operationDidFail(operation.id, memoId: operation.type.memoId, operationType: operation.type, error: error)
+            let err = NSError(domain: "OperationError", code: -1, userInfo: [NSLocalizedDescriptionKey: operation.errorDescription ?? "Unknown error"])
+            await delegate.operationDidFail(operation.id, memoId: operation.type.memoId, operationType: operation.type, error: err)
         default:
             break
         }
@@ -439,8 +446,7 @@ public actor OperationCoordinator {
         case .completed:
             return .completed(Date())
         case .failed:
-            let error = NSError(domain: "OperationError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Operation failed"])
-            return .failed(error, Date())
+            return .failed("Operation failed", Date())
         case .cancelled:
             return .cancelled(Date())
         }
@@ -474,12 +480,12 @@ public actor OperationCoordinator {
         switch (operation.type, operation.status) {
         case (.recording(let memoId), .active):
             await MainActor.run {
-                eventBus.publish(.recordingStarted(memoId: memoId))
+                EventBus.shared.publish(.recordingStarted(memoId: memoId))
             }
             
         case (.recording(let memoId), .completed):
             await MainActor.run {
-                eventBus.publish(.recordingCompleted(memoId: memoId))
+                EventBus.shared.publish(.recordingCompleted(memoId: memoId))
             }
             
         default:

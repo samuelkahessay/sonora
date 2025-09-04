@@ -9,6 +9,7 @@ import Foundation
 
 /// Test use case for validating the complete background recording flow
 /// This use case tests the integration of all recording use cases with the enhanced AudioRepository
+@MainActor
 final class RecordingFlowTestUseCase {
     
     // MARK: - Dependencies

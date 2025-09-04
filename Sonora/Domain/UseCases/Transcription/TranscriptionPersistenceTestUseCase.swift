@@ -49,42 +49,32 @@ final class TranscriptionPersistenceTestUseCase {
         // Phase 1: Save transcription states
             print("🧪 Phase 1: Saving various transcription states...")
             
-            await MainActor.run {
-                // Test different states
-                transcriptionRepository.saveTranscriptionState(.notStarted, for: testMemoId)
-                transcriptionRepository.saveTranscriptionState(.inProgress, for: testMemoId)
-                transcriptionRepository.saveTranscriptionState(.completed("Test transcription text for persistence testing"), for: testMemoId)
-                transcriptionRepository.saveTranscriptionState(.failed("Test error message"), for: testMemoId)
-                
-                // Save completed transcription with text
-                transcriptionRepository.saveTranscriptionText("This is a test transcription that should persist across app restarts.", for: testMemoId)
-            }
+            // Test different states (already on MainActor)
+            transcriptionRepository.saveTranscriptionState(.notStarted, for: testMemoId)
+            transcriptionRepository.saveTranscriptionState(.inProgress, for: testMemoId)
+            transcriptionRepository.saveTranscriptionState(.completed("Test transcription text for persistence testing"), for: testMemoId)
+            transcriptionRepository.saveTranscriptionState(.failed("Test error message"), for: testMemoId)
+            
+            // Save completed transcription with text
+            transcriptionRepository.saveTranscriptionText("This is a test transcription that should persist across app restarts.", for: testMemoId)
             
             print("✅ Phase 1: Transcription states saved")
             
             // Phase 2: Simulate app restart by clearing cache
             print("🧪 Phase 2: Simulating app restart (clearing cache)...")
             
-            await MainActor.run {
-                transcriptionRepository.clearTranscriptionCache()
-            }
+            transcriptionRepository.clearTranscriptionCache()
             
             print("✅ Phase 2: Cache cleared (simulating app restart)")
             
             // Phase 3: Verify data persists
             print("🧪 Phase 3: Verifying transcription data persists...")
             
-            let restoredState = await MainActor.run {
-                transcriptionRepository.getTranscriptionState(for: testMemoId)
-            }
+            let restoredState = transcriptionRepository.getTranscriptionState(for: testMemoId)
             
-            let restoredText = await MainActor.run {
-                transcriptionRepository.getTranscriptionText(for: testMemoId)
-            }
+            let restoredText = transcriptionRepository.getTranscriptionText(for: testMemoId)
             
-            let hasData = await MainActor.run {
-                transcriptionRepository.hasTranscriptionData(for: testMemoId)
-            }
+            let hasData = transcriptionRepository.hasTranscriptionData(for: testMemoId)
             
             if hasData && restoredState.isCompleted && restoredText != nil {
                 print("✅ TranscriptionPersistenceTestUseCase: Persistence test PASSED!")
@@ -101,13 +91,20 @@ final class TranscriptionPersistenceTestUseCase {
             // Phase 4: Test metadata persistence
             print("🧪 Phase 4: Testing metadata persistence...")
             
-            let metadata = await MainActor.run {
-                transcriptionRepository.getTranscriptionMetadata(for: testMemoId)
-            }
+            let metadata = transcriptionRepository.getTranscriptionMetadata(for: testMemoId)
             
             if let metadata = metadata {
                 print("✅ Phase 4: Metadata persistence test PASSED!")
-                print("   - Metadata keys: \(metadata.keys.sorted())")
+                let keys = [
+                    metadata.detectedLanguage != nil ? "detectedLanguage" : nil,
+                    metadata.qualityScore != nil ? "qualityScore" : nil,
+                    metadata.transcriptionService?.rawValue,
+                    metadata.whisperModel != nil ? "whisperModel" : nil,
+                    metadata.aiGenerated != nil ? "aiGenerated" : nil,
+                    metadata.moderationFlagged != nil ? "moderationFlagged" : nil,
+                    (metadata.moderationCategories != nil) ? "moderationCategories" : nil
+                ].compactMap { $0 }
+                print("   - Metadata keys: \(keys.sorted())")
             } else {
                 print("❌ Phase 4: Metadata persistence test FAILED!")
             }
@@ -115,9 +112,7 @@ final class TranscriptionPersistenceTestUseCase {
             // Phase 5: Test bulk operations
             print("🧪 Phase 5: Testing bulk transcription state retrieval...")
             
-            let allStates = await MainActor.run {
-                transcriptionRepository.getAllTranscriptionStates()
-            }
+            let allStates = transcriptionRepository.getAllTranscriptionStates()
             
             print("✅ Phase 5: Found \(allStates.count) transcription states")
             for (id, state) in allStates {
@@ -125,9 +120,7 @@ final class TranscriptionPersistenceTestUseCase {
             }
             
             // Cleanup
-            await MainActor.run {
-                transcriptionRepository.deleteTranscriptionData(for: testMemoId)
-            }
+            transcriptionRepository.deleteTranscriptionData(for: testMemoId)
             
             print("🧪 TranscriptionPersistenceTestUseCase: Test completed successfully")
     }
@@ -138,9 +131,7 @@ final class TranscriptionPersistenceTestUseCase {
         
         do {
             // Check initial state
-            let initialState = await MainActor.run {
-                getTranscriptionStateUseCase.execute(memo: memo)
-            }
+            let initialState = getTranscriptionStateUseCase.execute(memo: memo)
             print("🧪 Initial state: \(initialState.statusText)")
             
             // Start transcription if not already done
@@ -151,22 +142,16 @@ final class TranscriptionPersistenceTestUseCase {
                 // Wait a moment for transcription to start
                 try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
                 
-                let progressState = await MainActor.run {
-                    getTranscriptionStateUseCase.execute(memo: memo)
-                }
+                let progressState = getTranscriptionStateUseCase.execute(memo: memo)
                 print("🧪 Progress state: \(progressState.statusText)")
             }
             
             // Test persistence by simulating restart
             print("🧪 Simulating app restart...")
-            await MainActor.run {
-                transcriptionRepository.clearTranscriptionCache()
-            }
+            transcriptionRepository.clearTranscriptionCache()
             
             // Check if state persists
-            let persistedState = await MainActor.run {
-                getTranscriptionStateUseCase.execute(memo: memo)
-            }
+            let persistedState = getTranscriptionStateUseCase.execute(memo: memo)
             print("🧪 Persisted state after restart: \(persistedState.statusText)")
             
             if persistedState.isNotStarted {
@@ -176,9 +161,7 @@ final class TranscriptionPersistenceTestUseCase {
             }
             
             // Check if transcription text persists
-            let persistedText = await MainActor.run {
-                transcriptionRepository.getTranscriptionText(for: memo.id)
-            }
+            let persistedText = transcriptionRepository.getTranscriptionText(for: memo.id)
             
             if let text = persistedText, !text.isEmpty {
                 print("✅ TranscriptionPersistenceTestUseCase: Transcription text persisted!")
@@ -203,28 +186,20 @@ final class TranscriptionPersistenceTestUseCase {
         ]
         
         // Save transcriptions for all memos
-        await MainActor.run {
-            for (id, filename, text) in testMemos {
-                transcriptionRepository.saveTranscriptionState(.completed(text), for: id)
-                transcriptionRepository.saveTranscriptionText(text, for: id)
-                print("💾 Saved transcription for \(filename)")
-            }
+        for (id, filename, text) in testMemos {
+            transcriptionRepository.saveTranscriptionState(.completed(text), for: id)
+            transcriptionRepository.saveTranscriptionText(text, for: id)
+            print("💾 Saved transcription for \(filename)")
         }
         
         // Clear cache to simulate restart
-        await MainActor.run {
-            transcriptionRepository.clearTranscriptionCache()
-        }
+        transcriptionRepository.clearTranscriptionCache()
         
         // Verify all transcriptions persist
         var allPersisted = true
         for (id, filename, expectedText) in testMemos {
-            let state = await MainActor.run {
-                transcriptionRepository.getTranscriptionState(for: id)
-            }
-            let text = await MainActor.run {
-                transcriptionRepository.getTranscriptionText(for: id)
-            }
+            let state = transcriptionRepository.getTranscriptionState(for: id)
+            let text = transcriptionRepository.getTranscriptionText(for: id)
             
             if state.isCompleted && text == expectedText {
                 print("✅ \(filename): Persisted correctly")
@@ -241,10 +216,8 @@ final class TranscriptionPersistenceTestUseCase {
         }
         
         // Cleanup
-        await MainActor.run {
-            for (id, _, _) in testMemos {
-                transcriptionRepository.deleteTranscriptionData(for: id)
-            }
+        for (id, _, _) in testMemos {
+            transcriptionRepository.deleteTranscriptionData(for: id)
         }
     }
     

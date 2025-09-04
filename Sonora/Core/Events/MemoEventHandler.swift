@@ -167,14 +167,14 @@ public final class MemoEventHandler {
         // Fetch transcription metadata to report the service used (local WhisperKit vs Cloud API)
         let serviceMeta: (serviceKey: String, serviceLabel: String, whisperModel: String?) = {
             let meta = transcriptionRepository.getTranscriptionMetadata(for: memoId)
-            let key = (meta?["transcriptionService"] as? String) ?? "unknown"
+            let key = meta?.transcriptionService?.rawValue ?? "unknown"
             let label: String
-            switch key {
-            case "local_whisperkit": label = "WhisperKit (local)"
-            case "cloud_api": label = "Cloud API"
+            switch meta?.transcriptionService {
+            case .some(.localWhisperKit): label = "WhisperKit (local)"
+            case .some(.cloudAPI): label = "Cloud API"
             default: label = "unknown"
             }
-            let model = meta?["whisperModel"] as? String
+            let model = meta?.whisperModel
             return (key, label, model)
         }()
 
@@ -293,8 +293,6 @@ public final class MemoEventHandler {
     // MARK: - Cleanup
     deinit {
         subscriptionManager.cleanup()
-        logger.debug("MemoEventHandler cleaned up subscriptions", 
-                    category: .system, 
-                    context: LogContext())
+        // Avoid actor-hopping or logging from deinit to prevent isolation issues.
     }
 }

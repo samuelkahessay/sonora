@@ -160,27 +160,33 @@ public final class BuildConfiguration {
     
     /// Device model identifier
     public var deviceModel: String {
+        // Avoid UIDevice to keep this usable from non-main contexts.
+        // Build the identifier safely from the fixed-size CChar tuple.
         var systemInfo = utsname()
         uname(&systemInfo)
-        let modelCode = withUnsafePointer(to: &systemInfo.machine) {
-            $0.withMemoryRebound(to: CChar.self, capacity: 1) {
-                ptr in String.init(validatingUTF8: ptr)
-            }
+        let mirror = Mirror(reflecting: systemInfo.machine)
+        let identifier = mirror.children.reduce(into: "") { result, element in
+            guard let v = element.value as? Int8, v != 0 else { return }
+            result.append(Character(UnicodeScalar(UInt8(v))))
         }
-        return modelCode ?? "Unknown"
+        return identifier.isEmpty ? "Unknown" : identifier
     }
     
     /// iOS version
     public var iosVersion: String {
-        return UIDevice.current.systemVersion
+        // Use ProcessInfo to avoid main-actor UIDevice access
+        let ver = ProcessInfo.processInfo.operatingSystemVersion
+        return "\(ver.majorVersion).\(ver.minorVersion).\(ver.patchVersion)"
     }
     
     /// Device name (user-defined)
+    @MainActor
     public var deviceName: String {
         return UIDevice.current.name
     }
     
     /// Device system name
+    @MainActor
     public var systemName: String {
         return UIDevice.current.systemName
     }
@@ -431,3 +437,6 @@ public final class BuildConfiguration {
         }
     }
 }
+
+// BuildConfiguration is read-only after init and used app-wide; mark unchecked.
+extension BuildConfiguration: @unchecked Sendable {}

@@ -11,10 +11,12 @@ struct LanguageFallbackConfig {
 
 /// Use case for starting transcription of a memo
 /// Encapsulates the business logic for initiating transcription
+@MainActor
 protocol StartTranscriptionUseCaseProtocol {
     func execute(memo: Memo) async throws
 }
 
+@MainActor
 final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     
     // MARK: - Dependencies
@@ -60,6 +62,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
+    @MainActor
     func execute(memo: Memo) async throws {
         let context = LogContext(additionalInfo: [
             "memoId": memo.id.uuidString,
@@ -91,14 +94,14 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 transcriptionRepository.getTranscriptionState(for: memo.id)
             }
             guard !currentState.isInProgress else {
-                await operationCoordinator.failOperation(operationId, error: TranscriptionError.alreadyInProgress)
+                await operationCoordinator.failOperation(operationId, errorDescription: TranscriptionError.alreadyInProgress.errorDescription ?? "Transcription already in progress")
                 throw TranscriptionError.alreadyInProgress
             }
 
             // Check if file exists
             let audioURL = memo.fileURL
             guard FileManager.default.fileExists(atPath: audioURL.path) else {
-                await operationCoordinator.failOperation(operationId, error: TranscriptionError.fileNotFound)
+                await operationCoordinator.failOperation(operationId, errorDescription: TranscriptionError.fileNotFound.errorDescription ?? "Audio file not found")
                 throw TranscriptionError.fileNotFound
             }
 
@@ -118,7 +121,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     let failedState = TranscriptionState.failed("No speech detected")
                     transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
                 }
-                await operationCoordinator.failOperation(operationId, error: TranscriptionError.noSpeechDetected)
+                await operationCoordinator.failOperation(operationId, errorDescription: TranscriptionError.noSpeechDetected.errorDescription ?? "No speech detected")
                 logger.info("Transcription skipped: No speech detected", category: .transcription, context: context)
                 return
             }
@@ -136,7 +139,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (\(lang.uppercased()))...")
                     // Wire fine-grained engine progress if supported
                     if let progressSvc = transcriptionAPI as? TranscriptionProgressReporting {
-                        await progressSvc.setProgressHandler { [weak self] fraction in
+                        progressSvc.setProgressHandler { [weak self] fraction in
                             guard let self = self else { return }
                             // Map engine fraction into overall (0.2 -> 0.95)
                             let mapped = 0.2 + 0.75 * max(0.0, min(1.0, fraction))
@@ -160,15 +163,12 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     await MainActor.run {
                         // Save final text (also sets state to completed)
                         transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                        transcriptionRepository.saveTranscriptionMetadata([
-                            "detectedLanguage": langToSave,
-                            "qualityScore": qualityToSave
-                        ], for: memo.id)
+                        transcriptionRepository.saveTranscriptionMetadata(TranscriptionMetadata(detectedLanguage: langToSave, qualityScore: qualityToSave), for: memo.id)
                     }
                     await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
                     // Include service used in log context (WhisperKit local vs Cloud API)
                     let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
-                    let serviceKey = (meta?["transcriptionService"] as? String) ?? "unknown"
+                    let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
                     let serviceLabel: String = (serviceKey == "local_whisperkit") ? "WhisperKit (local)" : (serviceKey == "cloud_api" ? "Cloud API" : "unknown")
                     var info: [String: Any] = [
                         "memoId": memo.id.uuidString,
@@ -178,11 +178,11 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                         "service": serviceLabel,
                         "serviceKey": serviceKey
                     ]
-                    if let model = meta?["whisperModel"] as? String { info["whisperModel"] = model }
+                    if let model = meta?.whisperModel { info["whisperModel"] = model }
                     // Lower to debug; MemoEventHandler will emit the single info-level summary
                     logger.debug("Transcription completed (single, preferred language)", category: .transcription, context: LogContext(additionalInfo: info))
-                    await MainActor.run { [eventBus, textToSave] in
-                        eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
+                    await MainActor.run { [textToSave] in
+                        EventBus.shared.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
                     }
                     await operationCoordinator.completeOperation(operationId)
                     return
@@ -205,15 +205,12 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 await MainActor.run {
                     // Save final text (also sets state to completed)
                     transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                    transcriptionRepository.saveTranscriptionMetadata([
-                        "detectedLanguage": langToSave,
-                        "qualityScore": qualityToSave
-                    ], for: memo.id)
+                    transcriptionRepository.saveTranscriptionMetadata(TranscriptionMetadata(detectedLanguage: langToSave, qualityScore: qualityToSave), for: memo.id)
                 }
                 await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
                 // Include service used in log context
                 let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
-                let serviceKey = (meta?["transcriptionService"] as? String) ?? "unknown"
+                let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
                 let serviceLabel: String = (serviceKey == "local_whisperkit") ? "WhisperKit (local)" : (serviceKey == "cloud_api" ? "Cloud API" : "unknown")
                 var info: [String: Any] = [
                     "memoId": memo.id.uuidString,
@@ -223,7 +220,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     "service": serviceLabel,
                     "serviceKey": serviceKey
                 ]
-                if let model = meta?["whisperModel"] as? String { info["whisperModel"] = model }
+                if let model = meta?.whisperModel { info["whisperModel"] = model }
                 logger.debug("Transcription completed (chunked, preferred language)", category: .transcription, context: LogContext(additionalInfo: info))
                 await MainActor.run { [eventBus, textToSave] in
                     eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
@@ -238,7 +235,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (auto)...")
                 // Wire fine-grained engine progress if supported
                 if let progressSvc = transcriptionAPI as? TranscriptionProgressReporting {
-                    await progressSvc.setProgressHandler { [weak self] fraction in
+                    progressSvc.setProgressHandler { [weak self] fraction in
                         guard let self = self else { return }
                         let mapped = 0.2 + 0.75 * max(0.0, min(1.0, fraction))
                         Task { await self.updateProgress(operationId: operationId, fraction: mapped, step: "Transcribing...") }
@@ -281,14 +278,11 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 await MainActor.run {
                     // Save final text (also sets state to completed)
                     transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                    transcriptionRepository.saveTranscriptionMetadata([
-                        "detectedLanguage": langToSave,
-                        "qualityScore": qualityToSave
-                    ], for: memo.id)
+                    transcriptionRepository.saveTranscriptionMetadata(TranscriptionMetadata(detectedLanguage: langToSave, qualityScore: qualityToSave), for: memo.id)
                 }
                 // Include service used in log context
                 let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
-                let serviceKey = (meta?["transcriptionService"] as? String) ?? "unknown"
+                let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
                 let serviceLabel: String = (serviceKey == "local_whisperkit") ? "WhisperKit (local)" : (serviceKey == "cloud_api" ? "Cloud API" : "unknown")
                 var info: [String: Any] = [
                     "memoId": memo.id.uuidString,
@@ -298,7 +292,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     "service": serviceLabel,
                     "serviceKey": serviceKey
                 ]
-                if let model = meta?["whisperModel"] as? String { info["whisperModel"] = model }
+                if let model = meta?.whisperModel { info["whisperModel"] = model }
                 logger.debug("Transcription completed (single, auto)", category: .transcription, context: LogContext(additionalInfo: info))
                 await MainActor.run { [eventBus, textToSave] in
                     eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
@@ -361,10 +355,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 await MainActor.run {
                     // Save final text (also sets state to completed)
                     transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                    transcriptionRepository.saveTranscriptionMetadata([
-                        "detectedLanguage": langToSave,
-                        "qualityScore": qualityToSave
-                    ], for: memo.id)
+                    transcriptionRepository.saveTranscriptionMetadata(TranscriptionMetadata(detectedLanguage: langToSave, qualityScore: qualityToSave), for: memo.id)
                 }
             await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
 
@@ -373,8 +364,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             ))
 
             // Publish transcriptionCompleted event
-            await MainActor.run { [eventBus, textToSave] in
-                eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
+            await MainActor.run { [textToSave] in
+                EventBus.shared.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
             }
 
             // Complete op
@@ -391,7 +382,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             }
             
             // Fail the transcription operation
-            await operationCoordinator.failOperation(operationId, error: error)
+            await operationCoordinator.failOperation(operationId, errorDescription: error.localizedDescription)
             
             throw TranscriptionError.transcriptionFailed(error.localizedDescription)
         }
@@ -404,7 +395,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             percentage: max(0.0, min(1.0, fraction)),
             currentStep: step,
             estimatedTimeRemaining: nil,
-            additionalInfo: nil,
+            extraInfo: nil,
             totalSteps: total,
             currentStepIndex: index
         )
@@ -507,8 +498,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
         await annotateAIMetadataAndModerate(memoId: memoId, text: text)
 
-        await MainActor.run { [eventBus] in
-            eventBus.publish(.transcriptionCompleted(memoId: memoId, text: text))
+        await MainActor.run {
+            EventBus.shared.publish(.transcriptionCompleted(memoId: memoId, text: text))
         }
 
         await operationCoordinator.completeOperation(operationId)
@@ -517,21 +508,19 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
     // MARK: - AI Labeling & Moderation
     private func annotateAIMetadataAndModerate(memoId: UUID, text: String) async {
-        let existingMeta: [String: Any] = await MainActor.run {
-            DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memoId) ?? [:]
+        var meta: TranscriptionMetadata = await MainActor.run {
+            DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memoId) ?? TranscriptionMetadata()
         }
-        var workingMeta = existingMeta
-        workingMeta["aiGenerated"] = true
+        meta.aiGenerated = true
         do {
             let mod = try await moderationService.moderate(text: text)
-            workingMeta["moderationFlagged"] = mod.flagged
-            if let cats = mod.categories { workingMeta["moderationCategories"] = cats }
+            meta.moderationFlagged = mod.flagged
+            meta.moderationCategories = mod.categories
         } catch {
             // Best-effort; keep AI label.
         }
-        let metaToSave = workingMeta
         await MainActor.run {
-            DIContainer.shared.transcriptionRepository().saveTranscriptionMetadata(metaToSave, for: memoId)
+            DIContainer.shared.transcriptionRepository().saveTranscriptionMetadata(meta, for: memoId)
         }
     }
 }

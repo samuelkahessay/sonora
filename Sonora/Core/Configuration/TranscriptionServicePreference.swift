@@ -1,7 +1,7 @@
 import Foundation
 
 /// Enumeration of available transcription services
-enum TranscriptionServiceType: String, CaseIterable {
+public enum TranscriptionServiceType: String, CaseIterable, Codable, Sendable {
     case cloudAPI = "cloud_api"
     case localWhisperKit = "local_whisperkit"
     

@@ -220,8 +220,5 @@ public final class CalendarEventHandler {
     // MARK: - Cleanup
     deinit {
         subscriptionManager.cleanup()
-        logger.debug("CalendarEventHandler cleaned up", 
-                    category: .system, 
-                    context: LogContext())
     }
 }

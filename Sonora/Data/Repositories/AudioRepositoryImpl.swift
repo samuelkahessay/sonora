@@ -1,6 +1,6 @@
 import Foundation
 import AVFoundation
-import Combine
+@preconcurrency import Combine
 
 final class AudioPlayerProxy: NSObject, AVAudioPlayerDelegate {
     var onFinish: (() -> Void)?
@@ -43,7 +43,6 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     }
     
     deinit {
-        cancellables.removeAll()
         print("🎵 AudioRepositoryImpl: Deinitialized")
     }
     

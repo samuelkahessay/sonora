@@ -22,7 +22,7 @@ final class ModelDownloadManager: ObservableObject {
     private let pathQueue = DispatchQueue(label: "network.path.monitor")
     private let userDefaults = UserDefaults.standard
     private var downloadMetadata: [String: ModelDownloadMetadata] = [:]
-    private var healthCheckTimer: Timer?
+    private var healthCheckTask: Task<Void, Never>?
     
     // MARK: - Initialization
     
@@ -39,7 +39,7 @@ final class ModelDownloadManager: ObservableObject {
     }
     
     deinit {
-        healthCheckTimer?.invalidate()
+        healthCheckTask?.cancel()
         pathMonitor?.cancel()
     }
     
@@ -236,9 +236,12 @@ final class ModelDownloadManager: ObservableObject {
     
     /// Starts periodic health checking
     private func startHealthCheckTimer() {
-        healthCheckTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.checkDownloadHealth()
+        healthCheckTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 60_000_000_000) // 60 seconds
+                await MainActor.run {
+                    self?.checkDownloadHealth()
+                }
             }
         }
     }
@@ -565,7 +568,7 @@ final class ModelDownloadManager: ObservableObject {
 
 // MARK: - Download States
 
-enum ModelDownloadState: String, CaseIterable, Codable {
+enum ModelDownloadState: String, CaseIterable, Codable, Sendable {
     case notDownloaded = "not_downloaded"
     case downloading = "downloading"
     case downloaded = "downloaded"
@@ -593,7 +596,7 @@ enum ModelDownloadState: String, CaseIterable, Codable {
 // MARK: - Download Metadata
 
 /// Enhanced metadata for download tracking and recovery
-struct ModelDownloadMetadata: Codable {
+struct ModelDownloadMetadata: Codable, Sendable {
     let modelId: String
     let state: ModelDownloadState
     let startedAt: Date
@@ -635,7 +638,7 @@ struct ModelDownloadMetadata: Codable {
 
 // MARK: - Download Errors
 
-enum ModelDownloadError: LocalizedError {
+enum ModelDownloadError: LocalizedError, Sendable {
     case networkError(String)
     case storageError(String)
     case modelNotFound(String)

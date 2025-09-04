@@ -3,14 +3,12 @@ import Combine
 
 // Simple dependency registration container
 typealias ResolverType = DIContainer
-@MainActor
 protocol Resolver {
     func resolve<T>(_ type: T.Type) -> T?
 }
 
 /// Simple dependency injection container for Sonora services
 /// Provides protocol-based access to existing service instances
-@MainActor
 final class DIContainer: ObservableObject, Resolver {
     
     // MARK: - Singleton
@@ -70,6 +68,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Setup repository registrations
+    @MainActor
     private func setupRepositories() {
         // Register BackgroundAudioService
         register(BackgroundAudioService.self) { resolver in
@@ -102,6 +101,7 @@ final class DIContainer: ObservableObject, Resolver {
     
     /// Configure DIContainer with shared service instances
     /// This ensures all parts of the app use the same service instances
+    @MainActor
     func configure(
         analysisService: AnalysisService? = nil,
         logger: (any LoggerProtocol)? = nil
@@ -189,6 +189,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Check if container has been properly configured
+    @MainActor
     private func ensureConfigured() {
         if !isConfigured {
             configure()
@@ -200,6 +201,7 @@ final class DIContainer: ObservableObject, Resolver {
     
     
     /// Get transcription API service (legacy - prefer using factory)
+    @MainActor
     func transcriptionAPI() -> any TranscriptionAPI {
         ensureConfigured()
         guard let api = _transcriptionAPI else { fatalError("DIContainer not configured: transcriptionAPI") }
@@ -207,6 +209,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get transcription service factory (modern approach)
+    @MainActor
     func transcriptionServiceFactory() -> TranscriptionServiceFactory {
         ensureConfigured()
         guard let factory = _transcriptionServiceFactory else { fatalError("DIContainer not configured: transcriptionServiceFactory") }
@@ -214,6 +217,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get model download manager
+    @MainActor
     func modelDownloadManager() -> ModelDownloadManager {
         ensureConfigured()
         guard let manager = _modelDownloadManager else { fatalError("DIContainer not configured: modelDownloadManager") }
@@ -221,6 +225,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
 
     /// WhisperKit model provider
+    @MainActor
     func whisperKitModelProvider() -> WhisperKitModelProvider {
         ensureConfigured()
         guard let provider = _whisperKitModelProvider else { fatalError("DIContainer not configured: whisperKitModelProvider") }
@@ -228,11 +233,13 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Create a transcription service based on current user preferences
+    @MainActor
     func createTranscriptionService() -> any TranscriptionAPI {
         return transcriptionServiceFactory().createTranscriptionService()
     }
     
     /// Get analysis service
+    @MainActor
     func analysisService() -> any AnalysisServiceProtocol {
         ensureConfigured()
         
@@ -249,6 +256,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
 
     /// Get moderation service
+    @MainActor
     func moderationService() -> any ModerationServiceProtocol {
         ensureConfigured()
         guard let svc = _moderationService else { fatalError("DIContainer not configured: moderationService") }
@@ -256,12 +264,14 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get memo repository
+    @MainActor
     func memoRepository() -> any MemoRepository {
         ensureConfigured()
         return _memoRepository
     }
     
     /// Get transcription repository
+    @MainActor
     func transcriptionRepository() -> any TranscriptionRepository {
         ensureConfigured()
         guard let repo = _transcriptionRepository else { fatalError("DIContainer not configured: transcriptionRepository") }
@@ -269,6 +279,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get analysis repository
+    @MainActor
     func analysisRepository() -> any AnalysisRepository {
         ensureConfigured()
         guard let repo = _analysisRepository else { fatalError("DIContainer not configured: analysisRepository") }
@@ -276,6 +287,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get audio repository
+    @MainActor
     func audioRepository() -> any AudioRepository {
         ensureConfigured()
         guard let repo = _audioRepository else { fatalError("DIContainer not configured: audioRepository") }
@@ -283,18 +295,21 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get background audio service
+    @MainActor
     func backgroundAudioService() -> BackgroundAudioService {
         ensureConfigured()
         return _backgroundAudioService
     }
     
     /// Get start recording use case
+    @MainActor
     func startRecordingUseCase() -> StartRecordingUseCase {
         ensureConfigured()
         return _startRecordingUseCase
     }
     
     /// Get system navigator
+    @MainActor
     func systemNavigator() -> any SystemNavigator {
         ensureConfigured()
         guard let nav = _systemNavigator else { fatalError("DIContainer not configured: systemNavigator") }
@@ -302,6 +317,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get logger service
+    @MainActor
     func logger() -> any LoggerProtocol {
         ensureConfigured()
         guard let logger = _logger else { fatalError("DIContainer not configured: logger") }
@@ -309,6 +325,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
 
     /// Get transcript exporter service
+    @MainActor
     func transcriptExporter() -> any TranscriptExporting {
         ensureConfigured()
         if _transcriptExporter == nil {
@@ -318,6 +335,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
 
     /// Get analysis exporter service
+    @MainActor
     func analysisExporter() -> any AnalysisExporting {
         ensureConfigured()
         if _analysisExporter == nil {
@@ -327,12 +345,14 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get operation coordinator service
+    @MainActor
     func operationCoordinator() -> any OperationCoordinatorProtocol {
         ensureConfigured()
         return _operationCoordinator
     }
     
     /// Get live activity service
+    @MainActor
     func liveActivityService() -> any LiveActivityServiceProtocol {
         ensureConfigured()
         guard let service = _liveActivityService else { fatalError("DIContainer not configured: liveActivityService") }
@@ -340,6 +360,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get event bus (protocol)
+    @MainActor
     func eventBus() -> any EventBusProtocol {
         ensureConfigured()
         guard let bus = _eventBus else { fatalError("DIContainer not configured: eventBus") }
@@ -347,6 +368,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Get event handler registry (protocol)
+    @MainActor
     func eventHandlerRegistry() -> any EventHandlerRegistryProtocol {
         ensureConfigured()
         guard let reg = _eventHandlerRegistry else { fatalError("DIContainer not configured: eventHandlerRegistry") }
@@ -354,6 +376,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
 
     /// Spotlight indexing service
+    @MainActor
     func spotlightIndexer() -> any SpotlightIndexing {
         ensureConfigured()
         guard let idx = _spotlightIndexer else { fatalError("DIContainer not configured: spotlightIndexer") }
@@ -361,6 +384,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
     
     /// Factory: CreateTranscriptShareFileUseCase
+    @MainActor
     func createTranscriptShareFileUseCase() -> CreateTranscriptShareFileUseCase {
         ensureConfigured()
         return CreateTranscriptShareFileUseCase(
@@ -370,6 +394,7 @@ final class DIContainer: ObservableObject, Resolver {
     }
 
     /// Factory: CreateAnalysisShareFileUseCase
+    @MainActor
     func createAnalysisShareFileUseCase() -> CreateAnalysisShareFileUseCase {
         ensureConfigured()
         return CreateAnalysisShareFileUseCase(
@@ -381,13 +406,18 @@ final class DIContainer: ObservableObject, Resolver {
     
 }
 
+// The container is accessed from SwiftUI on the main actor
+// and not intended to be sent across threads. Mark as unchecked
+// to satisfy strict concurrency for the singleton.
+extension DIContainer: @unchecked Sendable {}
+
 // MARK: - SwiftUI Environment Support
 
 import SwiftUI
 
 /// Environment key for DIContainer
 private struct DIContainerKey: EnvironmentKey {
-    @MainActor static var defaultValue: DIContainer { DIContainer.shared }
+    static var defaultValue: DIContainer { DIContainer.shared }
 }
 
 extension EnvironmentValues {

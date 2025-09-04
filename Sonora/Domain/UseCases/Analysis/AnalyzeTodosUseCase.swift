@@ -2,11 +2,11 @@ import Foundation
 
 /// Use case for performing todos analysis on transcript with repository caching
 /// Encapsulates the business logic for identifying action items and todos with persistence
-protocol AnalyzeTodosUseCaseProtocol {
+protocol AnalyzeTodosUseCaseProtocol: Sendable {
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<TodosData>
 }
 
-final class AnalyzeTodosUseCase: AnalyzeTodosUseCaseProtocol {
+final class AnalyzeTodosUseCase: AnalyzeTodosUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol

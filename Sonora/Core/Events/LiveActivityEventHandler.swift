@@ -1,5 +1,5 @@
 import Foundation
-import Combine
+@preconcurrency import Combine
 
 @MainActor
 final class LiveActivityEventHandler {
@@ -120,7 +120,5 @@ final class LiveActivityEventHandler {
     
     deinit {
         subscriptionManager.cleanup()
-        cancellables.removeAll()
-        logger.debug("LiveActivityEventHandler cleaned up", category: .system, context: LogContext())
     }
 }

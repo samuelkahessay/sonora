@@ -2,10 +2,12 @@ import Foundation
 
 /// Use case for performing themes analysis on transcript with repository caching
 /// Encapsulates the business logic for identifying themes and sentiment with persistence
+@MainActor
 protocol AnalyzeThemesUseCaseProtocol {
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<ThemesData>
 }
 
+@MainActor
 final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
     
     // MARK: - Dependencies
@@ -41,9 +43,7 @@ final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
         print("🎯 AnalyzeThemesUseCase: Starting themes analysis for memo \(memoId)")
         
         // CACHE FIRST: Check if analysis already exists
-        if let cachedResult = await MainActor.run(body: {
-            analysisRepository.getAnalysisResult(for: memoId, mode: .themes, responseType: ThemesData.self)
-        }) {
+        if let cachedResult = analysisRepository.getAnalysisResult(for: memoId, mode: .themes, responseType: ThemesData.self) {
             print("🎯 AnalyzeThemesUseCase: Found cached themes analysis, returning immediately")
             return cachedResult
         }
@@ -74,8 +74,8 @@ final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
             // Publish analysisCompleted event on main actor
             print("📡 AnalyzeThemesUseCase: Publishing analysisCompleted event for memo \(memoId)")
             let resultSummary = "\(result.data.themes.count) themes, sentiment: \(result.data.sentiment)"
-            await MainActor.run { [eventBus] in
-                eventBus.publish(.analysisCompleted(memoId: memoId, type: .themes, result: resultSummary))
+            await MainActor.run {
+                EventBus.shared.publish(.analysisCompleted(memoId: memoId, type: .themes, result: resultSummary))
             }
             
             return result

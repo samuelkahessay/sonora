@@ -1,7 +1,6 @@
 import Foundation
 
-@MainActor
-class AnalysisService: ObservableObject, AnalysisServiceProtocol {
+class AnalysisService: ObservableObject, AnalysisServiceProtocol, @unchecked Sendable {
     private let config = AppConfiguration.shared
     
     func analyze<T: Codable & Sendable>(mode: AnalysisMode, transcript: String, responseType: T.Type) async throws -> AnalyzeEnvelope<T> {

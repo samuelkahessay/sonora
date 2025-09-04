@@ -1,14 +1,14 @@
 import Foundation
 
-public protocol OperationCoordinatorProtocol: AnyObject {
-    // Delegate
-    func setStatusDelegate(_ delegate: (any OperationStatusDelegate)?) async
+public protocol OperationCoordinatorProtocol: AnyObject, Sendable {
+    // Delegate (set from MainActor only)
+    @MainActor func setStatusDelegate(_ delegate: (any OperationStatusDelegate)?)
 
     // Registration & lifecycle
     func registerOperation(_ operationType: OperationType) async -> UUID?
     func startOperation(_ operationId: UUID) async -> Bool
     func completeOperation(_ operationId: UUID) async
-    func failOperation(_ operationId: UUID, error: Error) async
+    func failOperation(_ operationId: UUID, errorDescription: String) async
     func cancelOperation(_ operationId: UUID) async
     // Progress updates
     func updateProgress(operationId: UUID, progress: OperationProgress) async

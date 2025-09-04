@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 
+@MainActor
 final class ThemeManager: ObservableObject {
     // Theme settings
     @Published var mode: ThemeMode { didSet { persist() } }
@@ -103,12 +104,14 @@ final class ThemeManager: ObservableObject {
     
     private func setupAccessibilityObservers() {
         NotificationCenter.default.publisher(for: UIAccessibility.reduceTransparencyStatusDidChangeNotification)
+            .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.reducedTransparency = UIAccessibility.isReduceTransparencyEnabled
             }
             .store(in: &cancellables)
         
         NotificationCenter.default.publisher(for: UIAccessibility.reduceMotionStatusDidChangeNotification)
+            .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.reducedMotion = UIAccessibility.isReduceMotionEnabled
             }

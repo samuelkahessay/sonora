@@ -6,12 +6,25 @@ import Combine
 
 // MARK: - Operation Progress Tracking
 
+/// Additional typed info passed with progress updates
+public struct OperationExtraInfo: Sendable {
+    public let details: String?
+    public let bytesProcessed: Int64?
+    public let itemsProcessed: Int?
+
+    public init(details: String? = nil, bytesProcessed: Int64? = nil, itemsProcessed: Int? = nil) {
+        self.details = details
+        self.bytesProcessed = bytesProcessed
+        self.itemsProcessed = itemsProcessed
+    }
+}
+
 /// Detailed progress information for long-running operations
-public struct OperationProgress {
+public struct OperationProgress: Sendable {
     public let percentage: Double        // 0.0 to 1.0
     public let currentStep: String      // Human-readable current operation
     public let estimatedTimeRemaining: TimeInterval?
-    public let additionalInfo: [String: Any]?
+    public let extraInfo: OperationExtraInfo?
     // New optional fields for step-aware progress
     public let totalSteps: Int?
     public let currentStepIndex: Int?
@@ -20,14 +33,14 @@ public struct OperationProgress {
         percentage: Double,
         currentStep: String,
         estimatedTimeRemaining: TimeInterval? = nil,
-        additionalInfo: [String: Any]? = nil,
+        extraInfo: OperationExtraInfo? = nil,
         totalSteps: Int? = nil,
         currentStepIndex: Int? = nil
     ) {
         self.percentage = max(0.0, min(1.0, percentage))
         self.currentStep = currentStep
         self.estimatedTimeRemaining = estimatedTimeRemaining
-        self.additionalInfo = additionalInfo
+        self.extraInfo = extraInfo
         self.totalSteps = totalSteps
         self.currentStepIndex = currentStepIndex
     }
@@ -54,7 +67,7 @@ public struct OperationProgress {
 // MARK: - Enhanced Operation Status
 
 /// Extended operation status with detailed substates
-public enum DetailedOperationStatus {
+public enum DetailedOperationStatus: Sendable {
     // Pending substates
     case queued                          // In queue, waiting to start
     case waitingForResources            // Waiting for system resources
@@ -67,7 +80,7 @@ public enum DetailedOperationStatus {
     
     // Terminal states
     case completed(Date)                // Successfully finished
-    case failed(Error, Date)           // Failed with error
+    case failed(String, Date)          // Failed with error description
     case cancelled(Date)               // Cancelled by user or system
     
     /// Convert to basic OperationStatus for compatibility
@@ -216,7 +229,7 @@ extension DetailedOperationStatus: Hashable {
 // MARK: - Operation Notification System
 
 /// Real-time operation status updates for UI
-public struct OperationStatusUpdate {
+public struct OperationStatusUpdate: Sendable {
     public let operationId: UUID
     public let memoId: UUID
     public let operationType: OperationType
@@ -242,7 +255,7 @@ public struct OperationStatusUpdate {
 
 /// Protocol for receiving operation status updates
 @MainActor
-public protocol OperationStatusDelegate: AnyObject {
+public protocol OperationStatusDelegate: AnyObject, Sendable {
     func operationStatusDidUpdate(_ update: OperationStatusUpdate) async
     func operationDidComplete(_ operationId: UUID, memoId: UUID, operationType: OperationType) async
     func operationDidFail(_ operationId: UUID, memoId: UUID, operationType: OperationType, error: Error) async
@@ -251,7 +264,7 @@ public protocol OperationStatusDelegate: AnyObject {
 // MARK: - Operation Grouping and Filtering
 
 /// Grouping operations for UI presentation
-public enum OperationGroup: CaseIterable {
+public enum OperationGroup: CaseIterable, Sendable {
     case recording
     case transcription  
     case analysis
@@ -277,7 +290,7 @@ public enum OperationGroup: CaseIterable {
 }
 
 /// Filtering operations for UI presentation
-public enum OperationFilter: CaseIterable {
+public enum OperationFilter: CaseIterable, Sendable {
     case active
     case pending
     case completed
@@ -308,7 +321,7 @@ public enum OperationFilter: CaseIterable {
 // MARK: - Operation Summary for UI
 
 /// Summary of operation information for display
-public struct OperationSummary {
+public struct OperationSummary: Sendable {
     public let operation: Operation
     public let detailedStatus: DetailedOperationStatus
     public let userFriendlyDescription: String
@@ -335,8 +348,8 @@ public struct OperationSummary {
         case .completed:
             return .completed(operation.completedAt ?? Date())
         case .failed:
-            let error = operation.error ?? NSError(domain: "OperationError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"])
-            return .failed(error, operation.completedAt ?? Date())
+            let desc = operation.errorDescription ?? "Unknown error"
+            return .failed(desc, operation.completedAt ?? Date())
         case .cancelled:
             return .cancelled(operation.completedAt ?? Date())
         }
@@ -395,7 +408,7 @@ public struct OperationSummary {
 // MARK: - System Load Indicators
 
 /// System performance metrics for operation coordination
-public struct SystemOperationMetrics {
+public struct SystemOperationMetrics: Sendable {
     public let totalOperations: Int
     public let activeOperations: Int
     public let queuedOperations: Int

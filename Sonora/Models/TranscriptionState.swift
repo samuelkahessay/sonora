@@ -1,6 +1,6 @@
 import Foundation
 
-enum TranscriptionState: Codable, Equatable {
+enum TranscriptionState: Codable, Equatable, Sendable {
     case notStarted
     case inProgress
     case completed(String)

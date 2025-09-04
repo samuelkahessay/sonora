@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-protocol AnalysisServiceProtocol: ObservableObject {
+protocol AnalysisServiceProtocol: ObservableObject, Sendable {
     func analyze<T: Codable & Sendable>(mode: AnalysisMode, transcript: String, responseType: T.Type) async throws -> AnalyzeEnvelope<T>
     
     func analyzeDistill(transcript: String) async throws -> AnalyzeEnvelope<DistillData>

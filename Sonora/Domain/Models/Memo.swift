@@ -1,7 +1,7 @@
 import Foundation
 
 /// Domain model representing a voice memo with enhanced business logic
-public struct Memo: Identifiable, Equatable, Hashable {
+public struct Memo: Identifiable, Equatable, Hashable, Sendable {
     public let id: UUID
     public let filename: String
     public let fileURL: URL
@@ -160,7 +160,7 @@ public struct Memo: Identifiable, Equatable, Hashable {
 // MARK: - Supporting Domain Types
 
 /// Domain model for transcription status
-public enum DomainTranscriptionStatus: Codable, Equatable, Hashable {
+public enum DomainTranscriptionStatus: Codable, Equatable, Hashable, Sendable {
     case notStarted
     case inProgress
     case completed(String)
@@ -211,7 +211,7 @@ public enum DomainTranscriptionStatus: Codable, Equatable, Hashable {
 }
 
 /// Domain model for analysis types
-public enum DomainAnalysisType: String, CaseIterable, Codable, Hashable {
+public enum DomainAnalysisType: String, CaseIterable, Codable, Hashable, Sendable {
     case distill = "distill"
     case summary = "summary"
     case themes = "themes"

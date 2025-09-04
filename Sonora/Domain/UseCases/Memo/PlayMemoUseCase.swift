@@ -2,11 +2,11 @@ import Foundation
 
 /// Use case for playing a memo
 /// Encapsulates the business logic for memo playback
-protocol PlayMemoUseCaseProtocol {
+protocol PlayMemoUseCaseProtocol: Sendable {
     func execute(memo: Memo) async throws
 }
 
-final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
+final class PlayMemoUseCase: PlayMemoUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let memoRepository: any MemoRepository
@@ -17,6 +17,7 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
+    @MainActor
     func execute(memo: Memo) async throws {
         print("▶️ PlayMemoUseCase: Starting playback for memo: \(memo.filename)")
         

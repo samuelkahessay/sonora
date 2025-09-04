@@ -2,11 +2,11 @@ import Foundation
 
 /// Use case for performing comprehensive Distill analysis on transcript with repository caching
 /// Provides mentor-like insights including summary, action items, themes, and reflection questions
-protocol AnalyzeDistillUseCaseProtocol {
+protocol AnalyzeDistillUseCaseProtocol: Sendable {
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<DistillData>
 }
 
-final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol {
+final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
@@ -31,6 +31,7 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
+    @MainActor
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<DistillData> {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
@@ -48,12 +49,12 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol {
         do {
             // Validate inputs
             guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                await operationCoordinator.failOperation(operationId, error: AnalysisError.emptyTranscript)
+                await operationCoordinator.failOperation(operationId, errorDescription: AnalysisError.emptyTranscript.errorDescription ?? "Empty transcript")
                 throw AnalysisError.emptyTranscript
             }
             
             guard transcript.count >= 10 else {
-                await operationCoordinator.failOperation(operationId, error: AnalysisError.transcriptTooShort)
+                await operationCoordinator.failOperation(operationId, errorDescription: AnalysisError.transcriptTooShort.errorDescription ?? "Transcript too short")
                 throw AnalysisError.transcriptTooShort
             }
             
@@ -90,7 +91,7 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol {
             // Guardrails: validate structure before persisting
             guard AnalysisGuardrails.validate(distill: result.data) else {
                 logger.error("Distill validation failed — not persisting result", category: .analysis, context: context, error: nil)
-                await operationCoordinator.failOperation(operationId, error: AnalysisError.invalidResponse)
+                await operationCoordinator.failOperation(operationId, errorDescription: AnalysisError.invalidResponse.errorDescription ?? "Invalid response")
                 throw AnalysisError.invalidResponse
             }
             _ = analysisTimer.finish(additionalInfo: "Service call completed successfully")
@@ -117,8 +118,8 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol {
             
             // Publish analysisCompleted event on main actor
             logger.debug("Publishing analysisCompleted event for Distill analysis", category: .analysis, context: context)
-            await MainActor.run { [eventBus] in
-                eventBus.publish(.analysisCompleted(memoId: memoId, type: .distill, result: result.data.summary))
+            await MainActor.run {
+                EventBus.shared.publish(.analysisCompleted(memoId: memoId, type: .distill, result: result.data.summary))
             }
             
             // Complete the analysis operation
@@ -134,7 +135,7 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol {
                        error: error)
             
             // Fail the analysis operation
-            await operationCoordinator.failOperation(operationId, error: error)
+            await operationCoordinator.failOperation(operationId, errorDescription: error.localizedDescription)
             
             throw AnalysisError.analysisServiceError(error.localizedDescription)
         }

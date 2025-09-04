@@ -2,11 +2,11 @@ import Foundation
 
 /// Use case for handling a new recording
 /// Encapsulates the business logic for processing new recordings
-protocol HandleNewRecordingUseCaseProtocol {
+protocol HandleNewRecordingUseCaseProtocol: Sendable {
     func execute(at url: URL) async throws -> Memo
 }
 
-final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
+final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let memoRepository: any MemoRepository
@@ -23,6 +23,7 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
     }
     
     // MARK: - Use Case Execution
+    @MainActor
     func execute(at url: URL) async throws -> Memo {
         print("💾 HandleNewRecordingUseCase: Processing new recording at: \(url.lastPathComponent)")
         
@@ -42,8 +43,8 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol {
             // Publish memoCreated event on main actor
             print("📡 HandleNewRecordingUseCase: Publishing memoCreated event for memo \(memo.id)")
             let domainMemo = memo
-            await MainActor.run { [eventBus] in
-                eventBus.publish(.memoCreated(domainMemo))
+            await MainActor.run {
+                EventBus.shared.publish(.memoCreated(domainMemo))
             }
             
             print("✅ HandleNewRecordingUseCase: Successfully processed new recording: \(memo.filename)")

@@ -296,8 +296,5 @@ public final class RemindersEventHandler {
     // MARK: - Cleanup
     deinit {
         subscriptionManager.cleanup()
-        logger.debug("RemindersEventHandler cleaned up", 
-                    category: .system, 
-                    context: LogContext())
     }
 }

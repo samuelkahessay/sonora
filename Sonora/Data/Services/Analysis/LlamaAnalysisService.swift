@@ -1,6 +1,6 @@
 import Foundation
 import UIKit
-import LLM
+@preconcurrency import LLM
 
 @MainActor
 final class LlamaAnalysisService: ObservableObject, AnalysisServiceProtocol {
@@ -99,7 +99,7 @@ final class LlamaAnalysisService: ObservableObject, AnalysisServiceProtocol {
     
     /// Estimate whether a model's on-disk footprint is likely to exceed practical memory limits for the current device.
     private func isModelViableOnDevice(_ model: LocalModel) -> Bool {
-        let estRAM = UIDevice.current.estimatedRAMCapacity // bytes (approx)
+        let estRAM = ProcessInfo.processInfo.physicalMemory // bytes (approx)
         // Heuristic memory budget for weights + runtime (KV cache, context): ~45% of total RAM
         // Debugger attached reduces headroom; be conservative.
         let budget = UInt64(Double(estRAM) * 0.45)
@@ -149,15 +149,15 @@ final class LlamaAnalysisService: ObservableObject, AnalysisServiceProtocol {
         // Ensure model is loaded (cached after first use)
         try await ensureModelLoaded()
         
-        guard let llm = llm else {
+        guard let llmInstance = llm else {
             throw AnalysisError.modelNotAvailable
         }
         
         // Simple prompt
         let prompt = buildSimplePrompt(mode: mode, transcript: transcript)
         
-        // Get completion
-        let output = await llm.getCompletion(from: prompt)
+        // Get completion - call directly, preconcurrency import handles Sendable warnings
+        let output = await llmInstance.getCompletion(from: prompt)
         
         // Parse output
         let parsedData = try parseSimpleOutput(output, mode: mode, responseType: responseType)

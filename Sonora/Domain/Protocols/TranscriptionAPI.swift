@@ -2,6 +2,7 @@ import Foundation
 
 /// Protocol for transcription services that handle audio-to-text conversion
 /// Provides a clean abstraction for the core transcription functionality
+@MainActor
 protocol TranscriptionAPI {
     /// Transcribes audio content from the given URL to text
     /// - Parameter url: The URL of the audio file to transcribe
@@ -32,7 +33,7 @@ protocol TranscriptionProgressReporting {
 }
 
 /// Detailed transcription response, optionally including detected language and confidences
-struct TranscriptionResponse: Equatable {
+struct TranscriptionResponse: Equatable, Sendable {
     let text: String
     let detectedLanguage: String?
     let confidence: Double?
@@ -41,7 +42,7 @@ struct TranscriptionResponse: Equatable {
 }
 
 /// Result type for chunked transcription
-struct ChunkTranscriptionResult: Equatable {
+struct ChunkTranscriptionResult: Equatable, Sendable {
     let segment: VoiceSegment
     let response: TranscriptionResponse
 }

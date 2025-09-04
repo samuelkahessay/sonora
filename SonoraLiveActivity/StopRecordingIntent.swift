@@ -7,7 +7,7 @@ import AppIntents
 @available(iOS 17.0, *)
 struct StopRecordingIntent: AppIntent {
     static var title: LocalizedStringResource { "Stop Recording" }
-    static var description = IntentDescription("Stops the current recording in Sonora")
+    static var description: IntentDescription { IntentDescription("Stops the current recording in Sonora") }
     static var openAppWhenRun: Bool { true }
 
     func perform() async throws -> some IntentResult {
