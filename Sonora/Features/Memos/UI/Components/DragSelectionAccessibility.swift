@@ -114,16 +114,9 @@ extension View {
             .accessibilityLabel(accessibilityLabel(for: memo, isSelected: isSelected))
             .accessibilityHint(accessibilityHint(for: viewModel.isEditMode, isSelected: isSelected))
             .accessibilityValue(accessibilityValue(for: memo))
-            // Add custom rotor actions (chained for compatibility with pre‑iOS 17 APIs)
+            // Keep simple toggle action; remove range/drag affordances
             .accessibilityAction(named: Text(isSelected ? "Deselect" : "Select")) {
                 if viewModel.isEditMode { viewModel.toggleMemoSelection(memo) }
-            }
-            .accessibilityAction(named: Text("Select all from here to end")) {
-                if viewModel.isEditMode,
-                   !isSelected,
-                   let idx = viewModel.memos.firstIndex(where: { $0.id == memo.id }) {
-                    DragSelectionAccessibility.selectRange(from: idx, to: viewModel.memos.count - 1, viewModel: viewModel)
-                }
             }
             .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
@@ -149,11 +142,7 @@ extension View {
     /// Generate accessibility hint
     private func accessibilityHint(for isEditMode: Bool, isSelected: Bool) -> String {
         if isEditMode {
-            if DragSelectionAccessibility.prefersAlternativeSelection {
-                return isSelected ? "Double tap to deselect" : "Double tap to select. Use actions to select ranges."
-            } else {
-                return isSelected ? "Double tap to deselect, or drag to select multiple" : "Double tap to select, or drag to select multiple"
-            }
+            return isSelected ? "Double tap to deselect" : "Double tap to select"
         } else {
             return "Double tap to view memo details"
         }

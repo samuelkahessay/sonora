@@ -24,6 +24,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _transcriptionServiceFactory: TranscriptionServiceFactory?
     private var _modelDownloadManager: ModelDownloadManager?
     private var _analysisService: AnalysisService!
+    private var _llamaAnalysisService: LlamaAnalysisService?
     private var _memoRepository: MemoRepositoryImpl!
     private var _transcriptionRepository: (any TranscriptionRepository)?
     private var _analysisRepository: (any AnalysisRepository)?
@@ -234,6 +235,16 @@ final class DIContainer: ObservableObject, Resolver {
     /// Get analysis service
     func analysisService() -> any AnalysisServiceProtocol {
         ensureConfigured()
+        
+        // Return local analysis service if enabled, otherwise use API service
+        if AppConfiguration.shared.useLocalAnalysis {
+            if _llamaAnalysisService == nil {
+                _llamaAnalysisService = LlamaAnalysisService()
+                print("🦙 DIContainer: Created LlamaAnalysisService instance")
+            }
+            return _llamaAnalysisService!
+        }
+        
         return _analysisService
     }
 

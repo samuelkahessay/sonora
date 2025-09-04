@@ -1,5 +1,5 @@
 {
-  "originHash" : "dd8ba1f6f226d4755ff1a7033520876c37bc27e89b7dd91a9d4cec3596f93b24",
+  "originHash" : "d746f4288e39973135199ce2f90fdc2838a3385ba65f6c64a44d2255a2ead63f",
   "pins" : [
     {
       "identity" : "jinja",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "31c4dd39bcdc07eaa42a384bdc88ea599022b800",
         "version" : "1.1.2"
+      }
+    },
+    {
+      "identity" : "llm.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/eastriverlee/LLM.swift",
+      "state" : {
+        "revision" : "4c4e909ac4758c628c9cd263a0c25b6edff5526d",
+        "version" : "2.0.1"
       }
     },
     {
@@ -26,6 +35,15 @@
       "state" : {
         "revision" : "8c0c0a8b49e080e54e5e328cc552821ff07cd341",
         "version" : "1.2.1"
+      }
+    },
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-syntax.git",
+      "state" : {
+        "revision" : "21b3b45635decd1a0b89968f81b6d9a93128f773",
+        "version" : "602.0.0-prerelease-2025-08-11"
       }
     },
     {

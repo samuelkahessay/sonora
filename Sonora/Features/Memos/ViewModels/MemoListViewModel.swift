@@ -46,15 +46,6 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     // MARK: - Multi-Select Edit Mode
     @Published var isEditMode: Bool = false
     @Published var selectedMemoIds: Set<UUID> = []
-    @Published var isDragSelecting: Bool = false
-    @Published var dragStartIndex: Int? = nil
-    @Published var dragCurrentIndex: Int? = nil
-    
-    // MARK: - Efficient Row Tracking
-    @Published var measuredRowHeight: CGFloat = 80 // Updated when first row is measured
-    @Published var listContentOffset: CGFloat = 0
-    private var velocityTracker = DragVelocityTracker()
-    private let hapticDebouncer = HapticDebouncer.forMemoSelection()
     
     // MARK: - Computed Properties
     
@@ -690,12 +681,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             isEditMode.toggle()
             
             // Clear selection when exiting edit mode
-            if !isEditMode {
-                selectedMemoIds.removeAll()
-                isDragSelecting = false
-                dragStartIndex = nil
-                dragCurrentIndex = nil
-            }
+            if !isEditMode { selectedMemoIds.removeAll() }
         }
         
         HapticManager.shared.playSelection()
@@ -736,22 +722,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         }
     }
 
-    /// Whether the memo at the given index is selected
-    func isIndexSelected(_ index: Int) -> Bool {
-        guard index >= 0 && index < memos.count else { return false }
-        return selectedMemoIds.contains(memos[index].id)
-    }
-
-    /// Set selection state for item at index without heavy animations (used during drag)
-    func setSelection(forIndex index: Int, selected: Bool) {
-        guard index >= 0 && index < memos.count else { return }
-        let id = memos[index].id
-        if selected {
-            if !selectedMemoIds.contains(id) { selectedMemoIds.insert(id) }
-        } else {
-            if selectedMemoIds.contains(id) { selectedMemoIds.remove(id) }
-        }
-    }
+    // Drag-based selection helpers removed (tap-only selection)
     
     /// Select all memos
     func selectAll() {
@@ -807,93 +778,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         }
     }
     
-    /// Update drag selection with performance optimization and smooth interpolation
-    func updateDragSelection(to index: Int, velocity: CGFloat = 0) {
-        guard isEditMode && isDragSelecting else { return }
-        guard index >= 0 && index < memos.count else { return }
-        
-        dragCurrentIndex = index
-        
-        // Use interpolated selection for smooth drag experience
-        if let startIndex = dragStartIndex {
-            let selectionRange = SelectionInterpolator.interpolateSelection(
-                from: startIndex,
-                to: index,
-                velocity: velocity,
-                rowHeight: measuredRowHeight,
-                maxItems: memos.count
-            )
-            
-            // Get memos in the interpolated range
-            let indicesToSelect = Array(selectionRange).filter { $0 < memos.count }
-            let memosToSelect = indicesToSelect.map { memos[$0] }
-            
-            // Update selection with smooth animation
-            withAnimation(.easeOut(duration: 0.1)) {
-                for memo in memosToSelect {
-                    selectedMemoIds.insert(memo.id)
-                }
-            }
-            
-            // Intelligent haptic feedback using debouncer
-            if hapticDebouncer.shouldFireHaptic(newCount: selectedMemoIds.count) {
-                HapticManager.shared.playSelection()
-            }
-        }
-    }
-    
-    /// Update row height measurement (called when first row is measured)
-    func updateRowHeight(_ height: CGFloat) {
-        if abs(measuredRowHeight - height) > 1.0 { // Only update if meaningfully different
-            measuredRowHeight = height
-            logger.debug("Updated row height: \(height)", category: .viewModel, context: LogContext())
-        }
-    }
-    
-    /// Update list content offset for scroll-aware selection
-    func updateContentOffset(_ offset: CGFloat) {
-        listContentOffset = offset
-    }
-    
-    /// Enhanced drag selection with position and velocity tracking
-    func handleDragSelection(at point: CGPoint, velocity: CGPoint = .zero) {
-        guard isEditMode else { return }
-        
-        // Convert point to row index using measured height
-        let adjustedY = point.y - 8 + listContentOffset // Account for safe area and scroll
-        let currentIndex = max(0, min(Int(adjustedY / measuredRowHeight), memos.count - 1))
-        
-        // Initialize drag selection if not started
-        if dragStartIndex == nil {
-            dragStartIndex = currentIndex
-            isDragSelecting = true
-            hapticDebouncer.reset() // Reset haptic debouncer for new gesture
-            
-            // Initial selection
-            if currentIndex < memos.count {
-                withAnimation(.easeOut(duration: 0.1)) {
-                    selectedMemoIds.insert(memos[currentIndex].id)
-                }
-                HapticManager.shared.playSelection()
-            }
-        }
-        
-        // Update selection with velocity information
-        updateDragSelection(to: currentIndex, velocity: sqrt(velocity.x * velocity.x + velocity.y * velocity.y))
-    }
-    
-    /// End drag selection with cleanup
-    func endDragSelection() {
-        isDragSelecting = false
-        dragStartIndex = nil
-        dragCurrentIndex = nil
-        velocityTracker.reset()
-        
-        // Final haptic feedback
-        HapticManager.shared.playSelection()
-        
-        logger.debug("Drag selection ended with \(selectedMemoIds.count) items selected", category: .viewModel, context: LogContext())
-    }
+    // Drag selection API removed (tap-only selection)
     
     /// Check if a memo is selected
     func isMemoSelected(_ memo: Memo) -> Bool {

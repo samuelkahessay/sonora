@@ -125,6 +125,8 @@ struct TranscriptionServiceToggle: View {
         HapticManager.shared.playSelection()
         selectedService = service
         UserDefaults.standard.selectedTranscriptionService = service
+        // Enforce strict-local behavior automatically to avoid cloud costs when local is chosen
+        AppConfiguration.shared.strictLocalWhisper = (service == .localWhisperKit)
         
         Logger.shared.info("Selected transcription service: \(service.displayName)")
     }

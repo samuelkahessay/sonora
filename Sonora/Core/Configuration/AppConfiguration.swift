@@ -1,8 +1,9 @@
 import Foundation
+import Combine
 
 /// Centralized application configuration management
 /// Provides type-safe access to all app configuration values with environment variable support
-public final class AppConfiguration {
+public final class AppConfiguration: ObservableObject {
     
     // MARK: - Singleton
     
@@ -40,6 +41,14 @@ public final class AppConfiguration {
     /// API request timeout for health check operations (in seconds)
     /// Can be overridden with SONORA_HEALTH_TIMEOUT environment variable
     public private(set) var healthCheckTimeoutInterval: TimeInterval = 5.0
+    
+    // MARK: - Local Analysis Configuration
+    
+    /// Whether to use local LLM analysis instead of remote API
+    /// Stored in UserDefaults, can be toggled by user in settings
+    @Published public var useLocalAnalysis: Bool = UserDefaults.standard.bool(forKey: "useLocalAnalysis") {
+        didSet { UserDefaults.standard.set(useLocalAnalysis, forKey: "useLocalAnalysis") }
+    }
     
     // MARK: - Recording Configuration
     
@@ -177,6 +186,20 @@ public final class AppConfiguration {
     public var whisperChunkingStrategy: String {
         get { (UserDefaults.standard.string(forKey: "whisperChunkingStrategy") ?? "vad").lowercased() }
         set { UserDefaults.standard.set(newValue.lowercased(), forKey: "whisperChunkingStrategy") }
+    }
+
+    // MARK: - Effective Recording Cap (by service)
+    /// Returns the effective recording cap in seconds based on the user's selected transcription service.
+    /// - cloud API: returns the configured maxRecordingDuration (default 60s)
+    /// - local WhisperKit: returns nil (no cap)
+    public var effectiveRecordingCapSeconds: TimeInterval? {
+        let selected = UserDefaults.standard.selectedTranscriptionService
+        switch selected {
+        case .cloudAPI:
+            return maxRecordingDuration
+        case .localWhisperKit:
+            return nil // unlimited recording when using local transcription
+        }
     }
 
     // MARK: - Search / Spotlight

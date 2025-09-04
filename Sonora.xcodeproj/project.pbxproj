@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0A633FA42E68BD9600E6AB88 /* Transformers in Frameworks */ = {isa = PBXBuildFile; productRef = 0A633FA32E68BD9600E6AB88 /* Transformers */; };
+		0A633FD82E69ACA900E6AB88 /* LLM in Frameworks */ = {isa = PBXBuildFile; productRef = 0A633FD72E69ACA900E6AB88 /* LLM */; };
 		0A875D9D2E600B7100245D4A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9C2E600B7100245D4A /* WidgetKit.framework */; };
 		0A875D9F2E600B7100245D4A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9E2E600B7100245D4A /* SwiftUI.framework */; };
 		0A875DAC2E600B7300245D4A /* SonoraLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0A875D9A2E600B7100245D4A /* SonoraLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -130,6 +131,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0A633FD82E69ACA900E6AB88 /* LLM in Frameworks */,
 				0AA6FA0D2E6370F000C8BF7A /* WhisperKit in Frameworks */,
 				0AA6FA102E63710600C8BF7A /* ZIPFoundation in Frameworks */,
 				0A633FA42E68BD9600E6AB88 /* Transformers in Frameworks */,
@@ -220,6 +222,7 @@
 				0AA6FA0C2E6370F000C8BF7A /* WhisperKit */,
 				0AA6FA0F2E63710600C8BF7A /* ZIPFoundation */,
 				0A633FA32E68BD9600E6AB88 /* Transformers */,
+				0A633FD72E69ACA900E6AB88 /* LLM */,
 			);
 			productName = Sonora;
 			productReference = 0A39740A2E5A6CA400F27D16 /* Sonora.app */;
@@ -332,6 +335,7 @@
 				0AA6FA0B2E6370F000C8BF7A /* XCRemoteSwiftPackageReference "WhisperKit" */,
 				0AA6FA0E2E63710600C8BF7A /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 				0A633FA22E68BD9600E6AB88 /* XCRemoteSwiftPackageReference "swift-transformers" */,
+				0A633FD62E69ACA900E6AB88 /* XCRemoteSwiftPackageReference "LLM" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0A39740B2E5A6CA400F27D16 /* Products */;
@@ -823,6 +827,14 @@
 				version = 0.1.17;
 			};
 		};
+		0A633FD62E69ACA900E6AB88 /* XCRemoteSwiftPackageReference "LLM" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/eastriverlee/LLM.swift";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 2.0.1;
+			};
+		};
 		0AA6FA0B2E6370F000C8BF7A /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/argmaxinc/WhisperKit";
@@ -846,6 +858,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0A633FA22E68BD9600E6AB88 /* XCRemoteSwiftPackageReference "swift-transformers" */;
 			productName = Transformers;
+		};
+		0A633FD72E69ACA900E6AB88 /* LLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0A633FD62E69ACA900E6AB88 /* XCRemoteSwiftPackageReference "LLM" */;
+			productName = LLM;
 		};
 		0AA6FA0C2E6370F000C8BF7A /* WhisperKit */ = {
 			isa = XCSwiftPackageProductDependency;

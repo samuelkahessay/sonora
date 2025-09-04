@@ -16,6 +16,7 @@ enum SemanticColor: String, CaseIterable {
     // Text
     case textPrimary = "text/Primary"
     case textSecondary = "text/Secondary"
+    case textTertiary = "text/Tertiary"
     case textInverted = "text/Inverted"
     case textOnColored = "text/OnColored"
 
@@ -50,6 +51,7 @@ extension SemanticColor {
         // Text
         case .textPrimary: return .label
         case .textSecondary: return .secondaryLabel
+        case .textTertiary: return .tertiaryLabel
         case .textInverted: return .label // used on tinted/inverted surfaces; assets should provide high-contrast values
         case .textOnColored: return .white // always white for icons/text on colored backgrounds
 

@@ -9,6 +9,7 @@ struct SettingsView: View {
                     OnboardingSectionView()
                     LanguageSectionView()
                     WhisperKitSectionView()
+                    LocalAISectionView()
                     AIDisclosureSectionView()
                     PrivacySectionView()
                 }

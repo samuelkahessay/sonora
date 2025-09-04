@@ -419,14 +419,15 @@ final class BackgroundAudioService: NSObject, ObservableObject {
         }
         
         let elapsed = recorder.currentTime
-        let remaining = max(0, config.maxRecordingDuration - elapsed)
+        let cap = config.effectiveRecordingCapSeconds
+        let remaining = cap != nil ? max(0, cap! - elapsed) : .infinity
         
         DispatchQueue.main.async {
             // Update elapsed time
             self.recordingTime = elapsed
             
-            // Countdown behavior: show when < 10s remaining
-            if remaining > 0 && remaining < 10.0 {
+            // Countdown behavior: only when a finite cap exists and < 10s remaining
+            if cap != nil, remaining.isFinite, remaining > 0 && remaining < 10.0 {
                 self.isInCountdown = true
                 self.remainingTime = remaining
             } else {
@@ -434,17 +435,24 @@ final class BackgroundAudioService: NSObject, ObservableObject {
                 self.remainingTime = 0
             }
             
-            // Auto-stop when exceeding max duration
-            if elapsed >= self.config.maxRecordingDuration {
+            // Auto-stop only when a finite cap exists
+            if let cap, elapsed >= cap {
                 self.recordingStoppedAutomatically = true
-                self.autoStopMessage = "Recording stopped automatically after \(self.config.formattedMaxDuration)"
+                self.autoStopMessage = "Recording stopped automatically after \(Self.formatDuration(cap))"
                 self.isInCountdown = false
                 self.remainingTime = 0
-                
+
                 // Stop recording to trigger delegate callbacks
                 self.stopRecording()
             }
         }
+    }
+
+    private static func formatDuration(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds.rounded())
+        let minutes = total / 60
+        let secs = total % 60
+        return String(format: "%d:%02d", minutes, secs)
     }
     
     // MARK: - Permission Management
