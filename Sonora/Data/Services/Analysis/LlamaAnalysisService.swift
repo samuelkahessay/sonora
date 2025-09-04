@@ -34,46 +34,103 @@ final class LlamaAnalysisService: ObservableObject, AnalysisServiceProtocol {
     
     private func ensureModelLoaded() async throws {
         let targetModel = selectedModel
-        
-        // Check if we need to reload (different model or no model loaded)
-        if llm != nil && currentLoadedModel == targetModel {
-            return // Already loaded with correct model
+
+        // If already loaded for this model, keep using it
+        if llm != nil && currentLoadedModel == targetModel { return }
+
+        // If model is likely too large for this device, skip loading and fall back preemptively
+        if !isModelViableOnDevice(targetModel) {
+            logger.warning("Selected model appears too large for device memory; will try smaller models")
+        } else {
+            // Try to load target model; if it fails (e.g., memory), fall back
+            if try await tryLoadModel(targetModel) { return }
         }
-        
-        // Validate device compatibility
-        guard targetModel.isDeviceCompatible else {
-            throw AnalysisError.deviceIncompatible(targetModel.incompatibilityReason ?? "Device not compatible")
+
+        // Fallback chain: prefer downloaded, compatible models from higher to lower tiers
+        // Prefer smaller models first to avoid memory pressure on mobile devices
+        let fallbackOrder: [LocalModel] = [
+            .llama32_3B, .gemma2_2B, .qwen25_3B, .llama32_1B, .phi4_mini, .tinyllama_1B
+        ]
+        for candidate in fallbackOrder {
+            if candidate == targetModel { continue }
+            if try await tryLoadModel(candidate) {
+                logger.warning("Falling back to \(candidate.displayName) after load failure of \(targetModel.displayName)")
+                return
+            }
         }
-        
-        // Check model is downloaded
-        guard targetModel.isDownloaded else {
-            throw AnalysisError.modelNotDownloaded
+
+        // No viable model could be loaded
+        throw AnalysisError.modelLoadFailed
+    }
+
+    private func tryLoadModel(_ model: LocalModel) async throws -> Bool {
+        // Validate device + file present
+        guard model.isDeviceCompatible else { return false }
+        guard model.isDownloaded else { return false }
+
+        // Unload any previous
+        if currentLoadedModel != model { llm = nil; currentLoadedModel = nil }
+
+        // Log file info prior to load
+        let path = model.localPath.path
+        var sizeInfo = "unknown"
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: path),
+           let size = attrs[.size] as? NSNumber {
+            let formatter = ByteCountFormatter()
+            formatter.allowedUnits = [.useMB, .useGB]
+            formatter.countStyle = .file
+            sizeInfo = formatter.string(fromByteCount: size.int64Value)
         }
-        
-        // Unload previous model if switching
-        if currentLoadedModel != targetModel {
-            llm = nil
-            currentLoadedModel = nil
-        }
-        
-        // Load new model
-        logger.info("Loading \(targetModel.displayName) model...")
-        
-        // Initialize LLM with sensible defaults
+        logger.info("Loading \(model.displayName) model (\(sizeInfo))...")
         llm = LLM(
-            from: targetModel.localPath,
+            from: model.localPath,
             topP: 0.95,
             temp: 0.7,
             historyLimit: 2,
-            maxTokenCount: 1024
+            maxTokenCount: 512
         )
-        
-        guard llm != nil else {
-            throw AnalysisError.modelLoadFailed
+        guard llm != nil else { return false }
+        currentLoadedModel = model
+        logger.info("\(model.displayName) model loaded successfully")
+        return true
+    }
+    
+    // MARK: - Memory Viability Heuristic
+    
+    /// Estimate whether a model's on-disk footprint is likely to exceed practical memory limits for the current device.
+    private func isModelViableOnDevice(_ model: LocalModel) -> Bool {
+        let estRAM = UIDevice.current.estimatedRAMCapacity // bytes (approx)
+        // Heuristic memory budget for weights + runtime (KV cache, context): ~45% of total RAM
+        // Debugger attached reduces headroom; be conservative.
+        let budget = UInt64(Double(estRAM) * 0.45)
+        let modelBytes = totalModelBytesOnDisk(model)
+        logger.debug("Memory check: estRAM=\(ByteCountFormatter.string(fromByteCount: Int64(estRAM), countStyle: .memory)), budget=\(ByteCountFormatter.string(fromByteCount: Int64(budget), countStyle: .memory)), model=\(ByteCountFormatter.string(fromByteCount: Int64(modelBytes), countStyle: .memory))")
+        return modelBytes <= budget
+    }
+    
+    /// Sum sizes of model GGUF files (handles shards when primary is 00001-of-NN)
+    private func totalModelBytesOnDisk(_ model: LocalModel) -> UInt64 {
+        let primary = model.localPath.lastPathComponent.lowercased()
+        let dir = model.localPath.deletingLastPathComponent()
+        do {
+            if primary.contains("-00001-of-") {
+                // Sum all parts by pattern prefix
+                let prefix = primary.replacingOccurrences(of: "-00001-of-", with: "-")
+                let files = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+                let ggufs = files.filter { $0.lowercased().hasSuffix(".gguf") && $0.lowercased().contains(prefix.split(separator: "-gguf").first ?? "") }
+                var total: UInt64 = 0
+                for f in ggufs {
+                    let p = dir.appendingPathComponent(f).path
+                    if let attrs = try? FileManager.default.attributesOfItem(atPath: p), let s = attrs[.size] as? UInt64 { total += s }
+                }
+                return total
+            } else {
+                let attrs = try FileManager.default.attributesOfItem(atPath: model.localPath.path)
+                return (attrs[.size] as? UInt64) ?? 0
+            }
+        } catch {
+            return 0
         }
-        
-        currentLoadedModel = targetModel
-        logger.info("\(targetModel.displayName) model loaded successfully")
     }
     
     func analyze<T: Codable & Sendable>(

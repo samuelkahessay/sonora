@@ -104,4 +104,27 @@ extension UIDevice {
             return ProcessInfo.processInfo.physicalMemory
         }
     }
+    
+    /// Get the highest tier supported by this device
+    var deviceTier: ModelTier {
+        let ram = estimatedRAMCapacity
+        if ram >= 6_000_000_000 { return .balanced } // 6GB+
+        return .fast // 4GB or less
+    }
+    
+    /// Get all tiers supported by this device
+    var supportedTiers: [ModelTier] {
+        let currentTier = deviceTier
+        switch currentTier {
+        case .balanced:
+            return [.fast, .balanced]
+        case .fast:
+            return [.fast]
+        }
+    }
+    
+    /// Check if device supports a specific tier
+    func supportsTier(_ tier: ModelTier) -> Bool {
+        return supportedTiers.contains(tier)
+    }
 }

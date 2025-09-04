@@ -51,11 +51,19 @@ public final class AppConfiguration: ObservableObject {
     }
     
     /// Selected local model for analysis
-    /// Stored in UserDefaults, defaults to LLaMA 3.2 3B
-    @Published public var selectedLocalModel: String = UserDefaults.standard.string(forKey: "selectedLocalModel") ?? "llama-3.2-3b-instruct" {
-        didSet { 
+    /// Stored in UserDefaults, with smart defaults based on device capability
+    @Published public var selectedLocalModel: String = {
+        let saved = UserDefaults.standard.string(forKey: "selectedLocalModel")
+        let hasUserExplicitlySelected = UserDefaults.standard.object(forKey: "hasUserSelectedModel") != nil
+        // If user has never explicitly selected a model, use smart default
+        if !hasUserExplicitlySelected || saved == nil {
+            return LocalModel.defaultModel.rawValue
+        }
+        return saved ?? LocalModel.defaultModel.rawValue
+    }() {
+        didSet {
             UserDefaults.standard.set(selectedLocalModel, forKey: "selectedLocalModel")
-            objectWillChange.send()
+            UserDefaults.standard.set(true, forKey: "hasUserSelectedModel")
         }
     }
     

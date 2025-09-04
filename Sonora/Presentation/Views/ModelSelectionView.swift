@@ -14,45 +14,34 @@ struct ModelSelectionView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Current selection header
-                VStack(spacing: 8) {
-                    Text("Select Local AI Model")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    
-                    Text("Choose which model to use for voice memo analysis")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top)
+                // Header
+                HeaderSection()
                 
-                // Device info
-                DeviceInfoCard()
+                // Device capability info
+                DeviceCapabilityCard()
                 
-                // Model list
-                LazyVStack(spacing: 12) {
-                    ForEach(LocalModel.allCases, id: \.self) { model in
-                        ModelRow(
-                            model: model,
-                            isSelected: selectedModel == model,
-                            isDownloaded: downloadManager.isModelReady(model),
-                            isDownloading: downloadManager.isDownloading(model),
-                            downloadProgress: downloadManager.downloadProgress(for: model)
-                        ) {
-                            selectModel(model)
-                        } onDownload: {
-                            downloadManager.downloadModel(model)
-                        } onDelete: {
-                            downloadManager.deleteModel(model)
-                        } onCancelDownload: {
-                            downloadManager.cancelDownload(for: model)
-                        }
+                // Tier-based model sections
+                LazyVStack(spacing: 16) {
+                    ForEach(ModelTier.allCases, id: \.self) { tier in
+                        TierSectionView(
+                            tier: tier,
+                            models: LocalModel.modelsForTier(tier),
+                            isSupported: UIDevice.current.supportsTier(tier),
+                            selectedModel: selectedModel,
+                            downloadManager: downloadManager,
+                            onModelSelect: selectModel,
+                            onModelDownload: { downloadManager.downloadModel($0) },
+                            onModelDelete: { downloadManager.deleteModel($0) },
+                            onCancelDownload: { downloadManager.cancelDownload(for: $0) }
+                        )
                     }
                 }
                 
-                // Storage info
-                StorageInfoCard(downloadManager: downloadManager)
+                // Storage and recommendations
+                VStack(spacing: 12) {
+                    StorageInfoCard(downloadManager: downloadManager)
+                    RecommendationCard()
+                }
                 
                 Spacer(minLength: 20)
             }
@@ -77,35 +66,67 @@ struct ModelSelectionView: View {
     }
 }
 
-// MARK: - Device Info Card
+// MARK: - Header Section
 
-struct DeviceInfoCard: View {
+struct HeaderSection: View {
+    var body: some View {
+        VStack(spacing: 8) {
+            Text("AI Model Selection")
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            Text("Choose the best model for your device and use case")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.top)
+    }
+}
+
+// MARK: - Device Capability Card
+
+struct DeviceCapabilityCard: View {
     var body: some View {
         SettingsCard {
-            HStack {
-                Image(systemName: "iphone")
-                    .foregroundColor(.blue)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Device: \(UIDevice.current.readableModelName)")
-                        .font(.headline)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "iphone")
+                        .foregroundColor(.blue)
+                        .font(.title2)
                     
-                    Text("RAM: \(formatMemory(UIDevice.current.estimatedRAMCapacity))")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Device: \(UIDevice.current.readableModelName)")
+                            .font(.headline)
+                        
+                        Text("RAM: \(formatMemory(UIDevice.current.estimatedRAMCapacity))")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    // Tier badge
+                    Text(UIDevice.current.deviceTier.icon)
+                        .font(.title)
+                }
+                
+                // Supported tiers
+                HStack(spacing: 8) {
+                    Text("Supported Tiers:")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
-                    if UIDevice.current.isProModel {
-                        Text("Pro Model - All models supported")
+                    ForEach(UIDevice.current.supportedTiers, id: \.self) { tier in
+                        Text(tier.icon + " " + tier.displayName)
                             .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.green.opacity(0.2))
                             .foregroundColor(.green)
-                    } else {
-                        Text("Standard Model - Large models not supported")
-                            .font(.caption)
-                            .foregroundColor(.orange)
+                            .cornerRadius(4)
                     }
                 }
-                
-                Spacer()
             }
         }
     }
@@ -116,111 +137,33 @@ struct DeviceInfoCard: View {
     }
 }
 
-// MARK: - Model Row
+// MARK: - Recommendation Card
 
-struct ModelRow: View {
-    let model: LocalModel
-    let isSelected: Bool
-    let isDownloaded: Bool
-    let isDownloading: Bool
-    let downloadProgress: Float
-    
-    let onSelect: () -> Void
-    let onDownload: () -> Void
-    let onDelete: () -> Void
-    let onCancelDownload: () -> Void
-    
+struct RecommendationCard: View {
     var body: some View {
         SettingsCard {
-            VStack(alignment: .leading, spacing: 12) {
-                // Header
+            VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(model.displayName)
-                                .font(.headline)
-                                .foregroundColor(model.isDeviceCompatible ? .primary : .secondary)
-                            
-                            if isSelected && isDownloaded {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                            }
-                        }
-                        
-                        Text(model.approximateSize)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundColor(.orange)
                     
-                    Spacer()
-                    
-                    // Compatibility indicator
-                    if !model.isDeviceCompatible {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.orange)
-                    }
+                    Text("Recommendation")
+                        .font(.headline)
+                        .fontWeight(.semibold)
                 }
                 
-                // Incompatibility warning
-                if let reason = model.incompatibilityReason {
-                    HStack {
-                        Image(systemName: "info.circle")
-                            .foregroundColor(.orange)
-                        
-                        Text(reason)
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    }
-                }
+                let recommendedModel = LocalModel.recommendedModel
                 
-                // Download/Status section
-                if isDownloading {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            ProgressView(value: downloadProgress)
-                                .progressViewStyle(.linear)
-                            
-                            Text("\(Int(downloadProgress * 100))%")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Button("Cancel") {
-                            onCancelDownload()
-                        }
-                        .font(.caption)
-                        .foregroundColor(.red)
-                    }
-                    
-                } else if isDownloaded {
-                    HStack(spacing: 12) {
-                        Button(action: onSelect) {
-                            Text(isSelected ? "Selected" : "Select")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(isSelected)
-                        
-                        Button("Delete") {
-                            onDelete()
-                        }
-                        .font(.caption)
-                        .foregroundColor(.red)
-                    }
-                    
-                } else {
-                    Button(action: onDownload) {
-                        Label("Download", systemImage: "arrow.down.circle.fill")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!model.isDeviceCompatible)
-                }
+                Text("For your \(UIDevice.current.readableModelName), we recommend \(recommendedModel.displayName) for the best balance of speed and quality.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                Text(recommendedModel.useCaseDescription)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .italic()
             }
         }
-        .opacity(model.isDeviceCompatible ? 1.0 : 0.7)
     }
 }
 
