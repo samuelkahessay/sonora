@@ -50,6 +50,15 @@ public final class AppConfiguration: ObservableObject {
         didSet { UserDefaults.standard.set(useLocalAnalysis, forKey: "useLocalAnalysis") }
     }
     
+    /// Selected local model for analysis
+    /// Stored in UserDefaults, defaults to LLaMA 3.2 3B
+    @Published public var selectedLocalModel: String = UserDefaults.standard.string(forKey: "selectedLocalModel") ?? "llama-3.2-3b-instruct" {
+        didSet { 
+            UserDefaults.standard.set(selectedLocalModel, forKey: "selectedLocalModel")
+            objectWillChange.send()
+        }
+    }
+    
     // MARK: - Recording Configuration
     
     /// Maximum recording duration in seconds

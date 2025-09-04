@@ -6,7 +6,14 @@ import LLM
 final class LlamaAnalysisService: ObservableObject, AnalysisServiceProtocol {
     
     private var llm: LLM?
+    private var currentLoadedModel: LocalModel?
     private let logger = Logger.shared
+    
+    /// Currently selected model from user settings
+    private var selectedModel: LocalModel {
+        let modelId = AppConfiguration.shared.selectedLocalModel
+        return LocalModel(rawValue: modelId) ?? LocalModel.defaultModel
+    }
     
     // Keep model loaded until app backgrounds
     init() {
@@ -21,25 +28,40 @@ final class LlamaAnalysisService: ObservableObject, AnalysisServiceProtocol {
     @objc private func appDidEnterBackground() {
         // Free memory when app backgrounds
         llm = nil
+        currentLoadedModel = nil
         logger.debug("Model unloaded on background")
     }
     
     private func ensureModelLoaded() async throws {
-        // Return if already loaded
-        if llm != nil { return }
+        let targetModel = selectedModel
         
-        // Check model exists
-        guard let modelPath = SimpleModelDownloader.shared.modelPath else {
+        // Check if we need to reload (different model or no model loaded)
+        if llm != nil && currentLoadedModel == targetModel {
+            return // Already loaded with correct model
+        }
+        
+        // Validate device compatibility
+        guard targetModel.isDeviceCompatible else {
+            throw AnalysisError.deviceIncompatible(targetModel.incompatibilityReason ?? "Device not compatible")
+        }
+        
+        // Check model is downloaded
+        guard targetModel.isDownloaded else {
             throw AnalysisError.modelNotDownloaded
         }
         
-        // Load model (one-time cost)
-        logger.info("Loading LLaMA model...")
+        // Unload previous model if switching
+        if currentLoadedModel != targetModel {
+            llm = nil
+            currentLoadedModel = nil
+        }
         
-        // Initialize LLM with sensible defaults. Some SDK versions
-        // may not support a specific template enum case; omit template.
+        // Load new model
+        logger.info("Loading \(targetModel.displayName) model...")
+        
+        // Initialize LLM with sensible defaults
         llm = LLM(
-            from: modelPath,
+            from: targetModel.localPath,
             topP: 0.95,
             temp: 0.7,
             historyLimit: 2,
@@ -50,7 +72,8 @@ final class LlamaAnalysisService: ObservableObject, AnalysisServiceProtocol {
             throw AnalysisError.modelLoadFailed
         }
         
-        logger.info("Model loaded successfully")
+        currentLoadedModel = targetModel
+        logger.info("\(targetModel.displayName) model loaded successfully")
     }
     
     func analyze<T: Codable & Sendable>(
@@ -87,7 +110,7 @@ final class LlamaAnalysisService: ObservableObject, AnalysisServiceProtocol {
         return AnalyzeEnvelope(
             mode: mode,
             data: parsedData,
-            model: "llama-3.2-3b",
+            model: currentLoadedModel?.rawValue ?? "local-llm",
             tokens: TokenUsage(input: 0, output: 0),
             latency_ms: Int(duration * 1000),
             moderation: nil
@@ -248,9 +271,15 @@ extension AnalysisError {
     static let modelNotDownloaded = AnalysisError.networkError("Model not downloaded")
     static let modelLoadFailed = AnalysisError.networkError("Failed to load model")
     static let modelNotAvailable = AnalysisError.networkError("Model not available")
+    
+    static func deviceIncompatible(_ reason: String) -> AnalysisError {
+        return .networkError("Device incompatible: \(reason)")
+    }
+    
     static func invalidInput(_ msg: String) -> AnalysisError {
         return .decodingError(msg)
     }
+    
     static func parsingFailed(_ msg: String) -> AnalysisError {
         return .decodingError(msg)
     }
