@@ -249,4 +249,26 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
         }
         return states
     }
+
+    func getTranscriptionStates(for memoIds: [UUID]) -> [UUID: TranscriptionState] {
+        guard !memoIds.isEmpty else { return [:] }
+        var result: [UUID: TranscriptionState] = [:]
+        // Use cache first
+        for id in memoIds {
+            let key = memoIdKey(for: id)
+            if let cached = transcriptionStates[key] { result[id] = cached }
+        }
+        let missing = memoIds.filter { result[$0] == nil }
+        guard !missing.isEmpty else { return result }
+        // Query store for missing in a single fetch
+        if let models = try? context.fetch(FetchDescriptor<TranscriptionModel>()) {
+            for model in models {
+                let id = model.memo?.id ?? model.id
+                if missing.contains(id) {
+                    result[id] = mapModelToState(model)
+                }
+            }
+        }
+        return result
+    }
 }

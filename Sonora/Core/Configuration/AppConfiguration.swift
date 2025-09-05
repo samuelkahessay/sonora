@@ -220,6 +220,14 @@ public final class AppConfiguration: ObservableObject {
         set { UserDefaults.standard.set(newValue.lowercased(), forKey: "whisperChunkingStrategy") }
     }
 
+    // MARK: - AI Routing (Phase 3)
+    /// Enable progressive analysis routing (tiny -> small -> base) with early termination.
+    /// Controlled via UserDefaults key "enableProgressiveAnalysisRouting" or env SONORA_ENABLE_PROGRESSIVE_ANALYSIS
+    public var enableProgressiveAnalysisRouting: Bool {
+        get { UserDefaults.standard.object(forKey: "enableProgressiveAnalysisRouting") as? Bool ?? false }
+        set { UserDefaults.standard.set(newValue, forKey: "enableProgressiveAnalysisRouting") }
+    }
+
     // MARK: - Effective Recording Cap (by service)
     /// Returns the effective recording cap in seconds based on the user's selected transcription service.
     /// - cloud API: returns the configured maxRecordingDuration (default 60s)
@@ -409,9 +417,14 @@ public final class AppConfiguration: ObservableObject {
         }
         
         diskCacheEnabled = true // Always enable disk cache
-        
+
         // Log the loaded configuration
         logLoadedConfiguration()
+
+        // Phase 3: Enable progressive analysis routing by default (can be toggled in Settings or env)
+        if UserDefaults.standard.object(forKey: "enableProgressiveAnalysisRouting") == nil {
+            UserDefaults.standard.set(true, forKey: "enableProgressiveAnalysisRouting")
+        }
     }
     
     private func loadEnvironmentOverrides() {

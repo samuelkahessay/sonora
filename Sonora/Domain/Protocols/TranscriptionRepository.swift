@@ -35,6 +35,8 @@ protocol TranscriptionRepository: ObservableObject {
     func saveTranscriptionMetadata(_ metadata: TranscriptionMetadata, for memoId: UUID)
     func clearTranscriptionCache()
     func getAllTranscriptionStates() -> [UUID: TranscriptionState]
+    /// Batched retrieval for a set of memos to avoid N+1 fetches
+    func getTranscriptionStates(for memoIds: [UUID]) -> [UUID: TranscriptionState]
     
     /// Convenience method to get state changes for a specific memo
     func stateChangesPublisher(for memoId: UUID) -> AnyPublisher<TranscriptionStateChange, Never>

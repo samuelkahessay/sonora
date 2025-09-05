@@ -229,3 +229,9 @@ Cross‑feature communication:
 - Data: `Sonora/Data/Repositories/*`, `Sonora/Data/Services/*`
 - Features: `Sonora/Features/<FeatureName>/(UI|ViewModels)/*`
 - Shared UI: `Sonora/Views/Components/*` (feature-agnostic components)
+
+## Phase 3 Enhancements
+
+- Adaptive Detection: `DetectEventsAndRemindersUseCase` now derives a lightweight `DetectionContext` and applies an `AdaptiveThresholdPolicy` (default: `DefaultAdaptiveThresholdPolicy`) to set per‑memo confidence thresholds. Legacy static thresholds are retained as a floor. Target: ~30% fewer false positives with ≤5% recall loss.
+- Progressive Analysis Routing: When `AppConfiguration.enableProgressiveAnalysisRouting` is true, `ProgressiveAnalysisService` performs a tiny → small → base progression with early termination on simple content. It logs per‑tier latency, model, and token usage. Access via `DIContainer.progressiveAnalysisService()`.
+- SwiftData Optimizations: Added indices for frequent access (`MemoModel.creationDate`, `TranscriptionModel.id/status`), batched transcription state loading to remove N+1, and a short‑lived memo list cache in `MemoRepositoryImpl` to reduce list TTI.

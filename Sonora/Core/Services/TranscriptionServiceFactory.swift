@@ -175,16 +175,16 @@ final class TranscriptionServiceFactory {
             return cached
         }
         
-        logger.info("Creating local WhisperKit transcription service")
+        logger.info("Creating local WhisperKit transcription service with model manager and adaptive router")
+        let modelManager = DIContainer.shared.whisperKitModelManager()
+        let modelRouter = AdaptiveModelRouter(modelProvider: modelProvider)
         let service = WhisperKitTranscriptionService(
             downloadManager: downloadManager,
-            modelProvider: modelProvider
+            modelProvider: modelProvider,
+            modelManager: modelManager,
+            modelRouter: modelRouter
         )
-        // Opportunistically prewarm the model in the background for faster first use
-        Task { @MainActor in
-            let manager = DIContainer.shared.whisperKitModelManager()
-            try? await manager.prewarmModel()
-        }
+        // Prewarming is now handled by the model manager internally during first use
         localService = service
         return service
     }

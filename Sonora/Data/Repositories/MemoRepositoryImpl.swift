@@ -9,6 +9,10 @@ import SwiftData
 final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     @Published var memos: [Memo] = []
     
+    // Lightweight in-memory cache for common list queries
+    private var memosCache: [Memo]? = nil
+    private var memosCacheTime: Date? = nil
+    
     // MARK: - Reactive Publishers (Swift 6 Compliant)
     
     /// Publisher for memo list changes - enables unified state management
@@ -141,7 +145,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
 
     private func mapToDomain(_ model: MemoModel) -> Memo {
         let url = URL(fileURLWithPath: model.audioFilePath)
-        // Transcription status is sourced from TranscriptionRepository separately
+        // Status injected via batched map when available; default to repository lookup as fallback
         let status = mapToDomainStatus(transcriptionRepository.getTranscriptionState(for: model.id))
         return Memo(
             id: model.id,
@@ -174,14 +178,38 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
     
     func loadMemos() {
+        // Serve cached list immediately if fresh (perceived latency win)
+        if let cache = memosCache, let ts = memosCacheTime, Date().timeIntervalSince(ts) < 3 {
+            self.memos = cache
+        }
         do {
             let descriptor = FetchDescriptor<MemoModel>(sortBy: [SortDescriptor(\.creationDate, order: .reverse)])
             let models = try context.fetch(descriptor)
-            self.memos = models.map(mapToDomain)
-            print("✅ MemoRepository: Loaded \(memos.count) memos from SwiftData")
+            let ids = models.map { $0.id }
+            // Batch fetch transcription states to avoid N+1
+            let states = transcriptionRepository.getTranscriptionStates(for: ids)
+            let mapped: [Memo] = models.map { model in
+                let url = URL(fileURLWithPath: model.audioFilePath)
+                let state = states[model.id] ?? transcriptionRepository.getTranscriptionState(for: model.id)
+                return Memo(
+                    id: model.id,
+                    filename: model.filename,
+                    fileURL: url,
+                    creationDate: model.creationDate,
+                    transcriptionStatus: mapToDomainStatus(state),
+                    analysisResults: [],
+                    customTitle: model.customTitle,
+                    shareableFileName: model.shareableFileName
+                )
+            }
+            self.memos = mapped
+            self.memosCache = mapped
+            self.memosCacheTime = Date()
+            print("✅ MemoRepository: Loaded \(mapped.count) memos from SwiftData (batched states)")
         } catch {
             print("❌ MemoRepository: Failed to fetch memos from SwiftData: \(error)")
             self.memos = []
+            self.memosCache = nil
         }
     }
     
@@ -262,7 +290,9 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             }
             
             print("✅ MemoRepository: Successfully saved memo \(memo.filename) [SwiftData]")
-            
+            // Invalidate list cache
+            memosCache = nil; memosCacheTime = nil
+        
         } catch {
             print("❌ MemoRepository: Failed to save memo \(memo.filename): \(error)")
         }
@@ -294,6 +324,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             // No legacy sidecar metadata to clean up in SwiftData migration
             
             print("✅ MemoRepository: Successfully deleted memo \(memo.filename)")
+            // Invalidate list cache
+            memosCache = nil; memosCacheTime = nil
             
         } catch {
             print("❌ MemoRepository: Failed to delete memo \(memo.filename): \(error)")
@@ -390,6 +422,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             let shareableText = sanitizedTitle != nil ? FileNameSanitizer.sanitize(sanitizedTitle!) : "default filename"
             print("✅ MemoRepository: Successfully renamed memo to '\(displayText)' with shareable filename '\(shareableText)'")
         }
+        // Invalidate list cache
+        memosCache = nil; memosCacheTime = nil
     }
     
     func updateMemoMetadata(_ memo: Memo, metadata: [String: Any]) {

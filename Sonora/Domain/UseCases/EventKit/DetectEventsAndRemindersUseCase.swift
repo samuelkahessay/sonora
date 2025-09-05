@@ -53,18 +53,13 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
     private let logger: LoggerProtocol
     private let eventBus: EventBusProtocol
     private let operationCoordinator: OperationCoordinatorProtocol
+    private let thresholdPolicy: any AdaptiveThresholdPolicy
     
     // MARK: - Configuration
     private let useLocalAnalysis: Bool
-    // Minimum confidence to include results (user-configurable via UserDefaults)
-    private var eventConfidenceThreshold: Float {
-        let v = UserDefaults.standard.object(forKey: "eventConfidenceThreshold") as? Double ?? 0.7
-        return Float(v)
-    }
-    private var reminderConfidenceThreshold: Float {
-        let v = UserDefaults.standard.object(forKey: "reminderConfidenceThreshold") as? Double ?? 0.7
-        return Float(v)
-    }
+    // Legacy static thresholds remain as a safety floor; adaptive policy refines per-context
+    private var legacyEventThreshold: Float { Float(UserDefaults.standard.object(forKey: "eventConfidenceThreshold") as? Double ?? 0.7) }
+    private var legacyReminderThreshold: Float { Float(UserDefaults.standard.object(forKey: "reminderConfidenceThreshold") as? Double ?? 0.7) }
     
     // MARK: - Initialization
     init(
@@ -74,7 +69,8 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         logger: LoggerProtocol = Logger.shared,
         eventBus: EventBusProtocol = EventBus.shared,
         operationCoordinator: OperationCoordinatorProtocol,
-        useLocalAnalysis: Bool = false
+        useLocalAnalysis: Bool = false,
+        thresholdPolicy: any AdaptiveThresholdPolicy = DefaultAdaptiveThresholdPolicy()
     ) {
         self.analysisService = analysisService
         self.localAnalysisService = localAnalysisService
@@ -83,6 +79,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         self.eventBus = eventBus
         self.operationCoordinator = operationCoordinator
         self.useLocalAnalysis = useLocalAnalysis
+        self.thresholdPolicy = thresholdPolicy
     }
     
     // MARK: - Use Case Execution
@@ -141,11 +138,31 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         }
         
         do {
+            // Build feature context and adaptive thresholds
+            let detectionContext = DetectionContextBuilder.build(memoId: memoId, transcript: transcript)
+            let adaptive = thresholdPolicy.thresholds(for: detectionContext)
+            let eventThreshold = max(adaptive.event, legacyEventThreshold)
+            let reminderThreshold = max(adaptive.reminder, legacyReminderThreshold)
+            
+            logger.debug("Adaptive thresholds computed",
+                        category: .analysis,
+                        context: LogContext(correlationId: correlationId, additionalInfo: [
+                            "memoId": memoId.uuidString,
+                            "eventThreshold": eventThreshold,
+                            "reminderThreshold": reminderThreshold,
+                            "transcriptLength": detectionContext.transcriptLength,
+                            "sentenceCount": detectionContext.sentenceCount,
+                            "hasDatesOrTimes": detectionContext.hasDatesOrTimes,
+                            "hasCalendarPhrases": detectionContext.hasCalendarPhrases,
+                            "imperativeVerbDensity": detectionContext.imperativeVerbDensity
+                        ]))
             let result = try await performDetection(
                 transcript: transcript,
                 memoId: memoId,
                 context: context,
-                startTime: startTime
+                startTime: startTime,
+                eventThreshold: eventThreshold,
+                reminderThreshold: reminderThreshold
             )
             
             // Cache results
@@ -186,7 +203,9 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         transcript: String,
         memoId: UUID,
         context: LogContext,
-        startTime: Date
+        startTime: Date,
+        eventThreshold: Float,
+        reminderThreshold: Float
     ) async throws -> DetectionResult {
         
         if useLocalAnalysis {
@@ -194,14 +213,18 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
                 transcript: transcript,
                 memoId: memoId,
                 context: context,
-                startTime: startTime
+                startTime: startTime,
+                eventThreshold: eventThreshold,
+                reminderThreshold: reminderThreshold
             )
         } else {
             return try await performCloudDetection(
                 transcript: transcript,
                 memoId: memoId,
                 context: context,
-                startTime: startTime
+                startTime: startTime,
+                eventThreshold: eventThreshold,
+                reminderThreshold: reminderThreshold
             )
         }
     }
@@ -210,7 +233,9 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         transcript: String,
         memoId: UUID,
         context: LogContext,
-        startTime: Date
+        startTime: Date,
+        eventThreshold: Float,
+        reminderThreshold: Float
     ) async throws -> DetectionResult {
         logger.debug("Performing local event/reminder detection",
                     category: .analysis,
@@ -231,8 +256,8 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         let remindersEnvelope = try await remindersEnvelopeTask
         
         // Process results and filter by confidence
-        let filteredEvents = filterEventsByConfidence(eventsEnvelope.data)
-        let filteredReminders = filterRemindersByConfidence(remindersEnvelope.data)
+        let filteredEvents = filterEventsByConfidence(eventsEnvelope.data, threshold: eventThreshold)
+        let filteredReminders = filterRemindersByConfidence(remindersEnvelope.data, threshold: reminderThreshold)
         
         return DetectionResult(
             events: filteredEvents,
@@ -250,7 +275,9 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         transcript: String,
         memoId: UUID,
         context: LogContext,
-        startTime: Date
+        startTime: Date,
+        eventThreshold: Float,
+        reminderThreshold: Float
     ) async throws -> DetectionResult {
         logger.debug("Performing cloud event/reminder detection",
                     category: .analysis,
@@ -271,8 +298,8 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         // Process results and filter by confidence
         let eventsEnvelope = try await eventsResult
         let remindersEnvelope = try await remindersResult
-        let filteredEvents = filterEventsByConfidence(eventsEnvelope.data)
-        let filteredReminders = filterRemindersByConfidence(remindersEnvelope.data)
+        let filteredEvents = filterEventsByConfidence(eventsEnvelope.data, threshold: eventThreshold)
+        let filteredReminders = filterRemindersByConfidence(remindersEnvelope.data, threshold: reminderThreshold)
         
         return DetectionResult(
             events: filteredEvents,
@@ -288,10 +315,8 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
     
     // MARK: - Result Processing
     
-    private func filterEventsByConfidence(_ eventsData: EventsData?) -> EventsData? {
+    private func filterEventsByConfidence(_ eventsData: EventsData?, threshold: Float) -> EventsData? {
         guard let eventsData = eventsData else { return nil }
-        
-        let threshold = eventConfidenceThreshold
         let filteredEvents = eventsData.events.filter { event in
             event.confidence >= threshold
         }
@@ -305,10 +330,8 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         return filteredEvents.isEmpty ? nil : EventsData(events: filteredEvents)
     }
     
-    private func filterRemindersByConfidence(_ remindersData: RemindersData?) -> RemindersData? {
+    private func filterRemindersByConfidence(_ remindersData: RemindersData?, threshold: Float) -> RemindersData? {
         guard let remindersData = remindersData else { return nil }
-        
-        let threshold = reminderConfidenceThreshold
         let filteredReminders = remindersData.reminders.filter { reminder in
             reminder.confidence >= threshold
         }
