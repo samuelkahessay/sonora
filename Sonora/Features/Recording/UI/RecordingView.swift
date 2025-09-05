@@ -5,32 +5,9 @@
 
 import SwiftUI
 
-/// Large circular recording button component following modern iOS design patterns
-struct CircularRecordButton: View {
-    let isRecording: Bool
-    let action: () -> Void
-    private let buttonSize: CGFloat = 160
-    
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(isRecording ? Color.semantic(.error) : Color.semantic(.brandPrimary))
-                    .frame(width: buttonSize, height: buttonSize)
-                    .scaleEffect(isRecording ? 1.05 : 1.0)
-                
-                Label(isRecording ? "Stop" : "Record",
-                      systemImage: isRecording ? "stop.fill" : "mic.fill")
-                    .labelStyle(.iconOnly)
-                    .font(.system(size: 64, weight: .medium))
-                    .foregroundColor(.semantic(.textOnColored))
-            }
-        }
-        .buttonStyle(.plain)
-        .animation(.spring(response: 0.25, dampingFraction: 0.9), value: isRecording)
-        .shadow(radius: 5, y: 3)
-    }
-}
+// Note: CircularRecordButton has been replaced by SonicBloomRecordButton
+// The new button is defined in SonicBloomRecordButton.swift and embodies
+// the Sonora brand identity with organic waveform animations
 
 struct RecordingView: View {
     @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createRecordingViewModel()
@@ -49,51 +26,52 @@ struct RecordingView: View {
             Color.semantic(.bgPrimary)
                 .ignoresSafeArea()
 
+            // Sonora brand background with purposeful minimalism
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color.black.opacity(0.08),
-                    Color.blue.opacity(0.08)
+                    Color.whisperBlue.opacity(0.3),
+                    Color.clarityWhite
                 ]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
 
+            // Subtle radial highlight for depth
             RadialGradient(
                 gradient: Gradient(colors: [
-                    Color.white.opacity(0.22),
+                    Color.insightGold.opacity(0.08),
                     .clear
                 ]),
                 center: .center,
-                startRadius: 40,
-                endRadius: 260
+                startRadius: 60,
+                endRadius: 300
             )
             .ignoresSafeArea()
             .allowsHitTesting(false)
 
             // Your existing content
             NavigationStack {
-                VStack(spacing: Spacing.xxl) {
+                VStack(spacing: SonoraDesignSystem.Spacing.xxl) {
                     Spacer()
                     
                     if !viewModel.hasPermission {
-                        VStack(spacing: Spacing.lg) {
+                        VStack(spacing: SonoraDesignSystem.Spacing.lg) {
                             Image(systemName: viewModel.permissionStatus.iconName)
-                                .font(.largeTitle)
+                                .font(.system(size: SonoraDesignSystem.Layout.iconExtraLarge))
                                 .fontWeight(.medium)
-                                .foregroundColor(.semantic(.error))
+                                .foregroundColor(.sparkOrange)
                                 .accessibilityHidden(true)
                             
                             Text(viewModel.permissionStatus.displayName)
-                                .font(.title2)
-                                .fontWeight(.semibold)
+                                .headingStyle(.medium)
                                 .accessibilityAddTraits(.isHeader)
                             
                             Text(getPermissionDescription())
-                                .font(.body)
-                                .foregroundColor(.semantic(.textSecondary))
+                                .bodyStyle(.regular)
+                                .foregroundColor(.textSecondary)
                                 .multilineTextAlignment(.center)
-                                .padding(.horizontal)
+                                .padding(.horizontal, SonoraDesignSystem.Spacing.breathingRoom)
                                 .accessibilityLabel(getPermissionAccessibilityLabel())
                             
                             if viewModel.isRequestingPermission {
@@ -112,10 +90,10 @@ struct RecordingView: View {
                         .padding()
                         .accessibilityElement(children: .contain)
                     } else {
-                        VStack(spacing: Spacing.xl) {
+                        VStack(spacing: SonoraDesignSystem.Spacing.xl) {
                             
-                            // Large circular recording button
-                            CircularRecordButton(
+                            // Sonic Bloom recording button with brand identity
+                            SonicBloomRecordButton(
                                 isRecording: viewModel.isRecording,
                                 action: {
                                     HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
@@ -142,13 +120,14 @@ struct RecordingView: View {
                     
                     Spacer()
                 }
-                .padding()
+                .breathingRoom()
                 .safeAreaInset(edge: .bottom) {
                     Color.clear.frame(height: 0)
                 }
                 .navigationTitle("Sonora")
                 .toolbarBackground(.clear, for: .navigationBar)
                 .toolbarBackground(.visible, for: .navigationBar)
+                .brandThemed()
                 .onAppear {
                     viewModel.onViewAppear()
                 }
@@ -221,13 +200,13 @@ struct RecordingView: View {
     private func getPermissionDescription() -> String {
         switch viewModel.permissionStatus {
         case .notDetermined:
-            return "Sonora needs microphone access to record voice memos for transcription and analysis."
+            return SonoraBrandVoice.Permissions.microphoneDescription
         case .denied:
-            return "Microphone access was denied. Please enable it in Settings to record voice memos."
+            return SonoraBrandVoice.Permissions.microphoneDeniedDescription
         case .restricted:
-            return "Microphone access is restricted on this device. Check your device restrictions in Settings."
+            return SonoraBrandVoice.Permissions.restrictedDescription
         case .granted:
-            return "Microphone access is enabled"
+            return "Your voice is ready to be captured"
         }
     }
     
@@ -235,32 +214,32 @@ struct RecordingView: View {
     private func getPermissionButton() -> some View {
         switch viewModel.permissionStatus {
         case .notDetermined:
-            Button("Allow Microphone Access") { 
+            Button(SonoraBrandVoice.Permissions.allowMicrophone) { 
                 HapticManager.shared.playSelection()
                 viewModel.requestPermission()
             }
             .buttonStyle(.borderedProminent)
             .disabled(viewModel.isRequestingPermission)
-            .accessibilityLabel("Allow microphone access")
-            .accessibilityHint("Double tap to request microphone permission for recording voice memos")
+            .accessibilityLabel("Enable voice capture")
+            .accessibilityHint("Double tap to allow Sonora to listen and capture your thoughts")
             
         case .denied:
-            Button("Open Settings") { 
+            Button(SonoraBrandVoice.Permissions.openSettings) { 
                 HapticManager.shared.playSelection()
                 viewModel.openSettings()
             }
             .buttonStyle(.bordered)
             .accessibilityLabel("Open Settings app")
-            .accessibilityHint("Double tap to open Settings where you can enable microphone access")
+            .accessibilityHint("Double tap to open Settings where you can enable microphone access for voice capture")
             
         case .restricted:
-            Button("Check Device Settings") { 
+            Button(SonoraBrandVoice.Permissions.checkRestrictions) { 
                 HapticManager.shared.playSelection()
                 viewModel.openSettings()
             }
             .buttonStyle(.bordered)
-            .accessibilityLabel("Check device settings")
-            .accessibilityHint("Double tap to open Settings to check device restrictions")
+            .accessibilityLabel("Review device settings")
+            .accessibilityHint("Double tap to open Settings to check device restrictions for voice recording")
             
         case .granted:
             EmptyView()
@@ -284,17 +263,17 @@ struct RecordingView: View {
     
     private func getRecordButtonAccessibilityLabel() -> String {
         if viewModel.isRecording {
-            return "Stop recording"
+            return "Stop capturing your thoughts"
         } else {
-            return "Start recording"
+            return SonoraBrandVoice.Recording.readyToRecord
         }
     }
     
     private func getRecordButtonAccessibilityHint() -> String {
         if viewModel.isRecording {
-            return "Double tap to stop the current voice recording"
+            return "Double tap to stop recording and preserve your reflection"
         } else {
-            return "Double tap to start recording a 60-second voice memo"
+            return "Double tap to begin sharing your thoughts through voice"
         }
     }
     
@@ -316,9 +295,8 @@ private extension RecordingView {
     var timerOverlayView: some View {
         VStack(spacing: Spacing.sm) {
             Text(viewModel.formattedRecordingTime)
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .monospacedDigit()
+                .font(SonoraDesignSystem.Typography.timerDisplay)
+                .foregroundColor(.textPrimary)
                 .contentTransition(.numericText())
                 .accessibilityLabel("Recording duration")
                 .accessibilityValue(getTimeAccessibilityLabel())
@@ -328,13 +306,11 @@ private extension RecordingView {
             if viewModel.isInCountdown {
                 VStack(spacing: 4) {
                     Text("Recording ends in")
-                        .font(.headline)
-                        .foregroundColor(.semantic(.warning))
+                        .headingStyle(.small)
+                        .foregroundColor(.warningState)
                     Text("\(Int(ceil(viewModel.remainingTime)))")
-                        .font(.system(.largeTitle, design: .rounded))
-                        .fontWeight(.bold)
-                        .foregroundColor(.semantic(.error))
-                        .monospacedDigit()
+                        .font(SonoraDesignSystem.Typography.timerDisplay)
+                        .foregroundColor(.errorState)
                         .contentTransition(.numericText())
                 }
                 .accessibilityElement(children: .combine)
