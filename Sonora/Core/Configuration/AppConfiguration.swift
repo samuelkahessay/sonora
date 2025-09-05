@@ -87,11 +87,26 @@ public final class AppConfiguration: ObservableObject {
     
     /// Sample rate for audio recordings
     /// Can be overridden with SONORA_SAMPLE_RATE environment variable
-    public private(set) var audioSampleRate: Double = 44100.0
+    /// Voice-optimized default: 22050 Hz (perfect for voice content)
+    public private(set) var audioSampleRate: Double = 22050.0
     
     /// Number of audio channels (1 = mono, 2 = stereo)
     /// Can be overridden with SONORA_AUDIO_CHANNELS environment variable
     public private(set) var audioChannels: Int = 1
+    
+    /// Audio bit rate for voice recordings (bits per second)
+    /// Can be overridden with SONORA_AUDIO_BITRATE environment variable
+    /// Voice-optimized default: 64000 bps for optimal clarity/size balance
+    public private(set) var audioBitRate: Int = 64000
+    
+    /// Voice-optimized audio quality (0.0 to 1.0)
+    /// Can be overridden with SONORA_VOICE_QUALITY environment variable
+    /// Calibrated specifically for voice content: 0.7 provides excellent speech clarity
+    public private(set) var voiceOptimizedQuality: Float = 0.7
+    
+    /// Enable adaptive quality based on content type and system conditions
+    /// Can be overridden with SONORA_ADAPTIVE_QUALITY environment variable
+    public private(set) var enableAdaptiveAudioQuality: Bool = true
     
     // MARK: - Network Configuration
     
@@ -219,6 +234,63 @@ public final class AppConfiguration: ObservableObject {
         }
     }
 
+    // MARK: - Voice Optimization Methods
+    
+    /// Returns the optimal audio quality based on content type and system conditions
+    /// - Parameter contentType: The type of content being recorded (voice, music, etc.)
+    /// - Parameter batteryLevel: Current battery level (0.0 to 1.0), -1 if unknown
+    /// - Returns: Optimized quality value for the given conditions
+    public func getOptimalAudioQuality(for contentType: AudioContentType = .voice, batteryLevel: Float = -1) -> Float {
+        guard enableAdaptiveAudioQuality else {
+            return contentType == .voice ? voiceOptimizedQuality : recordingQuality
+        }
+        
+        // Adaptive quality based on system conditions
+        let baseQuality = contentType == .voice ? voiceOptimizedQuality : recordingQuality
+        
+        // Reduce quality on low battery
+        if batteryLevel >= 0 && batteryLevel < 0.2 {
+            return max(0.5, baseQuality * 0.8)
+        }
+        
+        // Check thermal state
+        let thermalState = ProcessInfo.processInfo.thermalState
+        if thermalState == .serious || thermalState == .critical {
+            return max(0.5, baseQuality * 0.85)
+        }
+        
+        return baseQuality
+    }
+    
+    /// Returns the optimal bit rate based on content type and system conditions
+    /// - Parameter contentType: The type of content being recorded
+    /// - Parameter batteryLevel: Current battery level (0.0 to 1.0), -1 if unknown
+    /// - Returns: Optimized bit rate for the given conditions
+    public func getOptimalBitRate(for contentType: AudioContentType = .voice, batteryLevel: Float = -1) -> Int {
+        let baseBitRate = contentType == .voice ? audioBitRate : 128000
+        
+        guard enableAdaptiveAudioQuality else { return baseBitRate }
+        
+        // Reduce bit rate on low battery or thermal pressure
+        if (batteryLevel >= 0 && batteryLevel < 0.2) || ProcessInfo.processInfo.thermalState.rawValue >= 2 {
+            return max(32000, Int(Double(baseBitRate) * 0.75))
+        }
+        
+        return baseBitRate
+    }
+    
+    /// Returns voice-optimized sample rate (22050 Hz)
+    /// This sample rate is perfect for voice content as it captures frequencies up to 11 kHz,
+    /// which covers the full range of human speech (300-3400 Hz fundamental, harmonics up to 8 kHz)
+    public var voiceOptimizedSampleRate: Double {
+        return 22050.0
+    }
+    
+    /// Returns high-quality sample rate for music or mixed content (44100 Hz)
+    public var highQualitySampleRate: Double {
+        return 44100.0
+    }
+    
     // MARK: - Search / Spotlight
     /// Whether Core Spotlight indexing is enabled (user can opt out in Settings in future)
     public var searchIndexingEnabled: Bool {
@@ -403,6 +475,24 @@ public final class AppConfiguration: ObservableObject {
             audioChannels = max(1, min(2, channels))
             print("🔧 AppConfiguration: Audio channels overridden to \(audioChannels)")
         }
+        
+        if let bitRateString = ProcessInfo.processInfo.environment["SONORA_AUDIO_BITRATE"],
+           let bitRate = Int(bitRateString) {
+            audioBitRate = max(32000, min(320000, bitRate))
+            print("🔧 AppConfiguration: Audio bit rate overridden to \(audioBitRate)")
+        }
+        
+        if let voiceQualityString = ProcessInfo.processInfo.environment["SONORA_VOICE_QUALITY"],
+           let voiceQuality = Float(voiceQualityString) {
+            voiceOptimizedQuality = max(0.0, min(1.0, voiceQuality))
+            print("🔧 AppConfiguration: Voice quality overridden to \(voiceOptimizedQuality)")
+        }
+        
+        if let adaptiveString = ProcessInfo.processInfo.environment["SONORA_ADAPTIVE_QUALITY"],
+           let adaptive = Bool(adaptiveString) {
+            enableAdaptiveAudioQuality = adaptive
+            print("🔧 AppConfiguration: Adaptive quality overridden to \(enableAdaptiveAudioQuality)")
+        }
         if let strict = ProcessInfo.processInfo.environment["SONORA_STRICT_LOCAL_WHISPER"],
            let val = Bool(strict) {
             strictLocalWhisper = val
@@ -534,6 +624,11 @@ public final class AppConfiguration: ObservableObject {
             diskCacheEnabled = diskCache
             print("🔧 AppConfiguration: Disk cache overridden to \(diskCacheEnabled)")
         }
+
+        // Phase 2: default to unloading WhisperKit after transcription to reduce memory
+        if UserDefaults.standard.object(forKey: "releaseLocalModelAfterTranscription") == nil {
+            UserDefaults.standard.set(true, forKey: "releaseLocalModelAfterTranscription")
+        }
     }
     
     private func logLoadedConfiguration() {
@@ -659,6 +754,49 @@ public final class AppConfiguration: ObservableObject {
         }
         
         return warnings
+    }
+}
+
+// MARK: - Audio Content Type
+
+/// Defines the type of audio content being recorded for optimization
+public enum AudioContentType: String, CaseIterable, Sendable {
+    case voice = "voice"
+    case music = "music"
+    case mixed = "mixed"
+    
+    /// Human-readable display name
+    public var displayName: String {
+        switch self {
+        case .voice:
+            return "Voice"
+        case .music:
+            return "Music"
+        case .mixed:
+            return "Mixed Content"
+        }
+    }
+    
+    /// Recommended sample rate for this content type
+    public var recommendedSampleRate: Double {
+        switch self {
+        case .voice:
+            return 22050.0
+        case .music, .mixed:
+            return 44100.0
+        }
+    }
+    
+    /// Recommended bit rate for this content type
+    public var recommendedBitRate: Int {
+        switch self {
+        case .voice:
+            return 64000
+        case .music:
+            return 128000
+        case .mixed:
+            return 96000
+        }
     }
 }
 

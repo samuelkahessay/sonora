@@ -26,8 +26,11 @@ public final class EventBus: ObservableObject {
     
     /// Automatic cleanup configuration
     private var lastCleanupTime = Date()
-    private let cleanupInterval: TimeInterval = 60 // Clean every 60 seconds
-    private let maxSubscriptionsBeforeCleanup = 100
+    private var cleanupInterval: TimeInterval = 60 // Base: 60s
+    private let cleanupIntervalUnderPressure: TimeInterval = 10 // Pressure: 10s
+    private var maxSubscriptionsBeforeCleanup = 100
+    private let maxSubscriptionsUnderPressure = 50
+    private var isUnderMemoryPressure = false
     
     /// Subscription entry with weak reference tracking
     private struct SubscriptionEntry {
@@ -49,6 +52,25 @@ public final class EventBus: ObservableObject {
     private init() {
         if enableEventLogging {
             print("📡 EventBus: Initialized")
+        }
+        // Observe memory pressure to adapt cleanup behavior
+        NotificationCenter.default.addObserver(
+            forName: .memoryPressureStateChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            let underPressure = (note.userInfo?["isUnderPressure"] as? Bool) ?? false
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.isUnderMemoryPressure = underPressure
+                self.cleanupInterval = underPressure ? self.cleanupIntervalUnderPressure : 60
+                self.maxSubscriptionsBeforeCleanup = underPressure ? self.maxSubscriptionsUnderPressure : 100
+                if self.enableEventLogging {
+                    print("📡 EventBus: Memory pressure=\(underPressure) → cleanupInterval=\(self.cleanupInterval)s, maxSubs=\(self.maxSubscriptionsBeforeCleanup)")
+                }
+                // Trigger an immediate cleanup pass under pressure
+                if underPressure { self.cleanupDeadSubscriptions() }
+            }
         }
     }
     

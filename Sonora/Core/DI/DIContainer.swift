@@ -44,6 +44,11 @@ final class DIContainer: ObservableObject, Resolver {
     private var _spotlightIndexer: (any SpotlightIndexing)?
     private weak var _whisperKitModelProvider: WhisperKitModelProvider?
     private var _modelContext: ModelContext? // Keep strong reference to ModelContext
+
+    // MARK: - Phase 2: Core Optimization Services
+    private var _audioQualityManager: AudioQualityManager?
+    private var _whisperKitModelManager: WhisperKitModelManager?
+    private var _memoryPressureDetector: MemoryPressureDetector?
     
     // MARK: - EventKit Services (Protocol References)
     private var _eventKitRepository: (any EventKitRepository)?
@@ -230,6 +235,20 @@ final class DIContainer: ObservableObject, Resolver {
         self._startRecordingUseCase = resolve(StartRecordingUseCase.self)!
         self._systemNavigator = resolve((any SystemNavigator).self)!
         self._liveActivityService = resolve((any LiveActivityServiceProtocol).self)!
+
+        // Phase 2: Instantiate optimization services (strong references for app lifetime)
+        if self._audioQualityManager == nil {
+            self._audioQualityManager = AudioQualityManager()
+        }
+        if self._whisperKitModelManager == nil {
+            self._whisperKitModelManager = WhisperKitModelManager(modelProvider: self._whisperKitModelProvider!)
+            // Lifecycle hooks are configured in the manager initializer
+        }
+        if self._memoryPressureDetector == nil {
+            let detector = MemoryPressureDetector()
+            detector.startMonitoring()
+            self._memoryPressureDetector = detector
+        }
         
         // Initialize model management and transcription factory
         self._whisperKitModelProvider = WhisperKitModelProvider()
@@ -474,6 +493,32 @@ final class DIContainer: ObservableObject, Resolver {
         ensureConfigured()
         guard let logger = _logger else { fatalError("DIContainer not configured: logger") }
         return logger
+    }
+
+    // MARK: - Phase 2 Service Accessors
+
+    /// Audio quality manager (voice-optimized and adaptive)
+    @MainActor
+    func audioQualityManager() -> AudioQualityManager {
+        ensureConfigured()
+        guard let mgr = _audioQualityManager else { fatalError("DIContainer not configured: audioQualityManager") }
+        return mgr
+    }
+
+    /// WhisperKit model lifecycle manager (prewarming, idle unload)
+    @MainActor
+    func whisperKitModelManager() -> WhisperKitModelManager {
+        ensureConfigured()
+        guard let mgr = _whisperKitModelManager else { fatalError("DIContainer not configured: whisperKitModelManager") }
+        return mgr
+    }
+
+    /// Memory pressure detector (system-wide monitoring)
+    @MainActor
+    func memoryPressureDetector() -> MemoryPressureDetector {
+        ensureConfigured()
+        guard let det = _memoryPressureDetector else { fatalError("DIContainer not configured: memoryPressureDetector") }
+        return det
     }
 
     /// Get transcript exporter service

@@ -37,6 +37,27 @@ public actor OperationCoordinator {
     /// Global concurrency cap (checked at registration time)
     private let maxConcurrentOperations = 10
     
+    // MARK: - Sliding Window Memory Management
+    
+    /// Memory management configuration
+    private struct MemoryManagementConfig {
+        static let maxOperationHistory = 100        // Count-based limit
+        static let standardRetentionTime: TimeInterval = 300  // 5 minutes normal
+        static let memoryPressureRetentionTime: TimeInterval = 60  // 1 minute under pressure
+        static let cleanupInterval: TimeInterval = 30  // Check every 30 seconds
+        static let memoryPressureThreshold: Double = 0.8  // 80% of max operations
+        
+        // Sliding window tiers
+        static let recentOperationLimit = 20     // Keep last 20 operations always
+        static let completedOperationLimit = 50  // Keep up to 50 completed operations
+        static let errorOperationLimit = 30      // Keep up to 30 failed operations for debugging
+    }
+    
+    /// Memory pressure detection
+    private var isUnderMemoryPressure = false
+    private var lastCleanupTime = Date()
+    private var cleanupTimer: Task<Void, Never>?
+    
     /// EventBus for coarse operation events (e.g. recording started/completed, transcription progress)
     private let eventBus: any EventBusProtocol
     
@@ -66,9 +87,23 @@ public actor OperationCoordinator {
         self.eventBus = eventBus
         self.logger = logger
         
-        logger.debug("OperationCoordinator initialized", 
+        // Start the sliding window cleanup timer after initialization
+        Task { await self.startCleanupTimer() }
+        
+        logger.debug("OperationCoordinator initialized with sliding window memory management", 
                     category: .system, 
                     context: LogContext())
+
+        // Observe system memory pressure to adapt cleanup aggressiveness
+        NotificationCenter.default.addObserver(forName: .memoryPressureStateChanged, object: nil, queue: .main) { [weak self] note in
+            guard let self = self else { return }
+            let under = (note.userInfo?["isUnderPressure"] as? Bool) ?? false
+            Task { await self.setMemoryPressureState(under) }
+        }
+    }
+    
+    deinit {
+        cleanupTimer?.cancel()
     }
     
     // MARK: - Operation Registration
@@ -474,25 +509,191 @@ public actor OperationCoordinator {
         }
     }
     
-    private func cleanupCompletedOperations() async {
+    /// Starts the periodic cleanup timer for sliding window management
+    private func startCleanupTimer() {
+        cleanupTimer = Task { [weak self] in
+            while !Task.isCancelled {
+                let under = await self?.isUnderMemoryPressure ?? false
+                let interval = under ? 10.0 : MemoryManagementConfig.cleanupInterval
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                if !Task.isCancelled {
+                    await self?.performIntelligentCleanup()
+                }
+            }
+        }
+    }
+
+    /// Update memory pressure state and trigger immediate cleanup if entering pressure
+    private func setMemoryPressureState(_ underPressure: Bool) async {
+        let was = isUnderMemoryPressure
+        isUnderMemoryPressure = underPressure
+        if underPressure && !was {
+            await emergencyMemoryCleanup()
+        }
+    }
+    
+    /// Comprehensive sliding window cleanup with adaptive frequency
+    private func performIntelligentCleanup() async {
         let now = Date()
-        let cleanupThreshold: TimeInterval = 300 // Keep completed operations for 5 minutes
+        let timeSinceLastCleanup = now.timeIntervalSince(lastCleanupTime)
         
+        // Detect memory pressure
+        await detectMemoryPressure()
+        
+        // Determine cleanup strategy based on conditions
+        let retentionTime = isUnderMemoryPressure ? 
+            MemoryManagementConfig.memoryPressureRetentionTime : 
+            MemoryManagementConfig.standardRetentionTime
+        
+        let initialCount = operations.count
+        
+        // Step 1: Time-based cleanup
+        await cleanupByTime(threshold: retentionTime)
+        
+        // Step 2: Count-based sliding window enforcement
+        await enforceCountLimits()
+        
+        // Step 3: Emergency cleanup if under memory pressure
+        if isUnderMemoryPressure {
+            await emergencyMemoryCleanup()
+        }
+        
+        let finalCount = operations.count
+        let cleanedCount = initialCount - finalCount
+        
+        if cleanedCount > 0 || isUnderMemoryPressure {
+            logger.info("Sliding window cleanup: removed \(cleanedCount) operations, \(finalCount) remaining, memory pressure: \(isUnderMemoryPressure)", 
+                       category: .system, 
+                       context: LogContext(additionalInfo: [
+                           "retentionTime": "\(retentionTime)s",
+                           "timeSinceLastCleanup": "\(timeSinceLastCleanup)s"
+                       ]))
+        }
+        
+        lastCleanupTime = now
+    }
+    
+    /// Time-based cleanup of old operations
+    private func cleanupByTime(threshold: TimeInterval) async {
+        let now = Date()
         let operationsToRemove = operations.values.filter { operation in
-            operation.status.isFinished && 
-            now.timeIntervalSince(operation.completedAt ?? operation.createdAt) > cleanupThreshold
+            let referenceTime = operation.completedAt ?? operation.createdAt
+            return operation.status.isFinished && 
+                   now.timeIntervalSince(referenceTime) > threshold
         }
         
         for operation in operationsToRemove {
             operations.removeValue(forKey: operation.id)
             queuedOperations.removeAll { $0 == operation.id }
         }
+    }
+    
+    /// Enforce count-based limits with priority preservation
+    private func enforceCountLimits() async {
+        guard operations.count > MemoryManagementConfig.maxOperationHistory else { return }
         
-        if !operationsToRemove.isEmpty {
-            logger.debug("Cleaned up \(operationsToRemove.count) old operations", 
-                        category: .system, 
-                        context: LogContext())
+        // Categorize operations
+        let allOps = operations.values.sorted { $0.createdAt > $1.createdAt } // Newest first
+        let recentOps = Array(allOps.prefix(MemoryManagementConfig.recentOperationLimit))
+        let completedOps = allOps.filter { $0.status == .completed }
+        let errorOps = allOps.filter { $0.status == .failed || $0.status == .cancelled }
+        let activeOps = allOps.filter { !$0.status.isFinished }
+        
+        // Build keep set with priorities
+        var keepSet = Set<UUID>()
+        
+        // Always keep active operations
+        activeOps.forEach { keepSet.insert($0.id) }
+        
+        // Keep recent operations (regardless of status)
+        recentOps.forEach { keepSet.insert($0.id) }
+        
+        // Keep limited completed operations (newest first)
+        completedOps.prefix(MemoryManagementConfig.completedOperationLimit).forEach { 
+            keepSet.insert($0.id) 
         }
+        
+        // Keep limited error operations for debugging (newest first)
+        errorOps.prefix(MemoryManagementConfig.errorOperationLimit).forEach { 
+            keepSet.insert($0.id) 
+        }
+        
+        // Remove operations not in keep set
+        let operationsToRemove = operations.keys.filter { !keepSet.contains($0) }
+        
+        for operationId in operationsToRemove {
+            operations.removeValue(forKey: operationId)
+            queuedOperations.removeAll { $0 == operationId }
+        }
+    }
+    
+    /// Emergency cleanup under memory pressure
+    private func emergencyMemoryCleanup() async {
+        logger.warning("Emergency memory cleanup triggered", 
+                      category: .system, 
+                      context: LogContext(),
+                      error: nil)
+        
+        // Aggressively clean old completed operations
+        let allOps = operations.values.sorted { $0.createdAt > $1.createdAt }
+        let activeOps = allOps.filter { !$0.status.isFinished }
+        let recentOps = Array(allOps.prefix(10)) // Keep only 10 most recent
+        let criticalErrorOps = allOps.filter { 
+            $0.status == .failed && 
+            Date().timeIntervalSince($0.createdAt) < 300 // Keep errors from last 5 minutes only
+        }
+        
+        var keepSet = Set<UUID>()
+        activeOps.forEach { keepSet.insert($0.id) }
+        recentOps.forEach { keepSet.insert($0.id) }
+        criticalErrorOps.forEach { keepSet.insert($0.id) }
+        
+        let operationsToRemove = operations.keys.filter { !keepSet.contains($0) }
+        
+        for operationId in operationsToRemove {
+            operations.removeValue(forKey: operationId)
+            queuedOperations.removeAll { $0 == operationId }
+        }
+        
+        logger.info("Emergency cleanup completed: kept \(keepSet.count) operations", 
+                   category: .system, 
+                   context: LogContext())
+    }
+    
+    /// Detect memory pressure based on operation count and system conditions
+    private func detectMemoryPressure() async {
+        let operationCount = operations.count
+        let maxOperations = MemoryManagementConfig.maxOperationHistory
+        let operationPressure = Double(operationCount) / Double(maxOperations)
+        
+        // Check thermal state
+        let thermalState = ProcessInfo.processInfo.thermalState
+        let thermalPressure = thermalState.rawValue >= 2 // .serious or .critical
+        
+        // Update memory pressure state
+        let previousPressure = isUnderMemoryPressure
+        isUnderMemoryPressure = operationPressure > MemoryManagementConfig.memoryPressureThreshold || thermalPressure
+        
+        if isUnderMemoryPressure && !previousPressure {
+            logger.warning("Memory pressure detected - switching to aggressive cleanup", 
+                          category: .system, 
+                          context: LogContext(additionalInfo: [
+                              "operationCount": "\(operationCount)",
+                              "operationPressure": "\(operationPressure)",
+                              "thermalState": "\(thermalState)",
+                              "thermalPressure": "\(thermalPressure)"
+                          ]),
+                          error: nil)
+        } else if !isUnderMemoryPressure && previousPressure {
+            logger.info("Memory pressure relieved - returning to standard cleanup", 
+                       category: .system, 
+                       context: LogContext())
+        }
+    }
+    
+    /// Legacy method for backward compatibility
+    private func cleanupCompletedOperations() async {
+        await performIntelligentCleanup()
     }
     
     private func notifyOperationStateChange(_ operation: Operation) async {

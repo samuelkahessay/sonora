@@ -9,6 +9,7 @@
 import Foundation
 import AVFoundation
 import Combine
+import UIKit
 
 /// Protocol defining audio recording operations
 @MainActor
@@ -63,9 +64,55 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
         
         /// Voice-optimized settings for better quality and smaller files
         struct VoiceOptimized {
-            static let sampleRate: Double = 22050  // Perfect for voice (vs 44100 for music)
-            static let bitRate: Int = 64000        // 64k optimal for voice clarity
-            static let quality: Float = 0.7        // Balanced quality for voice
+            private static let config = AppConfiguration.shared
+            
+            /// Voice-optimized sample rate from configuration (default: 22050 Hz)
+            /// Perfect for voice content - captures full speech frequency range (300-3400 Hz fundamental + harmonics)
+            static var sampleRate: Double {
+                return config.voiceOptimizedSampleRate
+            }
+            
+            /// Optimal bit rate for voice content from configuration (default: 64000 bps)
+            /// Provides excellent clarity while minimizing file size
+            static var bitRate: Int {
+                return config.audioBitRate
+            }
+            
+            /// Voice-optimized quality setting from configuration (default: 0.7)
+            /// Calibrated specifically for speech clarity and compression balance
+            static var quality: Float {
+                return config.voiceOptimizedQuality
+            }
+            
+            /// Adaptive quality based on current system conditions
+            /// Adjusts quality for battery level and thermal state
+            @MainActor static func adaptiveQuality(batteryLevel: Float? = nil) -> Float {
+                let level = batteryLevel ?? UIDevice.current.batteryLevel
+                return config.getOptimalAudioQuality(for: .voice, batteryLevel: level)
+            }
+            
+            /// Adaptive bit rate based on current system conditions
+            @MainActor static func adaptiveBitRate(batteryLevel: Float? = nil) -> Int {
+                let level = batteryLevel ?? UIDevice.current.batteryLevel
+                return config.getOptimalBitRate(for: .voice, batteryLevel: level)
+            }
+        }
+        
+        /// High-quality settings for music or mixed content
+        struct HighQuality {
+            private static let config = AppConfiguration.shared
+            
+            static var sampleRate: Double {
+                return config.highQualitySampleRate // 44100 Hz
+            }
+            
+            static var bitRate: Int {
+                return 128000 // Standard quality for music
+            }
+            
+            static var quality: Float {
+                return config.recordingQuality
+            }
         }
     }
     
@@ -92,9 +139,44 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
     func createRecorder(url: URL, sampleRate: Double, channels: Int, quality: Float) throws -> AVAudioRecorder {
         return try createRecorderWithFallback(url: url, sampleRate: sampleRate, channels: channels, quality: quality)
     }
+
+    /// Creates and configures a new AVAudioRecorder using high-level recording settings
+    func createRecorder(url: URL, settings: AudioRecordingSettings) throws -> AVAudioRecorder {
+        return try createRecorderWithFallback(
+            url: url,
+            sampleRate: settings.sampleRate,
+            channels: settings.channels,
+            quality: settings.quality,
+            bitRateOverride: settings.bitRate
+        )
+    }
+    
+    /// Creates an optimized recorder for specific content type with adaptive quality
+    func createOptimizedRecorder(url: URL, contentType: AudioContentType = .voice) throws -> AVAudioRecorder {
+        let sampleRate: Double
+        let quality: Float
+        
+        switch contentType {
+        case .voice:
+            sampleRate = AudioConfiguration.VoiceOptimized.sampleRate
+            quality = AudioConfiguration.VoiceOptimized.adaptiveQuality()
+        case .music, .mixed:
+            sampleRate = AudioConfiguration.HighQuality.sampleRate
+            quality = AudioConfiguration.HighQuality.quality
+        }
+        
+        print("🎙️ AudioRecordingService: Creating \(contentType.displayName) optimized recorder - Sample Rate: \(sampleRate) Hz, Quality: \(quality)")
+        
+        return try createRecorderWithFallback(
+            url: url,
+            sampleRate: sampleRate,
+            channels: 1, // Always use mono for optimal file size and compatibility
+            quality: quality
+        )
+    }
     
     /// Creates recorder with intelligent format fallback for maximum device compatibility
-    func createRecorderWithFallback(url: URL, sampleRate: Double, channels: Int, quality: Float) throws -> AVAudioRecorder {
+    func createRecorderWithFallback(url: URL, sampleRate: Double, channels: Int, quality: Float, bitRateOverride: Int? = nil) throws -> AVAudioRecorder {
         var lastError: Error?
         
         for (formatId, formatName) in AudioConfiguration.FormatFallback.supportedFormats {
@@ -103,7 +185,8 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
                     format: formatId,
                     sampleRate: sampleRate,
                     channels: channels,
-                    quality: quality
+                    quality: quality,
+                    bitRateOverride: bitRateOverride
                 )
                 
                 let recorder = try AVAudioRecorder(url: url, settings: settings)
@@ -132,17 +215,28 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
     }
     
     /// Creates format-specific audio settings optimized for each codec
-    private func createAudioSettings(format: AudioFormatID, sampleRate: Double, channels: Int, quality: Float) -> [String: Any] {
+    private func createAudioSettings(format: AudioFormatID, sampleRate: Double, channels: Int, quality: Float, bitRateOverride: Int? = nil) -> [String: Any] {
         switch format {
         case kAudioFormatMPEG4AAC:
-            return [
+            var settings: [String: Any] = [
                 AVFormatIDKey: Int(format),
                 AVSampleRateKey: sampleRate,
                 AVNumberOfChannelsKey: channels,
                 AVEncoderAudioQualityKey: AudioConfiguration.audioQuality.rawValue,
                 AVSampleRateConverterAudioQualityKey: AVAudioQuality.max.rawValue
-                // Omit explicit bitrate for MPEG4AAC - let system choose for compatibility
             ]
+            
+            // Add explicit bitrate if provided; otherwise use adaptive voice bitrate for 22kHz voice
+            if let override = bitRateOverride {
+                settings[AVEncoderBitRateKey] = override
+                print("🎙️ AudioRecordingService: Using override bitrate: \(override) bps")
+            } else if sampleRate <= 22050.0 {
+                let optimizedBitRate = AudioConfiguration.VoiceOptimized.adaptiveBitRate()
+                settings[AVEncoderBitRateKey] = optimizedBitRate
+                print("🎙️ AudioRecordingService: Using voice-optimized bitrate: \(optimizedBitRate) bps")
+            }
+            
+            return settings
         case kAudioFormatAppleLossless:
             return [
                 AVFormatIDKey: Int(format),

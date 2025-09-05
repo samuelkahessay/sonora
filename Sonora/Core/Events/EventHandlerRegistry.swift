@@ -23,13 +23,15 @@ public final class EventHandlerRegistry {
     private var remindersEventHandler: RemindersEventHandler?
     private var liveActivityEventHandler: LiveActivityEventHandler?
     private var spotlightEventHandler: SpotlightEventHandler?
+    private var whisperKitEventHandler: WhisperKitEventHandler?
     
     // MARK: - Configuration
     private let enabledHandlers: Set<String> = [
         "MemoEventHandler",    // Always enabled for cross-cutting concerns
         "CalendarEventHandler", // Placeholder - disabled by default
         "RemindersEventHandler", // Placeholder - disabled by default
-        "LiveActivityEventHandler" // Live Activities for recording
+        "LiveActivityEventHandler", // Live Activities for recording
+        "WhisperKitEventHandler" // Whisper model lifecycle optimization
     ]
     
     // MARK: - Initialization
@@ -61,6 +63,7 @@ public final class EventHandlerRegistry {
         registerRemindersEventHandler()
         registerLiveActivityEventHandler()
         registerSpotlightEventHandler()
+        registerWhisperKitEventHandler()
         
         // Log registration summary
         let activeCount = handlerStatus.values.filter { $0 }.count
@@ -153,6 +156,21 @@ public final class EventHandlerRegistry {
         registeredHandlers[handlerName] = spotlightEventHandler
         handlerStatus[handlerName] = true
         logger.info("Registered SpotlightEventHandler", category: .system, context: LogContext())
+    }
+
+    /// Register the WhisperKit lifecycle optimization handler
+    private func registerWhisperKitEventHandler() {
+        let handlerName = "WhisperKitEventHandler"
+        let isEnabled = enabledHandlers.contains(handlerName)
+        if isEnabled {
+            whisperKitEventHandler = WhisperKitEventHandler(logger: logger, eventBus: eventBus)
+            registeredHandlers[handlerName] = whisperKitEventHandler
+            handlerStatus[handlerName] = true
+            logger.info("Registered and activated WhisperKitEventHandler", category: .system, context: LogContext())
+        } else {
+            handlerStatus[handlerName] = false
+            logger.debug("WhisperKitEventHandler disabled in configuration", category: .system, context: LogContext())
+        }
     }
     
     // MARK: - Handler Management

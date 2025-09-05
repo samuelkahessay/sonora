@@ -47,16 +47,11 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     private let config = AppConfiguration.shared
     
     // MARK: - Dynamic Configuration Properties
-    private var sampleRate: Double {
-        return config.audioSampleRate
-    }
-    
-    private var numberOfChannels: Int {
-        return config.audioChannels
-    }
-    
-    private var recordingQuality: Float {
-        return config.recordingQuality
+    /// Current optimized recording settings (resolved lazily via AudioQualityManager)
+    private var currentRecordingSettings: AudioRecordingSettings {
+        // Prefer adaptive, voice-optimized settings via the manager when available
+        let mgr = DIContainer.shared.audioQualityManager()
+        return mgr.getOptimalSettings(for: .voice)
     }
     
     // MARK: - Callbacks
@@ -130,18 +125,17 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
         
         do {
             // 2. Configure audio session
+            let settings = currentRecordingSettings
             try sessionService.configureForRecording(
-                sampleRate: sampleRate,
-                channels: numberOfChannels
+                sampleRate: settings.sampleRate,
+                channels: settings.channels
             )
             
             // 3. Create and start recorder
             let recordingURL = recordingService.generateRecordingURL()
             let recorder = try recordingService.createRecorder(
                 url: recordingURL,
-                sampleRate: sampleRate,
-                channels: numberOfChannels,
-                quality: recordingQuality
+                settings: currentRecordingSettings
             )
             
             // 4. Attempt to start recording with fallbacks
@@ -152,9 +146,7 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
                 try sessionService.attemptRecordingFallback()
                 let fallbackRecorder = try recordingService.createRecorder(
                     url: recordingURL,
-                    sampleRate: sampleRate,
-                    channels: numberOfChannels,
-                    quality: recordingQuality
+                    settings: currentRecordingSettings
                 )
                 try recordingService.startRecording(with: fallbackRecorder)
             }
@@ -359,9 +351,10 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
             // 2. Create new recorder (old one is invalid after interruption)
             let newRecorder = try recordingService.createRecorderWithFallback(
                 url: recordingURL,
-                sampleRate: sampleRate,
-                channels: numberOfChannels,
-                quality: recordingQuality
+                sampleRate: currentRecordingSettings.sampleRate,
+                channels: currentRecordingSettings.channels,
+                quality: currentRecordingSettings.quality,
+                bitRateOverride: currentRecordingSettings.bitRate
             )
             
             // 3. Attempt to resume recording
@@ -385,9 +378,10 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     /// Session reconfiguration with fallback strategies
     private func reconfigureSessionWithFallback() async throws {
         do {
+            let settings = currentRecordingSettings
             try sessionService.configureForRecording(
-                sampleRate: sampleRate,
-                channels: numberOfChannels
+                sampleRate: settings.sampleRate,
+                channels: settings.channels
             )
         } catch {
             print("⚠️ BackgroundAudioService: Primary session config failed, trying fallback")
@@ -439,8 +433,8 @@ extension BackgroundAudioService {
     /// Legacy method for backward compatibility
     func configureAudioSession() throws {
         try sessionService.configureForRecording(
-            sampleRate: sampleRate,
-            channels: numberOfChannels
+            sampleRate: currentRecordingSettings.sampleRate,
+            channels: currentRecordingSettings.channels
         )
     }
     

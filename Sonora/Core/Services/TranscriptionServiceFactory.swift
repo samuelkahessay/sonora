@@ -180,6 +180,11 @@ final class TranscriptionServiceFactory {
             downloadManager: downloadManager,
             modelProvider: modelProvider
         )
+        // Opportunistically prewarm the model in the background for faster first use
+        Task { @MainActor in
+            let manager = DIContainer.shared.whisperKitModelManager()
+            try? await manager.prewarmModel()
+        }
         localService = service
         return service
     }
