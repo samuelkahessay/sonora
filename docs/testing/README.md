@@ -14,7 +14,7 @@
 ## Historical Documentation
 
 Historical notes have been consolidated into a single archive for brevity:
-- **[ARCHIVE.md](../../ARCHIVE.md)** — compact summaries of past fixes (RESOLVED)
+- **[ARCHIVE.md](../archive/ARCHIVE.md)** — compact summaries of past fixes (RESOLVED)
 
 ## Quick Testing Commands
 
