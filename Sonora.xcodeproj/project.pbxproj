@@ -306,6 +306,9 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
+				IDETrustedMacroCommands = (
+					"LLM.LLMMacrosImplementation",
+				);
 				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
