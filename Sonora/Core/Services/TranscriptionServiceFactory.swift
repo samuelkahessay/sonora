@@ -50,10 +50,7 @@ final class TranscriptionServiceFactory {
             let previous = UserDefaults.standard.selectedWhisperModel
             UserDefaults.standard.selectedWhisperModel = fallbackId
             logger.info("Normalized selected Whisper model to installed fallback: \(fallbackId)")
-            NotificationCenter.default.post(name: .whisperModelNormalized, object: nil, userInfo: [
-                "previous": previous,
-                "normalized": fallbackId
-            ])
+            EventBus.shared.publish(.whisperModelNormalized(previous: previous, normalized: fallbackId))
         }
         
         logger.info("Creating transcription service - Preference: \(userPreference.displayName), Effective: \(effectiveService.displayName)")

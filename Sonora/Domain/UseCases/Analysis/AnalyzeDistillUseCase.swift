@@ -37,48 +37,43 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sen
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
         
         logger.analysis("Starting Distill analysis (comprehensive mentor-like insights)", context: context)
-        
-        // Register analysis operation (analysis can run concurrently - no conflicts)
+
+        // Validate inputs early (avoid creating coordinator ops for invalid requests)
+        guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw AnalysisError.emptyTranscript
+        }
+        guard transcript.count >= 10 else {
+            throw AnalysisError.transcriptTooShort
+        }
+
+        // CACHE FIRST (de-risk): Skip coordinator for cache hits
+        let cacheTimer = PerformanceTimer(operation: "Distill Cache Check", category: .performance)
+        if let cachedResult = await MainActor.run(body: {
+            analysisRepository.getAnalysisResult(for: memoId, mode: .distill, responseType: DistillData.self)
+        }) {
+            _ = cacheTimer.finish(additionalInfo: "Cache HIT - returning immediately (no coordinator op)")
+            logger.analysis("Found cached Distill analysis (cache hit)",
+                          level: .info,
+                          context: LogContext(correlationId: correlationId, additionalInfo: [
+                              "memoId": memoId.uuidString,
+                              "cacheHit": true,
+                              "latencyMs": cachedResult.latency_ms
+                          ]))
+            return cachedResult
+        }
+        _ = cacheTimer.finish(additionalInfo: "Cache MISS - proceeding to API call")
+
+        // Register analysis operation only for cache MISS
         guard let operationId = await operationCoordinator.registerOperation(.analysis(memoId: memoId, analysisType: .distill)) else {
             logger.warning("Distill analysis rejected by operation coordinator (system at capacity)", category: .analysis, context: context, error: nil)
             throw AnalysisError.systemBusy
         }
-        
         logger.debug("Distill analysis operation registered with ID: \(operationId)", category: .analysis, context: context)
-        
+
         do {
-            // Validate inputs
-            guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                await operationCoordinator.failOperation(operationId, errorDescription: AnalysisError.emptyTranscript.errorDescription ?? "Empty transcript")
-                throw AnalysisError.emptyTranscript
-            }
-            
-            guard transcript.count >= 10 else {
-                await operationCoordinator.failOperation(operationId, errorDescription: AnalysisError.transcriptTooShort.errorDescription ?? "Transcript too short")
-                throw AnalysisError.transcriptTooShort
-            }
+            // Inputs already validated above
             
             logger.debug("Transcript validated (\(transcript.count) characters)", category: .analysis, context: context)
-        
-            // CACHE FIRST: Check if analysis already exists
-            let cacheTimer = PerformanceTimer(operation: "Distill Cache Check", category: .performance)
-            if let cachedResult = await MainActor.run(body: {
-                analysisRepository.getAnalysisResult(for: memoId, mode: .distill, responseType: DistillData.self)
-            }) {
-                _ = cacheTimer.finish(additionalInfo: "Cache HIT - returning immediately")
-                logger.analysis("Found cached Distill analysis (cache hit)", 
-                              level: .info, 
-                              context: LogContext(correlationId: correlationId, additionalInfo: [
-                                  "memoId": memoId.uuidString,
-                                  "cacheHit": true,
-                                  "latencyMs": cachedResult.latency_ms
-                              ]))
-                
-                // Complete operation immediately for cache hit
-                await operationCoordinator.completeOperation(operationId)
-                return cachedResult
-            }
-            _ = cacheTimer.finish(additionalInfo: "Cache MISS - proceeding to API call")
             
             logger.analysis("No cached result found, calling analysis service", 
                           level: .warning, 

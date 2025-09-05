@@ -16,6 +16,8 @@ struct MemosView: View {
         self.popToRoot = popToRoot
     }
 
+    @State private var eventSubscriptionId: UUID? = nil
+
     var body: some View {
         NavigationStack(path: $viewModel.navigationPath) {
             VStack(spacing: 0) {
@@ -38,11 +40,22 @@ struct MemosView: View {
                 }
                 .errorAlert($viewModel.error) { viewModel.retryLastOperation() }
                 .loadingState(isLoading: viewModel.isLoading, message: "Loading memos...")
-                .onReceive(NotificationCenter.default.publisher(for: .openMemoByID)) { note in
-                    guard let idStr = note.userInfo?["memoId"] as? String, let id = UUID(uuidString: idStr) else { return }
-                    if let memo = DIContainer.shared.memoRepository().getMemo(by: id) {
-                        viewModel.navigationPath.append(memo)
+                .onAppear {
+                    // Subscribe to deep link navigation events
+                    eventSubscriptionId = EventBus.shared.subscribe(to: AppEvent.self) { [weak viewModel] event in
+                        switch event {
+                        case .navigateOpenMemoByID(let id):
+                            if let memo = DIContainer.shared.memoRepository().getMemo(by: id) {
+                                viewModel?.navigationPath.append(memo)
+                            }
+                        default:
+                            break
+                        }
                     }
+                }
+                .onDisappear {
+                    if let id = eventSubscriptionId { EventBus.shared.unsubscribe(id) }
+                    eventSubscriptionId = nil
                 }
         }
         .overlay(alignment: .bottom) {

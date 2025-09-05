@@ -56,7 +56,7 @@ struct ContentView: View {
     }
     
     private func popToRoot() {
-        NotificationCenter.default.post(name: .popToRootMemos, object: nil)
+        EventBus.shared.publish(.navigatePopToRootMemos)
     }
 }
 

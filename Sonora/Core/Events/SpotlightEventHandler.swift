@@ -47,6 +47,14 @@ final class SpotlightEventHandler {
             break
         case .recordingStarted, .recordingCompleted:
             break
+        case .navigatePopToRootMemos:
+            break
+        case .navigateOpenMemoByID(memoId: _):
+            break
+        case .whisperModelNormalized(previous: _, normalized: _):
+            break
+        case .microphonePermissionStatusChanged(status: _):
+            break
         }
     }
 }

@@ -25,17 +25,7 @@ enum MemoSystemIcons: String {
     case delete = "trash"
 }
 
-// MARK: - Notification Names
-
-/// **Type-Safe Notification Names**
-/// Centralized notification identifiers with compile-time safety
-extension Notification.Name {
-    /// Navigate to root of memos view
-    static let popToRootMemos = Notification.Name("popToRootMemos")
-    
-    /// Open specific memo by ID
-    static let openMemoByID = Notification.Name("openMemoByID")
-}
+// Legacy NotificationCenter names removed — migrated to EventBus
 
 // MARK: - Transcription State Keys
 

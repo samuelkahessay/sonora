@@ -68,13 +68,9 @@ final class RequestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCa
                         "final_status": finalStatus.rawValue
                     ]))
         
-        // Post notification for UI updates on the main actor
+        // Publish type-safe event for UI updates on the main actor
         await MainActor.run {
-            NotificationCenter.default.post(
-                name: .microphonePermissionStatusChanged,
-                object: nil,
-                userInfo: [MicrophonePermissionStatus.notificationUserInfoKey: finalStatus]
-            )
+            EventBus.shared.publish(.microphonePermissionStatusChanged(status: finalStatus))
         }
         
         return finalStatus

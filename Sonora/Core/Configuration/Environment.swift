@@ -199,7 +199,7 @@ public final class Environment: @unchecked Sendable {
         uname(&systemInfo)
         let modelCode = withUnsafePointer(to: &systemInfo.machine) {
             $0.withMemoryRebound(to: CChar.self, capacity: 1) {
-                ptr in String.init(validatingUTF8: ptr)
+                ptr in String(validatingCString: ptr)
             }
         }
         return modelCode ?? "Unknown"

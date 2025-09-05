@@ -2,13 +2,11 @@ import Foundation
 
 /// Use case for performing themes analysis on transcript with repository caching
 /// Encapsulates the business logic for identifying themes and sentiment with persistence
-@MainActor
-protocol AnalyzeThemesUseCaseProtocol {
+protocol AnalyzeThemesUseCaseProtocol: Sendable {
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<ThemesData>
 }
 
-@MainActor
-final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
+final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol, @unchecked Sendable {
     
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
@@ -43,7 +41,7 @@ final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
         print("🎯 AnalyzeThemesUseCase: Starting themes analysis for memo \(memoId)")
         
         // CACHE FIRST: Check if analysis already exists
-        if let cachedResult = analysisRepository.getAnalysisResult(for: memoId, mode: .themes, responseType: ThemesData.self) {
+        if let cachedResult = await analysisRepository.getAnalysisResult(for: memoId, mode: .themes, responseType: ThemesData.self) {
             print("🎯 AnalyzeThemesUseCase: Found cached themes analysis, returning immediately")
             return cachedResult
         }
@@ -51,7 +49,7 @@ final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
         print("🌐 AnalyzeThemesUseCase: No cached result, calling analysis service")
         
         do {
-            // Call service to perform analysis
+            // Perform analysis (execute is not @MainActor)
             let result = try await analysisService.analyzeThemes(transcript: transcript)
 
             // Guardrails: validate structure before persisting
@@ -65,18 +63,14 @@ final class AnalyzeThemesUseCase: AnalyzeThemesUseCaseProtocol {
             print("💾 AnalyzeThemesUseCase: Saving result to repository cache")
             
             // SAVE TO CACHE: Store result for future use
-            await MainActor.run {
-                analysisRepository.saveAnalysisResult(result, for: memoId, mode: .themes)
-            }
+            await MainActor.run { analysisRepository.saveAnalysisResult(result, for: memoId, mode: .themes) }
             
             print("✅ AnalyzeThemesUseCase: Analysis cached successfully")
             
             // Publish analysisCompleted event on main actor
             print("📡 AnalyzeThemesUseCase: Publishing analysisCompleted event for memo \(memoId)")
             let resultSummary = "\(result.data.themes.count) themes, sentiment: \(result.data.sentiment)"
-            await MainActor.run {
-                EventBus.shared.publish(.analysisCompleted(memoId: memoId, type: .themes, result: resultSummary))
-            }
+            await MainActor.run { EventBus.shared.publish(.analysisCompleted(memoId: memoId, type: .themes, result: resultSummary)) }
             
             return result
             

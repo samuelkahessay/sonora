@@ -34,6 +34,24 @@ public enum AppEvent: Equatable {
     
     /// Published when any analysis type completes successfully
     case analysisCompleted(memoId: UUID, type: AnalysisMode, result: String)
+
+    // MARK: - Navigation/UI Events (migrated from NotificationCenter)
+
+    /// Navigate to the root of the Memos view
+    case navigatePopToRootMemos
+
+    /// Open a specific memo by its ID (deep link or Spotlight)
+    case navigateOpenMemoByID(memoId: UUID)
+
+    // MARK: - Configuration/Settings Events
+
+    /// Whisper model selection normalized to an installed model
+    case whisperModelNormalized(previous: String, normalized: String)
+
+    // MARK: - Permission Events
+
+    /// Microphone permission status changed (result of a permission request)
+    case microphonePermissionStatusChanged(status: MicrophonePermissionStatus)
     
     // MARK: - Event Properties
     
@@ -49,6 +67,14 @@ public enum AppEvent: Equatable {
              .transcriptionProgress(let memoId, _, _),
              .analysisCompleted(let memoId, _, _):
             return memoId
+        case .navigatePopToRootMemos:
+            return nil
+        case .navigateOpenMemoByID(let memoId):
+            return memoId
+        case .whisperModelNormalized(_, _):
+            return nil
+        case .microphonePermissionStatusChanged(_):
+            return nil
         }
     }
     
@@ -77,6 +103,14 @@ public enum AppEvent: Equatable {
             }
         case .analysisCompleted(let memoId, let type, _):
             return "\(type.displayName) analysis completed for memo: \(memoId)"
+        case .navigatePopToRootMemos:
+            return "Navigate: Pop to root memos"
+        case .navigateOpenMemoByID(let memoId):
+            return "Navigate: Open memo: \(memoId.uuidString)"
+        case .whisperModelNormalized(let previous, let normalized):
+            return "Whisper model normalized: \(previous) → \(normalized)"
+        case .microphonePermissionStatusChanged(let status):
+            return "Microphone permission status changed: \(status.displayName)"
         }
     }
     
@@ -91,6 +125,12 @@ public enum AppEvent: Equatable {
             return .transcription
         case .analysisCompleted:
             return .analysis
+        case .navigatePopToRootMemos, .navigateOpenMemoByID:
+            return .memo
+        case .whisperModelNormalized:
+            return .analysis
+        case .microphonePermissionStatusChanged:
+            return .recording
         }
     }
 }

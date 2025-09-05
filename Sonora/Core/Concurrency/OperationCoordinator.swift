@@ -1,7 +1,23 @@
 import Foundation
 
-/// Thread-safe actor for coordinating concurrent operations
-/// Prevents conflicts and manages resource allocation across memo operations
+/// OperationCoordinator
+/// ---------------------
+/// Actor‑backed, process‑wide coordinator for Sonora’s long‑running operations
+/// (Recording, Transcription, Analysis). It centralizes:
+/// - Conflict detection (e.g. recording vs. transcription on the same memo)
+/// - Lightweight priority queueing (pending → active)
+/// - Global status + metrics for the UI and diagnostics
+/// - Delivery of detailed updates to a weak @MainActor delegate and coarse AppEvents
+///
+/// Concurrency & safety:
+/// - All mutable state is actor‑isolated (no locks).
+/// - `statusDelegate` is weak and @MainActor; we bridge via a setter and always call back on main.
+/// - AppEvent publications that affect UI are dispatched on the main actor.
+///
+/// Design notes:
+/// - Capacity is enforced at registration time to keep `start()` cheap and predictable.
+/// - Queue ordering: by priority (high first) then FIFO by creation time.
+/// - This is not a general job system; it solves Sonora‑specific UX needs. See ADR for trade‑offs.
 public actor OperationCoordinator {
     
     // MARK: - Singleton
@@ -9,25 +25,25 @@ public actor OperationCoordinator {
     
     // MARK: - State Management
     
-    /// All operations indexed by their unique ID
+    /// All operations indexed by unique ID (lifecycle source of truth)
     private var operations: [UUID: Operation] = [:]
     
-    /// Active operations grouped by memo ID for conflict detection
+    /// IDs of active operations per memo for O(1) conflict checks
     private var activeOperationsByMemo: [UUID: Set<UUID>] = [:]
     
-    /// Queued operations waiting for conflict resolution
+    /// Pending operation IDs waiting for conflicts/resources (metadata lives in `operations`)
     private var queuedOperations: [UUID] = []
     
-    /// Maximum number of concurrent operations (resource management)
+    /// Global concurrency cap (checked at registration time)
     private let maxConcurrentOperations = 10
     
-    /// Event bus for operation state notifications
+    /// EventBus for coarse operation events (e.g. recording started/completed, transcription progress)
     private let eventBus: any EventBusProtocol
     
-    /// Logger for debugging and monitoring
+    /// Logger for diagnostics and debugging
     private let logger: any LoggerProtocol
     
-    /// Delegate for operation status updates
+    /// Weak, @MainActor delegate for UI status updates
     public weak var statusDelegate: (any OperationStatusDelegate)?
     
     /// Set the status delegate (called from MainActor; bridge into actor)
@@ -71,7 +87,7 @@ public actor OperationCoordinator {
                     category: .system, 
                     context: context)
         
-        // Check if we're at capacity
+        // Capacity gate (enforced here; `start()` does not re-check)
         let activeCount = operations.values.filter { $0.status == .active }.count
         if activeCount >= maxConcurrentOperations {
             logger.warning("Operation registration rejected: at capacity (\(activeCount)/\(maxConcurrentOperations))", 
@@ -81,7 +97,7 @@ public actor OperationCoordinator {
             return nil
         }
         
-        // Check for conflicts with existing operations
+        // Check conflicts against active ops on the same memo
         if let conflict = await detectConflicts(for: operationType) {
             return await handleConflict(operation, conflict: conflict, context: context)
         }
@@ -99,7 +115,7 @@ public actor OperationCoordinator {
         return operation.id
     }
     
-    /// Start an operation (move from pending to active)
+    /// Start an operation (transition pending → active)
     public func startOperation(_ operationId: UUID) async -> Bool {
         guard var operation = operations[operationId] else {
             logger.error("Cannot start operation: not found", 
@@ -117,7 +133,7 @@ public actor OperationCoordinator {
             return false
         }
         
-        // Final conflict check before starting
+        // Defensive conflict check (another op may have become active)
         if let conflict = await detectConflicts(for: operation.type) {
             logger.debug("Operation start delayed due to conflict with \(conflict.conflictingOperation.type.description)", 
                         category: .system, 
@@ -130,7 +146,7 @@ public actor OperationCoordinator {
         operation.startedAt = Date()
         operations[operationId] = operation
         
-        // Track active operation by memo
+        // Index active operation by memo for conflict checks
         let memoId = operation.type.memoId
         if activeOperationsByMemo[memoId] == nil {
             activeOperationsByMemo[memoId] = Set()
@@ -147,7 +163,7 @@ public actor OperationCoordinator {
                    category: .system, 
                    context: context)
         
-        // Notify via event bus (integrate with existing event system)
+        // Publish coarse app events for UI consumers
         await notifyOperationStateChange(operation)
         
         return true
@@ -245,6 +261,7 @@ public actor OperationCoordinator {
     
     // MARK: - Private Implementation
     
+    /// Transition to a terminal state (completed/failed/cancelled), notify, and cleanup
     private func finishOperation(_ operationId: UUID, status: OperationStatus, errorDescription: String?) async {
         guard var operation = operations[operationId] else {
             logger.error("Cannot finish operation: not found", 
@@ -297,6 +314,7 @@ public actor OperationCoordinator {
         await cleanupCompletedOperations()
     }
     
+    /// Detect conflicts against currently active operations on the same memo
     private func detectConflicts(for operationType: OperationType) async -> OperationConflict? {
         let memoId = operationType.memoId
         
@@ -363,6 +381,7 @@ public actor OperationCoordinator {
         }
     }
     
+    /// Best‑effort start helper
     private func tryStartOperation(_ operationId: UUID) async {
         // Attempt to start operation if no conflicts
         let _ = await startOperation(operationId)
@@ -372,6 +391,7 @@ public actor OperationCoordinator {
         return operations[operationId]
     }
     
+    /// Start queued operations in priority order when capacity/conflicts allow
     private func processQueuedOperations() async {
         // Try to start queued operations in priority order
         let sortedQueue = queuedOperations.compactMap { id in
@@ -392,6 +412,7 @@ public actor OperationCoordinator {
         }
     }
     
+    /// Deliver lifecycle updates to the @MainActor delegate
     private func notifyStatusDelegate(operation: Operation, previousStatus: OperationStatus) async {
         guard let delegate = statusDelegate else { return }
         
@@ -420,6 +441,7 @@ public actor OperationCoordinator {
         }
     }
 
+    /// Deliver progress updates to the @MainActor delegate
     private func notifyProgressDelegate(operation: Operation, previousProgress: OperationProgress?) async {
         guard let delegate = statusDelegate else { return }
 

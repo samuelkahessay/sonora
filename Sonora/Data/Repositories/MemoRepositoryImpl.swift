@@ -199,7 +199,6 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             
             // Get file size
             let fileAttributes = try FileManager.default.attributesOfItem(atPath: audioDestination.path)
-            let fileSize = fileAttributes[.size] as? Int64
             
             // Get duration using AVAudioFile (avoids deprecated AVAsset.duration)
             let duration: TimeInterval = {

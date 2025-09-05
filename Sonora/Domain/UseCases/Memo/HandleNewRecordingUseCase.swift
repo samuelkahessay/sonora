@@ -35,10 +35,10 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol, @unche
             let memo = try createMemoFromRecording(url: url, metadata: fileMetadata)
             
             // Process recording through repository
-            await memoRepository.handleNewRecording(at: url)
+            memoRepository.handleNewRecording(at: url)
             
             // Verify processing was successful
-            try await verifyRecordingProcessed(memo)
+            try verifyRecordingProcessed(memo)
             
             // Publish memoCreated event on main actor
             print("📡 HandleNewRecordingUseCase: Publishing memoCreated event for memo \(memo.id)")

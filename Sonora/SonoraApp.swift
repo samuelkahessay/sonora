@@ -109,7 +109,11 @@ struct SonoraApp: App {
                     // Handle sonora://memo/<id>
                     if url.host == "memo" {
                         let idStr = url.lastPathComponent
-                        NotificationCenter.default.post(name: .openMemoByID, object: nil, userInfo: ["memoId": idStr])
+                        if let id = UUID(uuidString: idStr) {
+                            EventBus.shared.publish(.navigateOpenMemoByID(memoId: id))
+                        } else {
+                            print("⚠️ SonoraApp: Invalid memoId in deep link: \(idStr)")
+                        }
                     } else if url.host == "open" {
                         // This is the new default action for tapping the Live Activity.
                         // It should just open the app, so no action is needed here.
@@ -121,7 +125,9 @@ struct SonoraApp: App {
                 .onContinueUserActivity(CSSearchableItemActionType) { activity in
                     if let idStr = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String {
                         print("🔍 Spotlight activity for memo: \(idStr)")
-                        NotificationCenter.default.post(name: .openMemoByID, object: nil, userInfo: ["memoId": idStr])
+                        if let id = UUID(uuidString: idStr) {
+                            EventBus.shared.publish(.navigateOpenMemoByID(memoId: id))
+                        }
                     }
                 }
         }

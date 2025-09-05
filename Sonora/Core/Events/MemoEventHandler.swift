@@ -94,6 +94,14 @@ public final class MemoEventHandler {
         case .transcriptionProgress:
             // Progress is handled by UI; keep audit only
             break
+        case .navigatePopToRootMemos:
+            break
+        case .navigateOpenMemoByID(memoId: _):
+            break
+        case .whisperModelNormalized(previous: _, normalized: _):
+            break
+        case .microphonePermissionStatusChanged(status: _):
+            break
         }
         
         // Update analytics

@@ -51,7 +51,7 @@ final class AnalyzeTodosUseCase: AnalyzeTodosUseCaseProtocol, @unchecked Sendabl
         print("🌐 AnalyzeTodosUseCase: No cached result, calling analysis service")
         
         do {
-            // Call service to perform analysis
+            // Perform analysis (execute is not @MainActor)
             let result = try await analysisService.analyzeTodos(transcript: transcript)
 
             // Guardrails: validate structure before persisting
@@ -65,18 +65,14 @@ final class AnalyzeTodosUseCase: AnalyzeTodosUseCaseProtocol, @unchecked Sendabl
             print("💾 AnalyzeTodosUseCase: Saving result to repository cache")
             
             // SAVE TO CACHE: Store result for future use
-            await MainActor.run {
-                analysisRepository.saveAnalysisResult(result, for: memoId, mode: .todos)
-            }
+            await MainActor.run { analysisRepository.saveAnalysisResult(result, for: memoId, mode: .todos) }
             
             print("✅ AnalyzeTodosUseCase: Analysis cached successfully")
             
             // Publish analysisCompleted event on main actor
             print("📡 AnalyzeTodosUseCase: Publishing analysisCompleted event for memo \(memoId)")
             let resultSummary = "\(result.data.todos.count) todos identified"
-            await MainActor.run { [eventBus] in
-                eventBus.publish(.analysisCompleted(memoId: memoId, type: .todos, result: resultSummary))
-            }
+            await MainActor.run { eventBus.publish(.analysisCompleted(memoId: memoId, type: .todos, result: resultSummary)) }
             
             return result
             

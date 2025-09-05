@@ -103,15 +103,7 @@ public enum MicrophonePermissionStatus: String, CaseIterable, Equatable, Sendabl
     }
 }
 
-/// Permission status change notification
-public extension Notification.Name {
-    static let microphonePermissionStatusChanged = Notification.Name("MicrophonePermissionStatusChanged")
-}
-
-/// Notification userInfo key for permission status
-public extension MicrophonePermissionStatus {
-    static let notificationUserInfoKey = "MicrophonePermissionStatus"
-}
+// Legacy NotificationCenter identifiers removed — migrated to EventBus
 
 // MARK: - Permission Request API (Core layer)
 

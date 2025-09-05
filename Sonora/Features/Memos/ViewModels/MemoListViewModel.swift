@@ -135,17 +135,12 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
             .store(in: &cancellables)
 
-        // Listen for navigation notifications
-        NotificationCenter.default.publisher(for: .popToRootMemos)
-            .sink { [weak self] _ in
-                self?.popToRoot()
-            }
-            .store(in: &cancellables)
-        
-        // Subscribe to transcription completed events for real-time updates
+        // Subscribe to app events for navigation and real-time updates
         eventSubscriptionId = eventBus.subscribe(to: AppEvent.self) { [weak self] event in
             guard let self = self else { return }
             switch event {
+            case .navigatePopToRootMemos:
+                self.popToRoot()
             case .transcriptionCompleted(let memoId, _):
                 Task { @MainActor in
                     // Force refresh the specific memo's transcription state
@@ -632,7 +627,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     
     /// Toggle edit mode on/off
     func toggleEditMode() {
-        withAnimation(.easeInOut(duration: 0.2)) {
+        _ = withAnimation(.easeInOut(duration: 0.2)) {
             isEditMode.toggle()
             
             // Clear selection when exiting edit mode

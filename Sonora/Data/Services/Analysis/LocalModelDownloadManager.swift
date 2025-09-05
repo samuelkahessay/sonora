@@ -80,113 +80,6 @@ final class LocalModelDownloadManager: ObservableObject {
                 self.attemptSimpleCandidates(model)
             }
         }
-
-        func attemptDownload(_ model: LocalModel, candidates: [URL], index: Int) {
-            if index >= candidates.count {
-                Task { @MainActor in
-                    self.downloadStates[model]?.isDownloading = false
-                    self.downloadStates[model]?.isModelReady = false
-                }
-                return
-            }
-
-            let url = candidates[index]
-            let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 60 * 60)
-            let task = URLSession.shared.downloadTask(with: request) { [weak self] tempURL, response, error in
-                guard let self = self else { return }
-                
-                Task { @MainActor in
-                    if let error = error {
-                        print("❌ Download error for \(model.displayName): \(error)")
-                        // Try next candidate
-                        self.progressObservations[model]?.invalidate()
-                        self.progressObservations.removeValue(forKey: model)
-                        self.downloadTasks.removeValue(forKey: model)
-                        attemptDownload(model, candidates: candidates, index: index + 1)
-                        return
-                    }
-                    
-                    if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                        print("❌ HTTP error for \(model.displayName): status=\(http.statusCode)")
-                        // Try next candidate
-                        self.progressObservations[model]?.invalidate()
-                        self.progressObservations.removeValue(forKey: model)
-                        self.downloadTasks.removeValue(forKey: model)
-                        attemptDownload(model, candidates: candidates, index: index + 1)
-                        return
-                    }
-
-                    guard let tempURL = tempURL else {
-                        print("❌ No temp URL for \(model.displayName)")
-                        // Try next candidate
-                        self.progressObservations[model]?.invalidate()
-                        self.progressObservations.removeValue(forKey: model)
-                        self.downloadTasks.removeValue(forKey: model)
-                        attemptDownload(model, candidates: candidates, index: index + 1)
-                        return
-                    }
-                    
-                    do {
-                        let finalPath = model.localPath
-                        // Ensure directory exists
-                        let dir = finalPath.deletingLastPathComponent()
-                        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-                        
-                        // Remove existing file if present
-                        try? FileManager.default.removeItem(at: finalPath)
-                        
-                        // Move downloaded file to final location
-                        try FileManager.default.moveItem(at: tempURL, to: finalPath)
-                        
-                        // Validate file size (must be non-trivial)
-                        let attrs = try FileManager.default.attributesOfItem(atPath: finalPath.path)
-                        let size = (attrs[.size] as? NSNumber)?.uint64Value ?? 0
-                        if size < 10_000_000 { // < 10 MB indicates a bad/canceled download
-                            print("⚠️ Downloaded file too small (\(size) bytes) for \(model.displayName). Treating as failure.")
-                            try? FileManager.default.removeItem(at: finalPath)
-                            // Try next candidate
-                            self.progressObservations[model]?.invalidate()
-                            self.progressObservations.removeValue(forKey: model)
-                            self.downloadTasks.removeValue(forKey: model)
-                            attemptDownload(model, candidates: candidates, index: index + 1)
-                            return
-                        }
-
-                        // Persist primary filename for loader
-                        UserDefaults.standard.set(finalPath.lastPathComponent, forKey: "primaryGGUF_\(model.rawValue)")
-
-                        // Update state
-                        self.downloadStates[model]?.isModelReady = true
-                        self.downloadStates[model]?.isDownloading = false
-                        self.downloadStates[model]?.downloadProgress = 1.0
-                        
-                        print("✅ \(model.displayName) downloaded successfully")
-                        // Refresh any derived UI such as storage usage
-                        self.refreshModelStatus()
-                        
-                    } catch {
-                        print("❌ Failed to save \(model.displayName): \(error)")
-                        self.downloadStates[model]?.isDownloading = false
-                        self.downloadStates[model]?.isModelReady = false
-                    }
-                    
-                    // Clean up
-                    self.downloadTasks.removeValue(forKey: model)
-                    self.progressObservations[model]?.invalidate()
-                    self.progressObservations.removeValue(forKey: model)
-                }
-            }
-
-            // Store task and observe progress
-            self.downloadTasks[model] = task
-            self.progressObservations[model] = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
-                Task { @MainActor in
-                    self?.downloadStates[model]?.downloadProgress = Float(progress.fractionCompleted)
-                }
-            }
-
-            task.resume()
-        }
     }
 
     // MARK: - Resolution and Multi-part Download
@@ -309,7 +202,7 @@ final class LocalModelDownloadManager: ObservableObject {
                 }
                 // Observe per-part progress and map to aggregate
                 self.progressObservations[model]?.invalidate()
-                self.progressObservations[model] = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
+                self.progressObservations[model] = task.progress.observe(\Progress.fractionCompleted) { [weak self] (progress: Progress, change: NSKeyValueObservedChange<Double>) in
                     Task { @MainActor in
                         guard let self = self else { return }
                         let base = Float(idx) / Float(totalParts)
@@ -358,70 +251,57 @@ final class LocalModelDownloadManager: ObservableObject {
             Task { @MainActor in
                 if let error = error {
                     print("❌ Download error for \(model.displayName): \(error)")
-                    // Try next candidate
                     self.progressObservations[model]?.invalidate()
                     self.progressObservations.removeValue(forKey: model)
                     self.downloadTasks.removeValue(forKey: model)
-                    self.attemptDownload(model, candidates: candidates, index: index + 1)
+                    Task { @MainActor in self.attemptDownload(model, candidates: candidates, index: index + 1) }
                     return
                 }
 
                 if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
                     print("❌ HTTP error for \(model.displayName): status=\(http.statusCode)")
-                    // Try next candidate
                     self.progressObservations[model]?.invalidate()
                     self.progressObservations.removeValue(forKey: model)
                     self.downloadTasks.removeValue(forKey: model)
-                    self.attemptDownload(model, candidates: candidates, index: index + 1)
+                    Task { @MainActor in self.attemptDownload(model, candidates: candidates, index: index + 1) }
                     return
                 }
 
                 guard let tempURL = tempURL else {
                     print("❌ No temp URL for \(model.displayName)")
-                    // Try next candidate
                     self.progressObservations[model]?.invalidate()
                     self.progressObservations.removeValue(forKey: model)
                     self.downloadTasks.removeValue(forKey: model)
-                    self.attemptDownload(model, candidates: candidates, index: index + 1)
+                    Task { @MainActor in self.attemptDownload(model, candidates: candidates, index: index + 1) }
                     return
                 }
 
                 do {
                     let finalPath = model.localPath
-                    // Ensure directory exists
                     let dir = finalPath.deletingLastPathComponent()
                     try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-
-                    // Remove existing file if present
                     try? FileManager.default.removeItem(at: finalPath)
-
-                    // Move downloaded file to final location
                     try FileManager.default.moveItem(at: tempURL, to: finalPath)
 
-                    // Validate file size (must be non-trivial)
                     let attrs = try FileManager.default.attributesOfItem(atPath: finalPath.path)
                     let size = (attrs[.size] as? NSNumber)?.uint64Value ?? 0
                     if size < 10_000_000 { // < 10 MB indicates a bad/canceled download
                         print("⚠️ Downloaded file too small (\(size) bytes) for \(model.displayName). Trying next candidate.")
                         try? FileManager.default.removeItem(at: finalPath)
-                        // Try next candidate
                         self.progressObservations[model]?.invalidate()
                         self.progressObservations.removeValue(forKey: model)
                         self.downloadTasks.removeValue(forKey: model)
-                        self.attemptDownload(model, candidates: candidates, index: index + 1)
+                        Task { @MainActor in self.attemptDownload(model, candidates: candidates, index: index + 1) }
                         return
                     }
 
-                    // Persist primary filename for loader
                     UserDefaults.standard.set(finalPath.lastPathComponent, forKey: "primaryGGUF_\(model.rawValue)")
 
-                    // Update state
                     self.downloadStates[model]?.isModelReady = true
                     self.downloadStates[model]?.isDownloading = false
                     self.downloadStates[model]?.downloadProgress = 1.0
 
                     print("✅ \(model.displayName) downloaded successfully")
-                    // Refresh any derived UI such as storage usage
                     self.refreshModelStatus()
 
                 } catch {
@@ -430,16 +310,14 @@ final class LocalModelDownloadManager: ObservableObject {
                     self.downloadStates[model]?.isModelReady = false
                 }
 
-                // Clean up
                 self.downloadTasks.removeValue(forKey: model)
                 self.progressObservations[model]?.invalidate()
                 self.progressObservations.removeValue(forKey: model)
             }
         }
 
-        // Store task and observe progress
         self.downloadTasks[model] = task
-        self.progressObservations[model] = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
+        self.progressObservations[model] = task.progress.observe(\Progress.fractionCompleted) { [weak self] (progress: Progress, change: NSKeyValueObservedChange<Double>) in
             Task { @MainActor in
                 self?.downloadStates[model]?.downloadProgress = Float(progress.fractionCompleted)
             }

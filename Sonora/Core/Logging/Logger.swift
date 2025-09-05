@@ -2,7 +2,7 @@ import Foundation
 import os.log
 
 /// Log levels for filtering and prioritizing log messages
-public enum LogLevel: Int, CaseIterable, Comparable {
+public enum LogLevel: Int, CaseIterable, Comparable, Sendable {
     case verbose = 0
     case debug = 1
     case info = 2
@@ -47,7 +47,7 @@ public enum LogLevel: Int, CaseIterable, Comparable {
 }
 
 /// Categories for structured logging to group related log messages
-public enum LogCategory: String, CaseIterable {
+public enum LogCategory: String, CaseIterable, Sendable {
     case viewModel = "ViewModel"
     case useCase = "UseCase"
     case repository = "Repository"
@@ -78,40 +78,11 @@ public enum LogCategory: String, CaseIterable {
 }
 
 /// Log output destination configuration
-public enum LogDestination: Hashable {
+public enum LogDestination: Hashable, Sendable {
     case console
     case osLog
     case file(URL)
     case remote(URL)
-    
-    // Custom Hashable implementation
-    public func hash(into hasher: inout Hasher) {
-        switch self {
-        case .console:
-            hasher.combine("console")
-        case .osLog:
-            hasher.combine("osLog")
-        case .file(let url):
-            hasher.combine("file")
-            hasher.combine(url.absoluteString)
-        case .remote(let url):
-            hasher.combine("remote")
-            hasher.combine(url.absoluteString)
-        }
-    }
-    
-    public static func == (lhs: LogDestination, rhs: LogDestination) -> Bool {
-        switch(lhs, rhs) {
-        case(.console, .console), (.osLog, .osLog):
-            return true
-        case (.file(let lhsURL), .file(let rhsURL)):
-            return lhsURL == rhsURL
-        case (.remote(let lhsURL), .remote(let rhsURL)):
-            return lhsURL == rhsURL
-        default:
-            return false
-        }
-    }
 }
 
 /// Context information for error logging
@@ -171,12 +142,13 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     // MARK: - Privacy & Performance
     private let maxMessageLength = 1000
     private let sensitivePatterns: [NSRegularExpression] = {
-        let patterns = [
-            "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b", // Email
-            "\\b\\d{4}[- ]?\\d{4}[- ]?\\d{4}[- ]?\\d{4}\\b", // Credit card
-            "\\b\\d{3}-\\d{2}-\\d{4}\\b", // SSN
-            "Bearer\\s+[A-Za-z0-9\\-\\._~\\+\\/]+=*", // Bearer tokens
-            "api[_-]?key[\"']?\\s*[:=]\\s*[\"']?[A-Za-z0-9]{20,}", // API keys
+        // Use raw string literals to avoid double-escaping regex patterns
+        let patterns: [String] = [
+            #"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"#, // Email
+            #"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b"#,         // Credit card
+            #"\b\d{3}-\d{2}-\d{4}\b"#,                           // SSN
+            #"Bearer\s+[A-Za-z0-9\-_.~\+/]+=*"#,                   // Bearer tokens
+            #"api[_-]?key["']?\s*[:=]\s*["']?[A-Za-z0-9]{20,}"#,  // API keys
         ]
         return patterns.compactMap { try? NSRegularExpression(pattern: $0, options: .caseInsensitive) }
     }()
@@ -191,8 +163,8 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
         currentLogLevel = .verbose
         destinations = [.console, .osLog]
         #else
-        currentLogLevel = .warning  // Reduced from .info to reduce production noise
-        destinations = [.osLog]     // Remove console in production
+        currentLogLevel = .warning
+        destinations = [.osLog]
         #endif
     }
     
@@ -212,7 +184,10 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
         context: LogContext? = nil,
         error: Error? = nil
     ) {
-        guard level >= currentLogLevel else { return }
+        let logLevel = self.currentLogLevel
+        let destinations = self.destinations
+        
+        guard level >= logLevel else { return }
         
         queue.async {
             let sanitizedMessage = self.sanitizeMessage(message)
@@ -224,7 +199,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
                 error: error
             )
             
-            self.writeToDestinations(formattedMessage, level: level, category: category)
+            self.writeToDestinations(formattedMessage, level: level, category: category, destinations: destinations)
         }
     }
     
@@ -332,7 +307,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
         return sanitized
     }
     
-    private func writeToDestinations(_ message: String, level: LogLevel, category: LogCategory) {
+    private func writeToDestinations(_ message: String, level: LogLevel, category: LogCategory, destinations: Set<LogDestination>) {
         for destination in destinations {
             switch destination {
             case .console:
@@ -369,13 +344,11 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     
     private func sendToRemoteService(_ message: String, url: URL, level: LogLevel, category: LogCategory) {
         // Placeholder for remote logging implementation
-        // Could integrate with services like Sentry, LogRocket, etc.
     }
 }
 
 // MARK: - Performance Timer
 
-/// High-precision timer for measuring performance of operations
 public final class PerformanceTimer {
     private let startTime: CFAbsoluteTime
     private let operation: String
@@ -419,7 +392,6 @@ public final class PerformanceTimer {
 
 public extension LoggerProtocol {
     
-    /// Log audio-related operations
     func audio(
         _ message: String,
         level: LogLevel = .info,
@@ -429,7 +401,6 @@ public extension LoggerProtocol {
         log(level: level, category: .audio, message: message, context: context, error: error)
     }
     
-    /// Log transcription operations
     func transcription(
         _ message: String,
         level: LogLevel = .info,
@@ -439,7 +410,6 @@ public extension LoggerProtocol {
         log(level: level, category: .transcription, message: message, context: context, error: error)
     }
     
-    /// Log analysis operations
     func analysis(
         _ message: String,
         level: LogLevel = .info,
@@ -449,7 +419,6 @@ public extension LoggerProtocol {
         log(level: level, category: .analysis, message: message, context: context, error: error)
     }
     
-    /// Log repository operations
     func repository(
         _ message: String,
         level: LogLevel = .info,
@@ -459,7 +428,6 @@ public extension LoggerProtocol {
         log(level: level, category: .repository, message: message, context: context, error: error)
     }
     
-    /// Log use case execution
     func useCase(
         _ message: String,
         level: LogLevel = .info,
@@ -469,7 +437,6 @@ public extension LoggerProtocol {
         log(level: level, category: .useCase, message: message, context: context, error: error)
     }
     
-    /// Log view model operations
     func viewModel(
         _ message: String,
         level: LogLevel = .info,

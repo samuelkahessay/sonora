@@ -23,16 +23,16 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol, @unchecked Sendable {
         
         do {
             // Validate memo exists in repository
-            try await validateMemoExists(memo)
+            try validateMemoExists(memo)
             
             // Validate file system state
             try validateFileSystemState(memo)
             
             // Execute playback via repository
-            await memoRepository.playMemo(memo)
+            memoRepository.playMemo(memo)
             
             // Verify playback started successfully
-            try await verifyPlaybackStarted(memo)
+            try verifyPlaybackStarted(memo)
             
             print("✅ PlayMemoUseCase: Successfully initiated playback for memo: \(memo.filename)")
             

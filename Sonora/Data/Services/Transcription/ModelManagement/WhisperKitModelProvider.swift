@@ -157,7 +157,7 @@ final class WhisperKitModelProvider {
     func download(id: String, progress: @escaping @MainActor @Sendable (Double) -> Void) async throws {
         #if canImport(WhisperKit)
         logger.info("Starting WhisperKit download for model: \(id)")
-        await progress(0.0)
+        progress(0.0)
 
         do {
             // Proactively ensure common HuggingFace directories exist to avoid CFNetwork move errors
@@ -203,7 +203,7 @@ final class WhisperKitModelProvider {
                     progressCallback: { @Sendable progressObject in
                         let fractionCompleted = progressObject.fractionCompleted
                         Task { @MainActor in
-                            await progress(fractionCompleted)
+                            progress(fractionCompleted)
                         }
                         Logger.shared.debug("Download progress for \(id): \(Int(fractionCompleted * 100))%")
                     }
@@ -238,7 +238,7 @@ final class WhisperKitModelProvider {
             // Persist the exact folder path for future resolution
             savePersistedFolder(downloadedFolder, for: id)
             
-            await progress(1.0)
+            progress(1.0)
             logger.info("WhisperKitModelProvider: Successfully downloaded and validated model: \(id)")
 
         } catch let e as ModelDownloadError {

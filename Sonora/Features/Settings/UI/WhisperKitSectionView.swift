@@ -16,6 +16,8 @@ struct WhisperKitSectionView: View {
         downloadManager.getDownloadState(for: selectedModel.id)
     }
     
+    @State private var eventSubscriptionId: UUID? = nil
+
     var body: some View {
         SettingsCard {
             VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -151,12 +153,22 @@ struct WhisperKitSectionView: View {
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
             selectedModelId = UserDefaults.standard.selectedWhisperModel
         }
-        .onReceive(NotificationCenter.default.publisher(for: .whisperModelNormalized)) { note in
-            if let info = note.userInfo as? [String: String],
-               let prev = info["previous"], let norm = info["normalized"], prev != norm {
-                normalizationMessage = "Selected model changed to installed: \(WhisperModelInfo.model(withId: norm)?.displayName ?? norm)"
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { normalizationMessage = nil }
+        .onAppear {
+            // Subscribe to model normalization events
+            eventSubscriptionId = EventBus.shared.subscribe(to: AppEvent.self) { event in
+                switch event {
+                case .whisperModelNormalized(_, let normalized):
+                    let display = WhisperModelInfo.model(withId: normalized)?.displayName ?? normalized
+                    normalizationMessage = "Selected model changed to installed: \(display)"
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { normalizationMessage = nil }
+                default:
+                    break
+                }
             }
+        }
+        .onDisappear {
+            if let id = eventSubscriptionId { EventBus.shared.unsubscribe(id) }
+            eventSubscriptionId = nil
         }
         .sheet(isPresented: $showingModelSelection) { WhisperModelSelectionView() }
         .sheet(isPresented: $showingModelDiagnostics) { WhisperKitDiagnosticsView() }

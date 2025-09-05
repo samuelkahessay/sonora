@@ -79,6 +79,14 @@ public final class CalendarEventHandler {
         case .recordingStarted, .recordingCompleted:
             // Not relevant for calendar integration
             break
+        case .navigatePopToRootMemos:
+            break
+        case .navigateOpenMemoByID(memoId: _):
+            break
+        case .whisperModelNormalized(previous: _, normalized: _):
+            break
+        case .microphonePermissionStatusChanged(status: _):
+            break
         }
     }
     

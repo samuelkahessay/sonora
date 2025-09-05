@@ -28,7 +28,6 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol, @unchecked Sen
     }
     
     // MARK: - Use Case Execution
-    @MainActor
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<AnalysisData> {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
@@ -70,7 +69,7 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol, @unchecked Sen
                       context: LogContext(correlationId: correlationId, additionalInfo: ["cacheHit": false]))
         
         do {
-            // Call service to perform analysis
+            // Perform analysis (execute is not @MainActor)
             let analysisTimer = PerformanceTimer(operation: "Content Analysis API Call", category: .analysis)
             let result = try await analysisService.analyzeAnalysis(transcript: transcript)
             
@@ -91,9 +90,7 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol, @unchecked Sen
             
             // SAVE TO CACHE: Store result for future use
             let saveTimer = PerformanceTimer(operation: "Content Analysis Cache Save", category: .performance)
-            await MainActor.run {
-                analysisRepository.saveAnalysisResult(result, for: memoId, mode: .analysis)
-            }
+            await MainActor.run { analysisRepository.saveAnalysisResult(result, for: memoId, mode: .analysis) }
             _ = saveTimer.finish(additionalInfo: "Analysis cached successfully")
             
             logger.analysis("Content analysis cached successfully", 
@@ -101,9 +98,7 @@ final class AnalyzeContentUseCase: AnalyzeContentUseCaseProtocol, @unchecked Sen
             
             // Publish analysisCompleted event on main actor
             print("📡 AnalyzeContentUseCase: Publishing analysisCompleted event for memo \(memoId)")
-            await MainActor.run {
-                EventBus.shared.publish(.analysisCompleted(memoId: memoId, type: .analysis, result: result.data.summary))
-            }
+            await MainActor.run { EventBus.shared.publish(.analysisCompleted(memoId: memoId, type: .analysis, result: result.data.summary)) }
             
             return result
             

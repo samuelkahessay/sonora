@@ -84,33 +84,30 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
         
         logger.analysis("Starting parallel Distill analysis", context: context)
-        
-        // Register analysis operation
+
+        // Validate inputs early; avoid registering an op for invalid requests
+        guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw AnalysisError.emptyTranscript
+        }
+        guard transcript.count >= 10 else {
+            throw AnalysisError.transcriptTooShort
+        }
+
+        // CACHE FIRST: Skip coordinator entirely for cache hit
+        if let cachedResult = await MainActor.run(body: {
+            analysisRepository.getAnalysisResult(for: memoId, mode: .distill, responseType: DistillData.self)
+        }) {
+            logger.analysis("Found complete cached Distill analysis (no coordinator op)", level: .info, context: context)
+            return cachedResult
+        }
+
+        // Register analysis operation for the actual parallel run
         guard let operationId = await operationCoordinator.registerOperation(.analysis(memoId: memoId, analysisType: .distill)) else {
             logger.warning("Parallel Distill analysis rejected by operation coordinator", category: .analysis, context: context, error: nil)
             throw AnalysisError.systemBusy
         }
-        
+
         do {
-            // Validate inputs
-            guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                await operationCoordinator.failOperation(operationId, errorDescription: AnalysisError.emptyTranscript.errorDescription ?? "Empty transcript")
-                throw AnalysisError.emptyTranscript
-            }
-            
-            guard transcript.count >= 10 else {
-                await operationCoordinator.failOperation(operationId, errorDescription: AnalysisError.transcriptTooShort.errorDescription ?? "Transcript too short")
-                throw AnalysisError.transcriptTooShort
-            }
-            
-            // Check if complete distill result exists in cache
-            if let cachedResult = await MainActor.run(body: {
-                analysisRepository.getAnalysisResult(for: memoId, mode: .distill, responseType: DistillData.self)
-            }) {
-                logger.analysis("Found complete cached Distill analysis", level: .info, context: context)
-                await operationCoordinator.completeOperation(operationId)
-                return cachedResult
-            }
             
             // Execute parallel component analysis
             let result = try await executeParallelComponents(
