@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		0A555EC32E6A5175008F5486 /* LLM in Frameworks */ = {isa = PBXBuildFile; productRef = 0A555EC22E6A5175008F5486 /* LLM */; };
 		0A555EC52E6A5175008F5486 /* LLMMacros in Frameworks */ = {isa = PBXBuildFile; productRef = 0A555EC42E6A5175008F5486 /* LLMMacros */; };
-		0A633FA42E68BD9600E6AB88 /* Transformers in Frameworks */ = {isa = PBXBuildFile; productRef = 0A633FA32E68BD9600E6AB88 /* Transformers */; };
+		0A633FA42E68BD9600E6AB88 /* Transformers in Frameworks */ = {isa = PBXBuildFile; productRef = 0A633FA32E68BD9600E6AB88 /* Transformers */; settings = {ATTRIBUTES = (Required, ); }; };
 		0A875D9D2E600B7100245D4A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9C2E600B7100245D4A /* WidgetKit.framework */; };
 		0A875D9F2E600B7100245D4A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9E2E600B7100245D4A /* SwiftUI.framework */; };
 		0A875DAC2E600B7300245D4A /* SonoraLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0A875D9A2E600B7100245D4A /* SonoraLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -307,7 +307,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				IDETrustedMacroCommands = (
-					"LLM.LLMMacrosImplementation",
+					LLM.LLMMacrosImplementation,
 				);
 				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 2600;
@@ -594,8 +594,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				OTHER_SWIFT_FLAGS = "-skip-macro-validation";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.samuelkahessay.Sonora-TEST";
+				PRODUCT_BUNDLE_IDENTIFIER = com.samuelkahessay.Sonora;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -636,7 +635,6 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				OTHER_SWIFT_FLAGS = "-skip-macro-validation";
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelkahessay.Sonora;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
