@@ -1,43 +1,18 @@
 import Foundation
 import Combine
+import SwiftData
 
 @MainActor
 final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
-    private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private var analysisCache: [String: Any] = [:]
     private var analysisHistory: [UUID: [(mode: AnalysisMode, timestamp: Date)]] = [:]
     private let logger: any LoggerProtocol
-    
-    init(logger: any LoggerProtocol = Logger.shared) {
+    private let modelContext: ModelContext
+
+    init(context: ModelContext, logger: any LoggerProtocol = Logger.shared) {
+        self.modelContext = context
         self.logger = logger
-        logger.repository("AnalysisRepository initialized", 
-                        context: LogContext(additionalInfo: ["documentsPath": documentsPath.path]))
-    }
-    
-    private func analysisURL(for memoId: UUID, mode: AnalysisMode) -> URL {
-        let filename = "\(memoId.uuidString)_\(mode.rawValue)_analysis.json"
-        return documentsPath.appendingPathComponent("analysis").appendingPathComponent(filename)
-    }
-    
-    private func ensureAnalysisDirectory() {
-        let analysisDir = documentsPath.appendingPathComponent("analysis")
-        let exists = FileManager.default.fileExists(atPath: analysisDir.path)
-        
-        if !exists {
-            do {
-                try FileManager.default.createDirectory(at: analysisDir, withIntermediateDirectories: true)
-                logger.repository("Created analysis directory", 
-                                context: LogContext(additionalInfo: ["path": analysisDir.path]))
-            } catch {
-                logger.error("Failed to create analysis directory", 
-                           category: .repository, 
-                           context: LogContext(additionalInfo: ["path": analysisDir.path]), 
-                           error: error)
-            }
-        } else {
-            logger.debug("Analysis directory already exists", category: .repository, 
-                        context: LogContext(additionalInfo: ["path": analysisDir.path]))
-        }
+        logger.repository("AnalysisRepository initialized (SwiftData)", context: LogContext())
     }
     
     private func cacheKey(for memoId: UUID, mode: AnalysisMode) -> String {
@@ -46,63 +21,44 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
     
     func saveAnalysisResult<T: Codable>(_ result: AnalyzeEnvelope<T>, for memoId: UUID, mode: AnalysisMode) {
         let correlationId = UUID().uuidString
-        let context = LogContext(correlationId: correlationId, additionalInfo: [
+        let logCtx = LogContext(correlationId: correlationId, additionalInfo: [
             "memoId": memoId.uuidString,
             "mode": mode.rawValue,
             "operation": "save"
         ])
-        
+
         let saveTimer = PerformanceTimer(operation: "Analysis Save Operation", category: .repository)
-        
-        ensureAnalysisDirectory()
-        
-        let url = analysisURL(for: memoId, mode: mode)
+
         let key = cacheKey(for: memoId, mode: mode)
-        
-        logger.repository("Starting analysis save", context: context)
-        
+        logger.repository("Starting analysis save (SwiftData)", context: logCtx)
+
         do {
             let data = try JSONEncoder().encode(result)
-            
-            // Final guardrail: validate JSON structure before persisting
-            if !self.validateEnvelopeJSON(data: data, expectedMode: mode) {
-                logger.error("AnalysisRepository: Validation failed — refusing to persist analysis result", category: .repository, context: context, error: nil)
-                return
-            }
-            let dataSize = data.count
-            
-            try data.write(to: url)
-            logger.repository("Analysis data written to disk", 
-                            context: LogContext(correlationId: correlationId, additionalInfo: [
-                                "filePath": url.path,
-                                "fileSize": dataSize,
-                                "mode": mode.rawValue
-                            ]))
-            
+            // Insert a new model instance (support history)
+            let memoModel = try modelContext.fetch(FetchDescriptor<MemoModel>(predicate: #Predicate { $0.id == memoId })).first
+            let model = AnalysisResultModel(
+                id: UUID(),
+                mode: mode.rawValue,
+                summary: "",
+                keywords: [],
+                sentimentScore: nil,
+                timestamp: Date(),
+                payloadData: data,
+                memo: memoModel
+            )
+            modelContext.insert(model)
+            try modelContext.save()
+
             analysisCache[key] = result
-            logger.debug("Analysis cached in memory", category: .repository, context: context)
-            
             var history = analysisHistory[memoId] ?? []
-            history.append((mode: mode, timestamp: Date()))
+            history.append((mode: mode, timestamp: model.timestamp))
             analysisHistory[memoId] = history
-            
+
             _ = saveTimer.finish(additionalInfo: "Save completed successfully")
-            logger.repository("Analysis saved successfully", 
-                            level: .info,
-                            context: LogContext(correlationId: correlationId, additionalInfo: [
-                                "memoId": memoId.uuidString,
-                                "mode": mode.rawValue,
-                                "cached": true,
-                                "persisted": true,
-                                "fileSize": dataSize
-                            ]))
-            
+            logger.repository("Analysis saved successfully (SwiftData)", level: .info, context: logCtx)
         } catch {
             _ = saveTimer.finish(additionalInfo: "Save failed with error")
-            logger.error("Failed to save analysis result", 
-                       category: .repository, 
-                       context: context, 
-                       error: error)
+            logger.error("Failed to save analysis result (SwiftData)", category: .repository, context: logCtx, error: error)
         }
     }
 
@@ -178,60 +134,27 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             return cached
         }
         
-        logger.debug("Memory cache miss, checking disk", category: .repository, context: context)
-        
-        // Check disk persistence
-        let url = analysisURL(for: memoId, mode: mode)
-        let fileExists = FileManager.default.fileExists(atPath: url.path)
-        
-        guard fileExists else {
-            _ = loadTimer.finish(additionalInfo: "File does not exist")
-            logger.repository("No analysis file found on disk", 
-                            context: LogContext(correlationId: correlationId, additionalInfo: [
-                                "filePath": url.path,
-                                "mode": mode.rawValue
-                            ]))
-            return nil
-        }
-        
-        logger.debug("Analysis file found, loading from disk", category: .repository, 
-                    context: LogContext(correlationId: correlationId, additionalInfo: ["filePath": url.path]))
-        
+        logger.debug("Memory cache miss, checking SwiftData store", category: .repository, context: context)
+
         do {
-            let data = try Data(contentsOf: url)
-            let result = try JSONDecoder().decode(AnalyzeEnvelope<T>.self, from: data)
-            
-            // Cache in memory for future access
-            analysisCache[key] = result
-            
-            _ = loadTimer.finish(additionalInfo: "Disk load successful, cached in memory")
-            logger.repository("Analysis loaded from disk and cached in memory", 
-                            level: .info,
-                            context: LogContext(correlationId: correlationId, additionalInfo: [
-                                "memoId": memoId.uuidString,
-                                "mode": mode.rawValue,
-                                "cacheType": "disk",
-                                "fileSize": data.count,
-                                "latencyMs": result.latency_ms,
-                                "nowCachedInMemory": true
-                            ]))
-            return result
-            
+            let descriptor = FetchDescriptor<AnalysisResultModel>(
+                predicate: #Predicate { ($0.memo?.id == memoId) && ($0.mode == mode.rawValue) },
+                sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+            )
+            if let model = try modelContext.fetch(descriptor).first, let data = model.payloadData {
+                let result = try JSONDecoder().decode(AnalyzeEnvelope<T>.self, from: data)
+                analysisCache[key] = result
+                _ = loadTimer.finish(additionalInfo: "Store load successful, cached in memory")
+                logger.repository("Analysis loaded from SwiftData and cached", level: .info, context: context)
+                return result
+            } else {
+                _ = loadTimer.finish(additionalInfo: "No record found")
+                logger.repository("No analysis record found in SwiftData", context: context)
+                return nil
+            }
         } catch {
-            _ = loadTimer.finish(additionalInfo: "Disk load failed - decode error")
-            logger.error("Failed to load or decode analysis from disk", 
-                       category: .repository, 
-                       context: LogContext(correlationId: correlationId, additionalInfo: [
-                           "filePath": url.path,
-                           "mode": mode.rawValue
-                       ]), 
-                       error: error)
-            
-            // Remove corrupted file
-            try? FileManager.default.removeItem(at: url)
-            logger.warning("Removed corrupted analysis file", category: .repository, 
-                           context: LogContext(correlationId: correlationId, additionalInfo: ["filePath": url.path]), error: nil)
-            
+            _ = loadTimer.finish(additionalInfo: "Store load failed - decode error")
+            logger.error("Failed to load or decode analysis from SwiftData", category: .repository, context: context, error: error)
             return nil
         }
     }
@@ -243,28 +166,41 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             return true
         }
         
-        let url = analysisURL(for: memoId, mode: mode)
-        return FileManager.default.fileExists(atPath: url.path)
+        let descriptor = FetchDescriptor<AnalysisResultModel>(
+            predicate: #Predicate { ($0.memo?.id == memoId) && ($0.mode == mode.rawValue) }
+        )
+        return ((try? modelContext.fetch(descriptor))?.isEmpty == false)
     }
     
     func deleteAnalysisResults(for memoId: UUID) {
-        for mode in AnalysisMode.allCases {
-            deleteAnalysisResult(for: memoId, mode: mode)
+        do {
+            let descriptor = FetchDescriptor<AnalysisResultModel>(predicate: #Predicate { $0.memo?.id == memoId })
+            let items = try modelContext.fetch(descriptor)
+            for item in items { modelContext.delete(item) }
+            try modelContext.save()
+            analysisHistory.removeValue(forKey: memoId)
+            print("🗑️ AnalysisRepository: Deleted all analysis results for memo \(memoId)")
+        } catch {
+            logger.error("Failed to delete all analysis results", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error)
         }
-        analysisHistory.removeValue(forKey: memoId)
-        print("🗑️ AnalysisRepository: Deleted all analysis results for memo \(memoId)")
     }
     
     func deleteAnalysisResult(for memoId: UUID, mode: AnalysisMode) {
-        let url = analysisURL(for: memoId, mode: mode)
         let key = cacheKey(for: memoId, mode: mode)
-        
-        try? FileManager.default.removeItem(at: url)
-        analysisCache.removeValue(forKey: key)
-        
-        if var history = analysisHistory[memoId] {
-            history.removeAll { $0.mode == mode }
-            analysisHistory[memoId] = history.isEmpty ? nil : history
+        do {
+            let descriptor = FetchDescriptor<AnalysisResultModel>(
+                predicate: #Predicate { ($0.memo?.id == memoId) && ($0.mode == mode.rawValue) }
+            )
+            let items = try modelContext.fetch(descriptor)
+            for item in items { modelContext.delete(item) }
+            try modelContext.save()
+            analysisCache.removeValue(forKey: key)
+            if var history = analysisHistory[memoId] {
+                history.removeAll { $0.mode == mode }
+                analysisHistory[memoId] = history.isEmpty ? nil : history
+            }
+        } catch {
+            logger.error("Failed to delete analysis result", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "mode": mode.rawValue]), error: error)
         }
     }
     
@@ -276,9 +212,11 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             if let cached = analysisCache[key] {
                 results[mode] = cached
             } else {
-                let url = analysisURL(for: memoId, mode: mode)
-                if FileManager.default.fileExists(atPath: url.path) {
-                    results[mode] = "Available on disk"
+                let descriptor = FetchDescriptor<AnalysisResultModel>(
+                    predicate: #Predicate { ($0.memo?.id == memoId) && ($0.mode == mode.rawValue) }
+                )
+                if ((try? modelContext.fetch(descriptor))?.isEmpty == false) {
+                    results[mode] = "Available in store"
                 }
             }
         }
@@ -292,11 +230,14 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
         print("🧹 AnalysisRepository: Cleared analysis cache")
     }
     
-    func getCacheSize() -> Int {
-        return analysisCache.count
-    }
+    func getCacheSize() -> Int { analysisCache.count }
     
     func getAnalysisHistory(for memoId: UUID) -> [(mode: AnalysisMode, timestamp: Date)] {
-        return analysisHistory[memoId] ?? []
+        if let existing = analysisHistory[memoId] { return existing }
+        // Derive from store
+        if let items = try? modelContext.fetch(FetchDescriptor<AnalysisResultModel>(predicate: #Predicate { $0.memo?.id == memoId })) {
+            return items.map { (mode: AnalysisMode(rawValue: $0.mode) ?? .analysis, timestamp: $0.timestamp) }
+        }
+        return []
     }
 }

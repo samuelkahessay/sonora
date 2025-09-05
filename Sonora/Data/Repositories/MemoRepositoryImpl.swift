@@ -1,42 +1,9 @@
 import Foundation
 import Combine
 import AVFoundation
+import SwiftData
 
-// MARK: - MemoFileMetadata Structure
-struct MemoFileMetadata: Codable {
-    let id: String
-    let filename: String
-    let createdAt: Date
-    let audioPath: String // relative path to audio file
-    let fileSize: Int64?
-    let duration: TimeInterval?
-    var customTitle: String?
-    var shareableFileName: String? // User-friendly filename for sharing
-    
-    init(memo: Memo, audioPath: String, fileSize: Int64? = nil, duration: TimeInterval? = nil) {
-        self.id = memo.id.uuidString
-        self.filename = memo.filename
-        self.createdAt = memo.creationDate
-        self.audioPath = audioPath
-        self.fileSize = fileSize
-        self.duration = duration
-        self.customTitle = memo.customTitle
-        self.shareableFileName = memo.customTitle != nil 
-            ? FileNameSanitizer.sanitize(memo.customTitle!) 
-            : nil
-    }
-}
-
-// MARK: - MemoIndex Structure
-struct MemoIndex: Codable {
-    var memos: [String] // Array of memo IDs
-    var lastUpdated: Date
-    
-    init() {
-        self.memos = []
-        self.lastUpdated = Date()
-    }
-}
+// Previous file-based metadata/index removed in SwiftData migration
 
 @MainActor
 final class MemoRepositoryImpl: ObservableObject, MemoRepository {
@@ -48,13 +15,13 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     
     // Transcription is handled via dedicated repository and use cases
     private let transcriptionRepository: any TranscriptionRepository
+    private let context: ModelContext
     
     private var player: AVAudioPlayer?
     
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private let memosDirectoryPath: URL
-    private let indexPath: URL
-    private let metadataManager = MemoMetadataManager()
+    // Legacy sidecar metadata removed with SwiftData migration
     
     // MARK: - Transcription Use Cases
     private let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
@@ -63,41 +30,21 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     
     // MARK: - Initialization
     init(
+        context: ModelContext,
         transcriptionRepository: any TranscriptionRepository,
         startTranscriptionUseCase: StartTranscriptionUseCaseProtocol,
         getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
         retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
     ) {
+        self.context = context
         self.transcriptionRepository = transcriptionRepository
         self.startTranscriptionUseCase = startTranscriptionUseCase
         self.getTranscriptionStateUseCase = getTranscriptionStateUseCase
         self.retryTranscriptionUseCase = retryTranscriptionUseCase
 
         self.memosDirectoryPath = documentsPath.appendingPathComponent("Memos")
-        self.indexPath = memosDirectoryPath.appendingPathComponent("index.json")
         createDirectoriesIfNeeded()
         loadMemos()
-    }
-
-    /// Convenience initializer for tests or simple composition (no DIContainer usage)
-    convenience init() {
-        let trRepo = TranscriptionRepositoryImpl()
-        let api = TranscriptionService()
-        let start = StartTranscriptionUseCase(
-            transcriptionRepository: trRepo,
-            transcriptionAPI: api,
-            eventBus: EventBus.shared,
-            operationCoordinator: OperationCoordinator.shared,
-            moderationService: ModerationService()
-        )
-        let get = GetTranscriptionStateUseCase(transcriptionRepository: trRepo)
-        let retry = RetryTranscriptionUseCase(transcriptionRepository: trRepo, transcriptionAPI: api)
-        self.init(
-            transcriptionRepository: trRepo,
-            startTranscriptionUseCase: start,
-            getTranscriptionStateUseCase: get,
-            retryTranscriptionUseCase: retry
-        )
     }
     
     // MARK: - Directory Management
@@ -120,9 +67,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         return memoDirectoryPath(for: memoId).appendingPathComponent("audio.m4a")
     }
     
-    private func metadataFilePath(for memoId: UUID) -> URL {
-        return memoDirectoryPath(for: memoId).appendingPathComponent("memo.json")
-    }
+    // SwiftData-backed: no sidecar metadata file
     
     // MARK: - Playback
     func playMemo(_ memo: Memo) {
@@ -175,110 +120,68 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         print("⏹️ MemoRepository: Stopped playback")
     }
     
-    // MARK: - Atomic File Operations
-    private func atomicWrite<T: Codable>(_ data: T, to url: URL) throws {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        
-        let jsonData = try encoder.encode(data)
-        try jsonData.write(to: url, options: .atomic)
-    }
-    
-    private func atomicRead<T: Codable>(_ type: T.Type, from url: URL) throws -> T {
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            throw MemoRepositoryError.fileNotFound(url.path)
-        }
-        
-        let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        
-        return try decoder.decode(type, from: data)
-    }
+    // MARK: - File Helpers
     
     private func fileExists(at url: URL) -> Bool {
         return FileManager.default.fileExists(atPath: url.path)
     }
     
-    // MARK: - Index Management
-    private func loadIndex() -> MemoIndex {
-        do {
-            return try atomicRead(MemoIndex.self, from: indexPath)
-        } catch {
-            print("📋 MemoRepository: No existing index found, creating new one")
-            return MemoIndex()
+    // MARK: - SwiftData Helpers
+    private func fetchMemoModel(id: UUID) -> MemoModel? {
+        let descriptor = FetchDescriptor<MemoModel>(predicate: #Predicate { $0.id == id })
+        return (try? context.fetch(descriptor))?.first
+    }
+
+    private func mapToDomain(_ model: MemoModel) -> Memo {
+        let url = URL(fileURLWithPath: model.audioFilePath)
+        // Transcription status is sourced from TranscriptionRepository separately
+        let status = mapToDomainStatus(transcriptionRepository.getTranscriptionState(for: model.id))
+        return Memo(
+            id: model.id,
+            filename: model.filename,
+            fileURL: url,
+            creationDate: model.creationDate,
+            transcriptionStatus: status,
+            analysisResults: [],
+            customTitle: model.customTitle,
+            shareableFileName: model.shareableFileName
+        )
+    }
+
+    private func mapToDomainStatus(_ state: TranscriptionState) -> DomainTranscriptionStatus {
+        switch state {
+        case .notStarted: return .notStarted
+        case .inProgress: return .inProgress
+        case .completed(let text): return .completed(text)
+        case .failed(let error): return .failed(error)
         }
     }
-    
-    private func saveIndex(_ index: MemoIndex) {
-        do {
-            try atomicWrite(index, to: indexPath)
-            print("💾 MemoRepository: Index saved with \(index.memos.count) memos")
-        } catch {
-            print("❌ MemoRepository: Failed to save index: \(error)")
+
+    private func mapStateStringToTranscriptionState(_ status: String, text: String?) -> TranscriptionState {
+        switch status {
+        case "completed": return .completed(text ?? "")
+        case "inProgress": return .inProgress
+        case "failed": return .failed(text ?? "")
+        default: return .notStarted
         }
     }
     
     func loadMemos() {
-        var loadedMemos: [Memo] = []
-        let index = loadIndex()
-        
-        print("📋 MemoRepository: Loading \(index.memos.count) memos from index")
-        
-        for memoIdString in index.memos {
-            guard let memoId = UUID(uuidString: memoIdString) else {
-                print("⚠️ MemoRepository: Invalid memo ID: \(memoIdString)")
-                continue
-            }
-            
-            do {
-                let metadataPath = metadataFilePath(for: memoId)
-                let audioPath = audioFilePath(for: memoId)
-                
-                // Check if both files exist
-                guard fileExists(at: metadataPath), fileExists(at: audioPath) else {
-                    print("⚠️ MemoRepository: Missing files for memo \(memoId), skipping")
-                    continue
-                }
-                
-                let metadata = try atomicRead(MemoFileMetadata.self, from: metadataPath)
-                
-                // Create memo with the saved ID to ensure consistency
-                let memo = Memo(
-                    id: memoId,  // Use the ID from the index/filename, which matches metadata.id
-                    filename: metadata.filename,
-                    fileURL: audioPath,
-                    creationDate: metadata.createdAt,
-                    transcriptionStatus: .notStarted,
-                    analysisResults: [],
-                    customTitle: metadata.customTitle,
-                    shareableFileName: metadata.shareableFileName
-                )
-                
-                // Verify memo ID matches metadata (should always be true now)
-                if memo.id.uuidString == metadata.id {
-                    loadedMemos.append(memo)
-                    print("✅ MemoRepository: Successfully loaded memo \(metadata.filename) with ID \(memoId)")
-                } else {
-                    print("⚠️ MemoRepository: ID mismatch for memo \(metadata.filename) - This should not happen!")
-                }
-                
-            } catch {
-                print("❌ MemoRepository: Failed to load memo \(memoId): \(error)")
-            }
+        do {
+            let descriptor = FetchDescriptor<MemoModel>(sortBy: [SortDescriptor(\.creationDate, order: .reverse)])
+            let models = try context.fetch(descriptor)
+            self.memos = models.map(mapToDomain)
+            print("✅ MemoRepository: Loaded \(memos.count) memos from SwiftData")
+        } catch {
+            print("❌ MemoRepository: Failed to fetch memos from SwiftData: \(error)")
+            self.memos = []
         }
-        
-        let sortedMemos = loadedMemos.sorted { $0.creationDate > $1.creationDate }
-        print("✅ MemoRepository: Successfully loaded \(sortedMemos.count) memos")
-        self.memos = sortedMemos
     }
     
     func saveMemo(_ memo: Memo) {
         do {
             let memoDirectoryPath = memoDirectoryPath(for: memo.id)
             let audioDestination = audioFilePath(for: memo.id)
-            let metadataPath = metadataFilePath(for: memo.id)
             
             // Create memo directory
             try FileManager.default.createDirectory(at: memoDirectoryPath, 
@@ -311,24 +214,28 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 }
             }()
             
-            // Create metadata
-            let metadata = MemoFileMetadata(
-                memo: memo,
-                audioPath: "audio.m4a",
-                fileSize: fileSize,
-                duration: duration.isFinite ? duration : nil
-            )
-            
-            // Save metadata atomically
-            try atomicWrite(metadata, to: metadataPath)
-            
-            // Update index
-            var index = loadIndex()
-            if !index.memos.contains(memo.id.uuidString) {
-                index.memos.append(memo.id.uuidString)
-                index.lastUpdated = Date()
-                saveIndex(index)
+            // Upsert SwiftData model
+            if let model = fetchMemoModel(id: memo.id) {
+                model.filename = memo.filename
+                model.audioFilePath = audioDestination.path
+                model.customTitle = memo.customTitle
+                model.shareableFileName = memo.shareableFileName
+                model.duration = duration.isFinite ? duration : nil
+                model.creationDate = memo.creationDate
+            } else {
+                let shareName = memo.customTitle != nil ? FileNameSanitizer.sanitize(memo.customTitle!) : nil
+                let model = MemoModel(
+                    id: memo.id,
+                    creationDate: memo.creationDate,
+                    customTitle: memo.customTitle,
+                    filename: memo.filename,
+                    audioFilePath: audioDestination.path,
+                    duration: duration.isFinite ? duration : nil,
+                    shareableFileName: shareName
+                )
+                context.insert(model)
             }
+            try context.save()
             
             // Update in-memory list
             if !memos.contains(where: { $0.id == memo.id }) {
@@ -348,7 +255,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 print("📝 MemoRepository: Added memo \(savedMemo.filename) to in-memory list with ID \(savedMemo.id)")
             }
             
-            print("✅ MemoRepository: Successfully saved memo \(memo.filename)")
+            print("✅ MemoRepository: Successfully saved memo \(memo.filename) [SwiftData]")
             
         } catch {
             print("❌ MemoRepository: Failed to save memo \(memo.filename): \(error)")
@@ -369,17 +276,16 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 print("🗑️ MemoRepository: Deleted memo directory for \(memo.filename)")
             }
             
-            // Update index
-            var index = loadIndex()
-            index.memos.removeAll { $0 == memo.id.uuidString }
-            index.lastUpdated = Date()
-            saveIndex(index)
+            // Delete SwiftData model (cascades to related data)
+            if let model = fetchMemoModel(id: memo.id) {
+                context.delete(model)
+                try context.save()
+            }
             
             // Update in-memory list
             memos.removeAll { $0.id == memo.id }
             
-            // Clean up old metadata manager entry
-            metadataManager.deleteMetadata(for: memo.fileURL)
+            // No legacy sidecar metadata to clean up in SwiftData migration
             
             print("✅ MemoRepository: Successfully deleted memo \(memo.filename)")
             
@@ -389,11 +295,14 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
     
     func getMemo(by id: UUID) -> Memo? {
-        return memos.first { $0.id == id }
+        if let model = fetchMemoModel(id: id) { return mapToDomain(model) }
+        return nil
     }
     
     func getMemo(by url: URL) -> Memo? {
-        return memos.first { $0.fileURL == url }
+        let descriptor = FetchDescriptor<MemoModel>(predicate: #Predicate { $0.audioFilePath == url.path })
+        if let model = try? context.fetch(descriptor).first { return mapToDomain(model) }
+        return nil
     }
     
     func handleNewRecording(at url: URL) {
@@ -460,70 +369,27 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
     
     func renameMemo(_ memo: Memo, newTitle: String) {
-        do {
-            let metadataPath = metadataFilePath(for: memo.id)
-            
-            // Load existing metadata
-            guard fileExists(at: metadataPath) else {
-                print("⚠️ MemoRepository: No metadata file found for memo \(memo.filename)")
-                return
-            }
-            
-            var metadata = try atomicRead(MemoFileMetadata.self, from: metadataPath)
-            
-            // Update custom title and shareable filename in metadata
-            let sanitizedTitle = newTitle.isEmpty ? nil : newTitle
-            metadata.customTitle = sanitizedTitle
-            metadata.shareableFileName = sanitizedTitle != nil 
-                ? FileNameSanitizer.sanitize(sanitizedTitle!)
-                : nil
-            
-            // Save updated metadata
-            try atomicWrite(metadata, to: metadataPath)
-            
-            // Update in-memory memo with both custom title and shareable filename
-            if let index = memos.firstIndex(where: { $0.id == memo.id }) {
-                let updatedMemo = memos[index].withCustomTitle(sanitizedTitle)
-                memos[index] = updatedMemo
-                
-                // Trigger UI update
-                objectWillChange.send()
-                
-                let displayText = sanitizedTitle ?? "default"
-                let shareableText = metadata.shareableFileName ?? "default filename"
-                print("✅ MemoRepository: Successfully renamed memo to '\(displayText)' with shareable filename '\(shareableText)'")
-            }
-            
-        } catch {
-            print("❌ MemoRepository: Failed to rename memo \(memo.filename): \(error)")
+        let sanitizedTitle = newTitle.isEmpty ? nil : newTitle
+        if let model = fetchMemoModel(id: memo.id) {
+            model.customTitle = sanitizedTitle
+            model.shareableFileName = sanitizedTitle != nil ? FileNameSanitizer.sanitize(sanitizedTitle!) : nil
+            do { try context.save() } catch { print("❌ MemoRepository: Failed to rename memo in SwiftData: \(error)") }
+        }
+        // Update in-memory memo as well
+        if let index = memos.firstIndex(where: { $0.id == memo.id }) {
+            let updatedMemo = memos[index].withCustomTitle(sanitizedTitle)
+            memos[index] = updatedMemo
+            objectWillChange.send()
+            let displayText = sanitizedTitle ?? "default"
+            let shareableText = sanitizedTitle != nil ? FileNameSanitizer.sanitize(sanitizedTitle!) : "default filename"
+            print("✅ MemoRepository: Successfully renamed memo to '\(displayText)' with shareable filename '\(shareableText)'")
         }
     }
     
     func updateMemoMetadata(_ memo: Memo, metadata: [String: Any]) {
-        do {
-            let metadataPath = metadataFilePath(for: memo.id)
-            
-            // Load existing metadata
-            guard fileExists(at: metadataPath) else {
-                print("⚠️ MemoRepository: No metadata file found for memo \(memo.filename)")
-                return
-            }
-            
-            let existingMetadata = try atomicRead(MemoFileMetadata.self, from: metadataPath)
-            
-            // Update specific fields if provided
-            // For now, we'll just log the update since MemoFileMetadata is a struct
-            // In a more complex implementation, we could extend MemoFileMetadata to include additional fields
-            
-            print("📝 MemoRepository: Metadata update requested for memo \(memo.filename)")
-            print("📝 MemoRepository: Update data: \(metadata)")
-            
-            // Re-save metadata to update lastUpdated timestamp
-            try atomicWrite(existingMetadata, to: metadataPath)
-            
-        } catch {
-            print("❌ MemoRepository: Failed to update metadata for memo \(memo.filename): \(error)")
-        }
+        // SwiftData-backed repo: interpret known keys here if needed.
+        // For now, log and ignore to maintain signature.
+        print("📝 MemoRepository: Metadata update requested (ignored in SwiftData migration) for memo \(memo.filename) — data: \(metadata)")
     }
     
     // MARK: - Transcription Integration (via use cases)

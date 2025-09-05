@@ -6,18 +6,33 @@
 //
 
 import SwiftUI
+import SwiftData
 import UIKit
 import CoreSpotlight
 
 @main
 struct SonoraApp: App {
     @StateObject private var themeManager = ThemeManager()
+    private let modelContainer: ModelContainer
     init() {
         // Configure DI and register event handlers before any views initialize
         DIContainer.shared.configure()
         print("🚀 SonoraApp: DIContainer configured with shared services (App init)")
+        // Build SwiftData container early and inject ModelContext into DI
+        let schema = Schema([
+            MemoModel.self,
+            TranscriptionModel.self,
+            AnalysisResultModel.self
+        ])
+        do {
+            self.modelContainer = try ModelContainer(for: schema)
+        } catch {
+            fatalError("Failed to create SwiftData ModelContainer: \(error)")
+        }
+        // Inject ModelContext for repositories/services
+        DIContainer.shared.setModelContext(ModelContext(modelContainer))
+        // Register event handlers now that persistence is ready
         DIContainer.shared.eventHandlerRegistry().registerAllHandlers()
-        print("🎯 SonoraApp: Event handlers registered (App init)")
         
         // Initialize onboarding configuration
         _ = OnboardingConfiguration.shared
@@ -110,5 +125,6 @@ struct SonoraApp: App {
                     }
                 }
         }
+        .modelContainer(modelContainer)
     }
 }

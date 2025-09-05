@@ -1,172 +1,185 @@
 import Foundation
 import Combine
+import SwiftData
 
 @MainActor
 final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionRepository {
     @Published var transcriptionStates: [String: TranscriptionState] = [:]
-    
-    private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    private let metadataManager = MemoMetadataManager()
-    private let logger: any LoggerProtocol = Logger.shared
-    
-    private func transcriptionURL(for memoId: UUID) -> URL {
-        let filename = "\(memoId.uuidString)_transcription.json"
-        return documentsPath.appendingPathComponent("transcriptions").appendingPathComponent(filename)
+
+    private let context: ModelContext
+    private let logger: any LoggerProtocol
+
+    init(context: ModelContext, logger: any LoggerProtocol = Logger.shared) {
+        self.context = context
+        self.logger = logger
     }
-    
-    private func ensureTranscriptionDirectory() {
-        let transcriptionDir = documentsPath.appendingPathComponent("transcriptions")
-        if !FileManager.default.fileExists(atPath: transcriptionDir.path) {
-            try? FileManager.default.createDirectory(at: transcriptionDir, withIntermediateDirectories: true)
+
+    private func memoIdKey(for memoId: UUID) -> String { memoId.uuidString }
+
+    private func fetchMemoModel(id: UUID) -> MemoModel? {
+        let descriptor = FetchDescriptor<MemoModel>(predicate: #Predicate { $0.id == id }, sortBy: [])
+        return (try? context.fetch(descriptor))?.first
+    }
+
+    private func fetchTranscriptionModel(for memoId: UUID) -> TranscriptionModel? {
+        // Prefer by relationship
+        if let model = (try? context.fetch(FetchDescriptor<TranscriptionModel>(predicate: #Predicate { $0.memo?.id == memoId })))?.first {
+            return model
+        }
+        // Fallback by matching id to memoId (we may set it like that)
+        if let model = (try? context.fetch(FetchDescriptor<TranscriptionModel>(predicate: #Predicate { $0.id == memoId })))?.first {
+            return model
+        }
+        return nil
+    }
+
+    private func mapStateToModelFields(_ state: TranscriptionState) -> (status: String, text: String?) {
+        switch state {
+        case .notStarted: return ("notStarted", nil)
+        case .inProgress: return ("inProgress", nil)
+        case .completed(let text): return ("completed", text)
+        case .failed(let error): return ("failed", error)
         }
     }
 
-    private func metadataURL(for memoId: UUID) -> URL {
-        let dir = documentsPath.appendingPathComponent("transcriptions").appendingPathComponent("meta", isDirectory: true)
-        if !FileManager.default.fileExists(atPath: dir.path) {
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    private func mapModelToState(_ model: TranscriptionModel) -> TranscriptionState {
+        switch model.status {
+        case "completed":
+            return .completed(model.fullTranscript)
+        case "inProgress":
+            return .inProgress
+        case "failed":
+            return .failed(model.fullTranscript)
+        default:
+            return .notStarted
         }
-        return dir.appendingPathComponent("\(memoId.uuidString).json")
     }
-    
-    private func memoIdKey(for memoId: UUID) -> String {
-        return memoId.uuidString
-    }
-    
+
     func saveTranscriptionState(_ state: TranscriptionState, for memoId: UUID) {
         let key = memoIdKey(for: memoId)
         transcriptionStates[key] = state
-        
-        ensureTranscriptionDirectory()
-        let url = transcriptionURL(for: memoId)
-        
-        let transcriptionData = TranscriptionData(
-            memoId: memoId,
-            state: state,
-            text: state.text,
-            lastUpdated: Date()
-        )
-        
-        do {
-            let data = try JSONEncoder().encode(transcriptionData)
-            try data.write(to: url)
-            logger.debug("Saved transcription state \(state.statusText) for memo", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
-        } catch {
-            logger.error("Failed to save transcription state", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error)
+
+        let now = Date()
+        if let model = fetchTranscriptionModel(for: memoId) {
+            let mapped = mapStateToModelFields(state)
+            model.status = mapped.status
+            model.fullTranscript = mapped.text ?? model.fullTranscript
+            model.lastUpdated = now
+            do { try context.save() } catch { logger.error("Failed to save transcription model", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error) }
+            logger.debug("Updated transcription state in SwiftData", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "status": model.status]))
+            return
         }
+
+        // Create if not exists
+        let mapped = mapStateToModelFields(state)
+        let trans = TranscriptionModel(
+            id: memoId,
+            status: mapped.status,
+            language: "",
+            fullTranscript: mapped.text ?? "",
+            lastUpdated: now
+        )
+        if let memoModel = fetchMemoModel(id: memoId) { trans.memo = memoModel }
+        context.insert(trans)
+        do { try context.save() } catch { logger.error("Failed to insert transcription model", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error) }
+        logger.debug("Inserted transcription state in SwiftData", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "status": trans.status]))
     }
-    
+
     func getTranscriptionState(for memoId: UUID) -> TranscriptionState {
         let key = memoIdKey(for: memoId)
-        
-        if let cached = transcriptionStates[key] {
-            logger.debug("Found cached transcription state", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "state": cached.statusText]))
-            return cached
-        }
-        
-        let url = transcriptionURL(for: memoId)
-        guard FileManager.default.fileExists(atPath: url.path),
-              let data = try? Data(contentsOf: url),
-              let transcriptionData = try? JSONDecoder().decode(TranscriptionData.self, from: data) else {
-            logger.debug("No saved transcription found", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
+        if let cached = transcriptionStates[key] { return cached }
+
+        guard let model = fetchTranscriptionModel(for: memoId) else {
             transcriptionStates[key] = .notStarted
             return .notStarted
         }
-        
-        transcriptionStates[key] = transcriptionData.state
-        logger.debug("Loaded transcription state from disk", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "state": transcriptionData.state.statusText]))
-        return transcriptionData.state
+        let state = mapModelToState(model)
+        transcriptionStates[key] = state
+        return state
     }
-    
+
     func deleteTranscriptionData(for memoId: UUID) {
         let key = memoIdKey(for: memoId)
-        let url = transcriptionURL(for: memoId)
-        
         transcriptionStates.removeValue(forKey: key)
-        try? FileManager.default.removeItem(at: url)
-        
-        logger.info("Deleted transcription data for memo", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
+        if let model = fetchTranscriptionModel(for: memoId) {
+            context.delete(model)
+            do { try context.save() } catch { logger.error("Failed to delete transcription model", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error) }
+        }
+        logger.info("Deleted transcription data for memo (SwiftData)", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
     }
-    
+
     func hasTranscriptionData(for memoId: UUID) -> Bool {
         let key = memoIdKey(for: memoId)
-        
-        if transcriptionStates[key] != nil {
-            return true
-        }
-        
-        let url = transcriptionURL(for: memoId)
-        return FileManager.default.fileExists(atPath: url.path)
+        if transcriptionStates[key] != nil { return true }
+        return fetchTranscriptionModel(for: memoId) != nil
     }
-    
+
     func getTranscriptionText(for memoId: UUID) -> String? {
         let state = getTranscriptionState(for: memoId)
         return state.text
     }
-    
-    func saveTranscriptionText(_ text: String, for memoId: UUID) {
-        let state = TranscriptionState.completed(text)
-        saveTranscriptionState(state, for: memoId)
-    }
-    
-    func getTranscriptionMetadata(for memoId: UUID) -> TranscriptionMetadata? {
-        // Prefer separate metadata file if available
-        let metaURL = metadataURL(for: memoId)
-        if FileManager.default.fileExists(atPath: metaURL.path),
-           let data = try? Data(contentsOf: metaURL),
-           let obj = try? JSONDecoder().decode(TranscriptionMetadata.self, from: data) {
-            return obj
-        }
 
-        // Fallback: derive minimal metadata from transcription file
-        let url = transcriptionURL(for: memoId)
-        guard FileManager.default.fileExists(atPath: url.path),
-              let data = try? Data(contentsOf: url),
-              let transcriptionData = try? JSONDecoder().decode(TranscriptionData.self, from: data) else {
-            return nil
+    func saveTranscriptionText(_ text: String, for memoId: UUID) {
+        saveTranscriptionState(.completed(text), for: memoId)
+    }
+
+    func getTranscriptionMetadata(for memoId: UUID) -> TranscriptionMetadata? {
+        guard let model = fetchTranscriptionModel(for: memoId) else { return nil }
+        if let data = model.metadataData, let meta = try? JSONDecoder().decode(TranscriptionMetadata.self, from: data) {
+            return meta
         }
+        // Fallback derive
+        let state = mapModelToState(model)
         return TranscriptionMetadata(
-            memoId: transcriptionData.memoId,
-            state: transcriptionData.state.statusText,
-            text: transcriptionData.text ?? "",
-            lastUpdated: transcriptionData.lastUpdated
+            memoId: memoId,
+            state: state.statusText,
+            text: state.text,
+            lastUpdated: model.lastUpdated,
+            detectedLanguage: model.language
         )
     }
-    
+
     func saveTranscriptionMetadata(_ metadata: TranscriptionMetadata, for memoId: UUID) {
-        let url = metadataURL(for: memoId)
-        do {
-            let existing = getTranscriptionMetadata(for: memoId)
-            let merged = existing?.merging(metadata) ?? metadata
-            let data = try JSONEncoder().encode(merged)
-            try data.write(to: url)
-            logger.debug("Saved transcription metadata", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "file": url.lastPathComponent]))
-        } catch {
-            logger.error("Failed to save transcription metadata", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error)
+        let existing = getTranscriptionMetadata(for: memoId)
+        let merged = existing?.merging(metadata) ?? metadata
+        let data = try? JSONEncoder().encode(merged)
+        let now = Date()
+        if let model = fetchTranscriptionModel(for: memoId) {
+            model.metadataData = data
+            if let lang = merged.detectedLanguage { model.language = lang }
+            model.lastUpdated = now
+            do { try context.save() } catch { logger.error("Failed to update transcription metadata", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error) }
+            return
         }
+        let trans = TranscriptionModel(
+            id: memoId,
+            status: "notStarted",
+            language: merged.detectedLanguage ?? "",
+            fullTranscript: merged.text ?? "",
+            lastUpdated: now,
+            metadataData: data
+        )
+        if let memoModel = fetchMemoModel(id: memoId) { trans.memo = memoModel }
+        context.insert(trans)
+        do { try context.save() } catch { logger.error("Failed to insert transcription metadata", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error) }
     }
-    
+
     func clearTranscriptionCache() {
         transcriptionStates.removeAll()
         logger.debug("Cleared transcription cache", category: .repository, context: LogContext())
     }
-    
+
     func getAllTranscriptionStates() -> [UUID: TranscriptionState] {
         var states: [UUID: TranscriptionState] = [:]
-        
-        for (key, state) in transcriptionStates {
-            if let uuid = UUID(uuidString: key) {
-                states[uuid] = state
+        // Include cached
+        for (key, state) in transcriptionStates { if let uuid = UUID(uuidString: key) { states[uuid] = state } }
+        // Fetch from store
+        if let models = try? context.fetch(FetchDescriptor<TranscriptionModel>()) {
+            for model in models {
+                let id = model.memo?.id ?? model.id
+                states[id] = mapModelToState(model)
             }
         }
-        
         return states
     }
-}
-
-struct TranscriptionData: Codable {
-    let memoId: UUID
-    let state: TranscriptionState
-    let text: String?
-    let lastUpdated: Date
 }

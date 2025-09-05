@@ -6,8 +6,10 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
+    @SwiftUI.Environment(\.modelContext) private var modelContext
     @State private var selectedTab: Int = 0
     @StateObject private var onboardingConfiguration = OnboardingConfiguration.shared
     

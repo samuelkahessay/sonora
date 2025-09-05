@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftData
 
 // Simple dependency registration container
 typealias ResolverType = DIContainer
@@ -40,6 +41,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _moderationService: (any ModerationServiceProtocol)?
     private var _spotlightIndexer: (any SpotlightIndexing)?
     private var _whisperKitModelProvider: WhisperKitModelProvider?
+    private var _modelContext: ModelContext?
     
     // MARK: - Initialization
     private init() {
@@ -156,8 +158,7 @@ final class DIContainer: ObservableObject, Resolver {
         // Initialize core infrastructure
         self._logger = logger ?? Logger.shared
         self._eventBus = EventBus.shared
-        self._transcriptionRepository = TranscriptionRepositoryImpl()
-        self._analysisRepository = AnalysisRepositoryImpl()
+        // Persistence-backed repositories are initialized once ModelContext is injected
         
         // Initialize services from registrations
         self._backgroundAudioService = resolve(BackgroundAudioService.self)!
@@ -179,46 +180,12 @@ final class DIContainer: ObservableObject, Resolver {
         // Initialize Event Handler Registry with shared EventBus (via protocol)
         self._eventHandlerRegistry = EventHandlerRegistry.shared
         
-        // Initialize MemoRepository with Use Case dependencies
-        guard let trRepo = _transcriptionRepository, let trFactory = _transcriptionServiceFactory else {
-            fatalError("DIContainer not fully configured: missing transcription dependencies")
-        }
-        
-        // Create transcription service from factory
-        let transcriptionService = trFactory.createTranscriptionService()
-        
-        let startTranscriptionUseCase = StartTranscriptionUseCase(
-            transcriptionRepository: trRepo,
-            transcriptionAPI: transcriptionService,
-            eventBus: self._eventBus!,
-            operationCoordinator: self._operationCoordinator,
-            moderationService: self._moderationService!
-        )
-        let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(
-            transcriptionRepository: trRepo
-        )
-        let retryTranscriptionUseCase = RetryTranscriptionUseCase(
-            transcriptionRepository: trRepo,
-            transcriptionAPI: transcriptionService
-        )
-        
-        self._memoRepository = MemoRepositoryImpl(
-            transcriptionRepository: trRepo,
-            startTranscriptionUseCase: startTranscriptionUseCase,
-            getTranscriptionStateUseCase: getTranscriptionStateUseCase,
-            retryTranscriptionUseCase: retryTranscriptionUseCase
-        )
-
-        // Spotlight Indexer (optional feature) — requires memoRepository to be initialized
-        self._spotlightIndexer = SpotlightIndexer(
-            logger: self._logger ?? Logger.shared,
-            memoRepository: self._memoRepository,
-            transcriptionRepository: self._transcriptionRepository!,
-            analysisRepository: self._analysisRepository!
-        )
+        // Defer repository initialization until ModelContext is set
         
         _logger?.info("DIContainer: Configured with shared service instances", category: .system, context: LogContext())
-        _logger?.debug("DIContainer: MemoRepository: \(ObjectIdentifier(self._memoRepository))", category: .system, context: LogContext())
+        if let memoRepo = self._memoRepository {
+            _logger?.debug("DIContainer: MemoRepository: \(ObjectIdentifier(memoRepo))", category: .system, context: LogContext())
+        }
         if let repoObj = self._transcriptionRepository {
             _logger?.debug("DIContainer: TranscriptionRepository: \(ObjectIdentifier(repoObj as AnyObject))", category: .system, context: LogContext())
         }
@@ -306,6 +273,7 @@ final class DIContainer: ObservableObject, Resolver {
     @MainActor
     func memoRepository() -> any MemoRepository {
         ensureConfigured()
+        if _memoRepository == nil { initializePersistenceIfNeeded() }
         return _memoRepository
     }
     
@@ -313,6 +281,7 @@ final class DIContainer: ObservableObject, Resolver {
     @MainActor
     func transcriptionRepository() -> any TranscriptionRepository {
         ensureConfigured()
+        if _transcriptionRepository == nil { initializePersistenceIfNeeded() }
         guard let repo = _transcriptionRepository else { fatalError("DIContainer not configured: transcriptionRepository") }
         return repo
     }
@@ -321,6 +290,7 @@ final class DIContainer: ObservableObject, Resolver {
     @MainActor
     func analysisRepository() -> any AnalysisRepository {
         ensureConfigured()
+        if _analysisRepository == nil { initializePersistenceIfNeeded() }
         guard let repo = _analysisRepository else { fatalError("DIContainer not configured: analysisRepository") }
         return repo
     }
@@ -484,6 +454,66 @@ final class DIContainer: ObservableObject, Resolver {
             analysisRepository: analysisRepository(),
             exporter: analysisExporter(),
             logger: logger()
+        )
+    }
+
+    // MARK: - SwiftData ModelContext
+    @MainActor
+    func setModelContext(_ context: ModelContext) {
+        self._modelContext = context
+        _logger?.debug("DIContainer: ModelContext injected", category: .system, context: LogContext())
+        initializePersistenceIfNeeded()
+    }
+
+    @MainActor
+    func modelContext() -> ModelContext {
+        ensureConfigured()
+        guard let context = _modelContext else { fatalError("DIContainer not configured: modelContext") }
+        return context
+    }
+
+    // MARK: - Persistence Initialization
+    @MainActor
+    private func initializePersistenceIfNeeded() {
+        guard _memoRepository == nil || _transcriptionRepository == nil || _analysisRepository == nil else { return }
+        guard let ctx = _modelContext else {
+            _logger?.warning("ModelContext not yet available; deferring repository setup", category: .system, context: LogContext(), error: nil)
+            return
+        }
+
+        // Initialize SwiftData-backed repositories
+        let trRepo = TranscriptionRepositoryImpl(context: ctx)
+        self._transcriptionRepository = trRepo
+        let anRepo = AnalysisRepositoryImpl(context: ctx)
+        self._analysisRepository = anRepo
+
+        guard let trFactory = _transcriptionServiceFactory, let bus = _eventBus, let mod = _moderationService else {
+            fatalError("DIContainer not fully configured: missing dependencies for memo repository")
+        }
+        let transcriptionService = trFactory.createTranscriptionService()
+        let startTranscriptionUseCase = StartTranscriptionUseCase(
+            transcriptionRepository: trRepo,
+            transcriptionAPI: transcriptionService,
+            eventBus: bus,
+            operationCoordinator: _operationCoordinator,
+            moderationService: mod
+        )
+        let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(transcriptionRepository: trRepo)
+        let retryTranscriptionUseCase = RetryTranscriptionUseCase(transcriptionRepository: trRepo, transcriptionAPI: transcriptionService)
+        self._memoRepository = MemoRepositoryImpl(
+            context: ctx,
+            transcriptionRepository: trRepo,
+            startTranscriptionUseCase: startTranscriptionUseCase,
+            getTranscriptionStateUseCase: getTranscriptionStateUseCase,
+            retryTranscriptionUseCase: retryTranscriptionUseCase
+        )
+
+        // Spotlight Indexer (optional feature) — requires memoRepository to be initialized
+        self._spotlightIndexer = SpotlightIndexer(
+            logger: self._logger ?? Logger.shared,
+            memoRepository: self._memoRepository,
+            transcriptionRepository: trRepo,
+            analysisRepository: anRepo
         )
     }
     
