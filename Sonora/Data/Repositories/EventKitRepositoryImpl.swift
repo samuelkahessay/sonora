@@ -1,0 +1,843 @@
+// MARK: - EventKit Concurrency Helpers (Best Practices Approach)
+
+import Foundation
+@preconcurrency import EventKit
+
+// MARK: - Sendable Type Extensions
+extension EKReminder: @unchecked Sendable {}
+extension EKEvent: @unchecked Sendable {}
+extension EKCalendar: @unchecked Sendable {}
+
+// MARK: - EventKit Repository with Proper Concurrency
+@MainActor
+final class EventKitRepositoryImpl: EventKitRepository {
+    
+    private let eventStore: EKEventStore
+    private let logger: LoggerProtocol
+    
+    // MARK: - Caching Infrastructure (MainActor isolated)
+    private var cachedCalendars: [EKCalendar]?
+    private var cachedReminderLists: [EKCalendar]?
+    private var lastCacheUpdate: Date?
+    private let cacheTimeout: TimeInterval = 300 // 5 minutes
+    
+    // Smart suggestion cache
+    private var calendarSuggestionCache: [String: EKCalendar] = [:]
+    private var reminderListSuggestionCache: [String: EKCalendar] = [:]
+    
+    init(eventStore: EKEventStore = EKEventStore(), logger: LoggerProtocol = Logger.shared) {
+        self.eventStore = eventStore
+        self.logger = logger
+        
+        // Subscribe to EventKit change notifications
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(eventStoreChanged),
+            name: .EKEventStoreChanged,
+            object: eventStore
+        )
+        
+        logger.debug("EventKitRepositoryImpl initialized",
+                    category: .eventkit,
+                    context: LogContext())
+    }
+    
+    @objc private func eventStoreChanged() {
+        logger.info("EventKit store changed - invalidating cache",
+                   category: .eventkit,
+                   context: LogContext())
+        
+        invalidateCache()
+    }
+    
+    // MARK: - Permission Management
+    nonisolated func requestCalendarAccess() async throws -> Bool {
+        return await requestCalendarAccessOnMainActor()
+    }
+    
+    private func requestCalendarAccessOnMainActor() async -> Bool {
+        do {
+            let status = EKEventStore.authorizationStatus(for: .event)
+            
+            switch status {
+            case .notDetermined:
+                return try await eventStore.requestFullAccessToEvents()
+            case .authorized, .fullAccess:
+                return true
+            case .denied, .restricted:
+                return false
+            case .writeOnly:
+                // Request full access if we only have write access
+                return try await eventStore.requestFullAccessToEvents()
+            @unknown default:
+                return false
+            }
+        } catch {
+            logger.error("Failed to request calendar access",
+                        category: .eventkit,
+                        context: LogContext(),
+                        error: error)
+            return false
+        }
+    }
+    
+    nonisolated func requestReminderAccess() async throws -> Bool {
+        return await requestReminderAccessOnMainActor()
+    }
+    
+    private func requestReminderAccessOnMainActor() async -> Bool {
+        do {
+            let status = EKEventStore.authorizationStatus(for: .reminder)
+            
+            switch status {
+            case .notDetermined:
+                return try await eventStore.requestFullAccessToReminders()
+            case .authorized, .fullAccess:
+                return true
+            case .denied, .restricted:
+                return false
+            case .writeOnly:
+                return try await eventStore.requestFullAccessToReminders()
+            @unknown default:
+                return false
+            }
+        } catch {
+            logger.error("Failed to request reminder access",
+                        category: .eventkit,
+                        context: LogContext(),
+                        error: error)
+            return false
+        }
+    }
+    
+    // MARK: - Calendar Operations
+    nonisolated func getCalendars() async throws -> [EKCalendar] {
+        return await MainActor.run {
+            return getCalendarsOnMainActor()
+        }
+    }
+    
+    private func getCalendarsOnMainActor() -> [EKCalendar] {
+        // Check cache validity
+        if let cached = cachedCalendars,
+           let lastUpdate = lastCacheUpdate,
+           Date().timeIntervalSince(lastUpdate) < cacheTimeout {
+            logger.debug("Returning cached calendars (\(cached.count) items)",
+                        category: .eventkit, context: LogContext())
+            return cached
+        }
+        
+        logger.debug("Fetching fresh calendars from EventKit",
+                    category: .eventkit,
+                    context: LogContext())
+        
+        // Fetch fresh calendars
+        let calendars = eventStore.calendars(for: .event)
+            .filter { $0.allowsContentModifications }
+            .sorted { $0.title < $1.title }
+        
+        // Update cache
+        cachedCalendars = calendars
+        lastCacheUpdate = Date()
+        
+        logger.info("Fetched \(calendars.count) writable calendars from EventKit",
+                   category: .eventkit,
+                   context: LogContext(additionalInfo: [
+                       "calendarTitles": calendars.map { $0.title }
+                   ]))
+        
+        return calendars
+    }
+    
+    nonisolated func getReminderLists() async throws -> [EKCalendar] {
+        return await MainActor.run {
+            return getReminderListsOnMainActor()
+        }
+    }
+    
+    private func getReminderListsOnMainActor() -> [EKCalendar] {
+        // Check cache validity
+        if let cached = cachedReminderLists,
+           let lastUpdate = lastCacheUpdate,
+           Date().timeIntervalSince(lastUpdate) < cacheTimeout {
+            logger.debug("Returning cached reminder lists (\(cached.count) items)",
+                        category: .eventkit, context: LogContext())
+            return cached
+        }
+        
+        logger.debug("Fetching fresh reminder lists from EventKit",
+                    category: .eventkit,
+                    context: LogContext())
+        
+        // Fetch fresh reminder lists
+        let reminderLists = eventStore.calendars(for: .reminder)
+            .filter { $0.allowsContentModifications }
+            .sorted { $0.title < $1.title }
+        
+        // Update cache
+        cachedReminderLists = reminderLists
+        lastCacheUpdate = Date()
+        
+        logger.info("Fetched \(reminderLists.count) writable reminder lists from EventKit",
+                   category: .eventkit,
+                   context: LogContext(additionalInfo: [
+                       "listTitles": reminderLists.map { $0.title }
+                   ]))
+        
+        return reminderLists
+    }
+    
+    nonisolated func getDefaultCalendar() async throws -> EKCalendar? {
+        return await MainActor.run {
+            let defaultCalendar = eventStore.defaultCalendarForNewEvents
+            
+            if let calendar = defaultCalendar {
+                logger.debug("Found default calendar: \(calendar.title)",
+                            category: .eventkit,
+                            context: LogContext())
+            } else {
+                logger.warning("No default calendar available",
+                              category: .eventkit,
+                              context: LogContext(),
+                              error: nil)
+            }
+            
+            return defaultCalendar
+        }
+    }
+    
+    nonisolated func getDefaultReminderList() async throws -> EKCalendar? {
+        return await MainActor.run {
+            let defaultList = eventStore.defaultCalendarForNewReminders()
+            
+            if let list = defaultList {
+                logger.debug("Found default reminder list: \(list.title)",
+                            category: .eventkit,
+                            context: LogContext())
+            } else {
+                logger.warning("No default reminder list available",
+                              category: .eventkit,
+                              context: LogContext(),
+                              error: nil)
+            }
+            
+            return defaultList
+        }
+    }
+    
+    // MARK: - Event Creation
+    nonisolated func createEvent(_ event: EventsData.DetectedEvent, 
+                               in calendar: EKCalendar,
+                               maxRetries: Int = 3) async throws -> String {
+        return try await MainActor.run {
+            return try createEventOnMainActor(event: event, calendar: calendar, maxRetries: maxRetries)
+        }
+    }
+    
+    private func createEventOnMainActor(
+        event: EventsData.DetectedEvent,
+        calendar: EKCalendar,
+        maxRetries: Int = 3
+    ) throws -> String {
+        logger.info("Creating event: \(event.title)",
+                   category: .eventkit,
+                   context: LogContext(additionalInfo: [
+                       "calendar": calendar.title,
+                       "confidence": event.confidence,
+                       "hasDate": event.startDate != nil
+                   ]))
+        
+        var lastError: Error?
+        
+        for attempt in 1...maxRetries {
+            do {
+                let ekEvent = try createEKEvent(from: event, in: calendar)
+                try eventStore.save(ekEvent, span: .thisEvent, commit: true)
+                
+                let eventId = ekEvent.eventIdentifier ?? UUID().uuidString
+                
+                logger.info("Successfully created event: \(event.title)",
+                           category: .eventkit,
+                           context: LogContext(additionalInfo: [
+                               "eventId": eventId,
+                               "attempt": attempt,
+                               "calendar": calendar.title
+                           ]))
+                
+                return eventId
+            } catch {
+                lastError = error
+                logger.warning("Event creation attempt \(attempt) failed for: \(event.title)",
+                              category: .eventkit,
+                              context: LogContext(additionalInfo: [
+                                  "attempt": attempt,
+                                  "maxRetries": maxRetries
+                              ]),
+                              error: error)
+                
+                if attempt < maxRetries {
+                    // Brief delay before retry
+                    Thread.sleep(forTimeInterval: 0.1 * Double(attempt))
+                }
+            }
+        }
+        
+        logger.error("Failed to create event after \(maxRetries) attempts: \(event.title)",
+                    category: .eventkit,
+                    context: LogContext(),
+                    error: lastError)
+        
+        throw EventKitError.eventCreationError(title: event.title, underlying: lastError!)
+    }
+    
+    // MARK: - Reminder Creation  
+    nonisolated func createReminder(_ reminder: RemindersData.DetectedReminder,
+                                   in reminderList: EKCalendar,
+                                   maxRetries: Int = 3) async throws -> String {
+        return try await MainActor.run {
+            return try createReminderOnMainActor(reminder: reminder, 
+                                               reminderList: reminderList, 
+                                               maxRetries: maxRetries)
+        }
+    }
+    
+    private func createReminderOnMainActor(
+        reminder: RemindersData.DetectedReminder,
+        reminderList: EKCalendar,
+        maxRetries: Int = 3
+    ) throws -> String {
+        logger.info("Creating reminder: \(reminder.title)",
+                   category: .eventkit,
+                   context: LogContext(additionalInfo: [
+                       "list": reminderList.title,
+                       "priority": reminder.priority.rawValue,
+                       "hasDueDate": reminder.dueDate != nil
+                   ]))
+        
+        var lastError: Error?
+        
+        for attempt in 1...maxRetries {
+            do {
+                let ekReminder = EKReminder(eventStore: eventStore)
+                ekReminder.title = reminder.title
+                ekReminder.notes = reminder.sourceText
+                ekReminder.calendar = reminderList
+                
+                if let dueDate = reminder.dueDate {
+                    let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
+                    ekReminder.dueDateComponents = components
+                }
+                
+                // Convert priority
+                let ekPriority: Int = switch reminder.priority {
+                case .high: 1
+                case .medium: 5  
+                case .low: 9
+                }
+                ekReminder.priority = ekPriority
+                
+                try eventStore.save(ekReminder, commit: true)
+                
+                let reminderId = ekReminder.calendarItemIdentifier
+                
+                logger.info("Successfully created reminder: \(reminder.title)",
+                           category: .eventkit,
+                           context: LogContext(additionalInfo: [
+                               "reminderId": reminderId,
+                               "attempt": attempt,
+                               "list": reminderList.title
+                           ]))
+                
+                return reminderId
+                
+            } catch {
+                lastError = error
+                logger.warning("Reminder creation attempt \(attempt) failed for: \(reminder.title)",
+                              category: .eventkit,
+                              context: LogContext(additionalInfo: [
+                                  "attempt": attempt,
+                                  "maxRetries": maxRetries
+                              ]),
+                              error: error)
+                
+                if attempt < maxRetries {
+                    Thread.sleep(forTimeInterval: 0.1 * Double(attempt))
+                }
+            }
+        }
+        
+        logger.error("Failed to create reminder after \(maxRetries) attempts: \(reminder.title)",
+                    category: .eventkit,
+                    context: LogContext(),
+                    error: lastError)
+        
+        throw EventKitError.reminderCreationError(title: reminder.title, underlying: lastError!)
+    }
+    
+    // MARK: - Batch Operations
+    nonisolated func createEvents(_ events: [EventsData.DetectedEvent],
+                                 calendarMapping: [String: EKCalendar],
+                                 maxRetries: Int = 3) async throws -> [String: Result<String, Error>] {
+        return await MainActor.run {
+            return createEventsOnMainActor(events: events, 
+                                         calendarMapping: calendarMapping, 
+                                         maxRetries: maxRetries)
+        }
+    }
+    
+    private func createEventsOnMainActor(
+        events: [EventsData.DetectedEvent],
+        calendarMapping: [String: EKCalendar],
+        maxRetries: Int = 3
+    ) -> [String: Result<String, Error>] {
+        logger.info("Creating \(events.count) events in batch",
+                   category: .eventkit,
+                   context: LogContext())
+        
+        var results: [String: Result<String, Error>] = [:]
+        
+        for event in events {
+            guard let calendar = calendarMapping[event.id] else {
+                results[event.id] = .failure(EventKitError.calendarNotFound(identifier: event.id))
+                continue
+            }
+            
+            do {
+                let eventId = try createEventOnMainActor(event: event, calendar: calendar, maxRetries: maxRetries)
+                results[event.id] = .success(eventId)
+            } catch {
+                results[event.id] = .failure(error)
+            }
+        }
+        
+        return results
+    }
+    
+    nonisolated func createReminders(_ reminders: [RemindersData.DetectedReminder],
+                                    listMapping: [String: EKCalendar],
+                                    maxRetries: Int = 3) async throws -> [String: Result<String, Error>] {
+        return await MainActor.run {
+            return createRemindersOnMainActor(reminders: reminders,
+                                            reminderListMapping: listMapping,
+                                            maxRetries: maxRetries)
+        }
+    }
+    
+    private func createRemindersOnMainActor(
+        reminders: [RemindersData.DetectedReminder],
+        reminderListMapping: [String: EKCalendar],
+        maxRetries: Int = 3
+    ) -> [String: Result<String, Error>] {
+        logger.info("Creating \(reminders.count) reminders in batch",
+                   category: .eventkit,
+                   context: LogContext())
+        
+        var results: [String: Result<String, Error>] = [:]
+        
+        for reminder in reminders {
+            guard let reminderList = reminderListMapping[reminder.id] else {
+                results[reminder.id] = .failure(EventKitError.reminderListNotFound(identifier: reminder.id))
+                continue
+            }
+            
+            do {
+                let reminderId = try createReminderOnMainActor(reminder: reminder, 
+                                                             reminderList: reminderList, 
+                                                             maxRetries: maxRetries)
+                results[reminder.id] = .success(reminderId)
+            } catch {
+                results[reminder.id] = .failure(error)
+            }
+        }
+        
+        return results
+    }
+    
+    // MARK: - Update/Delete Operations
+    nonisolated func updateEvent(eventId: String, 
+                               with updatedData: EventsData.DetectedEvent) async throws {
+        try await MainActor.run {
+            logger.info("Updating event: \(eventId)", category: .eventkit, context: LogContext())
+            guard let ekEvent = eventStore.event(withIdentifier: eventId) else {
+                throw EventKitError.calendarNotFound(identifier: eventId)
+            }
+
+            ekEvent.title = updatedData.title
+            if let startDate = updatedData.startDate {
+                ekEvent.startDate = startDate
+                ekEvent.endDate = updatedData.endDate ?? startDate.addingTimeInterval(3600)
+                ekEvent.isAllDay = false
+            }
+            ekEvent.location = updatedData.location
+            if let participants = updatedData.participants, !participants.isEmpty {
+                ekEvent.notes = "Participants: \(participants.joined(separator: ", "))\n\nOriginal: \(updatedData.sourceText)"
+            } else {
+                ekEvent.notes = "Original: \(updatedData.sourceText)"
+            }
+
+            try eventStore.save(ekEvent, span: .thisEvent, commit: true)
+            logger.info("Event updated: \(eventId)", category: .eventkit, context: LogContext())
+        }
+    }
+    
+    nonisolated func deleteEvent(eventId: String) async throws {
+        try await MainActor.run {
+            logger.info("Deleting event: \(eventId)", category: .eventkit, context: LogContext())
+            guard let ekEvent = eventStore.event(withIdentifier: eventId) else {
+                throw EventKitError.calendarNotFound(identifier: eventId)
+            }
+            try eventStore.remove(ekEvent, span: .thisEvent, commit: true)
+            logger.info("Event deleted: \(eventId)", category: .eventkit, context: LogContext())
+        }
+    }
+    
+    nonisolated func updateReminder(reminderId: String,
+                                   with updatedData: RemindersData.DetectedReminder) async throws {
+        try await MainActor.run {
+            logger.info("Updating reminder: \(reminderId)", category: .eventkit, context: LogContext())
+            guard let item = eventStore.calendarItem(withIdentifier: reminderId) as? EKReminder else {
+                throw EventKitError.reminderListNotFound(identifier: reminderId)
+            }
+
+            item.title = updatedData.title
+            item.notes = updatedData.sourceText
+
+            if let dueDate = updatedData.dueDate {
+                item.dueDateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
+            } else {
+                item.dueDateComponents = nil
+            }
+
+            let ekPriority: Int = switch updatedData.priority { case .high: 1; case .medium: 5; case .low: 9 }
+            item.priority = ekPriority
+
+            try eventStore.save(item, commit: true)
+            logger.info("Reminder updated: \(reminderId)", category: .eventkit, context: LogContext())
+        }
+    }
+    
+    nonisolated func deleteReminder(reminderId: String) async throws {
+        try await MainActor.run {
+            logger.info("Deleting reminder: \(reminderId)", category: .eventkit, context: LogContext())
+            guard let item = eventStore.calendarItem(withIdentifier: reminderId) as? EKReminder else {
+                throw EventKitError.reminderListNotFound(identifier: reminderId)
+            }
+            try eventStore.remove(item, commit: true)
+            logger.info("Reminder deleted: \(reminderId)", category: .eventkit, context: LogContext())
+        }
+    }
+    
+    // MARK: - Conflict Detection
+    nonisolated func detectConflicts(for event: EventsData.DetectedEvent) async throws -> [EKEvent] {
+        return await MainActor.run {
+            return checkForConflictsOnMainActor(event: event)
+        }
+    }
+    
+    private func checkForConflictsOnMainActor(event: EventsData.DetectedEvent) -> [EKEvent] {
+        guard let startDate = event.startDate else {
+            logger.debug("No start date for conflict detection: \(event.title)",
+                        category: .eventkit,
+                        context: LogContext())
+            return []
+        }
+        
+        let endDate = event.endDate ?? startDate.addingTimeInterval(3600) // Default 1 hour
+        
+        logger.debug("Checking for conflicts: \(event.title) from \(startDate) to \(endDate)",
+                    category: .eventkit,
+                    context: LogContext())
+        
+        let predicate = eventStore.predicateForEvents(
+            withStart: startDate,
+            end: endDate,
+            calendars: nil // Check all calendars
+        )
+        
+        let existingEvents = eventStore.events(matching: predicate)
+            .filter { existingEvent in
+                // Filter out all-day events and free time
+                !existingEvent.isAllDay && existingEvent.availability != .free
+            }
+        
+        if !existingEvents.isEmpty {
+            logger.info("Found \(existingEvents.count) potential conflicts for: \(event.title)",
+                       category: .eventkit,
+                       context: LogContext(additionalInfo: [
+                           "conflictTitles": existingEvents.map { $0.title ?? "Untitled" }
+                       ]))
+        }
+        
+        return existingEvents
+    }
+    
+    // MARK: - Smart Suggestions
+    nonisolated func suggestCalendar(for event: EventsData.DetectedEvent) async throws -> EKCalendar? {
+        return await MainActor.run {
+            return suggestCalendarOnMainActor(for: event)
+        }
+    }
+    
+    private func suggestCalendarOnMainActor(for event: EventsData.DetectedEvent) -> EKCalendar? {
+        // Check cache first
+        let cacheKey = "\(event.title)|\(event.sourceText)".lowercased()
+        if let cached = calendarSuggestionCache[cacheKey] {
+            logger.debug("Using cached calendar suggestion for: \(event.title)",
+                        category: .eventkit, context: LogContext())
+            return cached
+        }
+        
+        let calendars = getCalendarsOnMainActor()
+        let eventText = "\(event.title) \(event.sourceText)".lowercased()
+        
+        logger.debug("Analyzing event content for calendar suggestion: \(event.title)",
+                    category: .eventkit,
+                    context: LogContext())
+        
+        // Simple keyword-based suggestion
+        let workKeywords = ["meeting", "work", "project", "client", "office", "business"]
+        let personalKeywords = ["appointment", "doctor", "personal", "family", "home"]
+        let socialKeywords = ["party", "dinner", "social", "friend", "birthday"]
+        
+        var suggestedCalendar: EKCalendar?
+        
+        // Find best matching calendar
+        for calendar in calendars {
+            let calendarName = calendar.title.lowercased()
+            
+            if workKeywords.contains(where: { eventText.contains($0) }) && 
+               (calendarName.contains("work") || calendarName.contains("business")) {
+                suggestedCalendar = calendar
+                break
+            } else if personalKeywords.contains(where: { eventText.contains($0) }) && 
+                     (calendarName.contains("personal") || calendarName.contains("home")) {
+                suggestedCalendar = calendar
+                break
+            } else if socialKeywords.contains(where: { eventText.contains($0) }) && 
+                     calendarName.contains("social") {
+                suggestedCalendar = calendar
+                break
+            }
+        }
+        
+        // Fallback to default calendar
+        if suggestedCalendar == nil {
+            suggestedCalendar = eventStore.defaultCalendarForNewEvents ?? calendars.first
+        }
+        
+        // Cache the result
+        if let suggested = suggestedCalendar {
+            calendarSuggestionCache[cacheKey] = suggested
+            logger.info("Suggested calendar '\(suggested.title)' for event: \(event.title)",
+                       category: .eventkit, context: LogContext())
+        }
+        
+        return suggestedCalendar
+    }
+    
+    nonisolated func suggestReminderList(for reminder: RemindersData.DetectedReminder) async throws -> EKCalendar? {
+        return await MainActor.run {
+            return suggestReminderListOnMainActor(for: reminder)
+        }
+    }
+    
+    private func suggestReminderListOnMainActor(for reminder: RemindersData.DetectedReminder) -> EKCalendar? {
+        let lists = getReminderListsOnMainActor()
+        
+        // Simple priority-based selection
+        let listName = switch reminder.priority {
+        case .high: "Work"
+        case .medium: "Personal"  
+        case .low: "Someday"
+        }
+        
+        let suggestedList = lists.first { $0.title.lowercased().contains(listName.lowercased()) }
+                         ?? eventStore.defaultCalendarForNewReminders()
+                         ?? lists.first
+        
+        if let suggested = suggestedList {
+            logger.debug("Suggested reminder list '\(suggested.title)' for: \(reminder.title)",
+                        category: .eventkit, context: LogContext())
+        }
+        
+        return suggestedList
+    }
+    
+    // MARK: - Additional Operations
+    nonisolated func checkAvailability(startDate: Date, endDate: Date, excludeCalendars: [String]? = nil) async throws -> Bool {
+        return await MainActor.run {
+            logger.debug("Checking availability from \(startDate) to \(endDate)",
+                        category: .eventkit, context: LogContext())
+            
+            let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: nil)
+            let events = eventStore.events(matching: predicate)
+            
+            // Filter out excluded calendars if specified
+            let filteredEvents = if let excludeIds = excludeCalendars {
+                events.filter { event in
+                    !excludeIds.contains(event.calendar.calendarIdentifier)
+                }
+            } else {
+                events
+            }
+            
+            let isAvailable = filteredEvents.isEmpty
+            
+            logger.debug("Time slot availability: \(isAvailable) (\(filteredEvents.count) conflicts)",
+                        category: .eventkit,
+                        context: LogContext())
+            
+            return isAvailable
+        }
+    }
+    
+    nonisolated func getEvents(from startDate: Date, to endDate: Date, calendars: [EKCalendar]? = nil) async throws -> [EKEvent] {
+        return await MainActor.run {
+            logger.debug("Fetching events from \(startDate) to \(endDate)",
+                        category: .eventkit,
+                        context: LogContext(additionalInfo: [
+                            "calendarCount": calendars?.count ?? 0
+                        ]))
+            
+            let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: calendars)
+            let events = eventStore.events(matching: predicate)
+            
+            logger.debug("Found \(events.count) events in date range",
+                        category: .eventkit, context: LogContext())
+            
+            return events
+        }
+    }
+    
+    nonisolated func getReminders(completed: Bool? = nil,
+                                 dueAfter: Date? = nil,
+                                 dueBefore: Date? = nil,
+                                 lists: [EKCalendar]? = nil) async throws -> [EKReminder] {
+        await MainActor.run {
+            logger.debug("Fetching reminders with filters",
+                          category: .eventkit,
+                          context: LogContext(additionalInfo: [
+                              "completed": completed as Any,
+                              "dueAfter": dueAfter?.description ?? "nil",
+                              "dueBefore": dueBefore?.description ?? "nil",
+                              "listCount": lists?.count ?? 0
+                          ]))
+        }
+
+        // Bridge callback-based API to async and ensure EventKit calls occur on MainActor
+        let reminders: [EKReminder] = await withUnsafeContinuation { continuation in
+            Task { @MainActor in
+                let predicate = eventStore.predicateForReminders(in: lists)
+                eventStore.fetchReminders(matching: predicate) { items in
+                    continuation.resume(returning: items ?? [])
+                }
+            }
+        }
+
+        var filtered = reminders
+        if let completed = completed {
+            filtered = filtered.filter { $0.isCompleted == completed }
+        }
+
+        if dueAfter != nil || dueBefore != nil {
+            let cal = Calendar.current
+            filtered = filtered.filter { r in
+                guard let comps = r.dueDateComponents, let date = cal.date(from: comps) else { return false }
+                if let after = dueAfter, date < after { return false }
+                if let before = dueBefore, date > before { return false }
+                return true
+            }
+        }
+
+        await MainActor.run {
+            logger.debug("Found \\(filtered.count) reminders after filtering",
+                          category: .eventkit, context: LogContext())
+        }
+        return filtered
+    }
+    
+    func getCacheStats() -> [String: Any] {
+        return [
+            "calendars_cached": cachedCalendars?.count ?? 0,
+            "reminder_lists_cached": cachedReminderLists?.count ?? 0,
+            "last_update": lastCacheUpdate?.timeIntervalSinceNow ?? 0,
+            "cache_timeout": cacheTimeout,
+            "suggestion_cache_size": calendarSuggestionCache.count + reminderListSuggestionCache.count
+        ]
+    }
+    
+    nonisolated func detectRecurrencePattern(for event: EventsData.DetectedEvent) async -> EKRecurrenceRule? {
+        return await MainActor.run {
+            logger.debug("Recurrence detection not implemented for: \(event.title)",
+                        category: .eventkit, context: LogContext())
+            return nil
+        }
+    }
+    
+    nonisolated func createRecurringEvent(_ event: EventsData.DetectedEvent,
+                                         in calendar: EKCalendar,
+                                         recurrenceRule: EKRecurrenceRule) async throws -> String {
+        return try await MainActor.run {
+            logger.info("Recurring event creation not implemented for: \(event.title)",
+                       category: .eventkit, context: LogContext())
+            // For now, just create a regular event
+            return try createEventOnMainActor(event: event, calendar: calendar, maxRetries: 3)
+        }
+    }
+    
+    // MARK: - Helper Methods
+    private func createEKEvent(from event: EventsData.DetectedEvent, in calendar: EKCalendar) throws -> EKEvent {
+        let ekEvent = EKEvent(eventStore: eventStore)
+        ekEvent.title = event.title
+        ekEvent.calendar = calendar
+        
+        if let startDate = event.startDate {
+            ekEvent.startDate = startDate
+            ekEvent.endDate = event.endDate ?? startDate.addingTimeInterval(3600) // 1 hour default
+        } else {
+            // If no date specified, create all-day event for tomorrow
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+            ekEvent.startDate = Calendar.current.startOfDay(for: tomorrow)
+            ekEvent.endDate = Calendar.current.startOfDay(for: tomorrow).addingTimeInterval(86400) // Full day
+            ekEvent.isAllDay = true
+        }
+        
+        if let location = event.location {
+            ekEvent.location = location
+        }
+        
+        if let participants = event.participants, !participants.isEmpty {
+            ekEvent.notes = "Participants: \(participants.joined(separator: ", "))\n\nOriginal: \(event.sourceText)"
+        } else {
+            ekEvent.notes = "Original: \(event.sourceText)"
+        }
+        
+        return ekEvent
+    }
+    
+    // MARK: - Cache Management
+    func invalidateCache() {
+        cachedCalendars = nil
+        cachedReminderLists = nil
+        lastCacheUpdate = nil
+        calendarSuggestionCache.removeAll()
+        reminderListSuggestionCache.removeAll()
+        
+        logger.debug("EventKit cache invalidated",
+                     category: .eventkit,
+                     context: LogContext())
+    }
+    
+    func cleanupDetectionData() {
+        calendarSuggestionCache.removeAll()
+        reminderListSuggestionCache.removeAll()
+        
+        logger.debug("EventKit detection data cleaned up",
+                     category: .eventkit,
+                     context: LogContext())
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+}

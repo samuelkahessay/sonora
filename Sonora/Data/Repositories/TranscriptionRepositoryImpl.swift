@@ -5,6 +5,23 @@ import SwiftData
 @MainActor
 final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionRepository {
     @Published var transcriptionStates: [String: TranscriptionState] = [:]
+    
+    // MARK: - Event-Driven State Changes (Swift 6 Compliant)
+    
+    /// Subject for publishing transcription state changes
+    private let stateChangesSubject = PassthroughSubject<TranscriptionStateChange, Never>()
+    
+    /// Publisher for transcription state changes - eliminates need for polling
+    var stateChangesPublisher: AnyPublisher<TranscriptionStateChange, Never> {
+        stateChangesSubject.eraseToAnyPublisher()
+    }
+    
+    /// Get state changes for a specific memo
+    func stateChangesPublisher(for memoId: UUID) -> AnyPublisher<TranscriptionStateChange, Never> {
+        stateChangesPublisher
+            .filter { $0.memoId == memoId }
+            .eraseToAnyPublisher()
+    }
 
     private let context: ModelContext
     private let logger: any LoggerProtocol
@@ -57,7 +74,24 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
 
     func saveTranscriptionState(_ state: TranscriptionState, for memoId: UUID) {
         let key = memoIdKey(for: memoId)
+        let previousState = transcriptionStates[key]
         transcriptionStates[key] = state
+        
+        // Publish state change event - Swift 6 compliant MainActor isolation
+        let stateChange = TranscriptionStateChange(
+            memoId: memoId,
+            previousState: previousState,
+            currentState: state
+        )
+        stateChangesSubject.send(stateChange)
+        
+        logger.debug("Published transcription state change event", 
+                    category: .repository, 
+                    context: LogContext(additionalInfo: [
+                        "memoId": memoId.uuidString,
+                        "previousState": previousState?.statusText ?? "nil",
+                        "currentState": state.statusText
+                    ]))
 
         let now = Date()
         if let model = fetchTranscriptionModel(for: memoId) {
@@ -90,21 +124,54 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
         if let cached = transcriptionStates[key] { return cached }
 
         guard let model = fetchTranscriptionModel(for: memoId) else {
-            transcriptionStates[key] = .notStarted
-            return .notStarted
+            let state = TranscriptionState.notStarted
+            transcriptionStates[key] = state
+            
+            // Publish initial state discovery event
+            let stateChange = TranscriptionStateChange(
+                memoId: memoId,
+                previousState: nil,
+                currentState: state
+            )
+            stateChangesSubject.send(stateChange)
+            
+            return state
         }
+        
         let state = mapModelToState(model)
         transcriptionStates[key] = state
+        
+        // Publish state discovery event when loading from persistent storage
+        let stateChange = TranscriptionStateChange(
+            memoId: memoId,
+            previousState: nil,
+            currentState: state
+        )
+        stateChangesSubject.send(stateChange)
+        
         return state
     }
 
     func deleteTranscriptionData(for memoId: UUID) {
         let key = memoIdKey(for: memoId)
+        let previousState = transcriptionStates[key]
         transcriptionStates.removeValue(forKey: key)
+        
         if let model = fetchTranscriptionModel(for: memoId) {
             context.delete(model)
             do { try context.save() } catch { logger.error("Failed to delete transcription model", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error) }
         }
+        
+        // Publish deletion event - state change to notStarted
+        if let previous = previousState {
+            let stateChange = TranscriptionStateChange(
+                memoId: memoId,
+                previousState: previous,
+                currentState: .notStarted
+            )
+            stateChangesSubject.send(stateChange)
+        }
+        
         logger.info("Deleted transcription data for memo (SwiftData)", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
     }
 

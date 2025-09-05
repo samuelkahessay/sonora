@@ -16,7 +16,7 @@ public final class RemindersEventHandler {
     // private let remindersParser: TodosParser  // TODO: Implement structured todos parsing
     
     // MARK: - Configuration
-    private let isEnabled: Bool = false // TODO: Set to true when implementation is ready
+    private let isEnabled: Bool = true // EventKit integration is now ready
     private let defaultReminderList = "Sonora Memos" // TODO: Make configurable
     
     // MARK: - Initialization

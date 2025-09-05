@@ -102,6 +102,13 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
                 // due may be string or null — no strict check
             }
             return true
+        case .events:
+            // Basic structural check for events payload
+            guard let events = payload["events"] as? [Any] else { return false }
+            return !events.isEmpty
+        case .reminders:
+            guard let reminders = payload["reminders"] as? [Any] else { return false }
+            return !reminders.isEmpty
         }
     }
     

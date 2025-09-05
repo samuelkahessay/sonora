@@ -21,5 +21,11 @@
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Sonora needs microphone access to record voice memos. Your recordings stay private on your device until you choose to transcribe them using AI.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Sonora can add detected events from your voice memos directly to your calendar for better organization.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Sonora needs full calendar access to check for conflicts and suggest the best calendar for your events.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Sonora can create reminders from your voice memos to help you stay on top of important tasks.</string>
 </dict>
 </plist>

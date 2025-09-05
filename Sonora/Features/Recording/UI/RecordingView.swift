@@ -35,6 +35,7 @@ struct CircularRecordButton: View {
 struct RecordingView: View {
     @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createRecordingViewModel()
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
+    @SwiftUI.Environment(\.scenePhase) private var scenePhase: ScenePhase
     
     enum AccessibleElement {
         case recordButton
@@ -193,6 +194,23 @@ struct RecordingView: View {
                     Button("OK") { viewModel.dismissAutoStopAlert() }
                 } message: {
                     Text(viewModel.autoStopMessage ?? "")
+                }
+                .onChange(of: scenePhase) { oldPhase, newPhase in
+                    if newPhase == .active {
+                        // Check if we should stop recording due to Live Activity stop button
+                        let sharedDefaults = UserDefaults(suiteName: "group.sonora.shared") ?? UserDefaults.standard
+                        if sharedDefaults.bool(forKey: "shouldStopRecordingOnActivation") {
+                            // Clear the flag immediately to prevent duplicate stops
+                            sharedDefaults.removeObject(forKey: "shouldStopRecordingOnActivation")
+                            sharedDefaults.synchronize()
+                            
+                            // Stop recording if currently recording
+                            if viewModel.isRecording {
+                                HapticManager.shared.playRecordingFeedback(isStarting: false)
+                                viewModel.toggleRecording()
+                            }
+                        }
+                    }
                 }
             }
         }

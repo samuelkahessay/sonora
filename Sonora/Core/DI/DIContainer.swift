@@ -23,7 +23,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _transcriptionServiceFactory: TranscriptionServiceFactory?
     private var _modelDownloadManager: ModelDownloadManager?
     private var _analysisService: AnalysisService!
-    private var _llamaAnalysisService: LlamaAnalysisService?
+    private var _localAnalysisService: LocalAnalysisService?
     private var _memoRepository: MemoRepositoryImpl!
     private var _transcriptionRepository: (any TranscriptionRepository)?
     private var _analysisRepository: (any AnalysisRepository)?
@@ -42,6 +42,13 @@ final class DIContainer: ObservableObject, Resolver {
     private var _spotlightIndexer: (any SpotlightIndexing)?
     private var _whisperKitModelProvider: WhisperKitModelProvider?
     private var _modelContext: ModelContext?
+    
+    // MARK: - EventKit Services
+    private var _eventKitRepository: (any EventKitRepository)?
+    private var _eventKitPermissionService: (any EventKitPermissionServiceProtocol)?
+    private var _createCalendarEventUseCase: (any CreateCalendarEventUseCaseProtocol)?
+    private var _createReminderUseCase: (any CreateReminderUseCaseProtocol)?
+    private var _detectEventsAndRemindersUseCase: (any DetectEventsAndRemindersUseCaseProtocol)?
     
     // MARK: - Initialization
     private init() {
@@ -251,14 +258,24 @@ final class DIContainer: ObservableObject, Resolver {
         
         // Return local analysis service if enabled, otherwise use API service
         if AppConfiguration.shared.useLocalAnalysis {
-            if _llamaAnalysisService == nil {
-                _llamaAnalysisService = LlamaAnalysisService()
-                print("🦙 DIContainer: Created LlamaAnalysisService instance")
+            if _localAnalysisService == nil {
+                _localAnalysisService = LocalAnalysisService()
+                print("🤖 DIContainer: Created LocalAnalysisService instance")
             }
-            return _llamaAnalysisService!
+            return _localAnalysisService!
         }
         
         return _analysisService
+    }
+
+    /// Explicit local analysis service (on-device)
+    @MainActor
+    func localAnalysisService() -> any AnalysisServiceProtocol {
+        ensureConfigured()
+        if _localAnalysisService == nil {
+            _localAnalysisService = LocalAnalysisService()
+        }
+        return _localAnalysisService!
     }
 
     /// Get moderation service
@@ -434,6 +451,76 @@ final class DIContainer: ObservableObject, Resolver {
         ensureConfigured()
         guard let idx = _spotlightIndexer else { fatalError("DIContainer not configured: spotlightIndexer") }
         return idx
+    }
+    
+    // MARK: - EventKit Services
+    
+    /// Get EventKit repository
+    @MainActor
+    func eventKitRepository() -> any EventKitRepository {
+        ensureConfigured()
+        if _eventKitRepository == nil {
+            _eventKitRepository = EventKitRepositoryImpl(logger: logger())
+        }
+        return _eventKitRepository!
+    }
+    
+    /// Get EventKit permission service
+    @MainActor
+    func eventKitPermissionService() -> any EventKitPermissionServiceProtocol {
+        ensureConfigured()
+        if _eventKitPermissionService == nil {
+            _eventKitPermissionService = EventKitPermissionService(logger: logger())
+        }
+        return _eventKitPermissionService!
+    }
+    
+    /// Factory: CreateCalendarEventUseCase
+    @MainActor
+    func createCalendarEventUseCase() -> any CreateCalendarEventUseCaseProtocol {
+        ensureConfigured()
+        if _createCalendarEventUseCase == nil {
+            _createCalendarEventUseCase = CreateCalendarEventUseCase(
+                eventKitRepository: eventKitRepository(),
+                permissionService: eventKitPermissionService(),
+                logger: logger(),
+                eventBus: eventBus()
+            )
+        }
+        return _createCalendarEventUseCase!
+    }
+    
+    /// Factory: CreateReminderUseCase
+    @MainActor
+    func createReminderUseCase() -> any CreateReminderUseCaseProtocol {
+        ensureConfigured()
+        if _createReminderUseCase == nil {
+            _createReminderUseCase = CreateReminderUseCase(
+                eventKitRepository: eventKitRepository(),
+                permissionService: eventKitPermissionService(),
+                logger: logger(),
+                eventBus: eventBus()
+            )
+        }
+        return _createReminderUseCase!
+    }
+    
+    /// Factory: DetectEventsAndRemindersUseCase
+    @MainActor
+    func detectEventsAndRemindersUseCase() -> any DetectEventsAndRemindersUseCaseProtocol {
+        ensureConfigured()
+        if _detectEventsAndRemindersUseCase == nil {
+            _detectEventsAndRemindersUseCase = DetectEventsAndRemindersUseCase(
+                analysisService: analysisService(),
+                localAnalysisService: localAnalysisService(),
+                analysisRepository: analysisRepository(),
+                logger: logger(),
+                eventBus: eventBus(),
+                operationCoordinator: operationCoordinator(),
+                useLocalAnalysis: false // Default to cloud analysis
+            )
+        }
+        return _detectEventsAndRemindersUseCase!
     }
     
     /// Factory: CreateTranscriptShareFileUseCase

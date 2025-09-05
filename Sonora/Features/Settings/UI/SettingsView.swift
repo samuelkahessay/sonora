@@ -9,9 +9,13 @@ struct SettingsView: View {
                     OnboardingSectionView()
                     LanguageSectionView()
                     WhisperKitSectionView()
+                    AutoDetectionSectionView()
                     LocalAISectionView()
                     AIDisclosureSectionView()
                     PrivacySectionView()
+                    #if DEBUG
+                    DebugSectionView()
+                    #endif
                 }
                 .padding(.horizontal)
                 .padding(.top, Spacing.lg)

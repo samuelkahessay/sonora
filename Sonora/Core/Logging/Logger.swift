@@ -59,6 +59,7 @@ public enum LogCategory: String, CaseIterable, Sendable {
     case performance = "Performance"
     case error = "Error"
     case system = "System"
+    case eventkit = "EventKit"
     
     var emoji: String {
         switch self {
@@ -73,6 +74,7 @@ public enum LogCategory: String, CaseIterable, Sendable {
         case .performance: return "⏱️"
         case .error: return "🚫"
         case .system: return "🖥️"
+        case .eventkit: return "📅"
         }
     }
 }

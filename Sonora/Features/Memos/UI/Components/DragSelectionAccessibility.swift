@@ -90,7 +90,7 @@ struct DragSelectionAccessibility {
         
         withAnimation(.easeOut(duration: isReducedMotionEnabled ? 0.0 : 0.2)) {
             for memo in memosInRange {
-                viewModel.selectedMemoIds.insert(memo.id)
+                viewModel.selectMemo(memo)
             }
         }
         
@@ -249,7 +249,9 @@ struct DragSelectionAccessibilityPreview: View {
             }
         }
         .onAppear {
-            viewModel.isEditMode = true
+            if !viewModel.isEditMode {
+                viewModel.toggleEditMode()
+            }
         }
     }
 }

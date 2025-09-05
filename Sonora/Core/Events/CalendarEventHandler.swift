@@ -16,7 +16,7 @@ public final class CalendarEventHandler {
     // private let dateParser: DateParser   // TODO: Implement natural language date parsing
     
     // MARK: - Configuration
-    private let isEnabled: Bool = false // TODO: Set to true when implementation is ready
+    private let isEnabled: Bool = true // EventKit integration is now ready
     
     // MARK: - Initialization
     public init(

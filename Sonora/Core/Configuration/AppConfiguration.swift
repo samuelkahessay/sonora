@@ -568,6 +568,10 @@ public final class AppConfiguration: ObservableObject {
             return themesAnalysisTimeout
         case .todos:
             return todosAnalysisTimeout
+        case .events:
+            return contentAnalysisTimeout // Use same timeout as content analysis
+        case .reminders:
+            return contentAnalysisTimeout // Use same timeout as content analysis
         }
     }
     

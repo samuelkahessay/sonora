@@ -57,8 +57,14 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
     
     // MARK: - Configuration
     private struct TimerConfiguration {
-        static let updateInterval: TimeInterval = 0.1 // 100ms updates for smooth UI
+        static let normalUpdateInterval: TimeInterval = 1.0 // 1 second for normal recording
+        static let countdownUpdateInterval: TimeInterval = 0.1 // 100ms for smooth countdown
         static let countdownThreshold: TimeInterval = 10.0 // Start countdown at 10 seconds
+    }
+    
+    /// Dynamic update interval based on countdown state (Swift 6 compliant)
+    private var updateInterval: TimeInterval {
+        return isInCountdown ? TimerConfiguration.countdownUpdateInterval : TimerConfiguration.normalUpdateInterval
     }
     
     // MARK: - Callbacks
@@ -91,7 +97,8 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
             await self?.runTimerLoop()
         }
         
-        print("⏱️ RecordingTimerService: Timer started with cap: \(recordingCap?.description ?? "unlimited")")
+        let initialInterval = recordingCap != nil ? "adaptive (1.0s normal, 0.1s countdown)" : "1.0s"
+        print("⏱️ RecordingTimerService: Timer started with cap: \(recordingCap?.description ?? "unlimited"), interval: \(initialInterval)")
     }
     
     /// Stops the recording timer
@@ -135,11 +142,16 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
     
     // MARK: - Private Methods
     
-    /// Main timer loop that runs until cancelled
+    /// Main timer loop with adaptive frequency (Swift 6 compliant)
     private func runTimerLoop() async {
         while !Task.isCancelled {
+            // Get current update interval on MainActor (since isInCountdown is @Published)
+            let currentInterval = await MainActor.run { [weak self] in
+                return self?.updateInterval ?? TimerConfiguration.normalUpdateInterval
+            }
+            
             do {
-                try await Task.sleep(nanoseconds: UInt64(TimerConfiguration.updateInterval * 1_000_000_000))
+                try await Task.sleep(nanoseconds: UInt64(currentInterval * 1_000_000_000))
             } catch {
                 // Task was cancelled
                 break
@@ -153,7 +165,7 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
         }
     }
     
-    /// Updates timer state and handles countdown logic
+    /// Updates timer state and handles countdown logic with adaptive frequency
     private func updateTimerState() {
         guard let timeProvider = currentTimeProvider else { return }
         
@@ -161,15 +173,24 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
         let cap = recordingCapSeconds
         let remaining = cap != nil ? max(0, cap! - elapsed) : .infinity
         
+        // Track previous countdown state for frequency transition logging
+        let wasInCountdown = isInCountdown
+        
         // Update elapsed time
         self.recordingTime = elapsed
         
         // Countdown behavior: only when a finite cap exists and remaining time is within threshold
         if let _ = cap, remaining.isFinite, remaining > 0 && remaining < TimerConfiguration.countdownThreshold {
+            if !wasInCountdown {
+                print("⏱️ RecordingTimerService: Entering countdown mode - switching to \(TimerConfiguration.countdownUpdateInterval)s intervals")
+            }
             self.isInCountdown = true
             self.remainingTime = remaining
             print("⏱️ RecordingTimerService: Countdown active - \(remaining.formatted(.number.precision(.fractionLength(1)))) seconds remaining")
         } else {
+            if wasInCountdown {
+                print("⏱️ RecordingTimerService: Exiting countdown mode - switching to \(TimerConfiguration.normalUpdateInterval)s intervals")
+            }
             self.isInCountdown = false
             self.remainingTime = 0
         }

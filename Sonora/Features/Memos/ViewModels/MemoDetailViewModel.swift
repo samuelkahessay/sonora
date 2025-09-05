@@ -207,6 +207,23 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             if let flagged = meta.moderationFlagged { transcriptionModerationFlagged = flagged }
             if let cats = meta.moderationCategories { transcriptionModerationCategories = cats }
         }
+
+        // Auto-detected Events/Reminders banner trigger
+        let analysisRepo = DIContainer.shared.analysisRepository()
+        if let eventsEnvelope: AnalyzeEnvelope<EventsData> = analysisRepo.getAnalysisResult(for: memo.id, mode: .events, responseType: EventsData.self) {
+            let count = eventsEnvelope.data.events.count
+            if count > 0 && autoBannerDismissedForMemo[memo.id] != true {
+                eventDetectionCount = count
+                showEventDetectionBanner = true
+            }
+        }
+        if let remEnvelope: AnalyzeEnvelope<RemindersData> = analysisRepo.getAnalysisResult(for: memo.id, mode: .reminders, responseType: RemindersData.self) {
+            let count = remEnvelope.data.reminders.count
+            if count > 0 && autoBannerDismissedForMemo[memo.id] != true {
+                reminderDetectionCount = count
+                showReminderDetectionBanner = true
+            }
+        }
     }
     
     // MARK: - Public Methods
@@ -331,6 +348,31 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                         analysisEnvelope = envelope
                         isAnalyzing = false
                         print("📝 MemoDetailViewModel: Todos analysis completed (cached: \(envelope.latency_ms < 1000))")
+                    }
+
+                case .events:
+                    // Use combined detection use case and surface events
+                    let detection = try await DIContainer.shared.detectEventsAndRemindersUseCase().execute(transcript: transcript, memoId: memo.id)
+                    await MainActor.run {
+                        // Prefer detected events; fallback to empty to render a friendly state
+                        let data = detection.events ?? EventsData(events: [])
+                        analysisResult = data
+                        // No standard envelope for events/reminders; header is omitted by design
+                        analysisEnvelope = nil
+                        isAnalyzing = false
+                        print("📝 MemoDetailViewModel: Events detection completed (")
+                    }
+
+                case .reminders:
+                    // Use combined detection use case and surface reminders
+                    let detection = try await DIContainer.shared.detectEventsAndRemindersUseCase().execute(transcript: transcript, memoId: memo.id)
+                    await MainActor.run {
+                        // Prefer detected reminders; fallback to empty to render a friendly state
+                        let data = detection.reminders ?? RemindersData(reminders: [])
+                        analysisResult = data
+                        analysisEnvelope = nil
+                        isAnalyzing = false
+                        print("📝 MemoDetailViewModel: Reminders detection completed")
                     }
                 }
             } catch {
@@ -980,6 +1022,51 @@ extension MemoDetailViewModel {
     var languageBannerMessage: String {
         get { state.language.bannerMessage }
         set { state.language.bannerMessage = newValue }
+    }
+
+    // MARK: - Event Detection Banner
+    var showEventDetectionBanner: Bool {
+        get { state.ui.showEventDetectionBanner }
+        set { state.ui.showEventDetectionBanner = newValue }
+    }
+    var eventDetectionCount: Int {
+        get { state.ui.eventDetectionCount }
+        set { state.ui.eventDetectionCount = newValue }
+    }
+    var showReminderDetectionBanner: Bool {
+        get { state.ui.showReminderDetectionBanner }
+        set { state.ui.showReminderDetectionBanner = newValue }
+    }
+    var reminderDetectionCount: Int {
+        get { state.ui.reminderDetectionCount }
+        set { state.ui.reminderDetectionCount = newValue }
+    }
+    var autoBannerDismissedForMemo: [UUID: Bool] {
+        get { state.ui.autoBannerDismissedForMemo }
+        set { state.ui.autoBannerDismissedForMemo = newValue }
+    }
+    func dismissEventDetectionBanner() {
+        if let memo = currentMemo { autoBannerDismissedForMemo[memo.id] = true }
+        showEventDetectionBanner = false
+    }
+    func dismissReminderDetectionBanner() {
+        if let memo = currentMemo { autoBannerDismissedForMemo[memo.id] = true }
+        showReminderDetectionBanner = false
+    }
+    
+    func latestDetectedEvents() -> [EventsData.DetectedEvent] {
+        guard let memo = currentMemo else { return [] }
+        if let env: AnalyzeEnvelope<EventsData> = DIContainer.shared.analysisRepository().getAnalysisResult(for: memo.id, mode: .events, responseType: EventsData.self) {
+            return env.data.events
+        }
+        return []
+    }
+    func latestDetectedReminders() -> [RemindersData.DetectedReminder] {
+        guard let memo = currentMemo else { return [] }
+        if let env: AnalyzeEnvelope<RemindersData> = DIContainer.shared.analysisRepository().getAnalysisResult(for: memo.id, mode: .reminders, responseType: RemindersData.self) {
+            return env.data.reminders
+        }
+        return []
     }
     
     var languageBannerDismissedForMemo: [UUID: Bool] {

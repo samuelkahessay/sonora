@@ -57,6 +57,14 @@ struct AnalysisResultsView: View {
                     if let data = result as? TodosData {
                         TodosResultView(data: data)
                     }
+                case .events:
+                    if let data = result as? EventsData {
+                        EventsResultView(data: data)
+                    }
+                case .reminders:
+                    if let data = result as? RemindersData {
+                        RemindersResultView(data: data)
+                    }
                 }
             }
             .padding()

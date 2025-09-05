@@ -9,6 +9,13 @@ import SwiftData
 final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     @Published var memos: [Memo] = []
     
+    // MARK: - Reactive Publishers (Swift 6 Compliant)
+    
+    /// Publisher for memo list changes - enables unified state management
+    var memosPublisher: AnyPublisher<[Memo], Never> {
+        $memos.eraseToAnyPublisher()
+    }
+    
     // Playback state
     @Published private(set) var playingMemo: Memo?
     @Published private(set) var isPlaying: Bool = false
@@ -197,8 +204,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 print("📁 MemoRepository: Audio file copied to \(audioDestination.lastPathComponent)")
             }
             
-            // Get file size
-            let fileAttributes = try FileManager.default.attributesOfItem(atPath: audioDestination.path)
+            // Get file size (optional info; ignore result to silence unused warning)
+            _ = try? FileManager.default.attributesOfItem(atPath: audioDestination.path)
             
             // Get duration using AVAudioFile (avoids deprecated AVAsset.duration)
             let duration: TimeInterval = {

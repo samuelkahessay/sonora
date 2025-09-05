@@ -380,6 +380,10 @@ public struct OperationSummary: Sendable {
                 return "Extracting action items"
             case .analysis:
                 return "Performing detailed analysis"
+            case .events:
+                return "Detecting calendar events"
+            case .reminders:
+                return "Detecting reminders"
             }
         }
     }

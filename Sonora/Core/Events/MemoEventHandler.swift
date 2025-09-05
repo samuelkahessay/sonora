@@ -214,6 +214,44 @@ public final class MemoEventHandler {
         
         // Start tracking analysis time
         analysisStartTime[memoId] = Date()
+
+        // Auto-detect events/reminders if enabled and transcript suggests scheduling language
+        let defaults = UserDefaults.standard
+        let autoEvents = defaults.object(forKey: "autoDetectEvents") as? Bool ?? true
+        let autoReminders = defaults.object(forKey: "autoDetectReminders") as? Bool ?? true
+        if (autoEvents || autoReminders) && shouldRunEventDetection(transcript: text) {
+            logger.info("Auto-detection trigger conditions met; starting detection", category: .analysis, context: context)
+            Task { @MainActor in
+                do {
+                    let result = try await DIContainer.shared.detectEventsAndRemindersUseCase().execute(transcript: text, memoId: memoId)
+                    let eventsCount = autoEvents ? (result.events?.events.count ?? 0) : 0
+                    let remindersCount = autoReminders ? (result.reminders?.reminders.count ?? 0) : 0
+                    logger.info("Auto-detection completed: events=\(eventsCount), reminders=\(remindersCount)", category: .analysis, context: context)
+                } catch {
+                    logger.warning("Auto-detection failed: \(error.localizedDescription)", category: .analysis, context: context, error: error)
+                }
+            }
+        }
+    }
+
+    // Simple heuristic to decide if we should run detection
+    private func shouldRunEventDetection(transcript: String) -> Bool {
+        let lower = transcript.lowercased()
+        let eventKeywords = ["meet", "meeting", "appointment", "tomorrow", "next", "pm", "am", "call", "schedule", "at "]
+        let reminderKeywords = ["remember", "remind", "don't forget", "dont forget", "todo", "follow up", "buy", "send", "pick up"]
+        let hasEventLanguage = eventKeywords.contains { lower.contains($0) }
+        let hasReminderLanguage = reminderKeywords.contains { lower.contains($0) }
+
+        // Quick date/time detection using NSDataDetector
+        var hasDateTime = false
+        if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) {
+            let range = NSRange(lower.startIndex..<lower.endIndex, in: lower)
+            let matches = detector.matches(in: lower, options: [], range: range)
+            hasDateTime = !matches.isEmpty
+        }
+
+        let hasEnoughWords = transcript.split(separator: " ").count > 5
+        return hasEnoughWords && (hasDateTime || hasEventLanguage || hasReminderLanguage)
     }
     
     private func handleAnalysisCompleted(memoId: UUID, type: AnalysisMode, result: String, correlationId: String) async {
