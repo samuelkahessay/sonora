@@ -212,7 +212,7 @@ struct ShareOptionRow: View {
             fileURL: URL(fileURLWithPath: "/test.m4a"),
             creationDate: Date()
         ),
-        viewModel: MemoDetailViewModel()
+        viewModel: DIContainer.shared.viewModelFactory().createMemoDetailViewModel()
     ) {
         // Dismiss action for preview
     }

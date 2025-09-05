@@ -91,64 +91,16 @@ struct SonoraApp: App {
                         return
                     }
 
-                    // Accept both sonora://stopRecording and sonora:/stopRecording formats
-                    let isStopLink: Bool = {
-                        if url.host == "stopRecording" { return true }
-                        let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                        return path == "stopRecording"
-                    }()
-                    if isStopLink == false {
-                        print("ℹ️ SonoraApp: Deep link not matched as stop (host=\(url.host ?? "nil"), path=\(url.path))")
-                    }
-
-                    if isStopLink {
-                        print("🎯 SonoraApp: Processing stop recording deep link")
-                        Task { @MainActor in
-                            do {
-                                // Attempt to stop the current recording operation gracefully
-                                let coordinator = DIContainer.shared.operationCoordinator()
-                                let activeOps = await coordinator.getAllActiveOperations()
-                                print("📊 SonoraApp: Found \(activeOps.count) active operations")
-                                
-                                if let recordingOp = activeOps.first(where: { $0.type.category == .recording }) {
-                                    print("🎤 SonoraApp: Found active recording operation for memo: \(recordingOp.type.memoId)")
-                                    let memoId = recordingOp.type.memoId
-                                    let audioRepo = DIContainer.shared.audioRepository()
-                                    let stopUseCase = StopRecordingUseCase(
-                                        audioRepository: audioRepo,
-                                        operationCoordinator: DIContainer.shared.operationCoordinator()
-                                    )
-                                    
-                                    do {
-                                        try await stopUseCase.execute(memoId: memoId)
-                                        print("✅ SonoraApp: Successfully stopped recording via deep link")
-                                    } catch {
-                                        print("❌ SonoraApp: Failed to stop recording via deep link: \(error)")
-                                    }
-                                } else {
-                                    print("⚠️ SonoraApp: No active recording operation found")
-                                }
-                                
-                                // End the live activity immediately so it disappears right away
-                                print("🔄 SonoraApp: Ending Live Activity...")
-                                let liveService = DIContainer.shared.liveActivityService()
-                                let endUseCase = EndLiveActivityUseCase(liveActivityService: liveService)
-                                
-                                try await endUseCase.execute(dismissalPolicy: .immediate)
-                                print("✅ SonoraApp: Successfully ended Live Activity")
-                                
-                            } catch {
-                                print("❌ SonoraApp: Deep link handling failed: \(error)")
-                            }
-                        }
+                    // Handle sonora://memo/<id>
+                    if url.host == "memo" {
+                        let idStr = url.lastPathComponent
+                        NotificationCenter.default.post(name: .openMemoByID, object: nil, userInfo: ["memoId": idStr])
+                    } else if url.host == "open" {
+                        // This is the new default action for tapping the Live Activity.
+                        // It should just open the app, so no action is needed here.
+                        print("✅ SonoraApp: App opened via Live Activity tap.")
                     } else {
-                        // Handle sonora://memo/<id>
-                        if url.host == "memo" {
-                            let idStr = url.lastPathComponent
-                            NotificationCenter.default.post(name: .openMemoByID, object: nil, userInfo: ["memoId": idStr])
-                        } else {
-                            print("❌ SonoraApp: Unknown deep link host: \(url.host ?? "nil")")
-                        }
+                        print("⚠️ SonoraApp: Unknown or unhandled deep link host: \(url.host ?? "nil")")
                     }
                 }
                 .onContinueUserActivity(CSSearchableItemActionType) { activity in

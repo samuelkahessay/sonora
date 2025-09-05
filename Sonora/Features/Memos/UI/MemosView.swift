@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MemosView: View {
-    @StateObject private var viewModel = MemoListViewModel()
+    @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createMemoListViewModel()
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     let popToRoot: (() -> Void)?
     

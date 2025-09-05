@@ -35,25 +35,28 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     
                     Spacer()
                     
-                    // Stylized STOP pill (tap anywhere uses widgetURL to deep-link)
-                    HStack(alignment: .center, spacing: 8) {
-                        Image(systemName: "stop.circle.fill")
-                            .font(.system(size: 18, weight: .bold))
-                        Text("Stop")
-                            .font(.system(size: 16, weight: .bold))
+                    // Wrap the visual pill in a Button with the StopRecordingIntent
+                    Button(intent: StopRecordingIntent()) {
+                        HStack(alignment: .center, spacing: 8) {
+                            Image(systemName: "stop.circle.fill")
+                                .font(.system(size: 18, weight: .bold))
+                            Text("Stop")
+                                .font(.system(size: 16, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 24)
+                                .fill(.red.gradient)
+                                .shadow(color: .red.opacity(0.4), radius: 4, x: 0, y: 2)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 24)
+                                .stroke(.white.opacity(0.2), lineWidth: 1)
+                        )
                     }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(.red.gradient)
-                            .shadow(color: .red.opacity(0.4), radius: 4, x: 0, y: 2)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
-                    )
+                    .buttonStyle(.plain) // Use plain style to avoid system styling interfering with our custom look
                 }
                 
                 // Large monospace timer display
@@ -111,8 +114,8 @@ struct SonoraLiveActivityLiveActivity: Widget {
             )
             .activityBackgroundTint(.clear)
             .activitySystemActionForegroundColor(.white)
-            // Attach deep link to entire lock-screen activity surface
-            .widgetURL(URL(string: "sonora://stopRecording"))
+            // **FIX**: Change the deep link to a neutral "open" action
+            .widgetURL(URL(string: "sonora://open"))
 
         } dynamicIsland: { context in
             DynamicIsland {
@@ -134,34 +137,14 @@ struct SonoraLiveActivityLiveActivity: Widget {
                 }
                 
                 DynamicIslandExpandedRegion(.trailing) {
-                    VStack(alignment: .trailing, spacing: 4) {
-                        if context.state.isCountdown, let rem = context.state.remainingTime {
-                            HStack(alignment: .center, spacing: 4) {
-                                Image(systemName: "clock.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(.orange)
-                                Text(countdownString(rem))
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .monospacedDigit()
-                                    .foregroundStyle(.primary)
-                            }
-                        } else {
-                            HStack(alignment: .center, spacing: 4) {
-                                Circle()
-                                    .fill(.red)
-                                    .frame(width: 8, height: 8)
-                                    .opacity(0.8)
-                                    .animation(.easeInOut(duration: 1.0).repeatForever(), value: true)
-                                
-                                Text(elapsedString(from: context.state.startTime))
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .monospacedDigit()
-                                    .foregroundStyle(.primary)
-                            }
-                        }
+                    // **FIX**: Add an explicit stop button for the expanded island view
+                    Button(intent: StopRecordingIntent()) {
+                        Label("Stop", systemImage: "stop.circle.fill")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
                 }
                 
                 DynamicIslandExpandedRegion(.bottom) {
@@ -174,15 +157,10 @@ struct SonoraLiveActivityLiveActivity: Widget {
                                 .truncationMode(.tail)
                                 .foregroundStyle(.primary)
                             
-                            if context.state.isCountdown {
-                                Text("Auto-stop countdown")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                Text("Tap to stop recording")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
+                            // **FIX**: Updated text to be more accurate
+                            Text("Tap island to open app")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
                         
                         Spacer()
@@ -240,8 +218,8 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     .foregroundStyle(.red)
                     .symbolEffect(.pulse, options: .repeating, value: true)
             }
-            // Use App Intent for Dynamic Island tap (iOS 17+) or fallback to URL
-            .widgetURL(URL(string: "sonora://stopRecording"))
+            // **FIX**: Change the deep link to a neutral "open" action
+            .widgetURL(URL(string: "sonora://open"))
         }
     }
 }

@@ -21,106 +21,46 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     // MARK: - Debounce Management
     private var recordButtonDebounceTask: Task<Void, Never>?
     
-    // MARK: - Published Properties
-    @Published var isRecording: Bool = false
-    @Published var recordingTime: TimeInterval = 0
-    @Published var hasPermission: Bool = false
-    @Published var permissionStatus: MicrophonePermissionStatus = .notDetermined
-    @Published var recordingStoppedAutomatically: Bool = false
-    @Published var autoStopMessage: String?
-    @Published var isInCountdown: Bool = false
-    @Published var remainingTime: TimeInterval = 0
-    @Published var showAutoStopAlert: Bool = false
-    @Published var isRequestingPermission: Bool = false
+    // MARK: - Consolidated State
     
-    // MARK: - Error Handling Properties
-    @Published var error: SonoraError?
-    
-    // MARK: - Operation Status Properties
-    @Published var currentRecordingOperationId: UUID?
-    @Published var recordingOperationStatus: DetailedOperationStatus?
-    @Published var queuePosition: Int?
-    @Published var systemMetrics: SystemOperationMetrics?
+    /// Single source of truth for all UI state
+    @Published var state = RecordingViewState()
     
     // MARK: - Computed Properties
     
     /// Status text for the current recording state
     var recordingStatusText: String {
-        if isRequestingPermission {
-            return "Requesting Permission..."
-        }
-        
-        switch permissionStatus {
-        case .notDetermined:
-            return "Microphone Access Needed"
-        case .denied:
-            return "Microphone Permission Denied"
-        case .restricted:
-            return "Microphone Access Restricted"
-        case .granted:
-            if isRecording {
-                if isInCountdown {
-                    return "Recording ends in"
-                } else {
-                    return "Recording..."
-                }
-            } else {
-                return "Ready to Record"
-            }
-        }
+        state.recordingStatusText
     }
     
     /// Formatted recording time string
     var formattedRecordingTime: String {
-        formatTime(recordingTime)
+        state.recording.formattedRecordingTime
     }
     
     /// Formatted remaining time for countdown
     var formattedRemainingTime: String {
-        return "\(Int(ceil(remainingTime)))"
+        state.countdown.formattedRemainingTime
     }
     
     /// Recording button color based on state
     var recordingButtonColor: Color {
-        isRecording ? .semantic(.error) : .semantic(.brandPrimary)
+        state.recording.recordingButtonColor
     }
     
     /// Whether to show the recording indicator
     var shouldShowRecordingIndicator: Bool {
-        isRecording
+        state.recording.shouldShowRecordingIndicator
     }
     
     /// Enhanced status text that includes operation status
     var enhancedStatusText: String {
-        // Show operation status if available
-        if let opStatus = recordingOperationStatus {
-            switch opStatus {
-            case .queued:
-                if let position = queuePosition {
-                    return "Queued (position \(position + 1))"
-                }
-                return "Queued for recording"
-            case .waitingForResources:
-                return "Waiting for system resources"
-            case .waitingForConflictResolution:
-                return "Waiting (another operation active)"
-            case .processing(let progress):
-                if let progress = progress {
-                    return progress.currentStep
-                }
-                return "Processing recording"
-            default:
-                break
-            }
-        }
-        
-        // Fall back to basic status
-        return recordingStatusText
+        state.enhancedStatusText
     }
     
     /// System load indicator for UI
     var systemLoadText: String? {
-        guard let metrics = systemMetrics else { return nil }
+        guard let metrics = state.operations.systemMetrics else { return nil }
         
         if metrics.isSystemBusy {
             return "System busy (\(metrics.activeOperations)/\(metrics.maxConcurrentOperations) operations)"
@@ -169,29 +109,6 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         print("🎬 RecordingViewModel: Deinitialized and cleaned up debounce task")
     }
     
-    /// Convenience initializer using DIContainer
-    convenience init() {
-        let container = DIContainer.shared
-        let audioRepository = container.audioRepository()
-        let memoRepository = container.memoRepository()
-        let logger = container.logger()
-        
-        self.init(
-            startRecordingUseCase: StartRecordingUseCase(
-                audioRepository: audioRepository,
-                operationCoordinator: container.operationCoordinator()
-            ),
-            stopRecordingUseCase: StopRecordingUseCase(
-                audioRepository: audioRepository,
-                operationCoordinator: container.operationCoordinator()
-            ),
-            requestPermissionUseCase: RequestMicrophonePermissionUseCase(logger: logger),
-            handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository, eventBus: container.eventBus()),
-            audioRepository: audioRepository,
-            operationCoordinator: container.operationCoordinator(),
-            systemNavigator: container.systemNavigator()
-        )
-    }
     
     // MARK: - Setup Methods
     
@@ -575,6 +492,92 @@ extension RecordingViewModel {
 
 extension RecordingViewModel: ErrorHandling {
     var isLoading: Bool {
-        isRequestingPermission || currentRecordingOperationId != nil
+        state.permission.isRequestingPermission || state.recording.currentRecordingOperationId != nil
+    }
+}
+
+// MARK: - Backward Compatibility Properties
+
+extension RecordingViewModel {
+    
+    // MARK: - Recording Properties
+    var isRecording: Bool {
+        get { state.recording.isRecording }
+        set { state.recording.isRecording = newValue }
+    }
+    
+    var recordingTime: TimeInterval {
+        get { state.recording.recordingTime }
+        set { state.recording.recordingTime = newValue }
+    }
+    
+    var recordingStoppedAutomatically: Bool {
+        get { state.recording.recordingStoppedAutomatically }
+        set { state.recording.recordingStoppedAutomatically = newValue }
+    }
+    
+    var autoStopMessage: String? {
+        get { state.recording.autoStopMessage }
+        set { state.recording.autoStopMessage = newValue }
+    }
+    
+    var currentRecordingOperationId: UUID? {
+        get { state.recording.currentRecordingOperationId }
+        set { state.recording.currentRecordingOperationId = newValue }
+    }
+    
+    // MARK: - Permission Properties
+    var hasPermission: Bool {
+        get { state.permission.hasPermission }
+        set { state.permission.hasPermission = newValue }
+    }
+    
+    var permissionStatus: MicrophonePermissionStatus {
+        get { state.permission.permissionStatus }
+        set { state.permission.permissionStatus = newValue }
+    }
+    
+    var isRequestingPermission: Bool {
+        get { state.permission.isRequestingPermission }
+        set { state.permission.isRequestingPermission = newValue }
+    }
+    
+    // MARK: - Countdown Properties
+    var isInCountdown: Bool {
+        get { state.countdown.isInCountdown }
+        set { state.countdown.isInCountdown = newValue }
+    }
+    
+    var remainingTime: TimeInterval {
+        get { state.countdown.remainingTime }
+        set { state.countdown.remainingTime = newValue }
+    }
+    
+    // MARK: - Alert Properties
+    var showAutoStopAlert: Bool {
+        get { state.alert.showAutoStopAlert }
+        set { state.alert.showAutoStopAlert = newValue }
+    }
+    
+    // MARK: - Operation Properties
+    var recordingOperationStatus: DetailedOperationStatus? {
+        get { state.operations.recordingOperationStatus }
+        set { state.operations.recordingOperationStatus = newValue }
+    }
+    
+    var queuePosition: Int? {
+        get { state.operations.queuePosition }
+        set { state.operations.queuePosition = newValue }
+    }
+    
+    var systemMetrics: SystemOperationMetrics? {
+        get { state.operations.systemMetrics }
+        set { state.operations.systemMetrics = newValue }
+    }
+    
+    // MARK: - UI Properties
+    var error: SonoraError? {
+        get { state.ui.error }
+        set { state.ui.error = newValue }
     }
 }

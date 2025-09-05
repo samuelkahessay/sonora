@@ -1,0 +1,156 @@
+//
+//  AudioPermissionService.swift
+//  Sonora
+//
+//  Audio permission management service
+//  Handles microphone permission requests and status monitoring
+//
+
+import Foundation
+import AVFoundation
+import Combine
+
+// MicrophonePermissionStatus is defined in Core/Permissions/MicrophonePermissionStatus.swift
+
+/// Protocol defining audio permission management operations
+@MainActor
+protocol AudioPermissionServiceProtocol: ObservableObject {
+    var hasPermission: Bool { get }
+    var permissionStatus: MicrophonePermissionStatus { get }
+    var permissionStatusPublisher: AnyPublisher<MicrophonePermissionStatus, Never> { get }
+    
+    func checkPermissions()
+    func requestPermission() async -> Bool
+    func getCurrentPermissionStatus() -> MicrophonePermissionStatus
+}
+
+/// Focused service for microphone permission management
+@MainActor
+final class AudioPermissionService: AudioPermissionServiceProtocol, @unchecked Sendable {
+    
+    // MARK: - Published Properties
+    @Published var hasPermission = false
+    @Published var permissionStatus: MicrophonePermissionStatus = .notDetermined
+    
+    // MARK: - Publishers
+    var permissionStatusPublisher: AnyPublisher<MicrophonePermissionStatus, Never> {
+        $permissionStatus.eraseToAnyPublisher()
+    }
+    
+    // MARK: - Initialization
+    init() {
+        print("🔑 AudioPermissionService: Initialized")
+        checkPermissions()
+    }
+    
+    // MARK: - Public Interface
+    
+    /// Checks current microphone permissions and updates state
+    func checkPermissions() {
+        let status = getCurrentPermissionStatus()
+        updatePermissionState(status)
+        
+        print("🔑 AudioPermissionService: Permission check - \(status)")
+    }
+    
+    /// Requests microphone permission from the user
+    func requestPermission() async -> Bool {
+        return await withCheckedContinuation { continuation in
+            requestMicrophonePermission { [weak self] granted in
+                Task { @MainActor in
+                    let status: MicrophonePermissionStatus = granted ? .granted : .denied
+                    self?.updatePermissionState(status)
+                    continuation.resume(returning: granted)
+                }
+            }
+        }
+    }
+    
+    /// Gets the current permission status without updating state
+    func getCurrentPermissionStatus() -> MicrophonePermissionStatus {
+        return MicrophonePermissionStatus.current()
+    }
+    
+    /// Requests permission if needed, returns current status
+    func ensurePermission() async -> MicrophonePermissionStatus {
+        let currentStatus = getCurrentPermissionStatus()
+        
+        switch currentStatus {
+        case .notDetermined:
+            let granted = await requestPermission()
+            return granted ? .granted : .denied
+        case .granted, .denied, .restricted:
+            return currentStatus
+        }
+    }
+    
+    /// Checks if permission is available for recording
+    func canRecord() -> Bool {
+        return getCurrentPermissionStatus().allowsRecording
+    }
+    
+    // MARK: - Private Methods
+    
+    /// Updates the permission state and publishes changes
+    private func updatePermissionState(_ status: MicrophonePermissionStatus) {
+        let hasPermissionValue = status.allowsRecording
+        
+        // Only update if values have changed to avoid unnecessary notifications
+        if self.permissionStatus != status {
+            self.permissionStatus = status
+        }
+        
+        if self.hasPermission != hasPermissionValue {
+            self.hasPermission = hasPermissionValue
+        }
+        
+        print("🔑 AudioPermissionService: State updated - hasPermission: \(hasPermissionValue), status: \(status)")
+    }
+    
+    /// Requests microphone permission with iOS version compatibility
+    private func requestMicrophonePermission(_ completion: @escaping (Bool) -> Void) {
+        print("🔑 AudioPermissionService: Requesting microphone permission...")
+        
+        if #available(iOS 17.0, *) {
+            AVAudioApplication.requestRecordPermission { allowed in
+                print("🔑 AudioPermissionService: Permission request result (iOS 17+): \(allowed)")
+                completion(allowed)
+            }
+        } else {
+            AVAudioSession.sharedInstance().requestRecordPermission { allowed in
+                print("🔑 AudioPermissionService: Permission request result (iOS <17): \(allowed)")
+                completion(allowed)
+            }
+        }
+    }
+}
+
+// MARK: - Error Types
+
+enum AudioPermissionError: LocalizedError {
+    case permissionDenied
+    case permissionNotDetermined
+    case requestFailed
+    
+    var errorDescription: String? {
+        switch self {
+        case .permissionDenied:
+            return "Microphone permission was denied"
+        case .permissionNotDetermined:
+            return "Microphone permission has not been determined"
+        case .requestFailed:
+            return "Failed to request microphone permission"
+        }
+    }
+    
+    var recoverySuggestion: String? {
+        switch self {
+        case .permissionDenied:
+            return "Please enable microphone access in Settings > Privacy & Security > Microphone"
+        case .permissionNotDetermined:
+            return "Please allow microphone access when prompted"
+        case .requestFailed:
+            return "Try restarting the app and granting permission when prompted"
+        }
+    }
+}

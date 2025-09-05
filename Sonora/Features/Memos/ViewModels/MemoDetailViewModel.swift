@@ -30,80 +30,32 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     // MARK: - Current Memo
     private var currentMemo: Memo?
     
-    // MARK: - Published Properties
+    // MARK: - Consolidated State
     
-    // Transcription State
-    @Published var transcriptionState: TranscriptionState = .notStarted
+    /// Single source of truth for all UI state
+    @Published var state = MemoDetailViewState()
     
-    // Audio Playback State
-    @Published var isPlaying: Bool = false
-    
-    // Analysis State
-    @Published var selectedAnalysisMode: AnalysisMode?
-    @Published var analysisResult: Any?
-    @Published var analysisEnvelope: Any?
-    @Published var isAnalyzing: Bool = false
-    @Published var analysisError: String?
-    @Published var analysisCacheStatus: String?
-    @Published var analysisPerformanceInfo: String?
-    
-    // Parallel Distill State
-    @Published var isParallelDistillEnabled: Bool = true // Feature flag
-    @Published var distillProgress: DistillProgressUpdate?
-    @Published var partialDistillData: PartialDistillData?
-    
-    // MARK: - Operation Status
-    @Published var activeOperations: [OperationSummary] = []
-    @Published var memoOperationSummaries: [OperationSummary] = []
-    @Published var transcriptionProgressPercent: Double? = nil
-    @Published var transcriptionProgressStep: String? = nil
-
-    // Language detection banner
-    @Published var detectedLanguage: String? = nil
-    @Published var showNonEnglishBanner: Bool = false
-    @Published var languageBannerMessage: String = ""
-    private var languageBannerDismissedForMemo: [UUID: Bool] = [:]
-    
-    // Moderation state for transcription
-    @Published var transcriptionModerationFlagged: Bool = false
-    @Published var transcriptionModerationCategories: [String: Bool] = [:]
-    
-    // Error handling
-    @Published var error: SonoraError?
-    @Published var isLoading: Bool = false
-    
-    // Title renaming state
-    @Published var isRenamingTitle: Bool = false
-    @Published var editedTitle: String = ""
-    @Published var currentMemoTitle: String = ""
-    
-    // Share functionality state
-    @Published var showShareSheet: Bool = false
-    @Published var shareAudioEnabled: Bool = true
-    @Published var shareTranscriptionEnabled: Bool = false
-    @Published var shareAnalysisEnabled: Bool = false
-    @Published var shareAnalysisSelectedTypes: Set<DomainAnalysisType> = []
+    // MARK: - Non-UI State
     
     // Track temp files created for sharing so we can clean them up afterward
     private var lastShareTempURLs: [URL] = []
-    @Published var isPreparingShare: Bool = false
     private var pendingShareItems: [Any] = []
     
     // MARK: - Computed Properties
     
     /// Play button icon based on current playing state
     var playButtonIcon: String {
-        isPlaying ? "pause.fill" : "play.fill"
+        state.audio.playButtonIcon
     }
     
     /// Whether transcription section should show completed state
     var isTranscriptionCompleted: Bool {
-        transcriptionState.isCompleted
+        state.transcription.isCompleted
     }
     
     /// Text content from completed transcription
     var transcriptionText: String? {
-        transcriptionState.text
+        state.transcription.state.text
     }
 
     /// Count of available analysis categories (Distill, Analysis, Themes, Todos), consolidated across sub-modes
@@ -181,51 +133,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         print("📝 MemoDetailViewModel: Initialized with dependency injection")
     }
     
-    /// Convenience initializer using DIContainer
-    /// CRITICAL FIX: Uses proper dependency injection following Clean Architecture
-    convenience init() {
-        let container = DIContainer.shared
-        let memoRepository = container.memoRepository()
-        let analysisService = container.analysisService()
-        let analysisRepository = container.analysisRepository()
-        let transcriptionRepository = container.transcriptionRepository()
-        // Use routed transcription service from factory (respects preference + availability)
-        let transcriptionAPI = container.createTranscriptionService()
-        let logger = container.logger()
-        
-        // Use direct repository initialization to ensure real persistence
-        let startTranscriptionUseCase = StartTranscriptionUseCase(
-            transcriptionRepository: transcriptionRepository,
-            transcriptionAPI: transcriptionAPI,
-            eventBus: container.eventBus(),
-            operationCoordinator: container.operationCoordinator(),
-            moderationService: container.moderationService()
-        )
-        let retryTranscriptionUseCase = RetryTranscriptionUseCase(
-            transcriptionRepository: transcriptionRepository,
-            transcriptionAPI: transcriptionAPI
-        )
-        let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(
-            transcriptionRepository: transcriptionRepository
-        )
-        
-        self.init(
-            playMemoUseCase: PlayMemoUseCase(memoRepository: memoRepository),
-            startTranscriptionUseCase: startTranscriptionUseCase,
-            retryTranscriptionUseCase: retryTranscriptionUseCase,
-            getTranscriptionStateUseCase: getTranscriptionStateUseCase,
-            analyzeDistillUseCase: AnalyzeDistillUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus(), operationCoordinator: container.operationCoordinator()),
-            analyzeDistillParallelUseCase: AnalyzeDistillParallelUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus(), operationCoordinator: container.operationCoordinator()),
-            analyzeContentUseCase: AnalyzeContentUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
-            analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
-            analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: analysisService, analysisRepository: analysisRepository, logger: logger, eventBus: container.eventBus()),
-            renameMemoUseCase: RenameMemoUseCase(memoRepository: memoRepository),
-            createTranscriptShareFileUseCase: container.createTranscriptShareFileUseCase(),
-            createAnalysisShareFileUseCase: container.createAnalysisShareFileUseCase(),
-            memoRepository: memoRepository,
-            operationCoordinator: container.operationCoordinator()
-        )
-    }
     
     // MARK: - Setup Methods
     
@@ -260,19 +167,21 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     private func updateOperationStatus() async {
         guard let currentMemo = currentMemo else { return }
         
-        // Get operation summaries for current memo
-        memoOperationSummaries = await operationCoordinator.getOperationSummaries(
+        // Get operation summaries for current memo and extract IDs
+        let memoSummaries = await operationCoordinator.getOperationSummaries(
             group: .all,
             filter: .active,
             for: currentMemo.id
         )
+        memoOperationSummaries = memoSummaries.map { $0.operation.id }
         
         // Get all active operations system-wide (for debugging/monitoring)
-        activeOperations = await operationCoordinator.getOperationSummaries(
+        let allSummaries = await operationCoordinator.getOperationSummaries(
             group: .all,
             filter: .active,
             for: nil
         )
+        activeOperations = allSummaries.map { $0.operation.id }
     }
     
     private func updateFromRepository() {
@@ -708,13 +617,13 @@ extension MemoDetailViewModel {
         return """
         MemoDetailViewModel State:
         - currentMemo: \(currentMemo?.filename ?? "none")
-        - transcriptionState: \(transcriptionState.statusText)
-        - isPlaying: \(isPlaying)
-        - isAnalyzing: \(isAnalyzing)
-        - selectedAnalysisMode: \(selectedAnalysisMode?.displayName ?? "none")
-        - analysisError: \(analysisError ?? "none")
-        - error: \(error?.localizedDescription ?? "none")
-        - isLoading: \(isLoading)
+        - transcriptionState: \(state.transcription.state.statusText)
+        - isPlaying: \(state.audio.isPlaying)
+        - isAnalyzing: \(state.analysis.isAnalyzing)
+        - selectedAnalysisMode: \(state.analysis.selectedMode?.displayName ?? "none")
+        - analysisError: \(state.analysis.error ?? "none")
+        - error: \(state.ui.error?.localizedDescription ?? "none")
+        - isLoading: \(state.ui.isLoading)
         """
     }
     
@@ -725,9 +634,9 @@ extension MemoDetailViewModel {
         guard currentMemo != nil else { return }
         
         // Determine what operation to retry based on current state
-        if transcriptionState.isFailed {
+        if state.transcription.state.isFailed {
             retryTranscription()
-        } else if !transcriptionState.isCompleted {
+        } else if !state.transcription.state.isCompleted {
             startTranscription()
         }
     }
@@ -955,5 +864,195 @@ extension MemoDetailViewModel {
         """
         
         return header + text
+    }
+}
+
+// MARK: - Backward Compatibility Properties
+
+extension MemoDetailViewModel {
+    
+    // MARK: - Transcription Properties
+    var transcriptionState: TranscriptionState {
+        get { state.transcription.state }
+        set { state.transcription.state = newValue }
+    }
+    
+    var transcriptionProgressPercent: Double? {
+        get { state.transcription.progressPercent }
+        set { state.transcription.progressPercent = newValue }
+    }
+    
+    var transcriptionProgressStep: String? {
+        get { state.transcription.progressStep }
+        set { state.transcription.progressStep = newValue }
+    }
+    
+    var transcriptionModerationFlagged: Bool {
+        get { state.transcription.moderationFlagged }
+        set { state.transcription.moderationFlagged = newValue }
+    }
+    
+    var transcriptionModerationCategories: [String: Bool] {
+        get { state.transcription.moderationCategories }
+        set { state.transcription.moderationCategories = newValue }
+    }
+    
+    // MARK: - Audio Properties  
+    var isPlaying: Bool {
+        get { state.audio.isPlaying }
+        set { state.audio.isPlaying = newValue }
+    }
+    
+    // MARK: - Analysis Properties
+    var selectedAnalysisMode: AnalysisMode? {
+        get { state.analysis.selectedMode }
+        set { state.analysis.selectedMode = newValue }
+    }
+    
+    var analysisResult: Any? {
+        get { state.analysis.result }
+        set { 
+            if let value = newValue as? AnyHashable {
+                state.analysis.result = value 
+            } else {
+                state.analysis.result = nil
+            }
+        }
+    }
+    
+    var analysisEnvelope: Any? {
+        get { state.analysis.envelope }
+        set { 
+            if let value = newValue as? AnyHashable {
+                state.analysis.envelope = value 
+            } else {
+                state.analysis.envelope = nil
+            }
+        }
+    }
+    
+    var isAnalyzing: Bool {
+        get { state.analysis.isAnalyzing }
+        set { state.analysis.isAnalyzing = newValue }
+    }
+    
+    var analysisError: String? {
+        get { state.analysis.error }
+        set { state.analysis.error = newValue }
+    }
+    
+    var analysisCacheStatus: String? {
+        get { state.analysis.cacheStatus }
+        set { state.analysis.cacheStatus = newValue }
+    }
+    
+    var analysisPerformanceInfo: String? {
+        get { state.analysis.performanceInfo }
+        set { state.analysis.performanceInfo = newValue }
+    }
+    
+    var isParallelDistillEnabled: Bool {
+        get { state.analysis.isParallelDistillEnabled }
+        set { state.analysis.isParallelDistillEnabled = newValue }
+    }
+    
+    var distillProgress: DistillProgressUpdate? {
+        get { state.analysis.distillProgress }
+        set { state.analysis.distillProgress = newValue }
+    }
+    
+    var partialDistillData: PartialDistillData? {
+        get { state.analysis.partialDistillData }
+        set { state.analysis.partialDistillData = newValue }
+    }
+    
+    // MARK: - Language Properties
+    var detectedLanguage: String? {
+        get { state.language.detectedLanguage }
+        set { state.language.detectedLanguage = newValue }
+    }
+    
+    var showNonEnglishBanner: Bool {
+        get { state.language.showNonEnglishBanner }
+        set { state.language.showNonEnglishBanner = newValue }
+    }
+    
+    var languageBannerMessage: String {
+        get { state.language.bannerMessage }
+        set { state.language.bannerMessage = newValue }
+    }
+    
+    var languageBannerDismissedForMemo: [UUID: Bool] {
+        get { state.language.bannerDismissedForMemo }
+        set { state.language.bannerDismissedForMemo = newValue }
+    }
+    
+    // MARK: - Title Editing Properties
+    var isRenamingTitle: Bool {
+        get { state.titleEditing.isRenaming }
+        set { state.titleEditing.isRenaming = newValue }
+    }
+    
+    var editedTitle: String {
+        get { state.titleEditing.editedTitle }
+        set { state.titleEditing.editedTitle = newValue }
+    }
+    
+    var currentMemoTitle: String {
+        get { state.titleEditing.currentMemoTitle }
+        set { state.titleEditing.currentMemoTitle = newValue }
+    }
+    
+    // MARK: - Share Properties
+    var showShareSheet: Bool {
+        get { state.share.showShareSheet }
+        set { state.share.showShareSheet = newValue }
+    }
+    
+    var shareAudioEnabled: Bool {
+        get { state.share.audioEnabled }
+        set { state.share.audioEnabled = newValue }
+    }
+    
+    var shareTranscriptionEnabled: Bool {
+        get { state.share.transcriptionEnabled }
+        set { state.share.transcriptionEnabled = newValue }
+    }
+    
+    var shareAnalysisEnabled: Bool {
+        get { state.share.analysisEnabled }
+        set { state.share.analysisEnabled = newValue }
+    }
+    
+    var shareAnalysisSelectedTypes: Set<DomainAnalysisType> {
+        get { state.share.analysisSelectedTypes }
+        set { state.share.analysisSelectedTypes = newValue }
+    }
+    
+    var isPreparingShare: Bool {
+        get { state.share.isPreparingShare }
+        set { state.share.isPreparingShare = newValue }
+    }
+    
+    // MARK: - UI Properties
+    var error: SonoraError? {
+        get { state.ui.error }
+        set { state.ui.error = newValue }
+    }
+    
+    var isLoading: Bool {
+        get { state.ui.isLoading }
+        set { state.ui.isLoading = newValue }
+    }
+    
+    // MARK: - Operation Properties (simplified access)
+    var activeOperations: [UUID] {
+        get { state.operations.activeOperations }
+        set { state.operations.activeOperations = newValue }
+    }
+    
+    var memoOperationSummaries: [UUID] {
+        get { state.operations.memoOperationSummaries }
+        set { state.operations.memoOperationSummaries = newValue }
     }
 }

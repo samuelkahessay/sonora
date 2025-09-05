@@ -8,7 +8,7 @@ protocol AnalyzeDistillParallelUseCaseProtocol: Sendable {
 }
 
 /// Progress update for parallel distill processing
-public struct DistillProgressUpdate: Sendable {
+public struct DistillProgressUpdate: Sendable, Equatable {
     public let completedComponents: Int
     public let totalComponents: Int
     public let completedResults: PartialDistillData
@@ -20,7 +20,7 @@ public struct DistillProgressUpdate: Sendable {
 }
 
 /// Partial distill data that gets built up progressively
-public struct PartialDistillData: Sendable {
+public struct PartialDistillData: Sendable, Equatable {
     public var summary: String?
     public var actionItems: [DistillData.ActionItem]?
     public var keyThemes: [String]?

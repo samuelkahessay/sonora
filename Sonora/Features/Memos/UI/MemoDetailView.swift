@@ -5,7 +5,7 @@ import UIKit
 
 struct MemoDetailView: View {
     let memo: Memo
-    @StateObject private var viewModel = MemoDetailViewModel()
+    @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createMemoDetailViewModel()
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
     @FocusState private var isTitleEditingFocused: Bool
     

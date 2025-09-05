@@ -33,7 +33,7 @@ struct CircularRecordButton: View {
 }
 
 struct RecordingView: View {
-    @StateObject private var viewModel = RecordingViewModel()
+    @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createRecordingViewModel()
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
     
     enum AccessibleElement {

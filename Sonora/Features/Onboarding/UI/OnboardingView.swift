@@ -4,7 +4,7 @@ import SwiftUI
 struct OnboardingView: View {
     
     // MARK: - ViewModel
-    @StateObject private var viewModel = OnboardingViewModel()
+    @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createOnboardingViewModel()
     @StateObject private var onboardingConfiguration = OnboardingConfiguration.shared
     
     // MARK: - State
@@ -314,7 +314,7 @@ struct OnboardingView: View {
 #if DEBUG
 #Preview("Onboarding - Welcome") {
     struct PreviewWrapper: View {
-        @StateObject private var viewModel = OnboardingViewModel()
+        @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createOnboardingViewModel()
         
         var body: some View {
             OnboardingView()
@@ -329,7 +329,7 @@ struct OnboardingView: View {
 
 #Preview("Onboarding - Privacy") {
     struct PreviewWrapper: View {
-        @StateObject private var viewModel = OnboardingViewModel()
+        @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createOnboardingViewModel()
         
         var body: some View {
             OnboardingView()
@@ -344,7 +344,7 @@ struct OnboardingView: View {
 
 #Preview("Onboarding - Microphone") {
     struct PreviewWrapper: View {
-        @StateObject private var viewModel = OnboardingViewModel()
+        @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createOnboardingViewModel()
         
         var body: some View {
             OnboardingView()
@@ -359,7 +359,7 @@ struct OnboardingView: View {
 
 #Preview("Onboarding - Features") {
     struct PreviewWrapper: View {
-        @StateObject private var viewModel = OnboardingViewModel()
+        @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createOnboardingViewModel()
         
         var body: some View {
             OnboardingView()

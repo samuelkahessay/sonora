@@ -56,7 +56,7 @@ struct MemoSwipeActionsView: View {
 }
 
 #Preview {
-    let vm = MemoListViewModel()
+    let vm = DIContainer.shared.viewModelFactory().createMemoListViewModel()
     let memo = Memo(
         filename: "Test.m4a",
         fileURL: URL(fileURLWithPath: "/dev/null"),

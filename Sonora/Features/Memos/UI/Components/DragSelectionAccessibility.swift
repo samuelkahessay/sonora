@@ -231,7 +231,7 @@ struct AlternativeSelectionControls: View {
 // MARK: - Preview Helpers for Accessibility Testing
 
 struct DragSelectionAccessibilityPreview: View {
-    @StateObject private var viewModel = MemoListViewModel()
+    @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createMemoListViewModel()
     
     var body: some View {
         VStack {

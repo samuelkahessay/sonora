@@ -20,6 +20,9 @@ final class SpotlightIndexer: SpotlightIndexing {
     private let transcriptionRepository: any TranscriptionRepository
     private let analysisRepository: any AnalysisRepository
 
+    // Core Spotlight queue isolation to prevent reentrancy issues
+    private let csQueue = DispatchQueue(label: "com.samuelkahessay.Sonora.spotlight", qos: .utility)
+
     // Debounce/throttle state
     private var debounceTasks: [UUID: Task<Void, Never>] = [:]
     private var lastIndexTime: [UUID: Date] = [:]
@@ -36,6 +39,53 @@ final class SpotlightIndexer: SpotlightIndexing {
         self.memoRepository = memoRepository
         self.transcriptionRepository = transcriptionRepository
         self.analysisRepository = analysisRepository
+    }
+
+    // MARK: - Core Spotlight Queue Isolation
+    
+    /// Queue-isolated wrapper for indexing Core Spotlight items
+    private func cs_index(_ items: [CSSearchableItem]) async throws {
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            csQueue.async {
+                CSSearchableIndex.default().indexSearchableItems(items) { error in
+                    if let error = error {
+                        cont.resume(throwing: error)
+                    } else {
+                        cont.resume(returning: ())
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Queue-isolated wrapper for deleting Core Spotlight items by identifier
+    private func cs_delete(identifiers: [String]) async throws {
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            csQueue.async {
+                CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: identifiers) { error in
+                    if let error = error {
+                        cont.resume(throwing: error)
+                    } else {
+                        cont.resume(returning: ())
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Queue-isolated wrapper for deleting Core Spotlight items by domain
+    private func cs_deleteDomain(_ domainIDs: [String]) async throws {
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            csQueue.async {
+                CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: domainIDs) { error in
+                    if let error = error {
+                        cont.resume(throwing: error)
+                    } else {
+                        cont.resume(returning: ())
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Public API
@@ -63,7 +113,7 @@ final class SpotlightIndexer: SpotlightIndexing {
         }
         let idStr = memoID.uuidString
         do {
-            try await CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: [idStr])
+            try await cs_delete(identifiers: [idStr])
             logger.info("Spotlight: deleted item \(idStr)", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]))
         } catch {
             logger.warning("Spotlight delete failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": idStr]), error: error)
@@ -78,7 +128,7 @@ final class SpotlightIndexer: SpotlightIndexing {
         }
         let start = Date()
         do {
-            try await CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: ["memo"])
+            try await cs_deleteDomain(["memo"])
         } catch {
             logger.warning("Spotlight domain delete failed; proceeding", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]), error: error)
         }
@@ -95,13 +145,10 @@ final class SpotlightIndexer: SpotlightIndexing {
                     items.append(item)
                 }
             }
-            await withCheckedContinuation { [weak self] continuation in
-                CSSearchableIndex.default().indexSearchableItems(items) { error in
-                    if let error = error {
-                        self?.logger.warning("Spotlight batch index failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "batchStart": idx]), error: error)
-                    }
-                    continuation.resume()
-                }
+            do {
+                try await cs_index(items)
+            } catch {
+                logger.warning("Spotlight batch index failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "batchStart": idx]), error: error)
             }
             idx += chunkSize
         }
@@ -133,15 +180,11 @@ final class SpotlightIndexer: SpotlightIndexing {
         }
         guard let item = await buildSearchableItem(for: memo) else { return }
         
-        await withCheckedContinuation { continuation in
-            CSSearchableIndex.default().indexSearchableItems([item]) { [weak self] error in
-                if let error = error {
-                    self?.logger.warning("Spotlight index failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]), error: error)
-                } else {
-                    self?.logger.info("Spotlight: indexed memo \(memoID)", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]))
-                }
-                continuation.resume()
-            }
+        do {
+            try await cs_index([item])
+            logger.info("Spotlight: indexed memo \(memoID)", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]))
+        } catch {
+            logger.warning("Spotlight index failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]), error: error)
         }
     }
 

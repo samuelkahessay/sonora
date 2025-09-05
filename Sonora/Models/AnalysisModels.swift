@@ -71,11 +71,11 @@ public struct DistillData: Codable, Sendable {
     public let key_themes: [String]
     public let reflection_questions: [String]
     
-    public struct ActionItem: Codable, Sendable {
+    public struct ActionItem: Codable, Sendable, Equatable {
         public let text: String
         public let priority: Priority
         
-        public enum Priority: String, Codable, Sendable {
+        public enum Priority: String, Codable, Sendable, Equatable {
             case high, medium, low
             
             var color: String {

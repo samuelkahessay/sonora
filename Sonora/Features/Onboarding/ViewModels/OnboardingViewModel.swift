@@ -156,14 +156,6 @@ final class OnboardingViewModel: ObservableObject, ErrorHandling {
         print("📋 OnboardingViewModel: Initialized")
     }
     
-    /// Convenience initializer using DIContainer
-    convenience init() {
-        let container = DIContainer.shared
-        self.init(
-            requestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCase(logger: container.logger()),
-            onboardingConfiguration: OnboardingConfiguration.shared
-        )
-    }
     
     // MARK: - Navigation Methods
     

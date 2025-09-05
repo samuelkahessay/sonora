@@ -1,5 +1,5 @@
 {
-  "originHash" : "d746f4288e39973135199ce2f90fdc2838a3385ba65f6c64a44d2255a2ead63f",
+  "originHash" : "1aa95e06557f2f383325c45d23aab0f7fbad77c44d610cf83bb9815784db1213",
   "pins" : [
     {
       "identity" : "jinja",
@@ -13,10 +13,10 @@
     {
       "identity" : "llm.swift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/eastriverlee/LLM.swift",
+      "location" : "https://github.com/samuelkahessay/LLM.swift",
       "state" : {
-        "revision" : "4c4e909ac4758c628c9cd263a0c25b6edff5526d",
-        "version" : "2.0.1"
+        "branch" : "fix-package-swift",
+        "revision" : "b6098175f8b75b622c75929d2f017dae6aba31bd"
       }
     },
     {

@@ -70,9 +70,48 @@ final class DIContainer: ObservableObject, Resolver {
     /// Setup repository registrations
     @MainActor
     private func setupRepositories() {
-        // Register BackgroundAudioService
+        // Register focused audio services
+        register(AudioSessionService.self) { resolver in
+            return AudioSessionService()
+        }
+        
+        register(AudioRecordingService.self) { resolver in
+            return AudioRecordingService()
+        }
+        
+        register(BackgroundTaskService.self) { resolver in
+            return BackgroundTaskService()
+        }
+        
+        register(AudioPermissionService.self) { resolver in
+            return AudioPermissionService()
+        }
+        
+        register(RecordingTimerService.self) { resolver in
+            return RecordingTimerService()
+        }
+        
+        register(AudioPlaybackService.self) { resolver in
+            return AudioPlaybackService()
+        }
+        
+        // Register BackgroundAudioService with orchestrated services
         register(BackgroundAudioService.self) { resolver in
-            return BackgroundAudioService()
+            let sessionService = resolver.resolve(AudioSessionService.self)!
+            let recordingService = resolver.resolve(AudioRecordingService.self)!
+            let backgroundTaskService = resolver.resolve(BackgroundTaskService.self)!
+            let permissionService = resolver.resolve(AudioPermissionService.self)!
+            let timerService = resolver.resolve(RecordingTimerService.self)!
+            let playbackService = resolver.resolve(AudioPlaybackService.self)!
+            
+            return BackgroundAudioService(
+                sessionService: sessionService,
+                recordingService: recordingService,
+                backgroundTaskService: backgroundTaskService,
+                permissionService: permissionService,
+                timerService: timerService,
+                playbackService: playbackService
+            )
         }
         
         // Register SystemNavigator
@@ -299,6 +338,50 @@ final class DIContainer: ObservableObject, Resolver {
     func backgroundAudioService() -> BackgroundAudioService {
         ensureConfigured()
         return _backgroundAudioService
+    }
+    
+    // MARK: - Focused Audio Services
+    
+    /// Get audio session service
+    @MainActor
+    func audioSessionService() -> AudioSessionService {
+        ensureConfigured()
+        return resolve(AudioSessionService.self)!
+    }
+    
+    /// Get audio recording service
+    @MainActor
+    func audioRecordingService() -> AudioRecordingService {
+        ensureConfigured()
+        return resolve(AudioRecordingService.self)!
+    }
+    
+    /// Get background task service
+    @MainActor
+    func backgroundTaskService() -> BackgroundTaskService {
+        ensureConfigured()
+        return resolve(BackgroundTaskService.self)!
+    }
+    
+    /// Get audio permission service
+    @MainActor
+    func audioPermissionService() -> AudioPermissionService {
+        ensureConfigured()
+        return resolve(AudioPermissionService.self)!
+    }
+    
+    /// Get recording timer service
+    @MainActor
+    func recordingTimerService() -> RecordingTimerService {
+        ensureConfigured()
+        return resolve(RecordingTimerService.self)!
+    }
+    
+    /// Get audio playback service
+    @MainActor
+    func audioPlaybackService() -> AudioPlaybackService {
+        ensureConfigured()
+        return resolve(AudioPlaybackService.self)!
     }
     
     /// Get start recording use case

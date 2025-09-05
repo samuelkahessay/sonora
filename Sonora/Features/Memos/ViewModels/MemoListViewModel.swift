@@ -115,51 +115,6 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         logger.debug("MemoListViewModel initialized", category: .viewModel, context: LogContext())
     }
     
-    /// Convenience initializer using DIContainer
-    /// CRITICAL FIX: Uses proper dependency injection following Clean Architecture
-    convenience init() {
-        let container = DIContainer.shared
-        let memoRepository = container.memoRepository()
-        let transcriptionRepository = container.transcriptionRepository()
-        // Use routed transcription service from factory (respects preference + availability)
-        let transcriptionAPI = container.createTranscriptionService()
-        
-        // Use direct repository initialization to ensure real persistence
-        let startTranscriptionUseCase = StartTranscriptionUseCase(
-            transcriptionRepository: transcriptionRepository,
-            transcriptionAPI: transcriptionAPI,
-            eventBus: container.eventBus(),
-            operationCoordinator: container.operationCoordinator(),
-            moderationService: container.moderationService()
-        )
-        let retryTranscriptionUseCase = RetryTranscriptionUseCase(
-            transcriptionRepository: transcriptionRepository,
-            transcriptionAPI: transcriptionAPI
-        )
-        let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(
-            transcriptionRepository: transcriptionRepository
-        )
-        let renameMemoUseCase = RenameMemoUseCase(
-            memoRepository: memoRepository
-        )
-        
-        self.init(
-            loadMemosUseCase: LoadMemosUseCase(memoRepository: memoRepository),
-            deleteMemoUseCase: DeleteMemoUseCase(
-                memoRepository: memoRepository,
-                analysisRepository: container.analysisRepository(),
-                transcriptionRepository: transcriptionRepository,
-                logger: container.logger()
-            ),
-            playMemoUseCase: PlayMemoUseCase(memoRepository: memoRepository),
-            startTranscriptionUseCase: startTranscriptionUseCase,
-            retryTranscriptionUseCase: retryTranscriptionUseCase,
-            getTranscriptionStateUseCase: getTranscriptionStateUseCase,
-            renameMemoUseCase: renameMemoUseCase,
-            memoRepository: memoRepository,
-            transcriptionRepository: transcriptionRepository
-        )
-    }
     
     // MARK: - Setup Methods
     
