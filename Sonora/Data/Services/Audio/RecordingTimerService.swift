@@ -123,6 +123,23 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
         print("⏱️ RecordingTimerService: Timer reset")
     }
     
+    /// Resume timer from interruption with accumulated time
+    func resumeFromInterruption(accumulatedTime: TimeInterval) {
+        // Set the accumulated time as the starting point
+        recordingTime = accumulatedTime
+        
+        // If we have a time provider and recording cap, restart the timer
+        if let timeProvider = currentTimeProvider {
+            timerTask = Task { [weak self] in
+                await self?.runTimerLoop()
+            }
+            
+            print("⏱️ RecordingTimerService: Timer resumed from interruption with \(accumulatedTime)s accumulated time")
+        } else {
+            print("⚠️ RecordingTimerService: Cannot resume - no time provider available")
+        }
+    }
+    
     /// Gets formatted recording time string
     func getFormattedRecordingTime() -> String {
         return formatDuration(recordingTime)

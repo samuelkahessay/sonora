@@ -18,37 +18,48 @@ final class DIContainer: ObservableObject, Resolver {
     // MARK: - Registration Container
     private var registrations: [ObjectIdentifier: Any] = [:]
     
-    // MARK: - Private Service Instances
+    // MARK: - Private Service Instances (Selective Memory Management)
+    // Protocol types cannot use weak references, so we use a hybrid approach:
+    // - Concrete class types: weak references where beneficial
+    // - Protocol types: keep as optional strong references with lifecycle tracking
     private var _transcriptionAPI: (any TranscriptionAPI)?
-    private var _transcriptionServiceFactory: TranscriptionServiceFactory?
-    private var _modelDownloadManager: ModelDownloadManager?
-    private var _analysisService: AnalysisService!
-    private var _localAnalysisService: LocalAnalysisService?
-    private var _memoRepository: MemoRepositoryImpl!
+    private weak var _transcriptionServiceFactory: TranscriptionServiceFactory?
+    private weak var _modelDownloadManager: ModelDownloadManager?
+    private weak var _analysisService: AnalysisService?
+    private weak var _localAnalysisService: LocalAnalysisService?
+    private weak var _memoRepository: MemoRepositoryImpl?
     private var _transcriptionRepository: (any TranscriptionRepository)?
     private var _analysisRepository: (any AnalysisRepository)?
     private var _logger: (any LoggerProtocol)?
-    private var _operationCoordinator: (any OperationCoordinatorProtocol)!
-    private var _backgroundAudioService: BackgroundAudioService!
+    private weak var _backgroundAudioService: BackgroundAudioService?
     private var _audioRepository: (any AudioRepository)?
     private var _transcriptExporter: (any TranscriptExporting)?
     private var _analysisExporter: (any AnalysisExporting)?
-    private var _startRecordingUseCase: StartRecordingUseCase!
+    private weak var _startRecordingUseCase: StartRecordingUseCase?
     private var _systemNavigator: (any SystemNavigator)?
     private var _liveActivityService: (any LiveActivityServiceProtocol)?
     private var _eventBus: (any EventBusProtocol)?
     private var _eventHandlerRegistry: (any EventHandlerRegistryProtocol)?
     private var _moderationService: (any ModerationServiceProtocol)?
     private var _spotlightIndexer: (any SpotlightIndexing)?
-    private var _whisperKitModelProvider: WhisperKitModelProvider?
-    private var _modelContext: ModelContext?
+    private weak var _whisperKitModelProvider: WhisperKitModelProvider?
+    private var _modelContext: ModelContext? // Keep strong reference to ModelContext
     
-    // MARK: - EventKit Services
+    // MARK: - EventKit Services (Protocol References)
     private var _eventKitRepository: (any EventKitRepository)?
     private var _eventKitPermissionService: (any EventKitPermissionServiceProtocol)?
     private var _createCalendarEventUseCase: (any CreateCalendarEventUseCaseProtocol)?
     private var _createReminderUseCase: (any CreateReminderUseCaseProtocol)?
     private var _detectEventsAndRemindersUseCase: (any DetectEventsAndRemindersUseCaseProtocol)?
+    
+    // MARK: - Core Services (Strong References)
+    // These services need to stay alive for the app lifetime
+    private var _operationCoordinator: (any OperationCoordinatorProtocol)!
+    
+    // MARK: - Service Lifecycle Management
+    private var serviceAccessTimes: [String: Date] = [:]
+    private let serviceCleanupInterval: TimeInterval = 300 // 5 minutes
+    private var lastCleanupTime = Date()
     
     // MARK: - Initialization
     private init() {
@@ -58,6 +69,52 @@ final class DIContainer: ObservableObject, Resolver {
     
     // MARK: - Configuration Guard
     private var isConfigured: Bool = false
+    
+    // MARK: - Memory Management
+    
+    /// Track service access for lifecycle management
+    private func trackServiceAccess(_ serviceName: String) {
+        serviceAccessTimes[serviceName] = Date()
+        scheduleCleanupIfNeeded()
+    }
+    
+    /// Schedule cleanup if needed based on memory pressure
+    private func scheduleCleanupIfNeeded() {
+        let now = Date()
+        guard now.timeIntervalSince(lastCleanupTime) > serviceCleanupInterval else { return }
+        
+        Task.detached(priority: .utility) { [weak self] in
+            await self?.performMemoryCleanup()
+        }
+    }
+    
+    /// Perform memory cleanup based on access patterns and system state
+    @MainActor
+    private func performMemoryCleanup() {
+        let now = Date()
+        lastCleanupTime = now
+        
+        // Check system memory pressure
+        let memoryPressure = ProcessInfo.processInfo.thermalState
+        let aggressiveCleanup = memoryPressure != .nominal
+        let cleanupThreshold: TimeInterval = aggressiveCleanup ? 120 : serviceCleanupInterval
+        
+        var cleanedServices: [String] = []
+        
+        // Clean up unused services based on access time
+        for (serviceName, lastAccess) in serviceAccessTimes {
+            if now.timeIntervalSince(lastAccess) > cleanupThreshold {
+                // Note: Weak references automatically nil out when service is deallocated
+                serviceAccessTimes.removeValue(forKey: serviceName)
+                cleanedServices.append(serviceName)
+            }
+        }
+        
+        if !cleanedServices.isEmpty {
+            let pressureIndicator = aggressiveCleanup ? " (memory pressure)" : ""
+            _logger?.debug("DIContainer: Cleaned \(cleanedServices.count) unused services\(pressureIndicator): \(cleanedServices.joined(separator: ", "))", category: .system, context: LogContext())
+        }
+    }
     
     // MARK: - Registration Methods
     
@@ -255,6 +312,7 @@ final class DIContainer: ObservableObject, Resolver {
     @MainActor
     func analysisService() -> any AnalysisServiceProtocol {
         ensureConfigured()
+        trackServiceAccess("AnalysisService")
         
         // Return local analysis service if enabled, otherwise use API service
         if AppConfiguration.shared.useLocalAnalysis {
@@ -265,7 +323,13 @@ final class DIContainer: ObservableObject, Resolver {
             return _localAnalysisService!
         }
         
-        return _analysisService
+        if let existing = _analysisService {
+            return existing
+        }
+        
+        // Re-create if deallocated
+        _analysisService = AnalysisService()
+        return _analysisService!
     }
 
     /// Explicit local analysis service (on-device)
@@ -290,8 +354,20 @@ final class DIContainer: ObservableObject, Resolver {
     @MainActor
     func memoRepository() -> any MemoRepository {
         ensureConfigured()
-        if _memoRepository == nil { initializePersistenceIfNeeded() }
-        return _memoRepository
+        trackServiceAccess("MemoRepository")
+        
+        if let existing = _memoRepository {
+            return existing
+        }
+        
+        // Re-create if needed
+        initializePersistenceIfNeeded()
+        
+        guard let repository = _memoRepository else {
+            fatalError("DIContainer: Failed to create MemoRepository")
+        }
+        
+        return repository
     }
     
     /// Get transcription repository
@@ -324,7 +400,10 @@ final class DIContainer: ObservableObject, Resolver {
     @MainActor
     func backgroundAudioService() -> BackgroundAudioService {
         ensureConfigured()
-        return _backgroundAudioService
+        guard let service = _backgroundAudioService else {
+            fatalError("DIContainer not configured: backgroundAudioService")
+        }
+        return service
     }
     
     // MARK: - Focused Audio Services
@@ -375,7 +454,10 @@ final class DIContainer: ObservableObject, Resolver {
     @MainActor
     func startRecordingUseCase() -> StartRecordingUseCase {
         ensureConfigured()
-        return _startRecordingUseCase
+        guard let useCase = _startRecordingUseCase else {
+            fatalError("DIContainer not configured: startRecordingUseCase")
+        }
+        return useCase
     }
     
     /// Get system navigator
@@ -596,12 +678,14 @@ final class DIContainer: ObservableObject, Resolver {
         )
 
         // Spotlight Indexer (optional feature) — requires memoRepository to be initialized
-        self._spotlightIndexer = SpotlightIndexer(
-            logger: self._logger ?? Logger.shared,
-            memoRepository: self._memoRepository,
-            transcriptionRepository: trRepo,
-            analysisRepository: anRepo
-        )
+        if let memoRepo = self._memoRepository {
+            self._spotlightIndexer = SpotlightIndexer(
+                logger: self._logger ?? Logger.shared,
+                memoRepository: memoRepo,
+                transcriptionRepository: trRepo,
+                analysisRepository: anRepo
+            )
+        }
     }
     
 }

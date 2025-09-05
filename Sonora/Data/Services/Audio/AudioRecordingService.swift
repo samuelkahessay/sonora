@@ -47,7 +47,26 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
     // MARK: - Configuration
     private struct AudioConfiguration {
         static let audioQuality: AVAudioQuality = .high
-        static let audioFormat: AudioFormatID = kAudioFormatMPEG4AAC
+        
+        /// 3-tier fallback format configuration
+        struct FormatFallback {
+            static let primaryFormat: AudioFormatID = kAudioFormatMPEG4AAC    // Best quality, modern devices
+            static let secondaryFormat: AudioFormatID = kAudioFormatAppleLossless  // Wider compatibility  
+            static let fallbackFormat: AudioFormatID = kAudioFormatLinearPCM  // Universal compatibility
+            
+            static let supportedFormats: [(AudioFormatID, String)] = [
+                (primaryFormat, "MPEG4AAC"),
+                (secondaryFormat, "Apple Lossless"), 
+                (fallbackFormat, "Linear PCM")
+            ]
+        }
+        
+        /// Voice-optimized settings for better quality and smaller files
+        struct VoiceOptimized {
+            static let sampleRate: Double = 22050  // Perfect for voice (vs 44100 for music)
+            static let bitRate: Int = 64000        // 64k optimal for voice clarity
+            static let quality: Float = 0.7        // Balanced quality for voice
+        }
     }
     
     // MARK: - Callbacks
@@ -69,25 +88,81 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
     
     // MARK: - Public Interface
     
-    /// Creates and configures a new AVAudioRecorder instance
+    /// Creates and configures a new AVAudioRecorder instance with 3-tier fallback
     func createRecorder(url: URL, sampleRate: Double, channels: Int, quality: Float) throws -> AVAudioRecorder {
-        let settings: [String: Any] = [
-            AVFormatIDKey: Int(AudioConfiguration.audioFormat),
-            AVSampleRateKey: sampleRate,
-            AVNumberOfChannelsKey: channels,
-            AVEncoderAudioQualityKey: AudioConfiguration.audioQuality.rawValue,
-            AVSampleRateConverterAudioQualityKey: AVAudioQuality.max.rawValue
-        ]
+        return try createRecorderWithFallback(url: url, sampleRate: sampleRate, channels: channels, quality: quality)
+    }
+    
+    /// Creates recorder with intelligent format fallback for maximum device compatibility
+    func createRecorderWithFallback(url: URL, sampleRate: Double, channels: Int, quality: Float) throws -> AVAudioRecorder {
+        var lastError: Error?
         
-        // Leave bit rate unspecified to let the system choose a compatible value.
-        // Some device/route combinations reject certain explicit bitrates and cause record() to fail.
+        for (formatId, formatName) in AudioConfiguration.FormatFallback.supportedFormats {
+            do {
+                let settings = createAudioSettings(
+                    format: formatId,
+                    sampleRate: sampleRate,
+                    channels: channels,
+                    quality: quality
+                )
+                
+                let recorder = try AVAudioRecorder(url: url, settings: settings)
+                recorder.delegate = self
+                recorder.isMeteringEnabled = true
+                
+                // Test recording capability before returning
+                recorder.prepareToRecord()
+                if recorder.record() {
+                    recorder.stop() // Stop test recording
+                    print("🎙️ AudioRecordingService: Successfully created recorder with \(formatName) format")
+                    return recorder
+                } else {
+                    throw AudioRecordingError.startFailed
+                }
+                
+            } catch {
+                lastError = error
+                print("⚠️ AudioRecordingService: \(formatName) format failed: \(error.localizedDescription)")
+                continue
+            }
+        }
         
-        let recorder = try AVAudioRecorder(url: url, settings: settings)
-        recorder.delegate = self
-        recorder.isMeteringEnabled = true
-        
-        print("🎙️ AudioRecordingService: Created recorder for \(url.lastPathComponent)")
-        return recorder
+        // If all formats failed, throw comprehensive error
+        throw AudioRecordingError.allFormatsFailedToRecord([lastError].compactMap { $0 })
+    }
+    
+    /// Creates format-specific audio settings optimized for each codec
+    private func createAudioSettings(format: AudioFormatID, sampleRate: Double, channels: Int, quality: Float) -> [String: Any] {
+        switch format {
+        case kAudioFormatMPEG4AAC:
+            return [
+                AVFormatIDKey: Int(format),
+                AVSampleRateKey: sampleRate,
+                AVNumberOfChannelsKey: channels,
+                AVEncoderAudioQualityKey: AudioConfiguration.audioQuality.rawValue,
+                AVSampleRateConverterAudioQualityKey: AVAudioQuality.max.rawValue
+                // Omit explicit bitrate for MPEG4AAC - let system choose for compatibility
+            ]
+        case kAudioFormatAppleLossless:
+            return [
+                AVFormatIDKey: Int(format),
+                AVSampleRateKey: sampleRate,
+                AVNumberOfChannelsKey: channels,
+                AVEncoderAudioQualityKey: AudioConfiguration.audioQuality.rawValue
+                // Apple Lossless doesn't use bitrate settings
+            ]
+        case kAudioFormatLinearPCM:
+            return [
+                AVFormatIDKey: Int(format),
+                AVSampleRateKey: sampleRate,
+                AVNumberOfChannelsKey: channels,
+                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsFloatKey: false,
+                AVLinearPCMIsBigEndianKey: false
+            ]
+        default:
+            return [:]
+        }
     }
     
     /// Starts recording with the provided recorder
@@ -228,9 +303,13 @@ enum AudioRecordingError: LocalizedError {
     case notRecording
     case startFailed
     case requiresSessionFallback
+    case requiresRecorderRecreation
     case recordingFailed(String)
     case encodingError(Error?)
     case recorderCreationFailed(Error)
+    case allFormatsFailedToRecord([Error])
+    case audioRouteUnavailable
+    case bluetoothConnectionFailed
     
     var errorDescription: String? {
         switch self {
@@ -242,12 +321,44 @@ enum AudioRecordingError: LocalizedError {
             return "Failed to start audio recording"
         case .requiresSessionFallback:
             return "Recording failed - audio session fallback required"
+        case .requiresRecorderRecreation:
+            return "Recorder recreation required due to route change"
         case .recordingFailed(let message):
             return "Recording failed: \(message)"
         case .encodingError(let error):
             return "Audio encoding error: \(error?.localizedDescription ?? "Unknown encoding error")"
         case .recorderCreationFailed(let error):
             return "Failed to create audio recorder: \(error.localizedDescription)"
+        case .allFormatsFailedToRecord(let errors):
+            let descriptions = errors.map { $0.localizedDescription }
+            return "All audio formats failed: \(descriptions.joined(separator: ", "))"
+        case .audioRouteUnavailable:
+            return "Audio route is unavailable for recording"
+        case .bluetoothConnectionFailed:
+            return "Bluetooth audio connection failed"
         }
     }
+    
+    var recoveryAction: RecoveryAction {
+        switch self {
+        case .requiresSessionFallback:
+            return .retryWithSessionFallback
+        case .requiresRecorderRecreation:
+            return .recreateRecorder
+        case .allFormatsFailedToRecord:
+            return .switchToBuiltInMic
+        case .audioRouteUnavailable:
+            return .selectDifferentRoute
+        default:
+            return .none
+        }
+    }
+}
+
+enum RecoveryAction {
+    case none
+    case retryWithSessionFallback
+    case recreateRecorder
+    case switchToBuiltInMic
+    case selectDifferentRoute
 }

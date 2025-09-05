@@ -143,6 +143,8 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     
     // MARK: - Privacy & Performance
     private let maxMessageLength = 1000
+    private let sanitizationCache = NSCache<NSString, NSString>()
+    private let sanitizationQueue = DispatchQueue(label: "com.sonora.logger.sanitization", qos: .utility)
     private let sensitivePatterns: [NSRegularExpression] = {
         // Use raw string literals to avoid double-escaping regex patterns
         let patterns: [String] = [
@@ -160,6 +162,10 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
         dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
         osLog = OSLog(subsystem: "com.sonora.app", category: "General")
+        
+        // Configure sanitization cache
+        sanitizationCache.countLimit = 500 // Reasonable cache size
+        sanitizationCache.totalCostLimit = 1024 * 1024 // 1MB cache limit
         
         #if DEBUG
         currentLogLevel = .verbose
@@ -191,17 +197,46 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
         
         guard level >= logLevel else { return }
         
-        queue.async {
-            let sanitizedMessage = self.sanitizeMessage(message)
-            let formattedMessage = self.formatMessage(
-                level: level,
-                category: category,
-                message: sanitizedMessage,
-                context: context,
-                error: error
-            )
-            
-            self.writeToDestinations(formattedMessage, level: level, category: category, destinations: destinations)
+        let truncatedMessage = String(message.prefix(maxMessageLength))
+        let messageKey = NSString(string: truncatedMessage)
+        
+        // Check cache first for immediate logging
+        if let cachedSanitized = sanitizationCache.object(forKey: messageKey) {
+            queue.async {
+                let formattedMessage = self.formatMessage(
+                    level: level,
+                    category: category,
+                    message: String(cachedSanitized),
+                    context: context,
+                    error: error
+                )
+                
+                self.writeToDestinations(formattedMessage, level: level, category: category, destinations: destinations)
+            }
+        } else {
+            // Perform async sanitization on dedicated queue
+            sanitizationQueue.async { [weak self] in
+                guard let self = self else { return }
+                
+                let sanitizedMessage = self.performSanitization(truncatedMessage)
+                let sanitizedKey = NSString(string: sanitizedMessage)
+                
+                // Cache the result
+                self.sanitizationCache.setObject(sanitizedKey, forKey: messageKey)
+                
+                // Log on main queue
+                self.queue.async {
+                    let formattedMessage = self.formatMessage(
+                        level: level,
+                        category: category,
+                        message: sanitizedMessage,
+                        context: context,
+                        error: error
+                    )
+                    
+                    self.writeToDestinations(formattedMessage, level: level, category: category, destinations: destinations)
+                }
+            }
         }
     }
     
@@ -294,8 +329,34 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     }
     
     private func sanitizeMessage(_ message: String) -> String {
-        var sanitized = String(message.prefix(maxMessageLength))
+        // Legacy method for backward compatibility - now uses cache
+        let truncated = String(message.prefix(maxMessageLength))
+        let messageKey = NSString(string: truncated)
         
+        if let cached = sanitizationCache.object(forKey: messageKey) {
+            return String(cached)
+        }
+        
+        let sanitized = performSanitization(truncated)
+        sanitizationCache.setObject(NSString(string: sanitized), forKey: messageKey)
+        return sanitized
+    }
+    
+    private func performSanitization(_ message: String) -> String {
+        var sanitized = message
+        
+        // Early exit if no sensitive patterns to check
+        guard !sensitivePatterns.isEmpty else { return sanitized }
+        
+        // Quick check: if message doesn't contain common sensitive indicators, skip regex
+        let hasCommonIndicators = sanitized.contains("@") || 
+                                 sanitized.contains("-") || 
+                                 sanitized.contains("Bearer") || 
+                                 sanitized.contains("api")
+        
+        guard hasCommonIndicators else { return sanitized }
+        
+        // Perform regex sanitization
         for pattern in sensitivePatterns {
             let range = NSRange(location: 0, length: sanitized.utf16.count)
             sanitized = pattern.stringByReplacingMatches(

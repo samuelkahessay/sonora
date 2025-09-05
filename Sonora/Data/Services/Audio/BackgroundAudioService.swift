@@ -64,6 +64,23 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     var onRecordingFailed: ((Error) -> Void)?
     var onBackgroundTaskExpired: (() -> Void)?
     
+    // MARK: - Interruption Recovery State
+    private struct InterruptionState {
+        var wasRecordingBeforeInterruption = false
+        var recordingURL: URL?
+        var recordingStartTime: Date?
+        var accumulatedTime: TimeInterval = 0
+        
+        mutating func reset() {
+            wasRecordingBeforeInterruption = false
+            recordingURL = nil
+            recordingStartTime = nil
+            accumulatedTime = 0
+        }
+    }
+    
+    private var interruptionState = InterruptionState()
+    
     // MARK: - Initialization
     init(sessionService: AudioSessionService = AudioSessionService(),
          recordingService: AudioRecordingService = AudioRecordingService(),
@@ -298,18 +315,102 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     /// Handles audio session interruption began
     private func handleAudioSessionInterruptionBegan() {
         print("🔊 BackgroundAudioService: Audio session interruption began")
-        // Recording service will handle the actual interruption
+        
+        // Preserve recording state for recovery
+        if isRecording {
+            interruptionState.wasRecordingBeforeInterruption = true
+            interruptionState.recordingURL = recordingService.currentRecordingURL
+            interruptionState.recordingStartTime = Date()
+            interruptionState.accumulatedTime = recordingService.getCurrentTime()
+            
+            print("🔊 BackgroundAudioService: Preserved recording state for recovery")
+        }
     }
     
-    /// Handles audio session interruption ended
+    /// Handles audio session interruption ended with comprehensive recovery
     private func handleAudioSessionInterruptionEnded(shouldResume: Bool) {
         print("🔊 BackgroundAudioService: Audio session interruption ended, shouldResume: \(shouldResume)")
         
-        if shouldResume && !recordingService.isRecorderActive() {
-            // Attempt to resume recording through recording service
-            // This could be enhanced to recreate the recorder if needed
-            print("ℹ️ BackgroundAudioService: Attempting to resume recording after interruption")
+        guard interruptionState.wasRecordingBeforeInterruption && shouldResume else {
+            interruptionState.reset()
+            return
         }
+        
+        Task { @MainActor in
+            await attemptRecordingRecovery()
+        }
+    }
+    
+    /// Comprehensive recording recovery with recorder recreation
+    @MainActor
+    private func attemptRecordingRecovery() async {
+        guard let recordingURL = interruptionState.recordingURL else {
+            print("❌ BackgroundAudioService: No recording URL for recovery")
+            handleRecoveryFailure("Missing recording URL")
+            return
+        }
+        
+        print("🔄 BackgroundAudioService: Attempting recording recovery")
+        
+        do {
+            // 1. Reconfigure audio session with fallback handling
+            try await reconfigureSessionWithFallback()
+            
+            // 2. Create new recorder (old one is invalid after interruption)
+            let newRecorder = try recordingService.createRecorderWithFallback(
+                url: recordingURL,
+                sampleRate: sampleRate,
+                channels: numberOfChannels,
+                quality: recordingQuality
+            )
+            
+            // 3. Attempt to resume recording
+            try recordingService.startRecording(with: newRecorder)
+            
+            // 4. Restore timer state
+            timerService.resumeFromInterruption(accumulatedTime: interruptionState.accumulatedTime)
+            
+            // 5. Update published state
+            isRecording = true
+            
+            print("✅ BackgroundAudioService: Recording recovery successful")
+            interruptionState.reset()
+            
+        } catch {
+            print("❌ BackgroundAudioService: Recording recovery failed: \(error)")
+            handleRecoveryFailure("Recovery failed: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Session reconfiguration with fallback strategies
+    private func reconfigureSessionWithFallback() async throws {
+        do {
+            try sessionService.configureForRecording(
+                sampleRate: sampleRate,
+                channels: numberOfChannels
+            )
+        } catch {
+            print("⚠️ BackgroundAudioService: Primary session config failed, trying fallback")
+            // Try fallback session configuration
+            try sessionService.attemptRecordingFallback()
+        }
+    }
+    
+    /// Handle recovery failure with proper cleanup
+    private func handleRecoveryFailure(_ reason: String) {
+        print("❌ BackgroundAudioService: Recovery failed - \(reason)")
+        
+        // Clean up state
+        isRecording = false
+        timerService.resetTimer()
+        backgroundTaskService.endBackgroundTask()
+        
+        // Notify about the failure
+        let error = AudioServiceError.recordingFailed("Interruption recovery failed: \(reason)")
+        onRecordingFailed?(error)
+        
+        // Reset interruption state
+        interruptionState.reset()
     }
     
     // MARK: - Cleanup

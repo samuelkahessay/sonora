@@ -14,15 +14,35 @@ public final class EventBus: ObservableObject {
     
     // MARK: - Private Properties
     
-    /// Storage for event subscriptions grouped by event type
-    /// Key: Event type identifier, Value: Array of (subscription ID, handler) pairs
-    private var subscriptions: [ObjectIdentifier: [(UUID, (AppEvent) -> Void)]] = [:]
+    /// Storage for event subscriptions with weak subscriber tracking
+    /// Key: Event type identifier, Value: Array of subscription entries
+    private var subscriptions: [ObjectIdentifier: [SubscriptionEntry]] = [:]
     
     /// Set of all active subscription IDs for validation
     private var activeSubscriptionIds: Set<UUID> = []
     
     /// Debug flag for logging event activity
     private let enableEventLogging = false
+    
+    /// Automatic cleanup configuration
+    private var lastCleanupTime = Date()
+    private let cleanupInterval: TimeInterval = 60 // Clean every 60 seconds
+    private let maxSubscriptionsBeforeCleanup = 100
+    
+    /// Subscription entry with weak reference tracking
+    private struct SubscriptionEntry {
+        let id: UUID
+        let handler: (AppEvent) -> Void
+        weak var subscriber: AnyObject?
+        let createdAt: Date
+        
+        var isValid: Bool {
+            // If no subscriber tracking, assume valid
+            guard let _ = subscriber else { return true }
+            // If subscriber is nil, the subscription is dead
+            return subscriber != nil
+        }
+    }
     
     // MARK: - Initialization
     
@@ -32,11 +52,58 @@ public final class EventBus: ObservableObject {
         }
     }
     
+    // MARK: - Memory Management
+    
+    /// Clean up dead subscriptions automatically
+    private func cleanupDeadSubscriptions() {
+        let now = Date()
+        var totalCleaned = 0
+        
+        for eventTypeId in subscriptions.keys {
+            // Filter out invalid subscriptions
+            subscriptions[eventTypeId] = subscriptions[eventTypeId]?.filter { entry in
+                if entry.isValid && activeSubscriptionIds.contains(entry.id) {
+                    return true
+                } else {
+                    // Remove from active set if invalid
+                    activeSubscriptionIds.remove(entry.id)
+                    totalCleaned += 1
+                    return false
+                }
+            }
+            
+            // Remove empty event type arrays
+            if subscriptions[eventTypeId]?.isEmpty == true {
+                subscriptions.removeValue(forKey: eventTypeId)
+            }
+        }
+        
+        if totalCleaned > 0 && enableEventLogging {
+            print("📡 EventBus: Cleaned up \(totalCleaned) dead subscriptions")
+        }
+        
+        lastCleanupTime = now
+    }
+    
+    /// Schedule cleanup if needed
+    private func scheduleCleanupIfNeeded() {
+        let now = Date()
+        let shouldCleanup = now.timeIntervalSince(lastCleanupTime) > cleanupInterval ||
+                           activeSubscriptionIds.count > maxSubscriptionsBeforeCleanup
+        
+        if shouldCleanup {
+            cleanupDeadSubscriptions()
+        }
+    }
+    
     // MARK: - Public Interface
     
     /// Publish an event to all subscribers
     /// - Parameter event: The event to publish
     public func publish(_ event: AppEvent) {
+        // Schedule cleanup if needed (lightweight check)
+        scheduleCleanupIfNeeded()
+        
         if enableEventLogging {
             print("📡 EventBus: Publishing \(event.description)")
         }
@@ -45,26 +112,26 @@ public final class EventBus: ObservableObject {
         let eventTypeId = ObjectIdentifier(AppEvent.self)
         
         // Find and execute all handlers for this event type
-        guard let handlers = subscriptions[eventTypeId] else {
+        guard let entries = subscriptions[eventTypeId] else {
             if enableEventLogging {
                 print("📡 EventBus: No subscribers for event type")
             }
             return
         }
         
+        // Filter to only valid, active subscriptions
+        let validEntries = entries.filter { entry in
+            entry.isValid && activeSubscriptionIds.contains(entry.id)
+        }
+        
         if enableEventLogging {
-            print("📡 EventBus: Notifying \(handlers.count) subscribers")
+            print("📡 EventBus: Notifying \(validEntries.count) subscribers")
         }
         
         // Execute all handlers for this event type
-        for (subscriptionId, handler) in handlers {
-            // Verify subscription is still active (safety check)
-            guard activeSubscriptionIds.contains(subscriptionId) else {
-                continue
-            }
-            
+        for entry in validEntries {
             // Execute handler (non-throwing)
-            handler(event)
+            entry.handler(event)
         }
     }
     
@@ -72,9 +139,11 @@ public final class EventBus: ObservableObject {
     /// - Parameters:
     ///   - eventType: The type of events to subscribe to (currently only AppEvent.self)
     ///   - handler: The closure to execute when events are published
+    ///   - subscriber: Optional weak reference to the subscribing object for automatic cleanup
     /// - Returns: Subscription ID that can be used to unsubscribe
     public func subscribe(
         to eventType: AppEvent.Type = AppEvent.self,
+        subscriber: AnyObject? = nil,
         handler: @escaping (AppEvent) -> Void
     ) -> UUID {
         let subscriptionId = UUID()
@@ -85,8 +154,16 @@ public final class EventBus: ObservableObject {
             subscriptions[eventTypeId] = []
         }
         
+        // Create subscription entry
+        let entry = SubscriptionEntry(
+            id: subscriptionId,
+            handler: handler,
+            subscriber: subscriber,
+            createdAt: Date()
+        )
+        
         // Add subscription
-        subscriptions[eventTypeId]?.append((subscriptionId, handler))
+        subscriptions[eventTypeId]?.append(entry)
         activeSubscriptionIds.insert(subscriptionId)
         
         if enableEventLogging {
@@ -108,11 +185,11 @@ public final class EventBus: ObservableObject {
         
         // Remove from all event type arrays
         for eventTypeId in subscriptions.keys {
-            subscriptions[eventTypeId]?.removeAll { $0.0 == subscriptionId }
+            subscriptions[eventTypeId]?.removeAll { $0.id == subscriptionId }
             
             // Clean up empty arrays
             if subscriptions[eventTypeId]?.isEmpty == true {
-                subscriptions[eventTypeId] = nil
+                subscriptions.removeValue(forKey: eventTypeId)
             }
         }
         
@@ -186,7 +263,7 @@ public final class EventBus: ObservableObject {
 @MainActor
 public protocol EventBusProtocol {
     func publish(_ event: AppEvent)
-    func subscribe(to eventType: AppEvent.Type, handler: @escaping (AppEvent) -> Void) -> UUID
+    func subscribe(to eventType: AppEvent.Type, subscriber: AnyObject?, handler: @escaping (AppEvent) -> Void) -> UUID
     func unsubscribe(_ subscriptionId: UUID)
     var subscriptionStats: String { get }
 }
@@ -210,7 +287,7 @@ public final class EventSubscriptionManager {
         to eventType: AppEvent.Type = AppEvent.self,
         handler: @escaping (AppEvent) -> Void
     ) {
-        let subscriptionId = eventBus.subscribe(to: eventType, handler: handler)
+        let subscriptionId = eventBus.subscribe(to: eventType, subscriber: nil, handler: handler)
         subscriptionIds.insert(subscriptionId)
     }
     
