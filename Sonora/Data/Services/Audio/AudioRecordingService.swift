@@ -193,15 +193,9 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
                 recorder.delegate = self
                 recorder.isMeteringEnabled = true
                 
-                // Test recording capability before returning
-                recorder.prepareToRecord()
-                if recorder.record() {
-                    recorder.stop() // Stop test recording
-                    print("🎙️ AudioRecordingService: Successfully created recorder with \(formatName) format")
-                    return recorder
-                } else {
-                    throw AudioRecordingError.startFailed
-                }
+                // Successfully created recorder
+                print("🎙️ AudioRecordingService: Successfully created recorder with \(formatName) format")
+                return recorder
                 
             } catch {
                 lastError = error

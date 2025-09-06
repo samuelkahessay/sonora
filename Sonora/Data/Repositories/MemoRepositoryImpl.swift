@@ -1,4 +1,5 @@
 import Foundation
+import Foundation
 import Combine
 import AVFoundation
 import SwiftData
@@ -144,7 +145,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
 
     private func mapToDomain(_ model: MemoModel) -> Memo {
-        let url = URL(fileURLWithPath: model.audioFilePath)
+        // Always derive the canonical audio URL from current container + memo id
+        let url = audioFilePath(for: model.id)
         // Status injected via batched map when available; default to repository lookup as fallback
         let status = mapToDomainStatus(transcriptionRepository.getTranscriptionState(for: model.id))
         return Memo(
@@ -176,7 +178,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         default: return .notStarted
         }
     }
-    
+
     func loadMemos() {
         // Serve cached list immediately if fresh (perceived latency win)
         if let cache = memosCache, let ts = memosCacheTime, Date().timeIntervalSince(ts) < 3 {
@@ -186,10 +188,22 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             let descriptor = FetchDescriptor<MemoModel>(sortBy: [SortDescriptor(\.creationDate, order: .reverse)])
             let models = try context.fetch(descriptor)
             let ids = models.map { $0.id }
+
+            // Identify orphaned records first (based on canonical path in current container)
+            let orphanModels: [MemoModel] = models.filter { model in
+                let url = audioFilePath(for: model.id)
+                return !FileManager.default.fileExists(atPath: url.path)
+            }
+
             // Batch fetch transcription states to avoid N+1
             let states = transcriptionRepository.getTranscriptionStates(for: ids)
-            let mapped: [Memo] = models.map { model in
-                let url = URL(fileURLWithPath: model.audioFilePath)
+            let mapped: [Memo] = models.compactMap { model in
+                // Recompute canonical path from current container
+                let url = audioFilePath(for: model.id)
+                // Filter out orphaned records (container changed or file removed)
+                guard FileManager.default.fileExists(atPath: url.path) else {
+                    return nil
+                }
                 let state = states[model.id] ?? transcriptionRepository.getTranscriptionState(for: model.id)
                 return Memo(
                     id: model.id,
@@ -206,21 +220,31 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             self.memosCache = mapped
             self.memosCacheTime = Date()
             print("✅ MemoRepository: Loaded \(mapped.count) memos from SwiftData (batched states)")
+
+            // Background cleanup for orphaned SwiftData records; single summary log
+            if !orphanModels.isEmpty {
+                let count = orphanModels.count
+                Task { @MainActor in
+                    orphanModels.forEach { context.delete($0) }
+                    do { try context.save() } catch { /* best-effort */ }
+                    print("🧹 MemoRepository: Orphan cleanup removed \(count) memo record(s) (missing audio files)")
+                }
+            }
         } catch {
             print("❌ MemoRepository: Failed to fetch memos from SwiftData: \(error)")
             self.memos = []
             self.memosCache = nil
         }
     }
-    
-    func saveMemo(_ memo: Memo) {
+
+    private func saveAndReturn(_ memo: Memo) -> Memo {
         do {
             let memoDirectoryPath = memoDirectoryPath(for: memo.id)
             let audioDestination = audioFilePath(for: memo.id)
             
             // Create memo directory
-            try FileManager.default.createDirectory(at: memoDirectoryPath, 
-                                                   withIntermediateDirectories: true, 
+            try FileManager.default.createDirectory(at: memoDirectoryPath,
+                                                   withIntermediateDirectories: true,
                                                    attributes: nil)
             
             // Copy audio file if it's not already in the correct location
@@ -232,13 +256,10 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 print("📁 MemoRepository: Audio file copied to \(audioDestination.lastPathComponent)")
             }
             
-            // Get file size (optional info; ignore result to silence unused warning)
-            _ = try? FileManager.default.attributesOfItem(atPath: audioDestination.path)
-            
-            // Get duration using AVAudioFile (avoids deprecated AVAsset.duration)
+            // Get duration using AVAudioFile with readiness helper
             let duration: TimeInterval = {
                 do {
-                    let audioFile = try AVAudioFile(forReading: audioDestination)
+                    let audioFile = try AudioReadiness.openIfReady(url: audioDestination, maxWait: 0.4)
                     let frames = Double(audioFile.length)
                     let rate = audioFile.fileFormat.sampleRate
                     let secs = frames / rate
@@ -271,19 +292,22 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             }
             try context.save()
             
+            // Construct canonical saved memo
+            let savedMemo = Memo(
+                id: memo.id,
+                filename: memo.filename,
+                fileURL: audioDestination,
+                creationDate: memo.creationDate,
+                transcriptionStatus: memo.transcriptionStatus,
+                analysisResults: memo.analysisResults,
+                customTitle: memo.customTitle,
+                shareableFileName: memo.shareableFileName
+            )
+            
             // Update in-memory list
-            if !memos.contains(where: { $0.id == memo.id }) {
-                // Create new memo with the same ID and updated URL
-                let savedMemo = Memo(
-                    id: memo.id,  // Preserve the original ID
-                    filename: memo.filename,
-                    fileURL: audioDestination,
-                    creationDate: memo.creationDate,
-                    transcriptionStatus: memo.transcriptionStatus,
-                    analysisResults: memo.analysisResults,
-                    customTitle: memo.customTitle,
-                    shareableFileName: memo.shareableFileName
-                )
+            if let idx = memos.firstIndex(where: { $0.id == memo.id }) {
+                memos[idx] = savedMemo
+            } else {
                 memos.append(savedMemo)
                 memos.sort { $0.creationDate > $1.creationDate }
                 print("📝 MemoRepository: Added memo \(savedMemo.filename) to in-memory list with ID \(savedMemo.id)")
@@ -292,12 +316,18 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             print("✅ MemoRepository: Successfully saved memo \(memo.filename) [SwiftData]")
             // Invalidate list cache
             memosCache = nil; memosCacheTime = nil
+            return savedMemo
         
         } catch {
             print("❌ MemoRepository: Failed to save memo \(memo.filename): \(error)")
+            return memo
         }
     }
-    
+
+    func saveMemo(_ memo: Memo) {
+        _ = saveAndReturn(memo)
+    }
+
     func deleteMemo(_ memo: Memo) {
         do {
             if playingMemo?.id == memo.id {
@@ -321,8 +351,6 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             // Update in-memory list
             memos.removeAll { $0.id == memo.id }
             
-            // No legacy sidecar metadata to clean up in SwiftData migration
-            
             print("✅ MemoRepository: Successfully deleted memo \(memo.filename)")
             // Invalidate list cache
             memosCache = nil; memosCacheTime = nil
@@ -343,7 +371,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         return nil
     }
     
-    func handleNewRecording(at url: URL) {
+    @discardableResult
+    func handleNewRecording(at url: URL) -> Memo {
         print("📁 MemoRepository: 🚨 NEW RECORDING RECEIVED - STARTING AUTO-TRANSCRIPTION FLOW")
         print("📁 MemoRepository: File URL: \(url.lastPathComponent)")
         print("📁 MemoRepository: Full path: \(url.path)")
@@ -351,7 +380,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         // Verify file exists and is accessible
         guard fileExists(at: url) else {
             print("❌ MemoRepository: Recording file does not exist at \(url.path)")
-            return
+            return Memo(filename: url.lastPathComponent, fileURL: url, creationDate: Date())
         }
         
         do {
@@ -364,7 +393,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             // Verify file has content
             guard fileSize > 0 else {
                 print("⚠️ MemoRepository: Recording file is empty, skipping")
-                return
+                return Memo(filename: url.lastPathComponent, fileURL: url, creationDate: creationDate)
             }
             
             let newMemo = Memo(
@@ -374,36 +403,22 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             )
             
             print("💾 MemoRepository: Saving new recording as memo \(newMemo.filename)")
-            saveMemo(newMemo)
+            let saved = saveAndReturn(newMemo)
             
-            // 🚀 CRITICAL FIX: Trigger auto-transcription after saving
-            print("🚀 MemoRepository: TRIGGERING AUTO-TRANSCRIPTION for \(newMemo.filename)")
-            triggerAutoTranscription(for: newMemo)
-            
-            print("✅ MemoRepository: Successfully processed new recording with auto-transcription")
-            
+            // Auto-transcription is orchestrated via memoCreated event to avoid duplicate triggers
+            print("✅ MemoRepository: Successfully processed new recording")
+            return saved
+        
         } catch {
             print("❌ MemoRepository: Failed to process new recording: \(error)")
+            return Memo(filename: url.lastPathComponent, fileURL: url, creationDate: Date())
         }
     }
-    
-    // MARK: - Auto-transcription
-    
-    /// Triggers automatic transcription for a newly saved memo
-    /// This uses modern Use Case architecture for clean separation of concerns
-    private func triggerAutoTranscription(for memo: Memo) {
-        Task { @MainActor in
-            do {
-                print("🎯 MemoRepository: Starting auto-transcription via StartTranscriptionUseCase for \(memo.filename)")
-                try await startTranscriptionUseCase.execute(memo: memo)
-                print("✅ MemoRepository: Auto-transcription initiated successfully for \(memo.filename)")
-                
-            } catch {
-                print("❌ MemoRepository: Auto-transcription failed for \(memo.filename): \(error)")
-                // Don't fail the entire recording process if transcription fails
-                // Just log the error and continue
-            }
-        }
+
+    func updateMemoMetadata(_ memo: Memo, metadata: [String: Any]) {
+        // SwiftData-backed repo: interpret known keys here if needed.
+        // For now, log and ignore to maintain signature.
+        print("📝 MemoRepository: Metadata update requested (ignored in SwiftData migration) for memo \(memo.filename) — data: \(metadata)")
     }
     
     func renameMemo(_ memo: Memo, newTitle: String) {
@@ -425,14 +440,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         // Invalidate list cache
         memosCache = nil; memosCacheTime = nil
     }
-    
-    func updateMemoMetadata(_ memo: Memo, metadata: [String: Any]) {
-        // SwiftData-backed repo: interpret known keys here if needed.
-        // For now, log and ignore to maintain signature.
-        print("📝 MemoRepository: Metadata update requested (ignored in SwiftData migration) for memo \(memo.filename) — data: \(metadata)")
-    }
-    
-    // MARK: - Transcription Integration (via use cases)
+
 }
 
 // MARK: - Error Types

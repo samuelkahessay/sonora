@@ -134,40 +134,65 @@ struct AnalysisResultView: View {
     let data: AnalysisData
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Summary")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
-                Text(data.summary)
-                    .font(.body)
-                    .lineSpacing(4)
-            }
+        VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.lg) {
+            // Summary section with brand typography
+            summarySection
             
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Key Points")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
-                ForEach(Array(data.key_points.enumerated()), id: \.offset) { _, point in
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("•")
-                            .font(.body)
-                            .foregroundColor(.semantic(.brandPrimary))
-                        Text(point)
-                            .font(.body)
-                            .lineSpacing(2)
-                        Spacer()
-                    }
-                }
+            // Key points as insight cards
+            keyPointsSection
+            
+            // Action items appear in Distill results, not Analysis
+        }
+        .padding(.all, SonoraDesignSystem.Spacing.breathingRoom)
+    }
+    
+    // MARK: - View Components
+    
+    /// Summary section with thoughtful typography
+    @ViewBuilder
+    private var summarySection: some View {
+        VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.sm) {
+            Text("Summary")
+                .font(SonoraDesignSystem.Typography.headingMedium)
+                .foregroundColor(.textPrimary)
+            
+            Text(data.summary)
+                .font(SonoraDesignSystem.Typography.bodyLarge)
+                .foregroundColor(.textPrimary)
+                .lineSpacing(6)
+        }
+        .padding(.all, SonoraDesignSystem.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.clarityWhite)
+                .shadow(color: Color.sonoraDep.opacity(0.05), radius: 4, x: 0, y: 2)
+        )
+    }
+    
+    /// Key points as branded insight cards
+    @ViewBuilder
+    private var keyPointsSection: some View {
+        VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.md) {
+            Text("Key Insights")
+                .font(SonoraDesignSystem.Typography.headingMedium)
+                .foregroundColor(.textPrimary)
+            
+            // Convert key points to insight cards
+            ForEach(Array(data.key_points.enumerated()), id: \.offset) { index, point in
+                SonoraInsightCard(
+                    insight: InsightData(
+                        text: point,
+                        category: "Insight",
+                        confidence: 0.8,
+                        source: "Analysis"
+                    ),
+                    isHighlighted: index == 0 // Highlight first insight
+                )
             }
         }
-        .padding()
-        .background(Color.semantic(.bgSecondary))
-        .cornerRadius(12)
-        .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
     }
+    
+    // (No action items for AnalysisData)
 }
 
 struct ThemesResultView: View {
@@ -175,70 +200,81 @@ struct ThemesResultView: View {
     
     private var sentimentColor: Color {
         switch data.sentiment.lowercased() {
-        case "positive": return .semantic(.success)
-        case "negative": return .semantic(.error)
-        case "mixed": return .semantic(.warning)
-        default: return .semantic(.separator)
+        case "positive": return .growthGreen
+        case "negative": return .sparkOrange
+        case "mixed": return .insightGold
+        default: return .reflectionGray
         }
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Sentiment")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-                
-                Text(data.sentiment.capitalized)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 4)
-                    .background(sentimentColor.opacity(0.2))
-                    .foregroundColor(sentimentColor)
-                    .cornerRadius(20)
-            }
+        VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.lg) {
+            // Sentiment indicator with brand styling
+            sentimentSection
             
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Themes")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
-                ForEach(Array(data.themes.enumerated()), id: \.offset) { _, theme in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(theme.name)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.semantic(.brandPrimary))
-                        
-                        ForEach(Array(theme.evidence.enumerated()), id: \.offset) { _, evidence in
-                            HStack(alignment: .top, spacing: 6) {
-                                Text("\"")
-                                    .font(.caption)
-                                    .foregroundColor(.semantic(.textSecondary))
-                                Text(evidence)
-                                    .font(.caption)
-                                    .italic()
-                                    .foregroundColor(.semantic(.textSecondary))
-                                    .lineLimit(3)
-                                Text("\"")
-                                    .font(.caption)
-                                    .foregroundColor(.semantic(.textSecondary))
-                                Spacer()
-                            }
-                        }
-                    }
-                    .padding(.bottom, 8)
-                }
+            // Themes as insight cards
+            themesSection
+        }
+        .padding(.all, SonoraDesignSystem.Spacing.breathingRoom)
+    }
+    
+    // MARK: - View Components
+    
+    /// Sentiment section with brand colors
+    @ViewBuilder
+    private var sentimentSection: some View {
+        HStack {
+            Text("Emotional Tone")
+                .font(SonoraDesignSystem.Typography.headingMedium)
+                .foregroundColor(.textPrimary)
+            
+            Spacer()
+            
+            Text(data.sentiment.capitalized)
+                .font(SonoraDesignSystem.Typography.bodyRegular)
+                .fontWeight(.medium)
+                .padding(.horizontal, SonoraDesignSystem.Spacing.md)
+                .padding(.vertical, SonoraDesignSystem.Spacing.xs)
+                .background(sentimentColor.opacity(0.2))
+                .foregroundColor(sentimentColor)
+                .clipShape(Capsule())
+        }
+        .padding(.all, SonoraDesignSystem.Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.clarityWhite)
+                .shadow(color: Color.sonoraDep.opacity(0.05), radius: 4, x: 0, y: 2)
+        )
+    }
+    
+    /// Themes section with branded cards
+    @ViewBuilder
+    private var themesSection: some View {
+        VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.md) {
+            Text("Recurring Themes")
+                .font(SonoraDesignSystem.Typography.headingMedium)
+                .foregroundColor(.textPrimary)
+            
+            ForEach(Array(data.themes.enumerated()), id: \.offset) { index, theme in
+                SonoraInsightCard(
+                    insight: InsightData(
+                        text: createThemeInsightText(theme),
+                        category: "Theme",
+                        confidence: 0.85,
+                        source: "Pattern Recognition"
+                    ),
+                    isHighlighted: index == 0
+                )
             }
         }
-        .padding()
-        .background(Color.semantic(.bgSecondary))
-        .cornerRadius(12)
-        .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
     }
+    
+    /// Create insight text from theme data
+    private func createThemeInsightText(_ theme: ThemesData.Theme) -> String {
+        let evidenceText = theme.evidence.prefix(2).joined(separator: " ... ")
+        return "\(theme.name): \(evidenceText)"
+    }
+
 }
 
 struct TodosResultView: View {

@@ -532,3 +532,4 @@ launch_app_sim({ simulatorName: 'iPhone 16', bundleId: 'com.samuelkahessay.Sonor
 For architecture details, see README.md and ARCHITECTURE.md  
 For testing procedures, see docs/testing/
 - Don't need to run launch_app_sim with the XcodeBuildMCP. Only command necessary is build_sim
+- Use relevant agents (analyze if it would make sense to run several agents concurrently, if there are no conflicts go for it), when devising implementation plans or performing tasks. Always take a step back to think who would give the best results - you or a specialized agent?

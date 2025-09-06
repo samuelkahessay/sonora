@@ -29,26 +29,26 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol, @unche
         
         do {
             // Comprehensive validation of the new recording
-            let fileMetadata = try validateNewRecording(at: url)
+            let _ = try validateNewRecording(at: url)
             
-            // Create memo object
-            let memo = try createMemoFromRecording(url: url, metadata: fileMetadata)
-            
-            // Process recording through repository
-            memoRepository.handleNewRecording(at: url)
-            
-            // Verify processing was successful
-            try verifyRecordingProcessed(memo)
-            
-            // Publish memoCreated event on main actor
-            print("📡 HandleNewRecordingUseCase: Publishing memoCreated event for memo \(memo.id)")
-            let domainMemo = memo
+            // Process recording through repository and get the persisted domain memo
+            let savedMemo = memoRepository.handleNewRecording(at: url)
+
+            // File readiness barrier on the persisted path
+            let ready = await AudioReadiness.ensureReady(url: savedMemo.fileURL, maxWait: 0.8)
+            if !ready {
+                // Best-effort short retry before giving up
+                try? await Task.sleep(nanoseconds: 150_000_000)
+            }
+
+            // Publish memoCreated after persistence and readiness
+            print("📡 HandleNewRecordingUseCase: Publishing memoCreated event for memo \(savedMemo.id)")
             await MainActor.run {
-                EventBus.shared.publish(.memoCreated(domainMemo))
+                EventBus.shared.publish(.memoCreated(savedMemo))
             }
             
-            print("✅ HandleNewRecordingUseCase: Successfully processed new recording: \(memo.filename)")
-            return memo
+            print("✅ HandleNewRecordingUseCase: Successfully processed new recording: \(savedMemo.filename)")
+            return savedMemo
             
         } catch let repositoryError as RepositoryError {
             print("❌ HandleNewRecordingUseCase: Repository error - \(repositoryError.localizedDescription)")
@@ -122,16 +122,7 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol, @unche
     // Audio integrity validation moved to Data layer.
     
     /// Creates a memo object from the validated recording
-    private func createMemoFromRecording(url: URL, metadata: FileMetadata) throws -> Memo {
-        let memo = Memo(
-            filename: url.lastPathComponent,
-            fileURL: url,
-            creationDate: metadata.creationDate
-        )
-        
-        print("📝 HandleNewRecordingUseCase: Created memo object for \(memo.filename)")
-        return memo
-    }
+    // Creation moved to repository to ensure consistent ID and path
     
     /// Verifies that the recording was processed successfully by the repository
     @MainActor

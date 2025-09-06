@@ -33,41 +33,21 @@ extension WhisperModelInfo {
     /// Standard WhisperKit models available for local transcription
     static let availableModels: [WhisperModelInfo] = [
         WhisperModelInfo(
-            id: "openai_whisper-tiny",
-            displayName: "Tiny",
-            size: "~39 MB",
-            description: "Fastest processing, basic accuracy. Good for quick drafts and real-time use.",
-            speedRating: .veryHigh,
-            accuracyRating: .low
+            id: "openai_whisper-large-v3",
+            displayName: "Large v3",
+            size: "~2.9 GB",
+            description: "Maximum accuracy local model (largest).",
+            speedRating: .low,
+            accuracyRating: .veryHigh
         ),
-        
         WhisperModelInfo(
-            id: "openai_whisper-tiny.en",
-            displayName: "Tiny (English)",
-            size: "~39 MB", 
-            description: "English-only tiny model. Fastest option for English transcription.",
-            speedRating: .veryHigh,
-            accuracyRating: .low
+            id: "openai_whisper-medium",
+            displayName: "Medium",
+            size: "~1.5 GB",
+            description: "High accuracy. Heavier and slower; use on newer devices.",
+            speedRating: .low,
+            accuracyRating: .veryHigh
         ),
-        
-        WhisperModelInfo(
-            id: "openai_whisper-base",
-            displayName: "Base",
-            size: "~142 MB",
-            description: "Balanced speed and accuracy. Good general-purpose model.",
-            speedRating: .high,
-            accuracyRating: .medium
-        ),
-        
-        WhisperModelInfo(
-            id: "openai_whisper-base.en",
-            displayName: "Base (English)",
-            size: "~142 MB",
-            description: "English-only base model. Recommended for most English users.",
-            speedRating: .high,
-            accuracyRating: .medium
-        ),
-        
         WhisperModelInfo(
             id: "openai_whisper-small",
             displayName: "Small",
@@ -77,17 +57,41 @@ extension WhisperModelInfo {
             accuracyRating: .high
         ),
         WhisperModelInfo(
-            id: "openai_whisper-medium",
-            displayName: "Medium",
-            size: "~1.5 GB",
-            description: "High accuracy. Heavier and slower; use on newer devices.",
-            speedRating: .low,
-            accuracyRating: .veryHigh
+            id: "openai_whisper-base.en",
+            displayName: "Base (English)",
+            size: "~142 MB",
+            description: "English-only base model. Recommended for most English users.",
+            speedRating: .high,
+            accuracyRating: .medium
+        ),
+        WhisperModelInfo(
+            id: "openai_whisper-base",
+            displayName: "Base",
+            size: "~142 MB",
+            description: "Balanced speed and accuracy. Good general-purpose model.",
+            speedRating: .high,
+            accuracyRating: .medium
+        ),
+        WhisperModelInfo(
+            id: "openai_whisper-tiny.en",
+            displayName: "Tiny (English)",
+            size: "~39 MB", 
+            description: "English-only tiny model. Fastest option for English transcription.",
+            speedRating: .veryHigh,
+            accuracyRating: .low
+        ),
+        WhisperModelInfo(
+            id: "openai_whisper-tiny",
+            displayName: "Tiny",
+            size: "~39 MB",
+            description: "Fastest processing, basic accuracy. Good for quick drafts and real-time use.",
+            speedRating: .veryHigh,
+            accuracyRating: .low
         )
     ]
     
     /// Default model recommendation
-    static let defaultModel = availableModels[3] // Base (English) model
+    static var defaultModel: WhisperModelInfo { availableModels.first! }
     
     /// Find model by ID
     static func model(withId id: String) -> WhisperModelInfo? {

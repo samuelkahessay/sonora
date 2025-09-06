@@ -71,6 +71,20 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         
         logger.info("Starting transcription for memo: \(memo.filename)", category: .transcription, context: context)
         
+        // Idempotency guard: do not proceed if already completed or in progress, or previously skipped for silence
+        let preState = transcriptionRepository.getTranscriptionState(for: memo.id)
+        if preState.isInProgress {
+            throw TranscriptionError.alreadyInProgress
+        }
+        if case .completed = preState {
+            throw TranscriptionError.alreadyCompleted
+        }
+        if case .failed(let msg) = preState, msg.lowercased().contains("no speech detected") {
+            // Treat silence as non-actionable; skip quietly
+            logger.info("Skipping transcription: previous attempt reported no speech", category: .transcription, context: context)
+            return
+        }
+        
         // Check for operation conflicts (e.g., can't transcribe while recording same memo)
         guard await operationCoordinator.canStartTranscription(for: memo.id) else {
             logger.warning("Cannot start transcription - conflicting operation (recording) active", 
@@ -90,19 +104,32 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             await MainActor.run { CurrentTranscriptionContext.memoId = memo.id }
             defer { Task { await MainActor.run { CurrentTranscriptionContext.memoId = nil } } }
             // Check if transcription is already in progress
-            let currentState = await MainActor.run {
-                transcriptionRepository.getTranscriptionState(for: memo.id)
-            }
-            guard !currentState.isInProgress else {
-                await operationCoordinator.failOperation(operationId, errorDescription: TranscriptionError.alreadyInProgress.errorDescription ?? "Transcription already in progress")
-                throw TranscriptionError.alreadyInProgress
-            }
+            // State is checked pre-registration; proceed
 
-            // Check if file exists
+            // Check file exists and is ready for AVFoundation
             let audioURL = memo.fileURL
             guard FileManager.default.fileExists(atPath: audioURL.path) else {
                 await operationCoordinator.failOperation(operationId, errorDescription: TranscriptionError.fileNotFound.errorDescription ?? "Audio file not found")
                 throw TranscriptionError.fileNotFound
+            }
+            // Bounded readiness barrier
+            _ = await AudioReadiness.ensureReady(url: audioURL, maxWait: 0.8)
+
+            // Early skip for tiny clips (avoid noisy IO + VAD)
+            do {
+                let asset = AVURLAsset(url: audioURL)
+                let durationTime = try await asset.load(.duration)
+                let totalDurationSec = CMTimeGetSeconds(durationTime)
+                if totalDurationSec < 0.8 {
+                    await MainActor.run {
+                        transcriptionRepository.saveTranscriptionState(.failed("Clip too short"), for: memo.id)
+                    }
+                    await operationCoordinator.completeOperation(operationId)
+                    logger.info("Transcription skipped (clip too short)", category: .transcription, context: context)
+                    return
+                }
+            } catch {
+                // If duration probing fails, continue; VAD will handle silence/invalid format
             }
 
             // Set state to in-progress
@@ -121,8 +148,9 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     let failedState = TranscriptionState.failed("No speech detected")
                     transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
                 }
-                await operationCoordinator.failOperation(operationId, errorDescription: TranscriptionError.noSpeechDetected.errorDescription ?? "No speech detected")
-                logger.info("Transcription skipped: No speech detected", category: .transcription, context: context)
+                // Treat as completed/skipped to avoid warning-level noise in coordinator
+                await operationCoordinator.completeOperation(operationId)
+                logger.info("Transcription skipped (no speech)", category: .transcription, context: context)
                 return
             }
 

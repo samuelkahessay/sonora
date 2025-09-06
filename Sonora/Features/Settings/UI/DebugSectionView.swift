@@ -12,7 +12,7 @@ struct DebugSectionView: View {
     var body: some View {
         SettingsCard {
             Text("Debug Tools")
-                .font(.headline)
+                .font(SonoraDesignSystem.Typography.headingSmall)
                 .accessibilityAddTraits(.isHeader)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {

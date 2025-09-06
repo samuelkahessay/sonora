@@ -491,6 +491,12 @@ extension RecordingViewModel {
 // MARK: - ErrorHandling Protocol Conformance
 
 extension RecordingViewModel: ErrorHandling {
+    var recordingProgress: Double {
+        let maxDur = AppConfiguration.shared.maxRecordingDuration
+        if maxDur <= 0 { return 0 }
+        let ratio = recordingTime / maxDur
+        return max(0.0, min(1.0, ratio))
+    }
     var isLoading: Bool {
         state.permission.isRequestingPermission || state.recording.currentRecordingOperationId != nil
     }

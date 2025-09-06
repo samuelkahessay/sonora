@@ -346,8 +346,9 @@ extension BrandThemeable {
         // Default implementation - override in conforming views
     }
     
+    @MainActor
     func getAnimation(for type: TransitionType) -> Animation {
-        return BrandThemeManager.shared.getAppropriateAnimation(for: type)
+        BrandThemeManager.shared.getAppropriateAnimation(for: type)
     }
 }
 
@@ -360,7 +361,7 @@ struct BrandThemeModifier: ViewModifier {
         content
             .environmentObject(themeManager)
             .colorScheme(themeManager.colorScheme)
-            .animation(themeManager.getAppropriateAnimation(for: .themeChange), value: themeManager.currentTheme)
+            .animation(themeManager.getAppropriateAnimation(for: .themeChange), value: themeManager.colorScheme)
     }
 }
 

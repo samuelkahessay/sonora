@@ -131,6 +131,26 @@ public final class MemoEventHandler {
         logger.debug("Memo metadata - Size: \(domainMemo.formattedFileSize), Extension: \(domainMemo.fileExtension)", 
                     category: .useCase, 
                     context: context)
+
+        // Start transcription (idempotent) – single orchestrator to avoid duplicates
+        Task { @MainActor in
+            // Defensive: ensure file exists before triggering work (protects imported/test memos)
+            guard FileManager.default.fileExists(atPath: domainMemo.fileURL.path) else {
+                logger.warning("Skipping transcription: audio file missing", category: .transcription, context: context, error: nil)
+                return
+            }
+            let state = transcriptionRepository.getTranscriptionState(for: domainMemo.id)
+            // Only start if nothing has begun yet
+            guard state.isNotStarted else { return }
+            do {
+                try await DIContainer.shared.startTranscriptionUseCase().execute(memo: domainMemo)
+            } catch {
+                // Non-fatal: log and continue. Already-completed/in-progress errors are expected in races.
+                Logger.shared.debug("StartTranscriptionUseCase skipped/failed for memoCreated: \(error.localizedDescription)",
+                                    category: .transcription,
+                                    context: context)
+            }
+        }
     }
     
     private func handleRecordingStarted(_ memoId: UUID, correlationId: String) async {

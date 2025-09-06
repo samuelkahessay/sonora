@@ -40,7 +40,7 @@ struct DiagnosticsSectionView: View {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack(spacing: Spacing.md) {
                     Image(systemName: "brain.head.profile").foregroundColor(.semantic(.brandPrimary))
-                    Text("Local Engine (WhisperKit)").font(.headline)
+                    Text("Local Engine (WhisperKit)").font(SonoraDesignSystem.Typography.headingSmall)
                     Spacer()
                     Button("Open Diagnostics") { showWhisperDiagnostics = true }.buttonStyle(.bordered)
                 }
@@ -64,7 +64,7 @@ struct DiagnosticsSectionView: View {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack(spacing: Spacing.md) {
                     Image(systemName: "waveform").foregroundColor(.semantic(.brandPrimary))
-                    Text("Audio Quality").font(.headline)
+                    Text("Audio Quality").font(SonoraDesignSystem.Typography.headingSmall)
                 }
                 gridRow("Profile", currentProfileName)
                 gridRow("Adaptive", adaptiveEnabled ? "On" : "Off")
@@ -85,7 +85,7 @@ struct DiagnosticsSectionView: View {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack(spacing: Spacing.md) {
                     Image(systemName: "gauge.with.needle").foregroundColor(.semantic(.brandPrimary))
-                    Text("System Resources").font(.headline)
+                    Text("System Resources").font(SonoraDesignSystem.Typography.headingSmall)
                 }
                 gridRow("Under Pressure", isUnderPressure ? "Yes" : "No")
                 gridRow("Memory", String(format: "%.0f MB", memoryStats.memoryUsageMB))
@@ -105,7 +105,7 @@ struct DiagnosticsSectionView: View {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack(spacing: Spacing.md) {
                     Image(systemName: "chart.bar").foregroundColor(.semantic(.brandPrimary))
-                    Text("Operations").font(.headline)
+                    Text("Operations").font(SonoraDesignSystem.Typography.headingSmall)
                 }
                 Text(systemOpsText).font(.caption).foregroundColor(.semantic(.textSecondary))
                 HStack(spacing: Spacing.sm) {
@@ -120,7 +120,7 @@ struct DiagnosticsSectionView: View {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack(spacing: Spacing.md) {
                     Image(systemName: "antenna.radiowaves.left.and.right").foregroundColor(.semantic(.brandPrimary))
-                    Text("Event Bus").font(.headline)
+                    Text("Event Bus").font(SonoraDesignSystem.Typography.headingSmall)
                 }
                 Text(eventBusStats).font(.caption).foregroundColor(.semantic(.textSecondary))
                 Button("Refresh") { refreshEventBus() }.buttonStyle(.bordered)

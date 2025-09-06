@@ -14,6 +14,9 @@ import SwiftUI
 /// Features organic waveform animation that transforms into geometric patterns during recording
 struct SonicBloomRecordButton: View {
     
+    // Progress (0...1) to display an outer ring during recording
+    var progress: Double? = nil
+    
     // MARK: - Properties
     
     let isRecording: Bool
@@ -24,9 +27,10 @@ struct SonicBloomRecordButton: View {
     @State private var bloomScale: CGFloat = 1.0
     @State private var pulseOpacity: Double = 0.0
     @State private var innerRotation: Double = 0
+    @State private var bloomTrigger: Bool = false
     
     // Constants
-    private let buttonSize: CGFloat = SonoraDesignSystem.Spacing.recordButtonSize
+    private let buttonSize: CGFloat = 250
     private let waveformCount: Int = 8
     private let bloomAnimationDuration: TimeInterval = 0.8
     
@@ -54,18 +58,27 @@ struct SonicBloomRecordButton: View {
             .scaleEffect(bloomScale)
         }
         .buttonStyle(PlainButtonStyle())
-        .sensoryFeedback(.impact(.medium), trigger: isRecording)
+        .bloomPulse(trigger: $bloomTrigger)
+        .sensoryFeedback(.impact(weight: .medium), trigger: isRecording)
         .onChange(of: isRecording) { _, newValue in
             animateRecordingState(newValue)
+            // Fire bloom shortly after state changes to enhance visibility
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                bloomTrigger = true
+            }
         }
         .onAppear {
             startContinuousAnimations()
+        }
+        .onDisappear {
+            phaseTask?.cancel()
+            phaseTask = nil
         }
     }
     
     // MARK: - Button Components
     
-    /// Outer pulsing ring that appears during recording
+
     @ViewBuilder
     private var pulseRing: some View {
         if isRecording {
@@ -166,7 +179,7 @@ struct SonicBloomRecordButton: View {
             ZStack {
                 ForEach(0..<6, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.insightHighlight.opacity(0.3))
+                        .fill(Color.clear)
                         .frame(width: 60, height: 2)
                         .offset(y: -20)
                         .rotationEffect(.degrees(Double(index) * 60 + innerRotation * 0.5))
@@ -219,11 +232,13 @@ struct SonicBloomRecordButton: View {
     
     /// Start continuous background animations
     private func startContinuousAnimations() {
-        // Continuous waveform phase animation
-        Timer.scheduledTimer(withTimeInterval: 0.016, repeats: true) { _ in
-            waveformPhase += 0.02
-            if waveformPhase > .pi * 2 {
-                waveformPhase = 0
+        // Continuous waveform phase animation on main actor; cancel on disappear
+        phaseTask?.cancel()
+        phaseTask = Task { @MainActor in
+            while !Task.isCancelled {
+                waveformPhase += 0.02
+                if waveformPhase > .pi * 2 { waveformPhase = 0 }
+                try? await Task.sleep(nanoseconds: 16_000_000) // ~60fps
             }
         }
         
@@ -234,6 +249,8 @@ struct SonicBloomRecordButton: View {
             innerRotation = 360
         }
     }
+    
+    @State private var phaseTask: Task<Void, Never>? = nil
 }
 
 // MARK: - Waveform Petal Shape
@@ -248,17 +265,31 @@ struct WaveformPetal: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let center = CGPoint(x: rect.midX, y: rect.midY)
-        let radius = rect.width * 0.35
-        
-        // Calculate organic waveform amplitude
-        let baseAmplitude: CGFloat = isActive ? 0.3 : 0.15
-        let waveAmplitude = baseAmplitude * (1 + sin(phase + CGFloat(petalIndex) * 0.5) * 0.4)
-        
-        // Create organic petal shape
-        let startRadius = radius * (0.7 + waveAmplitude)
-        let endRadius = radius * (1.0 + waveAmplitude * 1.5)
+
+        // Constrain petals to remain within the main background circle.
+        // The main button background is a Circle() that fills the full frame,
+        // so its radius is half of the rect's width/height.
+        let R = min(rect.width, rect.height) / 2.0
+        let margin: CGFloat = 4 // keep a small visual gap to ensure petals never exceed the circle
+
+        // Calculate organic waveform amplitude (smaller factors so tips stay inside R)
+        let baseAmplitude: CGFloat = isActive ? 0.08 : 0.05
+        let waveVariation = sin(phase + CGFloat(petalIndex) * 0.5) * 0.4 // -0.4...+0.4
+        let waveAmplitude = baseAmplitude * (1 + waveVariation) // ~0.048...0.112 when active
+
+        // Petal radial bounds as a proportion of the main circle radius
+        let baseStartFactor: CGFloat = 0.62
+        let baseEndFactor: CGFloat = 0.82
+
+        var startRadius = R * (baseStartFactor + waveAmplitude)
+        var endRadius = R * (baseEndFactor + waveAmplitude * 1.5)
+
+        // Hard clamp to ensure petal tips never exceed the circle radius
+        startRadius = min(startRadius, R - margin * 2)
+        endRadius = min(endRadius, R - margin)
+
         let petalWidth: CGFloat = isActive ? 25 : 15
-        
+
         // Start point
         let startAngle = Angle.degrees(angle - Double(petalWidth) / 2)
         let endAngle = Angle.degrees(angle + Double(petalWidth) / 2)
@@ -278,16 +309,19 @@ struct WaveformPetal: Shape {
             y: center.y + sin(Angle.degrees(angle).radians) * endRadius
         )
         
-        // Create curved petal shape
+        // Create curved petal shape (break into simpler sub-expressions for type-checker)
         path.move(to: startPoint)
-        path.addQuadCurve(to: tipPoint, control: CGPoint(
-            x: center.x + cos(startAngle.radians) * (startRadius + endRadius) / 2,
-            y: center.y + sin(startAngle.radians) * (startRadius + endRadius) / 2
-        ))
-        path.addQuadCurve(to: endPoint, control: CGPoint(
-            x: center.x + cos(endAngle.radians) * (startRadius + endRadius) / 2,
-            y: center.y + sin(endAngle.radians) * (startRadius + endRadius) / 2
-        ))
+        let midRadius = (startRadius + endRadius) / 2
+        let ctrl1 = CGPoint(
+            x: center.x + cos(startAngle.radians) * midRadius,
+            y: center.y + sin(startAngle.radians) * midRadius
+        )
+        let ctrl2 = CGPoint(
+            x: center.x + cos(endAngle.radians) * midRadius,
+            y: center.y + sin(endAngle.radians) * midRadius
+        )
+        path.addQuadCurve(to: tipPoint, control: ctrl1)
+        path.addQuadCurve(to: endPoint, control: ctrl2)
         path.closeSubpath()
         
         return path

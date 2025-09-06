@@ -11,7 +11,7 @@ struct LanguageSectionView: View {
     var body: some View {
         SettingsCard {
             Text("Transcription Language")
-                .font(.headline)
+                .font(SonoraDesignSystem.Typography.headingSmall)
                 .accessibilityAddTraits(.isHeader)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {

@@ -92,6 +92,11 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
             logger.debug("🚀 WhisperKitModelManager: Model already warmed: \(selectedModel.displayName)")
             return
         }
+        // Skip if model is not installed (avoid noisy retries)
+        guard modelProvider.installedModelFolder(id: selectedModel.id) != nil else {
+            throttleMissingModelWarning(modelName: selectedModel.displayName)
+            return
+        }
         
         // Cancel any existing prewarm operation
         prewarmTask?.cancel()
@@ -205,7 +210,13 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
                 return
             } catch {
                 lastError = error
-                logger.warning("🚀 WhisperKitModelManager: Load attempt \(attempt) failed: \(error.localizedDescription)")
+                // If model is missing, do not spam warnings repeatedly
+                if case WhisperKitModelManagerError.modelNotFound = error {
+                    throttleMissingModelWarning(modelName: modelName)
+                    break
+                } else {
+                    logger.warning("🚀 WhisperKitModelManager: Load attempt \(attempt) failed: \(error.localizedDescription)")
+                }
                 
                 if attempt < ModelManagementConfig.maxRetryAttempts {
                     try await Task.sleep(nanoseconds: UInt64(ModelManagementConfig.retryDelay * 1_000_000_000))
@@ -214,6 +225,14 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
         }
         
         throw lastError ?? WhisperKitModelManagerError.loadFailed("All retry attempts exhausted")
+    }
+
+    // MARK: - Warning Throttling
+    private var hasWarnedMissingModel = false
+    private func throttleMissingModelWarning(modelName: String) {
+        guard !hasWarnedMissingModel else { return }
+        hasWarnedMissingModel = true
+        logger.warning("🚀 WhisperKitModelManager: Model not installed: \(modelName). Skipping prewarm.")
     }
     
     private func loadModelSynchronously(modelId: String, modelName: String) async throws {

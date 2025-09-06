@@ -66,6 +66,42 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0A556D4C2E6B9EAF008F5486 /* Exceptions for "Sonora" folder in "SonoraTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Black.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-BlackItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Bold.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-BoldItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Heavy.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-HeavyItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Medium.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-MediumItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Regular.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-RegularItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Semibold.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-SemiboldItalic.otf",
+			);
+			target = 0A3974162E5A6CA600F27D16 /* SonoraTests */;
+		};
+		0A556D4D2E6B9EAF008F5486 /* Exceptions for "Sonora" folder in "SonoraUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Black.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-BlackItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Bold.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-BoldItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Heavy.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-HeavyItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Medium.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-MediumItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Regular.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-RegularItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Semibold.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-SemiboldItalic.otf",
+			);
+			target = 0A3974202E5A6CA600F27D16 /* SonoraUITests */;
+		};
 		0A7F22DA2E5C0DB0003D9787 /* Exceptions for "Sonora" folder in "Sonora" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -83,6 +119,18 @@
 		0A875DBA2E600F3800245D4A /* Exceptions for "Sonora" folder in "SonoraLiveActivityExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Black.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-BlackItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Bold.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-BoldItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Heavy.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-HeavyItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Medium.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-MediumItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Regular.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-RegularItalic.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-Semibold.otf",
+				"Core/UI/DesignSystem/Fonts/New York/NewYorkMedium-SemiboldItalic.otf",
 				LiveActivity/SonoraLiveActivityAttributes.swift,
 			);
 			target = 0A875D992E600B7100245D4A /* SonoraLiveActivityExtension */;
@@ -101,6 +149,8 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				0A7F22DA2E5C0DB0003D9787 /* Exceptions for "Sonora" folder in "Sonora" target */,
+				0A556D4C2E6B9EAF008F5486 /* Exceptions for "Sonora" folder in "SonoraTests" target */,
+				0A556D4D2E6B9EAF008F5486 /* Exceptions for "Sonora" folder in "SonoraUITests" target */,
 				0A875DBA2E600F3800245D4A /* Exceptions for "Sonora" folder in "SonoraLiveActivityExtension" target */,
 			);
 			path = Sonora;

@@ -23,26 +23,27 @@ final class DIContainer: ObservableObject, Resolver {
     // - Concrete class types: weak references where beneficial
     // - Protocol types: keep as optional strong references with lifecycle tracking
     private var _transcriptionAPI: (any TranscriptionAPI)?
-    private weak var _transcriptionServiceFactory: TranscriptionServiceFactory?
-    private weak var _modelDownloadManager: ModelDownloadManager?
-    private weak var _analysisService: AnalysisService?
-    private weak var _localAnalysisService: LocalAnalysisService?
-    private weak var _memoRepository: MemoRepositoryImpl?
+    private var _transcriptionServiceFactory: TranscriptionServiceFactory?
+    private var _modelDownloadManager: ModelDownloadManager?
+    private var _analysisService: AnalysisService?
+    private var _localAnalysisService: LocalAnalysisService?
+    private var _memoRepository: MemoRepositoryImpl?
     private var _transcriptionRepository: (any TranscriptionRepository)?
     private var _analysisRepository: (any AnalysisRepository)?
     private var _logger: (any LoggerProtocol)?
-    private weak var _backgroundAudioService: BackgroundAudioService?
+    private var _backgroundAudioService: BackgroundAudioService?
     private var _audioRepository: (any AudioRepository)?
     private var _transcriptExporter: (any TranscriptExporting)?
     private var _analysisExporter: (any AnalysisExporting)?
-    private weak var _startRecordingUseCase: StartRecordingUseCase?
+    private var _startRecordingUseCase: StartRecordingUseCase?
+    private var _startTranscriptionUseCase: (any StartTranscriptionUseCaseProtocol)?
     private var _systemNavigator: (any SystemNavigator)?
     private var _liveActivityService: (any LiveActivityServiceProtocol)?
     private var _eventBus: (any EventBusProtocol)?
     private var _eventHandlerRegistry: (any EventHandlerRegistryProtocol)?
     private var _moderationService: (any ModerationServiceProtocol)?
     private var _spotlightIndexer: (any SpotlightIndexing)?
-    private weak var _whisperKitModelProvider: WhisperKitModelProvider?
+    private var _whisperKitModelProvider: WhisperKitModelProvider?
     private var _modelContext: ModelContext? // Keep strong reference to ModelContext
 
     // MARK: - Phase 2: Core Optimization Services
@@ -240,8 +241,21 @@ final class DIContainer: ObservableObject, Resolver {
         if self._audioQualityManager == nil {
             self._audioQualityManager = AudioQualityManager()
         }
-        if self._whisperKitModelManager == nil {
-            self._whisperKitModelManager = WhisperKitModelManager(modelProvider: self._whisperKitModelProvider!)
+
+        // Initialize model management primitives first
+        if self._whisperKitModelProvider == nil {
+            self._whisperKitModelProvider = WhisperKitModelProvider()
+        }
+        if self._modelDownloadManager == nil, let provider = self._whisperKitModelProvider {
+            self._modelDownloadManager = ModelDownloadManager(provider: provider)
+        }
+        if self._transcriptionServiceFactory == nil, let dm = self._modelDownloadManager, let provider = self._whisperKitModelProvider {
+            self._transcriptionServiceFactory = TranscriptionServiceFactory(downloadManager: dm, modelProvider: provider)
+        }
+
+        // Now create the WhisperKit model manager
+        if self._whisperKitModelManager == nil, let provider = self._whisperKitModelProvider {
+            self._whisperKitModelManager = WhisperKitModelManager(modelProvider: provider)
             // Lifecycle hooks are configured in the manager initializer
         }
         if self._memoryPressureDetector == nil {
@@ -249,11 +263,6 @@ final class DIContainer: ObservableObject, Resolver {
             detector.startMonitoring()
             self._memoryPressureDetector = detector
         }
-        
-        // Initialize model management and transcription factory
-        self._whisperKitModelProvider = WhisperKitModelProvider()
-        self._modelDownloadManager = ModelDownloadManager(provider: self._whisperKitModelProvider!)
-        self._transcriptionServiceFactory = TranscriptionServiceFactory(downloadManager: self._modelDownloadManager!, modelProvider: self._whisperKitModelProvider!)
         
         // Initialize external API services  
         self._transcriptionAPI = TranscriptionService()
@@ -492,6 +501,25 @@ final class DIContainer: ObservableObject, Resolver {
         }
         return useCase
     }
+
+    /// Get start transcription use case (cached)
+    @MainActor
+    func startTranscriptionUseCase() -> any StartTranscriptionUseCaseProtocol {
+        ensureConfigured()
+        if let uc = _startTranscriptionUseCase { return uc }
+        // Lazily build if not already created as part of repository init
+        let trRepo = transcriptionRepository()
+        let svc = transcriptionServiceFactory().createTranscriptionService()
+        let uc = StartTranscriptionUseCase(
+            transcriptionRepository: trRepo,
+            transcriptionAPI: svc,
+            eventBus: eventBus(),
+            operationCoordinator: operationCoordinator(),
+            moderationService: moderationService()
+        )
+        _startTranscriptionUseCase = uc
+        return uc
+    }
     
     /// Get system navigator
     @MainActor
@@ -726,6 +754,8 @@ final class DIContainer: ObservableObject, Resolver {
             operationCoordinator: _operationCoordinator,
             moderationService: mod
         )
+        // Cache for reuse by other orchestrators (e.g., MemoEventHandler)
+        self._startTranscriptionUseCase = startTranscriptionUseCase
         let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(transcriptionRepository: trRepo)
         let retryTranscriptionUseCase = RetryTranscriptionUseCase(transcriptionRepository: trRepo, transcriptionAPI: transcriptionService)
         self._memoRepository = MemoRepositoryImpl(

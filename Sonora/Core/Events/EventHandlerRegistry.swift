@@ -16,6 +16,7 @@ public final class EventHandlerRegistry {
     // MARK: - Handler Management
     private var registeredHandlers: [String: Any] = [:]
     private var handlerStatus: [String: Bool] = [:]
+    private var didRegisterAll: Bool = false
     
     // MARK: - Handler Instances
     private var memoEventHandler: MemoEventHandler?
@@ -51,6 +52,11 @@ public final class EventHandlerRegistry {
     
     /// Register all standard event handlers
     public func registerAllHandlers() {
+        guard !didRegisterAll else {
+            logger.debug("EventHandlerRegistry: registerAllHandlers called more than once – ignoring", category: .system, context: LogContext())
+            return
+        }
+        didRegisterAll = true
         logger.info("Registering all event handlers", 
                    category: .system, 
                    context: LogContext())

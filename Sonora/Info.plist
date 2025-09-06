@@ -27,5 +27,20 @@
 	<string>Sonora needs full calendar access to check for conflicts and suggest the best calendar for your events.</string>
 	<key>NSRemindersUsageDescription</key>
 	<string>Sonora can create reminders from your voice memos to help you stay on top of important tasks.</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>NewYorkMedium-Regular.otf</string>
+		<string>NewYorkMedium-Medium.otf</string>
+		<string>NewYorkMedium-Semibold.otf</string>
+		<string>NewYorkMedium-Bold.otf</string>
+		<string>NewYorkMedium-Heavy.otf</string>
+		<string>NewYorkMedium-Black.otf</string>
+		<string>NewYorkMedium-RegularItalic.otf</string>
+		<string>NewYorkMedium-MediumItalic.otf</string>
+		<string>NewYorkMedium-SemiboldItalic.otf</string>
+		<string>NewYorkMedium-BoldItalic.otf</string>
+		<string>NewYorkMedium-HeavyItalic.otf</string>
+		<string>NewYorkMedium-BlackItalic.otf</string>
+	</array>
 </dict>
 </plist>

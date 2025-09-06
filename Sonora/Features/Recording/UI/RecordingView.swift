@@ -1,4 +1,3 @@
-//  RecordingView.swift
 //  Sonora
 //
 //  Created by Samuel Kahessay on 2025-08-23.
@@ -20,7 +19,8 @@ struct RecordingView: View {
         case statusText
     }
     
-    var body: some View {
+    // Extracted background to help the compiler type-check faster
+    private var backgroundView: some View {
         ZStack {
             // Background: base fill + subtle gradients for Liquid Glass contrast
             Color.semantic(.bgPrimary)
@@ -49,150 +49,160 @@ struct RecordingView: View {
             )
             .ignoresSafeArea()
             .allowsHitTesting(false)
-
-            // Your existing content
-            NavigationStack {
-                VStack(spacing: SonoraDesignSystem.Spacing.xxl) {
-                    Spacer()
-                    
-                    if !viewModel.hasPermission {
-                        VStack(spacing: SonoraDesignSystem.Spacing.lg) {
-                            Image(systemName: viewModel.permissionStatus.iconName)
-                                .font(.system(size: SonoraDesignSystem.Layout.iconExtraLarge))
-                                .fontWeight(.medium)
-                                .foregroundColor(.sparkOrange)
-                                .accessibilityHidden(true)
-                            
-                            Text(viewModel.permissionStatus.displayName)
-                                .headingStyle(.medium)
-                                .accessibilityAddTraits(.isHeader)
-                            
-                            Text(getPermissionDescription())
-                                .bodyStyle(.regular)
-                                .foregroundColor(.textSecondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, SonoraDesignSystem.Spacing.breathingRoom)
-                                .accessibilityLabel(getPermissionAccessibilityLabel())
-                            
-                            if viewModel.isRequestingPermission {
-                                VStack(spacing: 8) {
-                                    LoadingIndicator(size: .regular)
-                                    Text("Requesting microphone permission")
-                                        .font(.subheadline)
-                                        .foregroundColor(.semantic(.textSecondary))
-                                }
-                                .accessibilityLabel("Requesting microphone permission")
-                            } else {
-                                getPermissionButton()
-                                    .accessibilityFocused($focusedElement, equals: .permissionButton)
+        }
+    }
+    
+    // Extracted main content to help the compiler
+    private var contentView: some View {
+        NavigationStack {
+            VStack(spacing: SonoraDesignSystem.Spacing.xxl) {
+                Spacer()
+                
+                if !viewModel.hasPermission {
+                    VStack(spacing: SonoraDesignSystem.Spacing.lg) {
+                        Image(systemName: viewModel.permissionStatus.iconName)
+                            .font(.system(size: SonoraDesignSystem.Layout.iconExtraLarge))
+                            .fontWeight(.medium)
+                            .foregroundColor(.sparkOrange)
+                            .accessibilityHidden(true)
+                        
+                        Text(viewModel.permissionStatus.displayName)
+                            .headingStyle(.medium)
+                            .accessibilityAddTraits(.isHeader)
+                        
+                        Text(getPermissionDescription())
+                            .bodyStyle(.regular)
+                            .foregroundColor(.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, SonoraDesignSystem.Spacing.breathingRoom)
+                            .accessibilityLabel(getPermissionAccessibilityLabel())
+                        
+                        if viewModel.isRequestingPermission {
+                            VStack(spacing: 8) {
+                                LoadingIndicator(size: .regular)
+                                Text("Requesting microphone permission")
+                                    .font(.subheadline)
+                                    .foregroundColor(.semantic(.textSecondary))
                             }
-                        }
-                        .padding()
-                        .accessibilityElement(children: .contain)
-                    } else {
-                        VStack(spacing: SonoraDesignSystem.Spacing.xl) {
-                            
-                            // Sonic Bloom recording button with brand identity
-                            SonicBloomRecordButton(
-                                isRecording: viewModel.isRecording,
-                                action: {
-                                    HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
-                                    viewModel.toggleRecording()
-                                }
-                            )
-                            .accessibilityLabel(getRecordButtonAccessibilityLabel())
-                            .accessibilityHint(getRecordButtonAccessibilityHint())
-                            .accessibilityFocused($focusedElement, equals: .recordButton)
-                            .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
-                            
-                            // Timer overlay area (fixed height to avoid layout shifts)
-                            ZStack(alignment: .top) {
-                                timerOverlayView
-                                    .opacity(viewModel.isRecording ? 1 : 0)
-                                    .transition(.move(edge: .top).combined(with: .opacity))
-                                    .accessibilityHidden(!viewModel.isRecording)
-                            }
-                            .frame(height: 80)
-                            .animation(.easeInOut(duration: 0.25), value: viewModel.isRecording)
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    Spacer()
-                }
-                .breathingRoom()
-                .safeAreaInset(edge: .bottom) {
-                    Color.clear.frame(height: 0)
-                }
-                .navigationTitle("Sonora")
-                .toolbarBackground(.clear, for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
-                .brandThemed()
-                .onAppear {
-                    viewModel.onViewAppear()
-                }
-                .initialFocus {
-                    if viewModel.hasPermission {
-                        focusedElement = .recordButton
-                    } else {
-                        focusedElement = .permissionButton
-                    }
-                }
-                .onChange(of: viewModel.hasPermission) { _, hasPermission in
-                    if hasPermission {
-                        HapticManager.shared.playPermissionGranted()
-                        FocusManager.shared.announceAndFocus(
-                            "Microphone access granted. You can now record voice memos.",
-                            delay: FocusManager.standardDelay
-                        ) {
-                            focusedElement = .recordButton
-                        }
-                    } else {
-                        HapticManager.shared.playPermissionDenied()
-                        FocusManager.shared.announceChange("Microphone access is required to record voice memos.")
-                        focusedElement = .permissionButton
-                    }
-                }
-                .onChange(of: viewModel.isRecording) { _, isRecording in
-                    if isRecording {
-                        FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
-                            focusedElement = .statusText
-                        }
-                    } else {
-                        FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
-                            focusedElement = .recordButton
+                            .accessibilityLabel("Requesting microphone permission")
+                        } else {
+                            getPermissionButton()
+                                .accessibilityFocused($focusedElement, equals: .permissionButton)
                         }
                     }
-                }
-                .onChange(of: viewModel.isInCountdown) { _, isInCountdown in
-                    if isInCountdown {
-                        focusedElement = .statusText
-                    }
-                }
-                .alert("Recording Stopped", isPresented: $viewModel.showAutoStopAlert) {
-                    Button("OK") { viewModel.dismissAutoStopAlert() }
-                } message: {
-                    Text(viewModel.autoStopMessage ?? "")
-                }
-                .onChange(of: scenePhase) { oldPhase, newPhase in
-                    if newPhase == .active {
-                        // Check if we should stop recording due to Live Activity stop button
-                        let sharedDefaults = UserDefaults(suiteName: "group.sonora.shared") ?? UserDefaults.standard
-                        if sharedDefaults.bool(forKey: "shouldStopRecordingOnActivation") {
-                            // Clear the flag immediately to prevent duplicate stops
-                            sharedDefaults.removeObject(forKey: "shouldStopRecordingOnActivation")
-                            sharedDefaults.synchronize()
-                            
-                            // Stop recording if currently recording
-                            if viewModel.isRecording {
-                                HapticManager.shared.playRecordingFeedback(isStarting: false)
+                    .padding()
+                    .accessibilityElement(children: .contain)
+                } else {
+                    VStack(spacing: SonoraDesignSystem.Spacing.xl) {
+                        
+                        // Sonic Bloom recording button with brand identity
+                        SonicBloomRecordButton(
+                            progress: viewModel.recordingProgress,
+                            isRecording: viewModel.isRecording,
+                            action: {
+                                HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
                                 viewModel.toggleRecording()
                             }
+                        )
+                        .accessibilityLabel(getRecordButtonAccessibilityLabel())
+                        .accessibilityHint(getRecordButtonAccessibilityHint())
+                        .accessibilityFocused($focusedElement, equals: .recordButton)
+                        .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
+                        
+                        // Timer overlay area (fixed height to avoid layout shifts)
+                        ZStack(alignment: .top) {
+                            timerOverlayView
+                                .opacity(viewModel.isRecording ? 1 : 0)
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                                .accessibilityHidden(!viewModel.isRecording)
+                        }
+                        .frame(height: 80)
+                        .animation(.easeInOut(duration: 0.25), value: viewModel.isRecording)
+                    }
+                    .padding(.horizontal)
+                }
+                
+                Spacer()
+            }
+            .breathingRoom()
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: 0)
+            }
+            .navigationTitle("Sonora")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.clear, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .brandThemed()
+            .onAppear {
+                viewModel.onViewAppear()
+            }
+            .initialFocus {
+                if viewModel.hasPermission {
+                    focusedElement = .recordButton
+                } else {
+                    focusedElement = .permissionButton
+                }
+            }
+            .onChange(of: viewModel.hasPermission) { _, hasPermission in
+                if hasPermission {
+                    HapticManager.shared.playPermissionGranted()
+                    FocusManager.shared.announceAndFocus(
+                        "Microphone access granted. You can now record voice memos.",
+                        delay: FocusManager.standardDelay
+                    ) {
+                        focusedElement = .recordButton
+                    }
+                } else {
+                    HapticManager.shared.playPermissionDenied()
+                    FocusManager.shared.announceChange("Microphone access is required to record voice memos.")
+                    focusedElement = .permissionButton
+                }
+            }
+            .onChange(of: viewModel.isRecording) { _, isRecording in
+                if isRecording {
+                    FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
+                        focusedElement = .statusText
+                    }
+                } else {
+                    FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
+                        focusedElement = .recordButton
+                    }
+                }
+            }
+            .onChange(of: viewModel.isInCountdown) { _, isInCountdown in
+                if isInCountdown {
+                    focusedElement = .statusText
+                }
+            }
+            .alert("Recording Stopped", isPresented: $viewModel.showAutoStopAlert) {
+                Button("OK") { viewModel.dismissAutoStopAlert() }
+            } message: {
+                Text(viewModel.autoStopMessage ?? "")
+            }
+            .onChange(of: scenePhase) { oldPhase, newPhase in
+                if newPhase == .active {
+                    // Check if we should stop recording due to Live Activity stop button
+                    let sharedDefaults = UserDefaults(suiteName: "group.sonora.shared") ?? UserDefaults.standard
+                    if sharedDefaults.bool(forKey: "shouldStopRecordingOnActivation") {
+                        // Clear the flag immediately to prevent duplicate stops
+                        sharedDefaults.removeObject(forKey: "shouldStopRecordingOnActivation")
+                        sharedDefaults.synchronize()
+                        
+                        // Stop recording if currently recording
+                        if viewModel.isRecording {
+                            HapticManager.shared.playRecordingFeedback(isStarting: false)
+                            viewModel.toggleRecording()
                         }
                     }
                 }
             }
         }
+    }
+    var body: some View {
+        AnyView(ZStack {
+            backgroundView
+            contentView
+        })
     }
     
     // MARK: - Permission UI Helpers

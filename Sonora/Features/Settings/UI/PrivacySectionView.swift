@@ -9,7 +9,7 @@ struct PrivacySectionView: View {
     var body: some View {
         SettingsCard {
             Text("Privacy & Data")
-                .font(.headline)
+                .font(SonoraDesignSystem.Typography.headingSmall)
                 .accessibilityAddTraits(.isHeader)
 
             // Links (stacked)
@@ -171,7 +171,7 @@ struct PrivacySectionView: View {
                 .frame(width: 24, height: 24)
                 .foregroundColor(Color.semantic(.brandPrimary))
             Text(title)
-                .font(.body)
+                .font(SonoraDesignSystem.Typography.bodyLarge)
                 .foregroundColor(.semantic(.textPrimary))
             Spacer()
             Image(systemName: "arrow.up.right")
@@ -184,7 +184,7 @@ struct PrivacySectionView: View {
     private func optionRow(title: String, binding: Binding<Bool>) -> some View {
         HStack(spacing: Spacing.md) {
             Text(title)
-                .font(.body)
+                .font(SonoraDesignSystem.Typography.bodyLarge)
             Spacer()
             Toggle("", isOn: binding)
                 .labelsHidden()

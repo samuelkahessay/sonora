@@ -23,7 +23,8 @@ protocol MemoRepository: ObservableObject {
     func deleteMemo(_ memo: Memo)
     func getMemo(by id: UUID) -> Memo?
     func getMemo(by url: URL) -> Memo?
-    func handleNewRecording(at url: URL)
+    @discardableResult
+    func handleNewRecording(at url: URL) -> Memo
     func updateMemoMetadata(_ memo: Memo, metadata: [String: Any])
     func renameMemo(_ memo: Memo, newTitle: String)
 }

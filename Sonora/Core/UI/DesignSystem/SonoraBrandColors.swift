@@ -15,32 +15,32 @@ extension Color {
     // MARK: - Primary Palette
     
     /// Sonora Deep: Rich, contemplative navy that conveys depth and wisdom
-    static let sonoraDep = Color(hex: "#1A2332")
+    static let sonoraDep = Color(hexString: "#1A2332")
     
     /// Clarity White: Pure, clean white for breathing room and mental clarity
-    static let clarityWhite = Color(hex: "#FDFFFE")
+    static let clarityWhite = Color(hexString: "#FDFFFE")
     
     /// Insight Gold: Warm, premium gold for highlighting key insights and achievements
-    static let insightGold = Color(hex: "#D4AF37")
+    static let insightGold = Color(hexString: "#D4AF37")
     
     // MARK: - Secondary Palette
     
     /// Reflection Gray: Soft blue-gray for secondary text and subtle elements
-    static let reflectionGray = Color(hex: "#8B9DC3")
+    static let reflectionGray = Color(hexString: "#8B9DC3")
     
     /// Whisper Blue: Ultra-light blue for backgrounds and gentle highlights
-    static let whisperBlue = Color(hex: "#E8F0FF")
+    static let whisperBlue = Color(hexString: "#E8F0FF")
     
     /// Growth Green: Muted teal for progress indicators and positive actions
-    static let growthGreen = Color(hex: "#4A9B8E")
+    static let growthGreen = Color(hexString: "#4A9B8E")
     
     // MARK: - Accent Colors
     
     /// Spark Orange: Energetic coral for call-to-action elements
-    static let sparkOrange = Color(hex: "#FF6B35")
+    static let sparkOrange = Color(hexString: "#FF6B35")
     
     /// Depth Purple: Rich purple for premium features and depth
-    static let depthPurple = Color(hex: "#6B4C93")
+    static let depthPurple = Color(hexString: "#6B4C93")
 }
 
 // MARK: - Semantic Color Mappings
@@ -123,9 +123,9 @@ extension Color {
 extension Color {
     
     /// Initialize Color from hex string
-    /// - Parameter hex: Hex color string (e.g., "#1A2332")
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+    /// - Parameter hexString: Hex color string (e.g., "#1A2332")
+    init(hexString: String) {
+        let hex = hexString.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)
         let a, r, g, b: UInt64
@@ -184,28 +184,58 @@ extension Color {
 
 /// Central theme configuration for Sonora brand colors
 struct SonoraBrandTheme {
-    
-    /// Default Sonora brand theme
-    static let `default` = SonoraBrandTheme()
-    
     // Core brand colors
-    let primary = Color.insightGold
-    let secondary = Color.growthGreen
-    let accent = Color.sparkOrange
-    let background = Color.clarityWhite
-    let surface = Color.whisperBlue
-    let onPrimary = Color.sonoraDep
-    let onSurface = Color.sonoraDep
+    let primary: Color
+    let secondary: Color
+    let accent: Color
+    let background: Color
+    let surface: Color
+    let onPrimary: Color
+    let onSurface: Color
     
     // Semantic mappings
-    let recordingActive = Color.recordingActive
-    let recordingInactive = Color.recordingInactive
-    let insightHighlight = Color.insightHighlight
-    let textPrimary = Color.textPrimary
-    let textSecondary = Color.textSecondary
+    let recordingActive: Color
+    let recordingInactive: Color
+    let insightHighlight: Color
+    let textPrimary: Color
+    let textSecondary: Color
     
     /// Whether this theme uses dark appearance
-    var isDark: Bool { false } // Sonora brand prefers light, contemplative appearance
+    let isDark: Bool
+    
+    /// Designated initializer with sensible defaults for the light theme
+    init(
+        primary: Color = .insightGold,
+        secondary: Color = .growthGreen,
+        accent: Color = .sparkOrange,
+        background: Color = .clarityWhite,
+        surface: Color = .whisperBlue,
+        onPrimary: Color = .sonoraDep,
+        onSurface: Color = .sonoraDep,
+        recordingActive: Color = .recordingActive,
+        recordingInactive: Color = .recordingInactive,
+        insightHighlight: Color = .insightHighlight,
+        textPrimary: Color = .textPrimary,
+        textSecondary: Color = .textSecondary,
+        isDark: Bool = false
+    ) {
+        self.primary = primary
+        self.secondary = secondary
+        self.accent = accent
+        self.background = background
+        self.surface = surface
+        self.onPrimary = onPrimary
+        self.onSurface = onSurface
+        self.recordingActive = recordingActive
+        self.recordingInactive = recordingInactive
+        self.insightHighlight = insightHighlight
+        self.textPrimary = textPrimary
+        self.textSecondary = textSecondary
+        self.isDark = isDark
+    }
+    
+    /// Default Sonora brand theme (light)
+    static let `default` = SonoraBrandTheme()
 }
 
 // MARK: - Preview Support

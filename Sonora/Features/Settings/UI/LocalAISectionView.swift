@@ -6,7 +6,7 @@ struct LocalAISectionView: View {
     var body: some View {
         SettingsCard {
             Text("Local AI")
-                .font(.headline)
+                .font(SonoraDesignSystem.Typography.headingSmall)
                 .accessibilityAddTraits(.isHeader)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {

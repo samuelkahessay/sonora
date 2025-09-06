@@ -169,23 +169,34 @@ final class SpotlightIndexer: SpotlightIndexing {
             logger.warning("CSSearchableIndex unavailable; skipping index", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]), error: nil)
             return
         }
-        guard let memo = memoRepository.getMemo(by: memoID) else {
-            logger.warning("Spotlight: memo not found for indexing", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]), error: nil)
+        if let memo = memoRepository.getMemo(by: memoID) {
+            // proceed
+            guard let item = await buildSearchableItem(for: memo) else { return }
+            do {
+                try await cs_index([item])
+                logger.info("Spotlight: indexed memo \(memoID)", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]))
+            } catch {
+                logger.warning("Spotlight index failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]), error: error)
+            }
             return
         }
+        // If not found yet, schedule a single retry after a short delay (persistence lag)
+        logger.warning("Spotlight: memo not found for indexing", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]), error: nil)
+        do {
+            try await Task.sleep(nanoseconds: 300_000_000) // 0.3s
+        } catch {}
+        if let memo2 = memoRepository.getMemo(by: memoID), let item2 = await buildSearchableItem(for: memo2) {
+            do { try await cs_index([item2]) } catch {}
+            logger.info("Spotlight: indexed memo on retry \(memoID)", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]))
+            return
+        }
+        // Give up quietly after one retry to avoid log spam (subsequent events will re-attempt)
         // Respect privacy flag if provided via metadata; skip if isPrivate == true
         if let meta = transcriptionRepository.getTranscriptionMetadata(for: memoID), let isPrivate = meta.isPrivate, isPrivate {
             logger.info("Spotlight: skipping private memo", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]))
             return
         }
-        guard let item = await buildSearchableItem(for: memo) else { return }
         
-        do {
-            try await cs_index([item])
-            logger.info("Spotlight: indexed memo \(memoID)", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]))
-        } catch {
-            logger.warning("Spotlight index failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]), error: error)
-        }
     }
 
     private func buildSearchableItem(for memo: Memo) async -> CSSearchableItem? {

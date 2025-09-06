@@ -3,6 +3,8 @@ import Foundation
 /// Factory for creating transcription services based on user preferences
 @MainActor
 final class TranscriptionServiceFactory {
+    private static var didWarnMissingSelectedModel: Bool = false
+    private static var didInfoNormalizedModel: Bool = false
     
     // MARK: - Properties
     
@@ -41,7 +43,12 @@ final class TranscriptionServiceFactory {
         // If user prefers local, allow any installed model to enable local service even when selected differs
         if userPreference == .localWhisperKit && effectiveService == .cloudAPI && anyInstalled {
             effectiveService = .localWhisperKit
-            logger.warning("Selected local model not installed (id=\(selectedModel.id)); using available installed model(s): \(validInstalledIds)")
+            if !Self.didWarnMissingSelectedModel {
+                logger.warning("Selected local model not installed (id=\(selectedModel.id)); using available installed model(s): \(validInstalledIds)")
+                Self.didWarnMissingSelectedModel = true
+            } else {
+                logger.debug("Selected local model not installed; using installed model(s): \(validInstalledIds)")
+            }
         }
 
         // If user prefers local but selected model is not installed, eagerly normalize the selection
@@ -49,7 +56,12 @@ final class TranscriptionServiceFactory {
         if userPreference == .localWhisperKit && !isSelectedInstalled, let fallbackId = validInstalledIds.first {
             let previous = UserDefaults.standard.selectedWhisperModel
             UserDefaults.standard.selectedWhisperModel = fallbackId
-            logger.info("Normalized selected Whisper model to installed fallback: \(fallbackId)")
+            if !Self.didInfoNormalizedModel {
+                logger.info("Normalized selected Whisper model to installed fallback: \(fallbackId)")
+                Self.didInfoNormalizedModel = true
+            } else {
+                logger.debug("Normalized selected Whisper model to installed fallback: \(fallbackId)")
+            }
             EventBus.shared.publish(.whisperModelNormalized(previous: previous, normalized: fallbackId))
         }
         

@@ -9,7 +9,7 @@ struct AutoDetectionSectionView: View {
     var body: some View {
         SettingsCard {
             Text("Auto-Detection")
-                .font(.headline)
+                .font(SonoraDesignSystem.Typography.headingSmall)
                 .accessibilityAddTraits(.isHeader)
 
             Toggle("Auto-detect Calendar Events", isOn: $autoDetectEvents)

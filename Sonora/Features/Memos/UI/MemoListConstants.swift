@@ -23,7 +23,7 @@ enum MemoListColors {
     /// - Parameter colorScheme: Current interface color scheme
     /// - Returns: Pure black in dark mode for OLED optimization, semantic background in light mode
     static func containerBackground(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? .black : Color.semantic(.bgSecondary)
+        colorScheme == .dark ? Color(UIColor.systemBackground) : Color.semantic(.bgSecondary)
     }
 }
 

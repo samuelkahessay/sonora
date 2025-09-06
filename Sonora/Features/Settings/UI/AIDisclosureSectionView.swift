@@ -4,7 +4,7 @@ struct AIDisclosureSectionView: View {
     var body: some View {
         SettingsCard {
             Text("AI Features")
-                .font(.headline)
+                .font(SonoraDesignSystem.Typography.headingSmall)
                 .accessibilityAddTraits(.isHeader)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {

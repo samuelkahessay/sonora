@@ -17,6 +17,61 @@ struct MemosView: View {
     }
 
     @State private var eventSubscriptionId: UUID? = nil
+    
+    // MARK: - Computed Properties
+    
+    /// Group memos by time periods for contextual headers
+    private var groupedMemos: [MemoSection] {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Group memos by time period
+        var sections: [TimePeriod: [Memo]] = [:]
+        
+        for memo in viewModel.memos {
+            let period: TimePeriod
+            
+            if calendar.isDateInToday(memo.creationDate) {
+                let hour = calendar.component(.hour, from: memo.creationDate)
+                switch hour {
+                case 5..<12:
+                    period = .thisMorning
+                case 12..<17:
+                    period = .thisAfternoon
+                case 17..<22:
+                    period = .thisEvening
+                default:
+                    period = .today
+                }
+            } else if calendar.isDateInYesterday(memo.creationDate) {
+                period = .yesterday
+            } else if calendar.dateInterval(of: .weekOfYear, for: now)?.contains(memo.creationDate) == true {
+                period = .thisWeek
+            } else if calendar.dateInterval(of: .month, for: now)?.contains(memo.creationDate) == true {
+                period = .thisMonth
+            } else {
+                period = .older
+            }
+            
+            sections[period, default: []].append(memo)
+        }
+        
+        // Convert to ordered sections
+        // Order sections so the newest content surfaces first at the top
+        let orderedPeriods: [TimePeriod] = [
+            .today, .thisEvening, .thisAfternoon, .thisMorning,
+            .yesterday, .thisWeek, .thisMonth, .older
+        ]
+        
+        return orderedPeriods.compactMap { period in
+            guard let memos = sections[period], !memos.isEmpty else { return nil }
+            return MemoSection(
+                period: period,
+                // Sort newest-first for easy access to recent recordings
+                memos: memos.sorted { $0.creationDate > $1.creationDate }
+            )
+        }
+    }
 
     var body: some View {
         NavigationStack(path: $viewModel.navigationPath) {
@@ -83,47 +138,63 @@ struct MemosView: View {
     private var memoListView: some View {
         ScrollViewReader { proxy in
             List {
-                ForEach(viewModel.memos, id: \.id) { memo in
-                    let separatorConfig = separatorConfiguration(for: memo)
-                    let rowContent = MemoRowView(memo: memo, viewModel: viewModel)
-                        .dragSelectionAccessibility(
-                            memo: memo,
-                            viewModel: viewModel,
-                            isSelected: viewModel.isMemoSelected(memo)
+                // Group memos by time periods for contextual headers
+                ForEach(groupedMemos, id: \.period.rawValue) { section in
+                    Section {
+                        ForEach(section.memos, id: \.id) { memo in
+                            let separatorConfig = separatorConfiguration(for: memo, in: section.memos)
+                            let rowContent = MemoRowView(memo: memo, viewModel: viewModel)
+                                .dragSelectionAccessibility(
+                                    memo: memo,
+                                    viewModel: viewModel,
+                                    isSelected: viewModel.isMemoSelected(memo)
+                                )
+                            
+                            if viewModel.isEditMode {
+                                rowContent
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { viewModel.toggleMemoSelection(memo) }
+                                    .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
+                                    .listRowBackground(
+                                        SelectedRowBackground(
+                                            selected: viewModel.isMemoSelected(memo),
+                                            colorScheme: colorScheme
+                                        )
+                                    )
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        MemoSwipeActionsView(memo: memo, viewModel: viewModel)
+                                    }
+                            } else {
+                                NavigationLink(value: memo) { rowContent }
+                                    .buttonStyle(.plain)
+                                    .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
+                                    .listRowBackground(
+                                        SelectedRowBackground(
+                                            selected: false,
+                                            colorScheme: colorScheme
+                                        )
+                                    )
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        MemoSwipeActionsView(memo: memo, viewModel: viewModel)
+                                    }
+                            }
+                        }
+                        .onDelete { offsets in
+                            HapticManager.shared.playDeletionFeedback()
+                            // Convert section-relative offsets to global memo indices
+                            let memosToDelete = offsets.map { section.memos[$0] }
+                            for memo in memosToDelete {
+                                if let globalIndex = viewModel.memos.firstIndex(where: { $0.id == memo.id }) {
+                                    viewModel.deleteMemo(at: globalIndex)
+                                }
+                            }
+                        }
+                    } header: {
+                        ContextualSectionHeader(
+                            period: section.period,
+                            memoCount: section.memos.count
                         )
-                
-                    if viewModel.isEditMode {
-                        rowContent
-                            .contentShape(Rectangle())
-                            .onTapGesture { viewModel.toggleMemoSelection(memo) }
-                            .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
-                            .listRowBackground(
-                                SelectedRowBackground(
-                                    selected: viewModel.isMemoSelected(memo),
-                                    colorScheme: colorScheme
-                                )
-                            )
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                MemoSwipeActionsView(memo: memo, viewModel: viewModel)
-                            }
-                    } else {
-                        NavigationLink(value: memo) { rowContent }
-                            .buttonStyle(.plain)
-                            .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
-                            .listRowBackground(
-                                SelectedRowBackground(
-                                    selected: false,
-                                    colorScheme: colorScheme
-                                )
-                            )
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                MemoSwipeActionsView(memo: memo, viewModel: viewModel)
-                            }
                     }
-                }
-                .onDelete { offsets in
-                    HapticManager.shared.playDeletionFeedback()
-                    viewModel.deleteMemos(at: offsets)
                 }
             }
             .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
@@ -140,13 +211,13 @@ struct MemosView: View {
         }
     }
 
-    /// Position-specific separator configuration for clean design
+    /// Position-specific separator configuration for clean design within sections
     /// Handles edge cases: first memo (no separators), middle memos (top & bottom), last memo (top only)
-    private func separatorConfiguration(for memo: Memo) -> (visibility: Visibility, edges: VerticalEdge.Set) {
-        let count = viewModel.memos.count
+    private func separatorConfiguration(for memo: Memo, in sectionMemos: [Memo]) -> (visibility: Visibility, edges: VerticalEdge.Set) {
+        let count = sectionMemos.count
         guard count > 1 else { return (.hidden, []) }
-        let isFirst = viewModel.memos.first?.id == memo.id
-        let isLast = viewModel.memos.last?.id == memo.id
+        let isFirst = sectionMemos.first?.id == memo.id
+        let isLast = sectionMemos.last?.id == memo.id
         if isFirst { return (.hidden, []) }
         if isLast { return (.visible, .top) }
         return (.visible, .all)
@@ -195,6 +266,80 @@ extension MemosView {
     private var bottomDeleteBar: some View { EmptyView() }
     
     // Drag selection helpers removed (tap-only selection)
+}
+
+// MARK: - Supporting Structures
+
+/// Time period categorization for contextual memo grouping
+enum TimePeriod: String, CaseIterable {
+    case thisMorning = "this_morning"
+    case thisAfternoon = "this_afternoon" 
+    case thisEvening = "this_evening"
+    case today = "today"
+    case yesterday = "yesterday"
+    case thisWeek = "this_week"
+    case thisMonth = "this_month"
+    case older = "older"
+    
+    /// Brand voice header text with contextual messaging
+    var headerText: String {
+        switch self {
+        case .thisMorning:
+            return "This morning's clarity"
+        case .thisAfternoon:
+            return "Afternoon reflections"
+        case .thisEvening:
+            return "Evening thoughts"
+        case .today:
+            return "Today's insights"
+        case .yesterday:
+            return "Yesterday's wisdom"
+        case .thisWeek:
+            return "This week's discoveries"
+        case .thisMonth:
+            return "Recent explorations"
+        case .older:
+            return "Earlier reflections"
+        }
+    }
+}
+
+/// Memo section with time period and associated memos
+struct MemoSection {
+    let period: TimePeriod
+    let memos: [Memo]
+}
+
+/// Contextual section header with brand voice and New York serif typography
+struct ContextualSectionHeader: View {
+    let period: TimePeriod
+    let memoCount: Int
+    
+    var body: some View {
+        HStack {
+            // Brand voice header with New York serif
+            Text(period.headerText)
+                .font(.custom("New York", size: 18, relativeTo: .headline))
+                .foregroundColor(.textPrimary)
+                .fontWeight(.medium)
+            
+            Spacer()
+            
+            // Subtle count indicator
+            Text("\(memoCount)")
+                .font(SonoraDesignSystem.Typography.caption)
+                .foregroundColor(.reflectionGray)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule()
+                        .fill(Color.whisperBlue.opacity(0.6))
+                )
+        }
+        .padding(.horizontal, SonoraDesignSystem.Spacing.md)
+        .padding(.vertical, SonoraDesignSystem.Spacing.sm)
+        .textCase(nil) // Preserve custom capitalization
+    }
 }
 
 #Preview { MemosView(popToRoot: nil) }

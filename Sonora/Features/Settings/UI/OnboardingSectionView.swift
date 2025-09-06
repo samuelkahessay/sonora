@@ -14,7 +14,7 @@ struct OnboardingSectionView: View {
                     Image(systemName: "info.circle")
                         .foregroundColor(.semantic(.info))
                     Text("Getting Started")
-                        .font(.headline)
+                        .font(SonoraDesignSystem.Typography.headingSmall)
                         .foregroundColor(.semantic(.textPrimary))
                     Spacer()
                 }
@@ -26,7 +26,7 @@ struct OnboardingSectionView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: Spacing.xs) {
                             Text("View Onboarding")
-                                .font(.body)
+                                .font(SonoraDesignSystem.Typography.bodyLarge)
                                 .fontWeight(.medium)
                                 .foregroundColor(.semantic(.textPrimary))
                             
@@ -51,7 +51,7 @@ struct OnboardingSectionView: View {
                 // Onboarding status
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("Onboarding Status")
-                        .font(.subheadline)
+                        .font(SonoraDesignSystem.Typography.bodyLarge)
                         .fontWeight(.medium)
                         .foregroundColor(.semantic(.textPrimary))
                     

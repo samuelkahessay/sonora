@@ -141,6 +141,10 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     private let dateFormatter: DateFormatter
     private let osLog: OSLog
     
+    // MARK: - Dedupe
+    private var dedupeMap: [String: Date] = [:]
+    private let dedupeWindow: TimeInterval = 0.4
+    
     // MARK: - Privacy & Performance
     private let maxMessageLength = 1000
     private let sanitizationCache = NSCache<NSString, NSString>()
@@ -203,6 +207,10 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
         // Check cache first for immediate logging
         if let cachedSanitized = sanitizationCache.object(forKey: messageKey) {
             queue.async {
+                // Dedupe check (based on truncated message, level, and category)
+                if self.shouldSuppress(level: level, category: category, messageKey: truncatedMessage) {
+                    return
+                }
                 let formattedMessage = self.formatMessage(
                     level: level,
                     category: category,
@@ -226,6 +234,10 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
                 
                 // Log on main queue
                 self.queue.async {
+                    // Dedupe check (based on truncated message, level, and category)
+                    if self.shouldSuppress(level: level, category: category, messageKey: truncatedMessage) {
+                        return
+                    }
                     let formattedMessage = self.formatMessage(
                         level: level,
                         category: category,
@@ -238,6 +250,18 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
                 }
             }
         }
+    }
+
+    // MARK: - Dedupe helper (queue-isolated)
+    private func shouldSuppress(level: LogLevel, category: LogCategory, messageKey: String) -> Bool {
+        let key = "\(level.rawValue)|\(category.rawValue)|\(messageKey)"
+        let now = Date()
+        if let last = dedupeMap[key], now.timeIntervalSince(last) < dedupeWindow {
+            // Within window: suppress this duplicate
+            return true
+        }
+        dedupeMap[key] = now
+        return false
     }
     
     // MARK: - Convenience Methods

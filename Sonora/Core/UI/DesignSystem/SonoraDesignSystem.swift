@@ -59,27 +59,30 @@ enum SonoraDesignSystem {
         
         // MARK: - Heading Hierarchy
         
-        /// H1: Large title for primary headings (28pt, Weight 600)
-        static let headingLarge = Font.system(size: 28, weight: .semibold, design: .default)
+        /// H1: Large title for primary headings (28pt, New York Bold)
+        static let headingLarge = Font.custom("New York", size: 28, relativeTo: .largeTitle)
             .leading(.tight)
+            .weight(.bold)
         
-        /// H2: Medium title for section headings (24pt, Weight 500)
-        static let headingMedium = Font.system(size: 24, weight: .medium, design: .default)
+        /// H2: Medium title for section headings (24pt, New York Medium)
+        static let headingMedium = Font.custom("New York", size: 24, relativeTo: .title2)
             .leading(.tight)
+            .weight(.medium)
         
-        /// H3: Small title for subsections (20pt, Weight 500)
-        static let headingSmall = Font.system(size: 20, weight: .medium, design: .default)
-            .leading(.snug)
+        /// H3: Small title for subsections (20pt, New York Medium)
+        static let headingSmall = Font.custom("New York", size: 20, relativeTo: .title3)
+            .leading(.tight)
+            .weight(.medium)
         
         // MARK: - Body Text
         
-        /// Large body text for important content (17pt, Weight 400)
-        static let bodyLarge = Font.system(size: 17, weight: .regular, design: .default)
-            .leading(.relaxed)
+        /// Large body text for important content (17pt, New York Regular)
+        static let bodyLarge = Font.custom("New York", size: 17, relativeTo: .body)
+            .leading(.loose)
         
         /// Regular body text for standard content (15pt, Weight 400)
         static let bodyRegular = Font.system(size: 15, weight: .regular, design: .default)
-            .leading(.relaxed)
+            .leading(.loose)
         
         /// Small body text for secondary content (13pt, Weight 400)
         static let bodySmall = Font.system(size: 13, weight: .regular, design: .default)
@@ -93,7 +96,7 @@ enum SonoraDesignSystem {
         
         /// Serif font for quotes and emotional moments (New York, 17pt)
         static let insightSerif = Font.custom("New York", size: 17, relativeTo: .body)
-            .leading(.relaxed)
+            .leading(.loose)
         
         /// Monospaced digits for time display and metrics
         static let monospaced = Font.system(.body, design: .monospaced)
@@ -109,8 +112,9 @@ enum SonoraDesignSystem {
         /// Button text styling
         static let button = Font.system(size: 16, weight: .medium, design: .default)
         
-        /// Navigation title styling
-        static let navigationTitle = Font.system(size: 18, weight: .semibold, design: .default)
+        /// Navigation title styling (New York Semibold for premium feel)
+        static let navigationTitle = Font.custom("New York", size: 18, relativeTo: .headline)
+            .weight(.semibold)
         
         /// Tab bar item styling
         static let tabBarItem = Font.system(size: 10, weight: .medium, design: .default)
@@ -178,8 +182,26 @@ enum SonoraDesignSystem {
     // MARK: - Shadow & Elevation
     
     /// Shadow definitions for creating subtle depth
-    enum Shadow {
+    struct Shadow {
+        let color: Color
+        let radius: CGFloat
+        let x: CGFloat
+        let y: CGFloat
         
+        init(color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
+            self.color = color
+            self.radius = radius
+            self.x = x
+            self.y = y
+        }
+        
+        func apply(to view: some View) -> some View {
+            view.shadow(color: color, radius: radius, x: x, y: y)
+        }
+    }
+    
+    /// Preset shadow styles
+    enum Shadows {
         /// Gentle shadow for floating elements
         static let gentle = Shadow(
             color: Color.black.opacity(0.08),
@@ -386,14 +408,7 @@ enum BodySize {
     }
 }
 
-// MARK: - Shadow Helper
-
-struct Shadow {
-    let color: Color
-    let radius: CGFloat
-    let x: CGFloat
-    let y: CGFloat
-}
+// (Removed duplicate Shadow helper; presets are under SonoraDesignSystem.Shadows)
 
 // MARK: - Preview Support
 
@@ -510,9 +525,9 @@ struct SonoraDesignSystem_Previews: PreviewProvider {
                 .headingStyle(.medium)
             
             HStack(spacing: SonoraDesignSystem.Spacing.lg) {
-                shadowExample("Gentle", .gentleShadow)
-                shadowExample("Card", .cardShadow)
-                shadowExample("Brand", .brandShadow)
+                shadowExample("Gentle") { view in AnyView(view.gentleShadow()) }
+                shadowExample("Card") { view in AnyView(view.cardShadow()) }
+                shadowExample("Brand") { view in AnyView(view.brandShadow()) }
             }
         }
     }

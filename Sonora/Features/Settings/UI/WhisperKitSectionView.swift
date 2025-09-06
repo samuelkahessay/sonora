@@ -34,7 +34,7 @@ struct WhisperKitSectionView: View {
                         .font(.title3)
                     
                     Text("WhisperKit Models")
-                        .font(.headline)
+                        .font(SonoraDesignSystem.Typography.headingSmall)
                         .fontWeight(.semibold)
                 }
                 .accessibilityElement(children: .combine)

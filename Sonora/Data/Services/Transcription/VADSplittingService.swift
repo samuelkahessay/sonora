@@ -74,10 +74,10 @@ final class DefaultVADSplittingService: VADSplittingService, @unchecked Sendable
     }
 
     func detectVoiceSegments(audioURL: URL) async throws -> [VoiceSegment] {
-        // Open file
+        // Open file (bounded retry)
         let file: AVAudioFile
         do {
-            file = try AVAudioFile(forReading: audioURL)
+            file = try AudioReadiness.openIfReady(url: audioURL, maxWait: 0.5)
         } catch {
             throw VADError.cannotOpenFile(audioURL.lastPathComponent)
         }
