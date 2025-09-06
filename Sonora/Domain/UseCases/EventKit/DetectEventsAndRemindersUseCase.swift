@@ -282,14 +282,14 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         logger.debug("Performing cloud event/reminder detection",
                     category: .analysis,
                     context: context)
-        
-        // Server does not support 'events'/'reminders' modes. Use local analysis for these.
-        async let eventsResult: AnalyzeEnvelope<EventsData> = localAnalysisService.analyze(
+
+        // Use cloud analysis for events/reminders when available
+        async let eventsResult: AnalyzeEnvelope<EventsData> = analysisService.analyze(
             mode: .events,
             transcript: transcript,
             responseType: EventsData.self
         )
-        async let remindersResult: AnalyzeEnvelope<RemindersData> = localAnalysisService.analyze(
+        async let remindersResult: AnalyzeEnvelope<RemindersData> = analysisService.analyze(
             mode: .reminders,
             transcript: transcript,
             responseType: RemindersData.self

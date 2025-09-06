@@ -44,7 +44,9 @@ class AnalysisService: ObservableObject, AnalysisServiceProtocol, @unchecked Sen
         }
         
         do {
-            let envelope = try JSONDecoder().decode(AnalyzeEnvelope<T>.self, from: data)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let envelope = try decoder.decode(AnalyzeEnvelope<T>.self, from: data)
             print("✅ AnalysisService: Analysis completed")
             print("✅ AnalysisService: Model: \(envelope.model)")
             print("✅ AnalysisService: Tokens: \(envelope.tokens.input) in, \(envelope.tokens.output) out")

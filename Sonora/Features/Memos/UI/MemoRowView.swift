@@ -198,13 +198,6 @@ struct MemoRowView: View {
                 }
             }
             .contentShape(Rectangle())
-            .onTapGesture {
-                if viewModel.isEditMode {
-                    viewModel.toggleMemoSelection(memo)
-                } else {
-                    // Navigation handled by parent view
-                }
-            }
             .contextMenu {
                 Button {
                     startRename()

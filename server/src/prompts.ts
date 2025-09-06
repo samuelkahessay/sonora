@@ -52,6 +52,32 @@ export function buildPrompt(mode: string, transcript: string): { system: string;
     case 'todos':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\nExtract actionable items the user explicitly mentioned. Return {"todos":[{"text":"...","due":null}]}`;
       break;
+    case 'events':
+      user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
+        `Extract concrete calendar events with date/time if present. Generate stable UUIDs for each event.\n` +
+        `Return JSON: {"events":[{` +
+        `"id":"uuid",` +
+        `"title":"Meeting with ...",` +
+        `"startDate":"2025-01-15T09:00:00Z"|null,` +
+        `"endDate":"2025-01-15T10:00:00Z"|null,` +
+        `"location":"optional location"|null,` +
+        `"participants":["optional","participants"],` +
+        `"confidence":0.0-1.0,` +
+        `"sourceText":"exact phrase(s) that led to detection"` +
+        `}]}`;
+      break;
+    case 'reminders':
+      user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
+        `Extract concrete reminders/tasks. Generate stable UUIDs for each reminder.\n` +
+        `Return JSON: {"reminders":[{` +
+        `"id":"uuid",` +
+        `"title":"...",` +
+        `"dueDate":"2025-01-15T09:00:00Z"|null,` +
+        `"priority":"High|Medium|Low",` +
+        `"confidence":0.0-1.0,` +
+        `"sourceText":"exact phrase(s) that led to detection"` +
+        `}]}`;
+      break;
     default:
       throw new Error(`Unknown mode: ${mode}`);
   }

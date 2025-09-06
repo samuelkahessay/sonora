@@ -983,7 +983,7 @@ September 5 represents the culmination of technical and design excellence. The E
 1. **Rapid MVP Development** - Functional app in 8 hours (Day 1)
 2. **Architecture Transformation** - Clean Architecture in single day (Aug 26)
 3. **Swift 6 Migration** - Proactive language upgrade
-4. **Local AI Integration** - WhisperKit + LLaMA models
+4. **Local AI Integration** - WhisperKit + LLaMA, Phi, and Qwen models
 5. **Comprehensive Testing** - 1,677+ lines of tests
 6. **Zero Technical Debt** - 570+ lines legacy code removed
 

@@ -10,6 +10,8 @@ export const ModelSettings = {
   analysis:            { verbosity: 'low', reasoningEffort: 'medium' },    // Standard analysis with key points extraction
   themes:              { verbosity: 'low', reasoningEffort: 'medium' },    // Pattern recognition for thematic analysis
   todos:               { verbosity: 'low', reasoningEffort: 'low' },       // Simple extraction of actionable items
+  events:              { verbosity: 'low', reasoningEffort: 'medium' },    // Calendar event extraction
+  reminders:           { verbosity: 'low', reasoningEffort: 'low' },       // Reminder extraction
   summarize:           { verbosity: 'low', reasoningEffort: 'low' },       // Basic summarization task
   tldr:                { verbosity: 'low', reasoningEffort: 'low' }        // Minimal processing for quick summaries
 } as const;
@@ -19,7 +21,7 @@ export type VerbosityLevel = "low" | "medium" | "high";
 export type ReasoningEffort = "low" | "medium" | "high";
 
 export const RequestSchema = z.object({
-  mode: z.enum(['analysis', 'themes', 'todos', 'distill', 'distill-summary', 'distill-actions', 'distill-themes', 'distill-reflection']),
+  mode: z.enum(['analysis', 'themes', 'todos', 'events', 'reminders', 'distill', 'distill-summary', 'distill-actions', 'distill-themes', 'distill-reflection']),
   transcript: z.string().min(10).max(10000)
 });
 
@@ -50,6 +52,33 @@ export const TodosDataSchema = z.object({
   todos: z.array(z.object({
     text: z.string(),
     due: z.string().nullable()
+  }))
+});
+
+// Events & Reminders Schemas
+export const EventsDataSchema = z.object({
+  events: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    startDate: z.string().datetime().nullable(),
+    endDate: z.string().datetime().nullable(),
+    location: z.string().nullable().optional(),
+    participants: z.array(z.string()).optional(),
+    confidence: z.number().min(0).max(1),
+    sourceText: z.string(),
+    memoId: z.string().uuid().optional().nullable()
+  }))
+});
+
+export const RemindersDataSchema = z.object({
+  reminders: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    dueDate: z.string().datetime().nullable(),
+    priority: z.enum(['High', 'Medium', 'Low']),
+    confidence: z.number().min(0).max(1),
+    sourceText: z.string(),
+    memoId: z.string().uuid().optional().nullable()
   }))
 });
 
@@ -185,6 +214,64 @@ export const TodosJsonSchema = {
   }
 };
 
+export const EventsJsonSchema = {
+  name: 'events_response',
+  schema: {
+    type: 'object',
+    properties: {
+      events: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Stable UUID for this detection' },
+            title: { type: 'string' },
+            startDate: { type: ['string', 'null'], description: 'ISO 8601 datetime' },
+            endDate: { type: ['string', 'null'], description: 'ISO 8601 datetime' },
+            location: { type: ['string', 'null'] },
+            participants: { type: 'array', items: { type: 'string' } },
+            confidence: { type: 'number', minimum: 0, maximum: 1 },
+            sourceText: { type: 'string' },
+            memoId: { type: ['string', 'null'] }
+          },
+          required: ['id', 'title', 'startDate', 'endDate', 'confidence', 'sourceText'],
+          additionalProperties: false
+        }
+      }
+    },
+    required: ['events'],
+    additionalProperties: false
+  }
+};
+
+export const RemindersJsonSchema = {
+  name: 'reminders_response',
+  schema: {
+    type: 'object',
+    properties: {
+      reminders: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Stable UUID for this detection' },
+            title: { type: 'string' },
+            dueDate: { type: ['string', 'null'], description: 'ISO 8601 datetime' },
+            priority: { type: 'string', enum: ['High', 'Medium', 'Low'] },
+            confidence: { type: 'number', minimum: 0, maximum: 1 },
+            sourceText: { type: 'string' },
+            memoId: { type: ['string', 'null'] }
+          },
+          required: ['id', 'title', 'dueDate', 'priority', 'confidence', 'sourceText'],
+          additionalProperties: false
+        }
+      }
+    },
+    required: ['reminders'],
+    additionalProperties: false
+  }
+};
+
 // Individual Distill Component JSON Schemas
 export const DistillSummaryJsonSchema = {
   name: "distill_summary_response",
@@ -267,15 +354,17 @@ export const AnalysisJsonSchemas = {
   'distill-reflection': DistillReflectionJsonSchema,
   analysis: AnalysisJsonSchema,
   themes: ThemesJsonSchema,
-  todos: TodosJsonSchema
+  todos: TodosJsonSchema,
+  events: EventsJsonSchema,
+  reminders: RemindersJsonSchema
 } as const;
 
 // Supported GPT models
 export const ModelSchema = z.enum(['gpt-5-mini', 'gpt-5-nano', 'gpt-4o', 'gpt-4o-mini']);
 
 export const ResponseSchema = z.object({
-  mode: z.enum(['analysis', 'themes', 'todos', 'distill', 'distill-summary', 'distill-actions', 'distill-themes', 'distill-reflection']),
-  data: z.union([AnalysisDataSchema, ThemesDataSchema, TodosDataSchema, DistillDataSchema, DistillSummaryDataSchema, DistillActionsDataSchema, DistillThemesDataSchema, DistillReflectionDataSchema]),
+  mode: z.enum(['analysis', 'themes', 'todos', 'events', 'reminders', 'distill', 'distill-summary', 'distill-actions', 'distill-themes', 'distill-reflection']),
+  data: z.union([AnalysisDataSchema, ThemesDataSchema, TodosDataSchema, EventsDataSchema, RemindersDataSchema, DistillDataSchema, DistillSummaryDataSchema, DistillActionsDataSchema, DistillThemesDataSchema, DistillReflectionDataSchema]),
   model: ModelSchema,
   tokens: z.object({
     input: z.number(),

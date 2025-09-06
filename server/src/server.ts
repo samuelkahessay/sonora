@@ -4,7 +4,7 @@ import multer from 'multer';
 import { z } from 'zod';
 import fs from 'fs';
 import { FormData, File } from 'undici';
-import { RequestSchema, AnalysisDataSchema, DistillDataSchema, ThemesDataSchema, TodosDataSchema, ModelSettings, AnalysisJsonSchemas } from './schema.js';
+import { RequestSchema, AnalysisDataSchema, DistillDataSchema, ThemesDataSchema, TodosDataSchema, EventsDataSchema, RemindersDataSchema, ModelSettings, AnalysisJsonSchemas } from './schema.js';
 import { buildPrompt } from './prompts.js';
 import { createChatJSON, createModeration } from './openai.js';
 
@@ -262,6 +262,12 @@ app.post('/analyze', async (req, res) => {
         case 'todos':
           validatedData = TodosDataSchema.parse(parsedData);
           break;
+        case 'events':
+          validatedData = EventsDataSchema.parse(parsedData);
+          break;
+        case 'reminders':
+          validatedData = RemindersDataSchema.parse(parsedData);
+          break;
         default:
           throw new Error(`Unknown mode: ${mode}`);
       }
@@ -300,6 +306,12 @@ app.post('/analyze', async (req, res) => {
           break;
         case 'todos':
           textForModeration = `${vd.todos.map((t: any) => t.text).join(' \n')}`;
+          break;
+        case 'events':
+          textForModeration = `${(vd.events || []).map((e: any) => `${e.title} ${e.location || ''}`).join(' \n')}`;
+          break;
+        case 'reminders':
+          textForModeration = `${(vd.reminders || []).map((r: any) => r.title).join(' \n')}`;
           break;
       }
     } catch {}
@@ -406,7 +418,7 @@ app.get('/test-gpt5', async (_req, res) => {
     const overallStartTime = Date.now();
     
     // Test all analysis modes
-    const modes = ['distill', 'distill-summary', 'distill-actions', 'distill-themes', 'distill-reflection', 'analysis', 'themes', 'todos'] as const;
+    const modes = ['distill', 'distill-summary', 'distill-actions', 'distill-themes', 'distill-reflection', 'analysis', 'themes', 'todos', 'events', 'reminders'] as const;
     
     for (const mode of modes) {
       const testStartTime = Date.now();
