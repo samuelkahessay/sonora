@@ -35,6 +35,29 @@ public enum AppEvent: Equatable {
     /// Published when any analysis type completes successfully
     case analysisCompleted(memoId: UUID, type: AnalysisMode, result: String)
 
+    // MARK: - EventKit Events (Calendar/Reminders)
+
+    /// Calendar event created successfully
+    case calendarEventCreated(memoId: UUID, eventId: String)
+
+    /// Calendar event creation failed
+    case eventCreationFailed(eventTitle: String, message: String)
+
+    /// Batch calendar event creation summary
+    case batchEventCreationCompleted(totalEvents: Int, successCount: Int, failureCount: Int)
+
+    /// Conflicts detected for a proposed calendar event
+    case eventConflictDetected(eventTitle: String, conflicts: [String])
+
+    /// Reminder created successfully
+    case reminderCreated(memoId: UUID, reminderId: String)
+
+    /// Reminder creation failed
+    case reminderCreationFailed(reminderTitle: String, message: String)
+
+    /// Batch reminder creation summary
+    case batchReminderCreationCompleted(totalReminders: Int, successCount: Int, failureCount: Int)
+
     // MARK: - Navigation/UI Events (migrated from NotificationCenter)
 
     /// Navigate to the root of the Memos view
@@ -75,6 +98,13 @@ public enum AppEvent: Equatable {
             return nil
         case .microphonePermissionStatusChanged(_):
             return nil
+        case .calendarEventCreated(let memoId, _):
+            return memoId
+        case .reminderCreated(let memoId, _):
+            return memoId
+        case .eventCreationFailed, .batchEventCreationCompleted, .eventConflictDetected,
+             .reminderCreationFailed, .batchReminderCreationCompleted:
+            return nil
         }
     }
     
@@ -111,6 +141,20 @@ public enum AppEvent: Equatable {
             return "Whisper model normalized: \(previous) → \(normalized)"
         case .microphonePermissionStatusChanged(let status):
             return "Microphone permission status changed: \(status.displayName)"
+        case .calendarEventCreated(_, let eventId):
+            return "Calendar event created: \(eventId)"
+        case .eventCreationFailed(let title, let message):
+            return "Calendar event creation failed: \(title) — \(message)"
+        case .batchEventCreationCompleted(let total, let success, let failure):
+            return "Calendar batch: total=\(total), success=\(success), failure=\(failure)"
+        case .eventConflictDetected(let title, let conflicts):
+            return "Conflicts for event '\(title)': \(conflicts.joined(separator: ", "))"
+        case .reminderCreated(_, let reminderId):
+            return "Reminder created: \(reminderId)"
+        case .reminderCreationFailed(let title, let message):
+            return "Reminder creation failed: \(title) — \(message)"
+        case .batchReminderCreationCompleted(let total, let success, let failure):
+            return "Reminders batch: total=\(total), success=\(success), failure=\(failure)"
         }
     }
     
@@ -131,6 +175,9 @@ public enum AppEvent: Equatable {
             return .analysis
         case .microphonePermissionStatusChanged:
             return .recording
+        case .calendarEventCreated, .eventCreationFailed, .batchEventCreationCompleted, .eventConflictDetected,
+             .reminderCreated, .reminderCreationFailed, .batchReminderCreationCompleted:
+            return .analysis
         }
     }
 }

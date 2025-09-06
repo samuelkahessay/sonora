@@ -59,7 +59,7 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
         }
         
         // Check for conflicts if event has a specific time
-        if let startDate = event.startDate {
+        if event.startDate != nil {
             do {
                 let conflicts = try await eventKitRepository.detectConflicts(for: event)
                 if !conflicts.isEmpty {
@@ -73,7 +73,7 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
                     // Don't throw error, but publish event for UI to handle
                     await MainActor.run {
                         eventBus.publish(.eventConflictDetected(
-                            eventId: event.id,
+                            eventTitle: event.title,
                             conflicts: conflicts.map { $0.title ?? "Untitled Event" }
                         ))
                     }
@@ -97,7 +97,7 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
             // Publish success event
             await MainActor.run {
                 eventBus.publish(.calendarEventCreated(
-                    memoId: event.memoId ?? UUID(), // Fallback if no memo ID
+                    memoId: event.memoId ?? UUID(),
                     eventId: eventId
                 ))
             }
@@ -120,7 +120,7 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
             await MainActor.run {
                 eventBus.publish(.eventCreationFailed(
                     eventTitle: event.title,
-                    error: error
+                    message: error.localizedDescription
                 ))
             }
             
@@ -184,7 +184,7 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
                 case .failure(let error):
                     eventBus.publish(.eventCreationFailed(
                         eventTitle: event.title,
-                        error: error
+                        message: error.localizedDescription
                     ))
                 }
             }
@@ -272,25 +272,4 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
     }
 }
 
-// MARK: - EventBus Extensions for EventKit Events
-
-extension AppEvent {
-    static func calendarEventCreated(memoId: UUID, eventId: String) -> AppEvent {
-        // This would need to be added to the AppEvent enum
-        // For now, we'll use a generic approach
-        return .analysisCompleted(memoId: memoId, type: .events, result: "Event created: \(eventId)")
-    }
-    
-    static func eventCreationFailed(eventTitle: String, error: Error) -> AppEvent {
-        // This would also need to be added to the AppEvent enum
-        return .analysisCompleted(memoId: UUID(), type: .events, result: "Failed: \(eventTitle) - \(error.localizedDescription)")
-    }
-    
-    static func eventConflictDetected(eventId: String, conflicts: [String]) -> AppEvent {
-        return .analysisCompleted(memoId: UUID(), type: .events, result: "Conflicts detected for \(eventId): \(conflicts.joined(separator: ", "))")
-    }
-    
-    static func batchEventCreationCompleted(totalEvents: Int, successCount: Int, failureCount: Int) -> AppEvent {
-        return .analysisCompleted(memoId: UUID(), type: .events, result: "Batch complete: \(successCount)/\(totalEvents) succeeded")
-    }
-}
+// Note: eventConflictDetected is published earlier via direct enum case in AppEvent

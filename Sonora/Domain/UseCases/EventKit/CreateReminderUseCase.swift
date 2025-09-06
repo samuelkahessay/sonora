@@ -93,7 +93,7 @@ final class CreateReminderUseCase: CreateReminderUseCaseProtocol, @unchecked Sen
             await MainActor.run {
                 eventBus.publish(.reminderCreationFailed(
                     reminderTitle: reminder.title,
-                    error: error
+                    message: error.localizedDescription
                 ))
             }
             
@@ -157,7 +157,7 @@ final class CreateReminderUseCase: CreateReminderUseCaseProtocol, @unchecked Sen
                 case .failure(let error):
                     eventBus.publish(.reminderCreationFailed(
                         reminderTitle: reminder.title,
-                        error: error
+                        message: error.localizedDescription
                     ))
                 }
             }
@@ -244,18 +244,4 @@ final class CreateReminderUseCase: CreateReminderUseCaseProtocol, @unchecked Sen
     }
 }
 
-// MARK: - EventBus Extensions for Reminder Events
-
-extension AppEvent {
-    static func reminderCreated(memoId: UUID, reminderId: String) -> AppEvent {
-        return .analysisCompleted(memoId: memoId, type: .reminders, result: "Reminder created: \(reminderId)")
-    }
-    
-    static func reminderCreationFailed(reminderTitle: String, error: Error) -> AppEvent {
-        return .analysisCompleted(memoId: UUID(), type: .reminders, result: "Failed: \(reminderTitle) - \(error.localizedDescription)")
-    }
-    
-    static func batchReminderCreationCompleted(totalReminders: Int, successCount: Int, failureCount: Int) -> AppEvent {
-        return .analysisCompleted(memoId: UUID(), type: .reminders, result: "Batch complete: \(successCount)/\(totalReminders) succeeded")
-    }
-}
+// Note: publishes direct AppEvent enum cases defined in AppEvent

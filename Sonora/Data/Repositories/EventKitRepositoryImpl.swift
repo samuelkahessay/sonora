@@ -3,7 +3,10 @@
 import Foundation
 @preconcurrency import EventKit
 
-// MARK: - Sendable Type Extensions
+// MARK: - Sendability for EventKit types
+// These types are used only on MainActor, but cross-task boundaries in a few bridges.
+// Mark as @unchecked Sendable to satisfy Swift 6 checks while keeping all EventKit
+// interactions on MainActor in this repository implementation.
 extension EKReminder: @unchecked Sendable {}
 extension EKEvent: @unchecked Sendable {}
 extension EKCalendar: @unchecked Sendable {}
@@ -51,7 +54,7 @@ final class EventKitRepositoryImpl: EventKitRepository {
     }
     
     // MARK: - Permission Management
-    nonisolated func requestCalendarAccess() async throws -> Bool {
+    func requestCalendarAccess() async throws -> Bool {
         return await requestCalendarAccessOnMainActor()
     }
     
@@ -81,7 +84,7 @@ final class EventKitRepositoryImpl: EventKitRepository {
         }
     }
     
-    nonisolated func requestReminderAccess() async throws -> Bool {
+    func requestReminderAccess() async throws -> Bool {
         return await requestReminderAccessOnMainActor()
     }
     
@@ -111,10 +114,8 @@ final class EventKitRepositoryImpl: EventKitRepository {
     }
     
     // MARK: - Calendar Operations
-    nonisolated func getCalendars() async throws -> [EKCalendar] {
-        return await MainActor.run {
-            return getCalendarsOnMainActor()
-        }
+    func getCalendars() async throws -> [EKCalendar] {
+        return getCalendarsOnMainActor()
     }
     
     private func getCalendarsOnMainActor() -> [EKCalendar] {
@@ -149,10 +150,8 @@ final class EventKitRepositoryImpl: EventKitRepository {
         return calendars
     }
     
-    nonisolated func getReminderLists() async throws -> [EKCalendar] {
-        return await MainActor.run {
-            return getReminderListsOnMainActor()
-        }
+    func getReminderLists() async throws -> [EKCalendar] {
+        return getReminderListsOnMainActor()
     }
     
     private func getReminderListsOnMainActor() -> [EKCalendar] {
@@ -187,51 +186,41 @@ final class EventKitRepositoryImpl: EventKitRepository {
         return reminderLists
     }
     
-    nonisolated func getDefaultCalendar() async throws -> EKCalendar? {
-        return await MainActor.run {
-            let defaultCalendar = eventStore.defaultCalendarForNewEvents
-            
-            if let calendar = defaultCalendar {
-                logger.debug("Found default calendar: \(calendar.title)",
-                            category: .eventkit,
-                            context: LogContext())
-            } else {
-                logger.warning("No default calendar available",
-                              category: .eventkit,
-                              context: LogContext(),
-                              error: nil)
-            }
-            
-            return defaultCalendar
+    func getDefaultCalendar() async throws -> EKCalendar? {
+        let defaultCalendar = eventStore.defaultCalendarForNewEvents
+        if let calendar = defaultCalendar {
+            logger.debug("Found default calendar: \(calendar.title)",
+                        category: .eventkit,
+                        context: LogContext())
+        } else {
+            logger.warning("No default calendar available",
+                          category: .eventkit,
+                          context: LogContext(),
+                          error: nil)
         }
+        return defaultCalendar
     }
     
-    nonisolated func getDefaultReminderList() async throws -> EKCalendar? {
-        return await MainActor.run {
-            let defaultList = eventStore.defaultCalendarForNewReminders()
-            
-            if let list = defaultList {
-                logger.debug("Found default reminder list: \(list.title)",
-                            category: .eventkit,
-                            context: LogContext())
-            } else {
-                logger.warning("No default reminder list available",
-                              category: .eventkit,
-                              context: LogContext(),
-                              error: nil)
-            }
-            
-            return defaultList
+    func getDefaultReminderList() async throws -> EKCalendar? {
+        let defaultList = eventStore.defaultCalendarForNewReminders()
+        if let list = defaultList {
+            logger.debug("Found default reminder list: \(list.title)",
+                        category: .eventkit,
+                        context: LogContext())
+        } else {
+            logger.warning("No default reminder list available",
+                          category: .eventkit,
+                          context: LogContext(),
+                          error: nil)
         }
+        return defaultList
     }
     
     // MARK: - Event Creation
-    nonisolated func createEvent(_ event: EventsData.DetectedEvent, 
-                               in calendar: EKCalendar,
-                               maxRetries: Int = 3) async throws -> String {
-        return try await MainActor.run {
-            return try createEventOnMainActor(event: event, calendar: calendar, maxRetries: maxRetries)
-        }
+    func createEvent(_ event: EventsData.DetectedEvent, 
+                     in calendar: EKCalendar,
+                     maxRetries: Int = 3) async throws -> String {
+        return try createEventOnMainActor(event: event, calendar: calendar, maxRetries: maxRetries)
     }
     
     private func createEventOnMainActor(
@@ -291,14 +280,12 @@ final class EventKitRepositoryImpl: EventKitRepository {
     }
     
     // MARK: - Reminder Creation  
-    nonisolated func createReminder(_ reminder: RemindersData.DetectedReminder,
-                                   in reminderList: EKCalendar,
-                                   maxRetries: Int = 3) async throws -> String {
-        return try await MainActor.run {
-            return try createReminderOnMainActor(reminder: reminder, 
-                                               reminderList: reminderList, 
-                                               maxRetries: maxRetries)
-        }
+    func createReminder(_ reminder: RemindersData.DetectedReminder,
+                        in reminderList: EKCalendar,
+                        maxRetries: Int = 3) async throws -> String {
+        return try createReminderOnMainActor(reminder: reminder, 
+                                            reminderList: reminderList, 
+                                            maxRetries: maxRetries)
     }
     
     private func createReminderOnMainActor(
@@ -375,14 +362,12 @@ final class EventKitRepositoryImpl: EventKitRepository {
     }
     
     // MARK: - Batch Operations
-    nonisolated func createEvents(_ events: [EventsData.DetectedEvent],
-                                 calendarMapping: [String: EKCalendar],
-                                 maxRetries: Int = 3) async throws -> [String: Result<String, Error>] {
-        return await MainActor.run {
-            return createEventsOnMainActor(events: events, 
-                                         calendarMapping: calendarMapping, 
-                                         maxRetries: maxRetries)
-        }
+    func createEvents(_ events: [EventsData.DetectedEvent],
+                      calendarMapping: [String: EKCalendar],
+                      maxRetries: Int = 3) async throws -> [String: Result<String, Error>] {
+        return createEventsOnMainActor(events: events, 
+                                      calendarMapping: calendarMapping, 
+                                      maxRetries: maxRetries)
     }
     
     private func createEventsOnMainActor(
@@ -413,14 +398,12 @@ final class EventKitRepositoryImpl: EventKitRepository {
         return results
     }
     
-    nonisolated func createReminders(_ reminders: [RemindersData.DetectedReminder],
-                                    listMapping: [String: EKCalendar],
-                                    maxRetries: Int = 3) async throws -> [String: Result<String, Error>] {
-        return await MainActor.run {
-            return createRemindersOnMainActor(reminders: reminders,
-                                            reminderListMapping: listMapping,
-                                            maxRetries: maxRetries)
-        }
+    func createReminders(_ reminders: [RemindersData.DetectedReminder],
+                         listMapping: [String: EKCalendar],
+                         maxRetries: Int = 3) async throws -> [String: Result<String, Error>] {
+        return createRemindersOnMainActor(reminders: reminders,
+                                         reminderListMapping: listMapping,
+                                         maxRetries: maxRetries)
     }
     
     private func createRemindersOnMainActor(
@@ -454,84 +437,74 @@ final class EventKitRepositoryImpl: EventKitRepository {
     }
     
     // MARK: - Update/Delete Operations
-    nonisolated func updateEvent(eventId: String, 
-                               with updatedData: EventsData.DetectedEvent) async throws {
-        try await MainActor.run {
-            logger.info("Updating event: \(eventId)", category: .eventkit, context: LogContext())
-            guard let ekEvent = eventStore.event(withIdentifier: eventId) else {
-                throw EventKitError.calendarNotFound(identifier: eventId)
-            }
-
-            ekEvent.title = updatedData.title
-            if let startDate = updatedData.startDate {
-                ekEvent.startDate = startDate
-                ekEvent.endDate = updatedData.endDate ?? startDate.addingTimeInterval(3600)
-                ekEvent.isAllDay = false
-            }
-            ekEvent.location = updatedData.location
-            if let participants = updatedData.participants, !participants.isEmpty {
-                ekEvent.notes = "Participants: \(participants.joined(separator: ", "))\n\nOriginal: \(updatedData.sourceText)"
-            } else {
-                ekEvent.notes = "Original: \(updatedData.sourceText)"
-            }
-
-            try eventStore.save(ekEvent, span: .thisEvent, commit: true)
-            logger.info("Event updated: \(eventId)", category: .eventkit, context: LogContext())
+    func updateEvent(eventId: String, 
+                     with updatedData: EventsData.DetectedEvent) async throws {
+        logger.info("Updating event: \(eventId)", category: .eventkit, context: LogContext())
+        guard let ekEvent = eventStore.event(withIdentifier: eventId) else {
+            throw EventKitError.calendarNotFound(identifier: eventId)
         }
+
+        ekEvent.title = updatedData.title
+        if let startDate = updatedData.startDate {
+            ekEvent.startDate = startDate
+            ekEvent.endDate = updatedData.endDate ?? startDate.addingTimeInterval(3600)
+            ekEvent.isAllDay = false
+        }
+        ekEvent.location = updatedData.location
+        if let participants = updatedData.participants, !participants.isEmpty {
+            ekEvent.notes = "Participants: \(participants.joined(separator: ", "))\n\nOriginal: \(updatedData.sourceText)"
+        } else {
+            ekEvent.notes = "Original: \(updatedData.sourceText)"
+        }
+
+        try eventStore.save(ekEvent, span: .thisEvent, commit: true)
+        logger.info("Event updated: \(eventId)", category: .eventkit, context: LogContext())
     }
     
-    nonisolated func deleteEvent(eventId: String) async throws {
-        try await MainActor.run {
-            logger.info("Deleting event: \(eventId)", category: .eventkit, context: LogContext())
-            guard let ekEvent = eventStore.event(withIdentifier: eventId) else {
-                throw EventKitError.calendarNotFound(identifier: eventId)
-            }
-            try eventStore.remove(ekEvent, span: .thisEvent, commit: true)
-            logger.info("Event deleted: \(eventId)", category: .eventkit, context: LogContext())
+    func deleteEvent(eventId: String) async throws {
+        logger.info("Deleting event: \(eventId)", category: .eventkit, context: LogContext())
+        guard let ekEvent = eventStore.event(withIdentifier: eventId) else {
+            throw EventKitError.calendarNotFound(identifier: eventId)
         }
+        try eventStore.remove(ekEvent, span: .thisEvent, commit: true)
+        logger.info("Event deleted: \(eventId)", category: .eventkit, context: LogContext())
     }
     
-    nonisolated func updateReminder(reminderId: String,
-                                   with updatedData: RemindersData.DetectedReminder) async throws {
-        try await MainActor.run {
-            logger.info("Updating reminder: \(reminderId)", category: .eventkit, context: LogContext())
-            guard let item = eventStore.calendarItem(withIdentifier: reminderId) as? EKReminder else {
-                throw EventKitError.reminderListNotFound(identifier: reminderId)
-            }
-
-            item.title = updatedData.title
-            item.notes = updatedData.sourceText
-
-            if let dueDate = updatedData.dueDate {
-                item.dueDateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
-            } else {
-                item.dueDateComponents = nil
-            }
-
-            let ekPriority: Int = switch updatedData.priority { case .high: 1; case .medium: 5; case .low: 9 }
-            item.priority = ekPriority
-
-            try eventStore.save(item, commit: true)
-            logger.info("Reminder updated: \(reminderId)", category: .eventkit, context: LogContext())
+    func updateReminder(reminderId: String,
+                        with updatedData: RemindersData.DetectedReminder) async throws {
+        logger.info("Updating reminder: \(reminderId)", category: .eventkit, context: LogContext())
+        guard let item = eventStore.calendarItem(withIdentifier: reminderId) as? EKReminder else {
+            throw EventKitError.reminderListNotFound(identifier: reminderId)
         }
+
+        item.title = updatedData.title
+        item.notes = updatedData.sourceText
+
+        if let dueDate = updatedData.dueDate {
+            item.dueDateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
+        } else {
+            item.dueDateComponents = nil
+        }
+
+        let ekPriority: Int = switch updatedData.priority { case .high: 1; case .medium: 5; case .low: 9 }
+        item.priority = ekPriority
+
+        try eventStore.save(item, commit: true)
+        logger.info("Reminder updated: \(reminderId)", category: .eventkit, context: LogContext())
     }
     
-    nonisolated func deleteReminder(reminderId: String) async throws {
-        try await MainActor.run {
-            logger.info("Deleting reminder: \(reminderId)", category: .eventkit, context: LogContext())
-            guard let item = eventStore.calendarItem(withIdentifier: reminderId) as? EKReminder else {
-                throw EventKitError.reminderListNotFound(identifier: reminderId)
-            }
-            try eventStore.remove(item, commit: true)
-            logger.info("Reminder deleted: \(reminderId)", category: .eventkit, context: LogContext())
+    func deleteReminder(reminderId: String) async throws {
+        logger.info("Deleting reminder: \(reminderId)", category: .eventkit, context: LogContext())
+        guard let item = eventStore.calendarItem(withIdentifier: reminderId) as? EKReminder else {
+            throw EventKitError.reminderListNotFound(identifier: reminderId)
         }
+        try eventStore.remove(item, commit: true)
+        logger.info("Reminder deleted: \(reminderId)", category: .eventkit, context: LogContext())
     }
     
     // MARK: - Conflict Detection
-    nonisolated func detectConflicts(for event: EventsData.DetectedEvent) async throws -> [EKEvent] {
-        return await MainActor.run {
-            return checkForConflictsOnMainActor(event: event)
-        }
+    func detectConflicts(for event: EventsData.DetectedEvent) async throws -> [EKEvent] {
+        return checkForConflictsOnMainActor(event: event)
     }
     
     private func checkForConflictsOnMainActor(event: EventsData.DetectedEvent) -> [EKEvent] {
@@ -572,10 +545,8 @@ final class EventKitRepositoryImpl: EventKitRepository {
     }
     
     // MARK: - Smart Suggestions
-    nonisolated func suggestCalendar(for event: EventsData.DetectedEvent) async throws -> EKCalendar? {
-        return await MainActor.run {
-            return suggestCalendarOnMainActor(for: event)
-        }
+    func suggestCalendar(for event: EventsData.DetectedEvent) async throws -> EKCalendar? {
+        return suggestCalendarOnMainActor(for: event)
     }
     
     private func suggestCalendarOnMainActor(for event: EventsData.DetectedEvent) -> EKCalendar? {
@@ -635,10 +606,8 @@ final class EventKitRepositoryImpl: EventKitRepository {
         return suggestedCalendar
     }
     
-    nonisolated func suggestReminderList(for reminder: RemindersData.DetectedReminder) async throws -> EKCalendar? {
-        return await MainActor.run {
-            return suggestReminderListOnMainActor(for: reminder)
-        }
+    func suggestReminderList(for reminder: RemindersData.DetectedReminder) async throws -> EKCalendar? {
+        return suggestReminderListOnMainActor(for: reminder)
     }
     
     private func suggestReminderListOnMainActor(for reminder: RemindersData.DetectedReminder) -> EKCalendar? {
@@ -664,67 +633,52 @@ final class EventKitRepositoryImpl: EventKitRepository {
     }
     
     // MARK: - Additional Operations
-    nonisolated func checkAvailability(startDate: Date, endDate: Date, excludeCalendars: [String]? = nil) async throws -> Bool {
-        return await MainActor.run {
-            logger.debug("Checking availability from \(startDate) to \(endDate)",
-                        category: .eventkit, context: LogContext())
-            
-            let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: nil)
-            let events = eventStore.events(matching: predicate)
-            
-            // Filter out excluded calendars if specified
-            let filteredEvents = if let excludeIds = excludeCalendars {
-                events.filter { event in
-                    !excludeIds.contains(event.calendar.calendarIdentifier)
-                }
-            } else {
-                events
+    func checkAvailability(startDate: Date, endDate: Date, excludeCalendars: [String]? = nil) async throws -> Bool {
+        logger.debug("Checking availability from \(startDate) to \(endDate)",
+                    category: .eventkit, context: LogContext())
+        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: nil)
+        let events = eventStore.events(matching: predicate)
+        let filteredEvents = if let excludeIds = excludeCalendars {
+            events.filter { event in
+                !excludeIds.contains(event.calendar.calendarIdentifier)
             }
-            
-            let isAvailable = filteredEvents.isEmpty
-            
-            logger.debug("Time slot availability: \(isAvailable) (\(filteredEvents.count) conflicts)",
-                        category: .eventkit,
-                        context: LogContext())
-            
-            return isAvailable
+        } else {
+            events
         }
+        let isAvailable = filteredEvents.isEmpty
+        logger.debug("Time slot availability: \(isAvailable) (\(filteredEvents.count) conflicts)",
+                    category: .eventkit,
+                    context: LogContext())
+        return isAvailable
     }
     
-    nonisolated func getEvents(from startDate: Date, to endDate: Date, calendars: [EKCalendar]? = nil) async throws -> [EKEvent] {
-        return await MainActor.run {
-            logger.debug("Fetching events from \(startDate) to \(endDate)",
-                        category: .eventkit,
-                        context: LogContext(additionalInfo: [
-                            "calendarCount": calendars?.count ?? 0
-                        ]))
-            
-            let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: calendars)
-            let events = eventStore.events(matching: predicate)
-            
-            logger.debug("Found \(events.count) events in date range",
-                        category: .eventkit, context: LogContext())
-            
-            return events
-        }
+    func getEvents(from startDate: Date, to endDate: Date, calendars: [EKCalendar]? = nil) async throws -> [EKEvent] {
+        logger.debug("Fetching events from \(startDate) to \(endDate)",
+                    category: .eventkit,
+                    context: LogContext(additionalInfo: [
+                        "calendarCount": calendars?.count ?? 0
+                    ]))
+        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: calendars)
+        let events = eventStore.events(matching: predicate)
+        logger.debug("Found \(events.count) events in date range",
+                    category: .eventkit, context: LogContext())
+        return events
     }
     
-    nonisolated func getReminders(completed: Bool? = nil,
-                                 dueAfter: Date? = nil,
-                                 dueBefore: Date? = nil,
-                                 lists: [EKCalendar]? = nil) async throws -> [EKReminder] {
-        await MainActor.run {
-            logger.debug("Fetching reminders with filters",
-                          category: .eventkit,
-                          context: LogContext(additionalInfo: [
-                              "completed": completed as Any,
-                              "dueAfter": dueAfter?.description ?? "nil",
-                              "dueBefore": dueBefore?.description ?? "nil",
-                              "listCount": lists?.count ?? 0
-                          ]))
-        }
+    func getReminders(completed: Bool? = nil,
+                      dueAfter: Date? = nil,
+                      dueBefore: Date? = nil,
+                      lists: [EKCalendar]? = nil) async throws -> [EKReminder] {
+        logger.debug("Fetching reminders with filters",
+                     category: .eventkit,
+                     context: LogContext(additionalInfo: [
+                         "completed": completed as Any,
+                         "dueAfter": dueAfter?.description ?? "nil",
+                         "dueBefore": dueBefore?.description ?? "nil",
+                         "listCount": lists?.count ?? 0
+                     ]))
 
-        // Bridge callback-based API to async and ensure EventKit calls occur on MainActor
+        // Bridge callback-based API to async on MainActor
         let reminders: [EKReminder] = await withUnsafeContinuation { continuation in
             Task { @MainActor in
                 let predicate = eventStore.predicateForReminders(in: lists)
@@ -738,7 +692,6 @@ final class EventKitRepositoryImpl: EventKitRepository {
         if let completed = completed {
             filtered = filtered.filter { $0.isCompleted == completed }
         }
-
         if dueAfter != nil || dueBefore != nil {
             let cal = Calendar.current
             filtered = filtered.filter { r in
@@ -748,11 +701,8 @@ final class EventKitRepositoryImpl: EventKitRepository {
                 return true
             }
         }
-
-        await MainActor.run {
-            logger.debug("Found \\(filtered.count) reminders after filtering",
-                          category: .eventkit, context: LogContext())
-        }
+        logger.debug("Found \(filtered.count) reminders after filtering",
+                     category: .eventkit, context: LogContext())
         return filtered
     }
     
@@ -766,23 +716,19 @@ final class EventKitRepositoryImpl: EventKitRepository {
         ]
     }
     
-    nonisolated func detectRecurrencePattern(for event: EventsData.DetectedEvent) async -> EKRecurrenceRule? {
-        return await MainActor.run {
-            logger.debug("Recurrence detection not implemented for: \(event.title)",
-                        category: .eventkit, context: LogContext())
-            return nil
-        }
+    func detectRecurrencePattern(for event: EventsData.DetectedEvent) async -> EKRecurrenceRule? {
+        logger.debug("Recurrence detection not implemented for: \(event.title)",
+                    category: .eventkit, context: LogContext())
+        return nil
     }
     
-    nonisolated func createRecurringEvent(_ event: EventsData.DetectedEvent,
-                                         in calendar: EKCalendar,
-                                         recurrenceRule: EKRecurrenceRule) async throws -> String {
-        return try await MainActor.run {
-            logger.info("Recurring event creation not implemented for: \(event.title)",
-                       category: .eventkit, context: LogContext())
-            // For now, just create a regular event
-            return try createEventOnMainActor(event: event, calendar: calendar, maxRetries: 3)
-        }
+    func createRecurringEvent(_ event: EventsData.DetectedEvent,
+                              in calendar: EKCalendar,
+                              recurrenceRule: EKRecurrenceRule) async throws -> String {
+        logger.info("Recurring event creation not implemented for: \(event.title)",
+                    category: .eventkit, context: LogContext())
+        // For now, just create a regular event
+        return try createEventOnMainActor(event: event, calendar: calendar, maxRetries: 3)
     }
     
     // MARK: - Helper Methods

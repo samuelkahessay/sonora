@@ -108,7 +108,7 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
             await self?.performPrewarmOperation(modelId: selectedModel.id, modelName: selectedModel.displayName, startTime: startTime)
         }
         
-        try await prewarmTask?.value
+        await prewarmTask?.value
     }
     
     /// Gets warmed WhisperKit instance or loads synchronously if not available

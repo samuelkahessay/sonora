@@ -11,6 +11,11 @@ This folder consolidates project documentation that was previously scattered acr
 
 ## Index
 
+### Project Overview
+- **[CHANGELOG.md](../CHANGELOG.md)** - Complete development history (Aug 23 - Sep 5, 2025)
+- [STATE_OF_SONORA.md](STATE_OF_SONORA.md) - Current project state summary
+
+### Technical Documentation
 - Architecture
   - [ARCHITECTURE.md](architecture/ARCHITECTURE.md)
   - [ARCHITECTURE_SIMPLIFIED.md](architecture/ARCHITECTURE_SIMPLIFIED.md)
@@ -19,14 +24,13 @@ This folder consolidates project documentation that was previously scattered acr
   - [MIGRATION_NOTES.md](migrations/MIGRATION_NOTES.md)
 - Integration
   - [LLM_INTEGRATION_SETUP.md](integration/LLM_INTEGRATION_SETUP.md)
+
+### Design & Development
 - Brand
   - [SonoraBrandIdentityImplementation.md](brand/SonoraBrandIdentityImplementation.md)
 - Guides
   - [sonora_vibe_coding_guide.md](guides/sonora_vibe_coding_guide.md)
 - Archive
   - [ARCHIVE.md](archive/ARCHIVE.md)
-
-- Project State
-  - [STATE_OF_SONORA.md](STATE_OF_SONORA.md)
 
 Additional areas like testing, QA, and App Store materials remain under their respective subfolders in `docs/`.

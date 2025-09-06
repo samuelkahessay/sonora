@@ -212,7 +212,7 @@ final class RecordingFlowTestUseCase {
                 }
                 
                 // Try to start again while recording
-                let _ = try await startRecordingUseCase.execute()
+                _ = try await startRecordingUseCase.execute()
                 print("❌ Error handling test failed: Second start should have thrown error")
                 
                 // Cleanup

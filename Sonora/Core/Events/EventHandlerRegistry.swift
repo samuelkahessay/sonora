@@ -28,11 +28,11 @@ public final class EventHandlerRegistry {
     
     // MARK: - Configuration
     private let enabledHandlers: Set<String> = [
-        "MemoEventHandler",    // Always enabled for cross-cutting concerns
-        "CalendarEventHandler", // Placeholder - disabled by default
-        "RemindersEventHandler", // Placeholder - disabled by default
-        "LiveActivityEventHandler", // Live Activities for recording
-        "WhisperKitEventHandler" // Whisper model lifecycle optimization
+        "MemoEventHandler",         // Always enabled for cross-cutting concerns
+        "CalendarEventHandler",     // Calendar integration (auto-detect gated by settings)
+        "RemindersEventHandler",     // Reminders integration (auto-detect gated by settings)
+        "LiveActivityEventHandler",  // Live Activities for recording
+        "WhisperKitEventHandler"     // Whisper model lifecycle optimization
     ]
     
     // MARK: - Initialization
@@ -106,31 +106,33 @@ public final class EventHandlerRegistry {
         }
     }
     
-    /// Register the calendar event handler (placeholder)
+    /// Register the calendar event handler
     private func registerCalendarEventHandler() {
         let handlerName = "CalendarEventHandler"
-        // Always register but handler self-determines if it's active
-        
+        let isEnabled = enabledHandlers.contains(handlerName)
+
         calendarEventHandler = CalendarEventHandler(logger: logger, eventBus: eventBus)
         registeredHandlers[handlerName] = calendarEventHandler
-        handlerStatus[handlerName] = false // Placeholder is always disabled
-        
-        logger.debug("Registered CalendarEventHandler (placeholder - disabled)", 
-                    category: .system, 
+        handlerStatus[handlerName] = isEnabled
+        if isEnabled { calendarEventHandler?.enable() }
+
+        logger.info("Registered CalendarEventHandler — active=\(isEnabled)",
+                    category: .system,
                     context: LogContext())
     }
     
-    /// Register the reminders event handler (placeholder)
+    /// Register the reminders event handler
     private func registerRemindersEventHandler() {
         let handlerName = "RemindersEventHandler"
-        // Always register but handler self-determines if it's active
-        
+        let isEnabled = enabledHandlers.contains(handlerName)
+
         remindersEventHandler = RemindersEventHandler(logger: logger, eventBus: eventBus)
         registeredHandlers[handlerName] = remindersEventHandler
-        handlerStatus[handlerName] = false // Placeholder is always disabled
-        
-        logger.debug("Registered RemindersEventHandler (placeholder - disabled)", 
-                    category: .system, 
+        handlerStatus[handlerName] = isEnabled
+        if isEnabled { remindersEventHandler?.enable() }
+
+        logger.info("Registered RemindersEventHandler — active=\(isEnabled)",
+                    category: .system,
                     context: LogContext())
     }
     
@@ -182,7 +184,7 @@ public final class EventHandlerRegistry {
     // MARK: - Handler Management
     
     /// Enable a specific handler by name
-    public func enableHandler(_ handlerName: String) -> Bool {
+    func enableHandler(_ handlerName: String) -> Bool {
         guard registeredHandlers[handlerName] != nil else {
             logger.warning("Attempted to enable unregistered handler: \(handlerName)", 
                           category: .system, 
@@ -190,19 +192,24 @@ public final class EventHandlerRegistry {
                           error: nil)
             return false
         }
-        
-        // TODO: Implement dynamic handler activation
-        // This would require handlers to support enable/disable functionality
-        
-        logger.info("TODO: Implement dynamic handler activation for \(handlerName)", 
-                   category: .system, 
-                   context: LogContext())
-        
-        return false
+
+        switch handlerName {
+        case "CalendarEventHandler":
+            calendarEventHandler?.enable()
+            handlerStatus[handlerName] = true
+            return true
+        case "RemindersEventHandler":
+            remindersEventHandler?.enable()
+            handlerStatus[handlerName] = true
+            return true
+        default:
+            logger.info("No-op enable for handler \(handlerName)", category: .system, context: LogContext())
+            return false
+        }
     }
     
     /// Disable a specific handler by name
-    public func disableHandler(_ handlerName: String) -> Bool {
+    func disableHandler(_ handlerName: String) -> Bool {
         guard registeredHandlers[handlerName] != nil else {
             logger.warning("Attempted to disable unregistered handler: \(handlerName)", 
                           category: .system, 
@@ -210,14 +217,19 @@ public final class EventHandlerRegistry {
                           error: nil)
             return false
         }
-        
-        // TODO: Implement dynamic handler deactivation
-        
-        logger.info("TODO: Implement dynamic handler deactivation for \(handlerName)", 
-                   category: .system, 
-                   context: LogContext())
-        
-        return false
+        switch handlerName {
+        case "CalendarEventHandler":
+            calendarEventHandler?.disable()
+            handlerStatus[handlerName] = false
+            return true
+        case "RemindersEventHandler":
+            remindersEventHandler?.disable()
+            handlerStatus[handlerName] = false
+            return true
+        default:
+            logger.info("No-op disable for handler \(handlerName)", category: .system, context: LogContext())
+            return false
+        }
     }
     
     /// Unregister all handlers (cleanup)

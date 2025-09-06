@@ -21,31 +21,16 @@ final class LoadMemosUseCase: LoadMemosUseCaseProtocol, @unchecked Sendable {
     func execute() async throws -> [Memo] {
         print("📂 LoadMemosUseCase: Starting memo loading operation")
         
-        do {
-            // Load memos from repository (repository filters orphans and cleans up in background)
-            memoRepository.loadMemos()
-            
-            let loadedMemos = memoRepository.memos
-            print("📂 LoadMemosUseCase: Successfully loaded \(loadedMemos.count) memos")
-            
-            // Soft-validate without throwing
-            validateLoadedMemos(loadedMemos)
-            
-            return loadedMemos
-            
-        } catch let repositoryError as RepositoryError {
-            print("❌ LoadMemosUseCase: Repository error - \(repositoryError.localizedDescription)")
-            throw repositoryError.asSonoraError
-            
-        } catch let error as NSError {
-            print("❌ LoadMemosUseCase: System error - \(error.localizedDescription)")
-            let mappedError = ErrorMapping.mapError(error)
-            throw mappedError
-            
-        } catch {
-            print("❌ LoadMemosUseCase: Unknown error - \(error.localizedDescription)")
-            throw SonoraError.storageReadFailed("Failed to load memos: \(error.localizedDescription)")
-        }
+        // Load memos from repository (repository filters orphans and cleans up in background)
+        memoRepository.loadMemos()
+        
+        let loadedMemos = memoRepository.memos
+        print("📂 LoadMemosUseCase: Successfully loaded \(loadedMemos.count) memos")
+        
+        // Soft-validate without throwing
+        validateLoadedMemos(loadedMemos)
+        
+        return loadedMemos
     }
     
     // MARK: - Private Methods

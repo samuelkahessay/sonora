@@ -419,7 +419,7 @@ public actor OperationCoordinator {
     /// Best‑effort start helper
     private func tryStartOperation(_ operationId: UUID) async {
         // Attempt to start operation if no conflicts
-        let _ = await startOperation(operationId)
+        _ = await startOperation(operationId)
     }
 
     public func getOperation(_ operationId: UUID) async -> Operation? {

@@ -129,7 +129,7 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
         recordingTime = accumulatedTime
         
         // If we have a time provider and recording cap, restart the timer
-        if let timeProvider = currentTimeProvider {
+        if currentTimeProvider != nil {
             timerTask = Task { [weak self] in
                 await self?.runTimerLoop()
             }
@@ -197,7 +197,7 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
         self.recordingTime = elapsed
         
         // Countdown behavior: only when a finite cap exists and remaining time is within threshold
-        if let _ = cap, remaining.isFinite, remaining > 0 && remaining < TimerConfiguration.countdownThreshold {
+        if cap != nil, remaining.isFinite, remaining > 0 && remaining < TimerConfiguration.countdownThreshold {
             if !wasInCountdown {
                 print("⏱️ RecordingTimerService: Entering countdown mode - switching to \(TimerConfiguration.countdownUpdateInterval)s intervals")
             }

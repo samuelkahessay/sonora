@@ -29,7 +29,7 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol, @unche
         
         do {
             // Comprehensive validation of the new recording
-            let _ = try validateNewRecording(at: url)
+            _ = try validateNewRecording(at: url)
             
             // Process recording through repository and get the persisted domain memo
             let savedMemo = memoRepository.handleNewRecording(at: url)

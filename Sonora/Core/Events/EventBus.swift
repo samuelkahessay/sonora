@@ -41,7 +41,7 @@ public final class EventBus: ObservableObject {
         
         var isValid: Bool {
             // If no subscriber tracking, assume valid
-            guard let _ = subscriber else { return true }
+            guard subscriber != nil else { return true }
             // If subscriber is nil, the subscription is dead
             return subscriber != nil
         }

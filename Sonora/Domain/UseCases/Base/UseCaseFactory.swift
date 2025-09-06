@@ -107,8 +107,16 @@ final class DefaultUseCaseFactory: UseCaseFactory {
     // MARK: - Transcription Use Cases
     
     func createStartTranscriptionUseCase() -> StartTranscriptionUseCase {
-        // TODO: Implement proper factory method - complex constructor requires investigation
-        fatalError("StartTranscriptionUseCase factory method not yet implemented")
+        let trRepo = container.transcriptionRepository()
+        let svc = container.createTranscriptionService()
+        return StartTranscriptionUseCase(
+            transcriptionRepository: trRepo,
+            transcriptionAPI: svc,
+            eventBus: container.eventBus(),
+            operationCoordinator: container.operationCoordinator(),
+            logger: container.logger(),
+            moderationService: container.moderationService()
+        )
     }
     
     func createRetryTranscriptionUseCase() -> RetryTranscriptionUseCase {

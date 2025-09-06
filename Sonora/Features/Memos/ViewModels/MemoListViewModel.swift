@@ -688,7 +688,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     
     /// Toggle edit mode on/off
     func toggleEditMode() {
-        _ = withAnimation(.easeInOut(duration: 0.2)) {
+        withAnimation(.easeInOut(duration: 0.2)) {
             var newSelectionState = self.selectionState
             newSelectionState.isEditMode.toggle()
             

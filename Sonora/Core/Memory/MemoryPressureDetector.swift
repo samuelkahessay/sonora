@@ -176,7 +176,6 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
         guard let source = memoryPressureSource else { return }
         
         let eventMask = source.mask
-        let wasUnderPressure = isUnderMemoryPressure
         
         // System memory pressure events
         if eventMask.contains(.warning) {

@@ -102,6 +102,15 @@ public final class MemoEventHandler {
             break
         case .microphonePermissionStatusChanged(status: _):
             break
+        case .calendarEventCreated(_, _),
+             .eventCreationFailed(_, _),
+             .batchEventCreationCompleted(_, _, _),
+             .eventConflictDetected(_, _),
+             .reminderCreated(_, _),
+             .reminderCreationFailed(_, _),
+             .batchReminderCreationCompleted(_, _, _):
+            // EventKit-specific events are handled by their respective handlers
+            break
         }
         
         // Update analytics

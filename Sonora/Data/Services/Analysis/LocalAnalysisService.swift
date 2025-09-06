@@ -438,9 +438,10 @@ final class LocalAnalysisService: ObservableObject, AnalysisServiceProtocol {
             If no reminders found: NO REMINDERS DETECTED
             """
             
+        @unknown default:
+            // Fallback for any future modes that may be added
+            return "Analyze this content: \(truncated)"
         }
-        // Fallback for future modes
-        return "Analyze this content: \(truncated)"
     }
     
     // MARK: - Component-Specific Prompts for Parallel Execution

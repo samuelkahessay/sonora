@@ -51,7 +51,7 @@ enum AudioReadiness {
         var delay: UInt64 = 50_000_000 // 50ms
         while Date().timeIntervalSince(start) < maxWait {
             if let f = try? AVAudioFile(forReading: url) { return f }
-            try? awaitSleep(delay)
+            awaitSleep(delay)
             delay = min(delay + 50_000_000, 200_000_000)
         }
         // Final attempt (throw if it fails)

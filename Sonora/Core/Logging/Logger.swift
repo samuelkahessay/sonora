@@ -202,10 +202,11 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
         guard level >= logLevel else { return }
         
         let truncatedMessage = String(message.prefix(maxMessageLength))
-        let messageKey = NSString(string: truncatedMessage)
+        let messageKeyNSString = NSString(string: truncatedMessage)
         
         // Check cache first for immediate logging
-        if let cachedSanitized = sanitizationCache.object(forKey: messageKey) {
+        if let cachedSanitized = sanitizationCache.object(forKey: messageKeyNSString) {
+            let cachedString = String(cachedSanitized)
             queue.async {
                 // Dedupe check (based on truncated message, level, and category)
                 if self.shouldSuppress(level: level, category: category, messageKey: truncatedMessage) {
@@ -214,7 +215,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
                 let formattedMessage = self.formatMessage(
                     level: level,
                     category: category,
-                    message: String(cachedSanitized),
+                    message: cachedString,
                     context: context,
                     error: error
                 )
@@ -223,6 +224,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
             }
         } else {
             // Perform async sanitization on dedicated queue
+            let messageKeyString = truncatedMessage // capture Sendable String
             sanitizationQueue.async { [weak self] in
                 guard let self = self else { return }
                 
@@ -230,12 +232,13 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
                 let sanitizedKey = NSString(string: sanitizedMessage)
                 
                 // Cache the result
-                self.sanitizationCache.setObject(sanitizedKey, forKey: messageKey)
+                let cacheKey = NSString(string: messageKeyString)
+                self.sanitizationCache.setObject(sanitizedKey, forKey: cacheKey)
                 
                 // Log on main queue
                 self.queue.async {
                     // Dedupe check (based on truncated message, level, and category)
-                    if self.shouldSuppress(level: level, category: category, messageKey: truncatedMessage) {
+                    if self.shouldSuppress(level: level, category: category, messageKey: messageKeyString) {
                         return
                     }
                     let formattedMessage = self.formatMessage(
@@ -471,7 +474,7 @@ public final class PerformanceTimer {
     }
     
     deinit {
-        let _ = finish()
+        _ = finish()
     }
 }
 
