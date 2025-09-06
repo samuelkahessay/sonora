@@ -130,8 +130,6 @@ struct RecordingView: View {
             }
             .navigationTitle("Sonora")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.clear, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
             .brandThemed()
             .onAppear {
                 viewModel.onViewAppear()
