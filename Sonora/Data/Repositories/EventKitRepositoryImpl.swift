@@ -123,9 +123,20 @@ final class EventKitRepositoryImpl: EventKitRepository {
         if let cached = cachedCalendars,
            let lastUpdate = lastCacheUpdate,
            Date().timeIntervalSince(lastUpdate) < cacheTimeout {
-            logger.debug("Returning cached calendars (\(cached.count) items)",
+            if !cached.isEmpty {
+                logger.debug("Returning cached calendars (\(cached.count) items)",
+                            category: .eventkit, context: LogContext())
+                return cached
+            }
+            // If cache is empty but we now have access, refetch to avoid sticky empty cache
+            let status = EKEventStore.authorizationStatus(for: .event)
+            if status == .denied || status == .restricted || status == .notDetermined {
+                logger.debug("Returning cached calendars (0 items) - authorization not sufficient to refetch",
+                            category: .eventkit, context: LogContext())
+                return cached
+            }
+            logger.debug("Cached calendars empty but authorized; refetching from EventKit",
                         category: .eventkit, context: LogContext())
-            return cached
         }
         
         logger.debug("Fetching fresh calendars from EventKit",
@@ -159,9 +170,20 @@ final class EventKitRepositoryImpl: EventKitRepository {
         if let cached = cachedReminderLists,
            let lastUpdate = lastCacheUpdate,
            Date().timeIntervalSince(lastUpdate) < cacheTimeout {
-            logger.debug("Returning cached reminder lists (\(cached.count) items)",
+            if !cached.isEmpty {
+                logger.debug("Returning cached reminder lists (\(cached.count) items)",
+                            category: .eventkit, context: LogContext())
+                return cached
+            }
+            // If cache is empty but we now have access, refetch
+            let status = EKEventStore.authorizationStatus(for: .reminder)
+            if status == .denied || status == .restricted || status == .notDetermined {
+                logger.debug("Returning cached reminder lists (0 items) - authorization not sufficient to refetch",
+                            category: .eventkit, context: LogContext())
+                return cached
+            }
+            logger.debug("Cached reminder lists empty but authorized; refetching from EventKit",
                         category: .eventkit, context: LogContext())
-            return cached
         }
         
         logger.debug("Fetching fresh reminder lists from EventKit",
