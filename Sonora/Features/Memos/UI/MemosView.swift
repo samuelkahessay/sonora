@@ -20,28 +20,29 @@ struct MemosView: View {
     
     // MARK: - Computed Properties
     
-    /// Group memos by time periods for contextual headers
-    private var groupedMemos: [MemoSection] {
+    // Cached grouping to avoid recomputation on each render
+    @State private var cachedGroupedMemos: [MemoSection] = []
+
+    /// Group memos by time periods for contextual headers (cached)
+    private func computeGroupedMemos() -> [MemoSection] {
+        let signState = Signpost.beginInterval("MemoListGrouping")
+        defer { Signpost.endInterval("MemoListGrouping", signState) }
+
         let calendar = Calendar.current
         let now = Date()
-        
-        // Group memos by time period
+
         var sections: [TimePeriod: [Memo]] = [:]
-        
+
         for memo in viewModel.memos {
             let period: TimePeriod
-            
+
             if calendar.isDateInToday(memo.creationDate) {
                 let hour = calendar.component(.hour, from: memo.creationDate)
                 switch hour {
-                case 5..<12:
-                    period = .thisMorning
-                case 12..<17:
-                    period = .thisAfternoon
-                case 17..<22:
-                    period = .thisEvening
-                default:
-                    period = .today
+                case 5..<12: period = .thisMorning
+                case 12..<17: period = .thisAfternoon
+                case 17..<22: period = .thisEvening
+                default: period = .today
                 }
             } else if calendar.isDateInYesterday(memo.creationDate) {
                 period = .yesterday
@@ -52,22 +53,19 @@ struct MemosView: View {
             } else {
                 period = .older
             }
-            
+
             sections[period, default: []].append(memo)
         }
-        
-        // Convert to ordered sections
-        // Order sections so the newest content surfaces first at the top
+
         let orderedPeriods: [TimePeriod] = [
             .today, .thisEvening, .thisAfternoon, .thisMorning,
             .yesterday, .thisWeek, .thisMonth, .older
         ]
-        
+
         return orderedPeriods.compactMap { period in
             guard let memos = sections[period], !memos.isEmpty else { return nil }
             return MemoSection(
                 period: period,
-                // Sort newest-first for easy access to recent recordings
                 memos: memos.sorted { $0.creationDate > $1.creationDate }
             )
         }
@@ -113,6 +111,11 @@ struct MemosView: View {
                     eventSubscriptionId = nil
                 }
         }
+        .onAppear {
+            cachedGroupedMemos = computeGroupedMemos()
+            Signpost.event("MemoListVisible")
+        }
+        .onChange(of: viewModel.memos) { _, _ in cachedGroupedMemos = computeGroupedMemos() }
         .overlay(alignment: .bottom) {
             // Bottom delete bar (only visible when in edit mode with selections)
             if viewModel.isEditMode && viewModel.hasSelection {
@@ -139,7 +142,7 @@ struct MemosView: View {
         ScrollViewReader { proxy in
             List {
                 // Group memos by time periods for contextual headers
-                ForEach(groupedMemos, id: \.period.rawValue) { section in
+                ForEach(cachedGroupedMemos, id: \.period.rawValue) { section in
                     Section {
                         ForEach(section.memos, id: \.id) { memo in
                             let separatorConfig = separatorConfiguration(for: memo, in: section.memos)

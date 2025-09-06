@@ -38,11 +38,13 @@ public final class EventBus: ObservableObject {
         let handler: (AppEvent) -> Void
         weak var subscriber: AnyObject?
         let createdAt: Date
+        /// True when the caller provided a subscriber to track; false when no tracking requested
+        let tracked: Bool
         
         var isValid: Bool {
-            // If no subscriber tracking, assume valid
-            guard subscriber != nil else { return true }
-            // If subscriber is nil, the subscription is dead
+            // If tracking wasn't requested, treat as always valid
+            guard tracked else { return true }
+            // If tracking was requested, subscription is only valid while the subscriber is alive
             return subscriber != nil
         }
     }
@@ -181,7 +183,8 @@ public final class EventBus: ObservableObject {
             id: subscriptionId,
             handler: handler,
             subscriber: subscriber,
-            createdAt: Date()
+            createdAt: Date(),
+            tracked: (subscriber != nil)
         )
         
         // Add subscription

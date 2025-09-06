@@ -23,6 +23,37 @@ final class LocalAnalysisService: ObservableObject, AnalysisServiceProtocol {
             name: UIApplication.didEnterBackgroundNotification,
             object: nil
         )
+
+        // Unload promptly on memory warnings
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didReceiveMemoryWarningNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.llm = nil
+                self.currentLoadedModel = nil
+                self.logger.warning("Local AI model unloaded on memory warning")
+            }
+        }
+
+        // Respond to system memory pressure notifications
+        NotificationCenter.default.addObserver(
+            forName: .memoryPressureStateChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            let underPressure = (note.userInfo?["isUnderPressure"] as? Bool) ?? false
+            Task { @MainActor in
+                guard let self = self else { return }
+                if underPressure {
+                    self.llm = nil
+                    self.currentLoadedModel = nil
+                    self.logger.warning("Local AI model unloaded due to memory pressure")
+                }
+            }
+        }
     }
     
     @objc private func appDidEnterBackground() {

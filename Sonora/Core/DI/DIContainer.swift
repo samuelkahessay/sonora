@@ -22,17 +22,17 @@ final class DIContainer: ObservableObject, Resolver {
     // Protocol types cannot use weak references, so we use a hybrid approach:
     // - Concrete class types: weak references where beneficial
     // - Protocol types: keep as optional strong references with lifecycle tracking
-    private var _transcriptionAPI: (any TranscriptionAPI)?
-    private var _transcriptionServiceFactory: TranscriptionServiceFactory?
-    private var _modelDownloadManager: ModelDownloadManager?
-    private var _analysisService: AnalysisService?
-    private var _localAnalysisService: LocalAnalysisService?
-    private var _memoRepository: MemoRepositoryImpl?
-    private var _transcriptionRepository: (any TranscriptionRepository)?
-    private var _analysisRepository: (any AnalysisRepository)?
-    private var _logger: (any LoggerProtocol)?
-    private var _backgroundAudioService: BackgroundAudioService?
-    private var _audioRepository: (any AudioRepository)?
+    var _transcriptionAPI: (any TranscriptionAPI)?
+    var _transcriptionServiceFactory: TranscriptionServiceFactory?
+    var _modelDownloadManager: ModelDownloadManager?
+    var _analysisService: AnalysisService?
+    var _localAnalysisService: LocalAnalysisService?
+    var _memoRepository: MemoRepositoryImpl?
+    var _transcriptionRepository: (any TranscriptionRepository)?
+    var _analysisRepository: (any AnalysisRepository)?
+    var _logger: (any LoggerProtocol)?
+    var _backgroundAudioService: BackgroundAudioService?
+    var _audioRepository: (any AudioRepository)?
     private var _transcriptExporter: (any TranscriptExporting)?
     private var _analysisExporter: (any AnalysisExporting)?
     private var _startRecordingUseCase: StartRecordingUseCase?
@@ -41,10 +41,10 @@ final class DIContainer: ObservableObject, Resolver {
     private var _liveActivityService: (any LiveActivityServiceProtocol)?
     private var _eventBus: (any EventBusProtocol)?
     private var _eventHandlerRegistry: (any EventHandlerRegistryProtocol)?
-    private var _moderationService: (any ModerationServiceProtocol)?
+    var _moderationService: (any ModerationServiceProtocol)?
     private var _spotlightIndexer: (any SpotlightIndexing)?
-    private var _whisperKitModelProvider: WhisperKitModelProvider?
-    private var _modelContext: ModelContext? // Keep strong reference to ModelContext
+    var _whisperKitModelProvider: WhisperKitModelProvider?
+    var _modelContext: ModelContext? // Keep strong reference to ModelContext
 
     // MARK: - Phase 2: Core Optimization Services
     private var _audioQualityManager: AudioQualityManager?
@@ -79,7 +79,7 @@ final class DIContainer: ObservableObject, Resolver {
     // MARK: - Memory Management
     
     /// Track service access for lifecycle management
-    private func trackServiceAccess(_ serviceName: String) {
+    func trackServiceAccess(_ serviceName: String) {
         serviceAccessTimes[serviceName] = Date()
         scheduleCleanupIfNeeded()
     }
@@ -288,7 +288,7 @@ final class DIContainer: ObservableObject, Resolver {
     
     /// Check if container has been properly configured
     @MainActor
-    private func ensureConfigured() {
+    func ensureConfigured() {
         if !isConfigured {
             configure()
         }
@@ -330,167 +330,13 @@ final class DIContainer: ObservableObject, Resolver {
         return provider
     }
     
-    /// Create a transcription service based on current user preferences
-    @MainActor
-    func createTranscriptionService() -> any TranscriptionAPI {
-        return transcriptionServiceFactory().createTranscriptionService()
-    }
+    // Transcription service creation moved to DIContainer+Analysis.swift
     
-    /// Get analysis service
-    @MainActor
-    func analysisService() -> any AnalysisServiceProtocol {
-        ensureConfigured()
-        trackServiceAccess("AnalysisService")
-        
-        // Return local analysis service if enabled, otherwise use API service
-        if AppConfiguration.shared.useLocalAnalysis {
-            if _localAnalysisService == nil {
-                _localAnalysisService = LocalAnalysisService()
-                print("🤖 DIContainer: Created LocalAnalysisService instance")
-            }
-            return _localAnalysisService!
-        }
-        
-        if let existing = _analysisService {
-            return existing
-        }
-        
-        // Re-create if deallocated
-        _analysisService = AnalysisService()
-        return _analysisService!
-    }
-
-    /// Optional progressive analysis router (tiny -> base). Falls back to standard service when disabled.
-    @MainActor
-    func progressiveAnalysisService() -> any AnalysisServiceProtocol {
-        ensureConfigured()
-        if AppConfiguration.shared.enableProgressiveAnalysisRouting {
-            let tiny = localAnalysisService()
-            let baseSvc: any AnalysisServiceProtocol
-            if let existing = _analysisService { baseSvc = existing } else { _analysisService = AnalysisService(); baseSvc = _analysisService! }
-            return ProgressiveAnalysisService(tiny: tiny, base: baseSvc, logger: logger())
-        } else {
-            return analysisService()
-        }
-    }
-
-    /// Explicit local analysis service (on-device)
-    @MainActor
-    func localAnalysisService() -> any AnalysisServiceProtocol {
-        ensureConfigured()
-        if _localAnalysisService == nil {
-            _localAnalysisService = LocalAnalysisService()
-        }
-        return _localAnalysisService!
-    }
-
-    /// Get moderation service
-    @MainActor
-    func moderationService() -> any ModerationServiceProtocol {
-        ensureConfigured()
-        guard let svc = _moderationService else { fatalError("DIContainer not configured: moderationService") }
-        return svc
-    }
+    // Analysis-related methods moved to DIContainer+Analysis.swift
     
-    /// Get memo repository
-    @MainActor
-    func memoRepository() -> any MemoRepository {
-        ensureConfigured()
-        trackServiceAccess("MemoRepository")
-        
-        if let existing = _memoRepository {
-            return existing
-        }
-        
-        // Re-create if needed
-        initializePersistenceIfNeeded()
-        
-        guard let repository = _memoRepository else {
-            fatalError("DIContainer: Failed to create MemoRepository")
-        }
-        
-        return repository
-    }
+    // Repository-related methods moved to DIContainer+Repositories.swift
     
-    /// Get transcription repository
-    @MainActor
-    func transcriptionRepository() -> any TranscriptionRepository {
-        ensureConfigured()
-        if _transcriptionRepository == nil { initializePersistenceIfNeeded() }
-        guard let repo = _transcriptionRepository else { fatalError("DIContainer not configured: transcriptionRepository") }
-        return repo
-    }
-    
-    /// Get analysis repository
-    @MainActor
-    func analysisRepository() -> any AnalysisRepository {
-        ensureConfigured()
-        if _analysisRepository == nil { initializePersistenceIfNeeded() }
-        guard let repo = _analysisRepository else { fatalError("DIContainer not configured: analysisRepository") }
-        return repo
-    }
-    
-    /// Get audio repository
-    @MainActor
-    func audioRepository() -> any AudioRepository {
-        ensureConfigured()
-        guard let repo = _audioRepository else { fatalError("DIContainer not configured: audioRepository") }
-        return repo
-    }
-    
-    /// Get background audio service
-    @MainActor
-    func backgroundAudioService() -> BackgroundAudioService {
-        ensureConfigured()
-        guard let service = _backgroundAudioService else {
-            fatalError("DIContainer not configured: backgroundAudioService")
-        }
-        return service
-    }
-    
-    // MARK: - Focused Audio Services
-    
-    /// Get audio session service
-    @MainActor
-    func audioSessionService() -> AudioSessionService {
-        ensureConfigured()
-        return resolve(AudioSessionService.self)!
-    }
-    
-    /// Get audio recording service
-    @MainActor
-    func audioRecordingService() -> AudioRecordingService {
-        ensureConfigured()
-        return resolve(AudioRecordingService.self)!
-    }
-    
-    /// Get background task service
-    @MainActor
-    func backgroundTaskService() -> BackgroundTaskService {
-        ensureConfigured()
-        return resolve(BackgroundTaskService.self)!
-    }
-    
-    /// Get audio permission service
-    @MainActor
-    func audioPermissionService() -> AudioPermissionService {
-        ensureConfigured()
-        return resolve(AudioPermissionService.self)!
-    }
-    
-    /// Get recording timer service
-    @MainActor
-    func recordingTimerService() -> RecordingTimerService {
-        ensureConfigured()
-        return resolve(RecordingTimerService.self)!
-    }
-    
-    /// Get audio playback service
-    @MainActor
-    func audioPlaybackService() -> AudioPlaybackService {
-        ensureConfigured()
-        return resolve(AudioPlaybackService.self)!
-    }
+    // Audio-related methods moved to DIContainer+Audio.swift
     
     /// Get start recording use case
     @MainActor
@@ -730,7 +576,7 @@ final class DIContainer: ObservableObject, Resolver {
 
     // MARK: - Persistence Initialization
     @MainActor
-    private func initializePersistenceIfNeeded() {
+    func initializePersistenceIfNeeded() {
         guard _memoRepository == nil || _transcriptionRepository == nil || _analysisRepository == nil else { return }
         guard let ctx = _modelContext else {
             _logger?.warning("ModelContext not yet available; deferring repository setup", category: .system, context: LogContext(), error: nil)

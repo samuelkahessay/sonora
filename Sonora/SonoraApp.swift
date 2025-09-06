@@ -38,6 +38,8 @@ struct SonoraApp: App {
         return base
     }
     init() {
+        // Signpost: begin app startup interval
+        Signpost.beginAppStartup()
         // Configure DI and register event handlers before any views initialize
         DIContainer.shared.configure()
         print("🚀 SonoraApp: DIContainer configured with shared services (App init)")
@@ -128,6 +130,11 @@ struct SonoraApp: App {
             ContentView()
                 .environmentObject(themeManager)
                 .preferredColorScheme(themeManager.colorSchemeOverride)
+                .onAppear {
+                    // Signpost: end app startup when first ContentView appears
+                    Signpost.endAppStartup()
+                    Signpost.event("ContentViewVisible")
+                }
                 // Debug handler validation disabled by default (kept for manual testing)
                 .onOpenURL { url in
                     print("🔗 SonoraApp: Deep link received: \(url)")
