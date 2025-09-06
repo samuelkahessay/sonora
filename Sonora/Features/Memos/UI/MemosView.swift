@@ -317,11 +317,10 @@ struct ContextualSectionHeader: View {
     
     var body: some View {
         HStack {
-            // Brand voice header with New York serif
+            // Brand voice header with New York serif (resolved via design system)
             Text(period.headerText)
-                .font(.custom("New York", size: 18, relativeTo: .headline))
+                .font(SonoraDesignSystem.Typography.navigationTitle)
                 .foregroundColor(.textPrimary)
-                .fontWeight(.medium)
             
             Spacer()
             

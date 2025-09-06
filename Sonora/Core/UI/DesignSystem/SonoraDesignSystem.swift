@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - Design System Foundation
 
@@ -57,27 +58,60 @@ enum SonoraDesignSystem {
     /// Typography hierarchy following brand guidelines with SF Pro and New York fonts
     enum Typography {
         
+        // MARK: - New York Font Resolution (UIKit → SwiftUI)
+        
+        /// Available New York Medium weights
+        private enum NYWeight: String {
+            case regular = "Regular"
+            case medium = "Medium"
+            case semibold = "Semibold"
+            case bold = "Bold"
+        }
+        
+        /// Resolve a UIFont for New York using known PostScript names; fall back to a serif system font.
+        private static func nyUIFont(size: CGFloat, textStyle: UIFont.TextStyle, weight: NYWeight) -> UIFont {
+            // Prefer the NewYorkMedium family variants available on iOS
+            let psName = "NewYorkMedium-\(weight.rawValue)"
+            if let f = UIFont(name: psName, size: size) {
+                return UIFontMetrics(forTextStyle: textStyle).scaledFont(for: f)
+            }
+            // Secondary candidates (defensive, in case family names vary across devices)
+            let candidates = [
+                "NewYorkMedium-\(weight.rawValue)",
+                "NewYork-\(weight.rawValue)",
+                "New York"
+            ]
+            for name in candidates {
+                if let f = UIFont(name: name, size: size) {
+                    return UIFontMetrics(forTextStyle: textStyle).scaledFont(for: f)
+                }
+            }
+            // Serif fallback that respects Dynamic Type
+            let base = UIFont.preferredFont(forTextStyle: textStyle)
+            if let serifDesc = base.fontDescriptor.withDesign(.serif) {
+                return UIFont(descriptor: serifDesc, size: size)
+            }
+            return base
+        }
+        
         // MARK: - Heading Hierarchy
         
         /// H1: Large title for primary headings (28pt, New York Bold)
-        static let headingLarge = Font.custom("New York", size: 28, relativeTo: .largeTitle)
+        static let headingLarge = Font(nyUIFont(size: 28, textStyle: .largeTitle, weight: .bold))
             .leading(.tight)
-            .weight(.bold)
         
         /// H2: Medium title for section headings (24pt, New York Medium)
-        static let headingMedium = Font.custom("New York", size: 24, relativeTo: .title2)
+        static let headingMedium = Font(nyUIFont(size: 24, textStyle: .title2, weight: .medium))
             .leading(.tight)
-            .weight(.medium)
         
         /// H3: Small title for subsections (20pt, New York Medium)
-        static let headingSmall = Font.custom("New York", size: 20, relativeTo: .title3)
+        static let headingSmall = Font(nyUIFont(size: 20, textStyle: .title3, weight: .medium))
             .leading(.tight)
-            .weight(.medium)
         
         // MARK: - Body Text
         
         /// Large body text for important content (17pt, New York Regular)
-        static let bodyLarge = Font.custom("New York", size: 17, relativeTo: .body)
+        static let bodyLarge = Font(nyUIFont(size: 17, textStyle: .body, weight: .regular))
             .leading(.loose)
         
         /// Regular body text for standard content (15pt, Weight 400)
@@ -95,7 +129,7 @@ enum SonoraDesignSystem {
         // MARK: - Special Typography
         
         /// Serif font for quotes and emotional moments (New York, 17pt)
-        static let insightSerif = Font.custom("New York", size: 17, relativeTo: .body)
+        static let insightSerif = Font(nyUIFont(size: 17, textStyle: .body, weight: .regular))
             .leading(.loose)
         
         /// Monospaced digits for time display and metrics
@@ -113,8 +147,7 @@ enum SonoraDesignSystem {
         static let button = Font.system(size: 16, weight: .medium, design: .default)
         
         /// Navigation title styling (New York Semibold for premium feel)
-        static let navigationTitle = Font.custom("New York", size: 18, relativeTo: .headline)
-            .weight(.semibold)
+        static let navigationTitle = Font(nyUIFont(size: 18, textStyle: .headline, weight: .semibold))
         
         /// Tab bar item styling
         static let tabBarItem = Font.system(size: 10, weight: .medium, design: .default)
