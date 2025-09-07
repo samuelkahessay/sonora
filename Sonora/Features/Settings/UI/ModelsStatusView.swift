@@ -19,7 +19,7 @@ struct ModelsStatusView: View {
                     // WhisperKit card
                     SettingsCard {
                         VStack(alignment: .leading, spacing: Spacing.md) {
-                            Label("Local Transcription", systemImage: "brain.head.profile")
+                            Label("Local Transcription", systemImage: "quote.bubble")
                                 .font(SonoraDesignSystem.Typography.headingSmall)
 
                             statusRow_Whisper()
@@ -65,8 +65,13 @@ struct ModelsStatusView: View {
         WhisperKitModelProvider.curatedModels.first(where: { $0.id == whisperId })?.sizeBytes
     }
     private func whisperOnDiskBytes() -> Int64? {
-        guard let folder = provider.installedModelFolder(id: whisperId) else { return nil }
-        return folderSize(folder)
+        if let folder = provider.installedModelFolder(id: whisperId) {
+            return folderSize(folder)
+        }
+        if let url = provider.modelURL(id: whisperId) {
+            return folderSize(url)
+        }
+        return nil
     }
 
     // MARK: - Local model helpers
@@ -98,12 +103,15 @@ struct ModelsStatusView: View {
         }
     }
     @ViewBuilder private func infoRow_Whisper() -> some View {
-        HStack(spacing: Spacing.md) {
-            if let exp = whisperExpectedBytes() {
-                infoPill(icon: "arrow.down.circle", text: "Size: \(formatBytes(exp))")
-            }
+        HStack {
             if let used = whisperOnDiskBytes() {
-                infoPill(icon: "internaldrive", text: "On disk: \(formatBytes(used))")
+                Text("On device: \(formatBytes(used))")
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+            } else if let exp = whisperExpectedBytes() {
+                Text("Download size: \(formatBytes(exp))")
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
             }
             Spacer()
         }
@@ -152,9 +160,16 @@ struct ModelsStatusView: View {
         }
     }
     @ViewBuilder private func infoRow_Local() -> some View {
-        HStack(spacing: Spacing.md) {
-            infoPill(icon: "arrow.down.circle", text: "Size: \(localApproxSizeString())")
-            if let used = localOnDiskBytes() { infoPill(icon: "internaldrive", text: "On disk: \(formatBytes(used))") }
+        HStack {
+            if let used = localOnDiskBytes() {
+                Text("On device: \(formatBytes(used))")
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+            } else {
+                Text("Download size: \(localApproxSizeString())")
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+            }
             Spacer()
         }
     }
@@ -219,12 +234,19 @@ struct ModelsStatusView: View {
     private func folderSize(_ url: URL, filter: ((URL) -> Bool)? = nil) -> Int64 {
         let fm = FileManager.default
         var total: Int64 = 0
-        if let en = fm.enumerator(at: url, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey], options: [.skipsHiddenFiles]) {
+        let keys: Set<URLResourceKey> = [.isRegularFileKey, .totalFileAllocatedSizeKey, .fileAllocatedSizeKey, .fileSizeKey]
+        if let en = fm.enumerator(at: url, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles]) {
             for case let fileURL as URL in en {
-                if let filter = filter, !filter(fileURL) { continue }
+                if let filter, !filter(fileURL) { continue }
                 do {
-                    let attrs = try fm.attributesOfItem(atPath: fileURL.path)
-                    if let size = attrs[.size] as? NSNumber { total += size.int64Value }
+                    let values = try fileURL.resourceValues(forKeys: keys)
+                    if values.isRegularFile == true {
+                        if let alloc = values.totalFileAllocatedSize ?? values.fileAllocatedSize {
+                            total += Int64(alloc)
+                        } else if let size = values.fileSize {
+                            total += Int64(size)
+                        }
+                    }
                 } catch { continue }
             }
         }

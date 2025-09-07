@@ -15,7 +15,7 @@ enum LocalModel: String, CaseIterable {
     var displayName: String {
         switch self {
         case .phi4_mini:
-            return "Phi-4 Mini (3.8B) ⭐"
+            return "Phi-4 Mini (3.8B)"
         case .llama32_3B:
             return "LLaMA 3.2 (3B)"
         case .llama32_1B:

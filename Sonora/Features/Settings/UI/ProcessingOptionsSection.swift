@@ -107,19 +107,25 @@ struct ProcessingOptionsSection: View {
                                 .font(.subheadline)
                                 .foregroundColor(.semantic(.textSecondary))
 
-                            if FeatureFlags.useFixedModelsForBeta {
-                                Button(action: { showModelsStatus = true }) {
-                                    Label("Model Status", systemImage: "square.and.arrow.down")
-                                }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                            }
-
                             // Local transcription (WhisperKit)
                             WhisperModelCompactRow(downloadManager: whisperDownloadManager)
 
                             // Local analysis (Phi-4 Mini)
                             LocalAnalysisModelCompactRow(appConfig: appConfig, manager: localModelDownloadManager)
+
+                            if FeatureFlags.useFixedModelsForBeta {
+                                // Place Model Status control at the bottom, centered
+                                HStack {
+                                    Spacer()
+                                    Button(action: { showModelsStatus = true }) {
+                                        Label("Model Status", systemImage: "square.and.arrow.down")
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.regular)
+                                    Spacer()
+                                }
+                                .padding(.top, Spacing.sm)
+                            }
                         }
                     }
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -287,14 +293,15 @@ private struct WhisperModelCompactRow: View {
             HStack(spacing: Spacing.sm) {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill").foregroundColor(.semantic(.success))
-                    Text("Ready").font(.caption).foregroundColor(.semantic(.success))
+                   // Text("Ready").font(.caption).foregroundColor(.semantic(.success))
                 }
                 Button(role: .destructive, action: { showDeleteConfirm = true }) {
-                    Label("Delete", systemImage: "trash")
+                    Image(systemName: "trash")
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .tint(.semantic(.error))
+                .accessibilityLabel("Delete model")
             }
             .alert("Delete \(selected.displayName)?", isPresented: $showDeleteConfirm) {
                 Button("Cancel", role: .cancel) {}
@@ -364,9 +371,18 @@ private struct LocalAnalysisModelCompactRow: View {
 
     @ViewBuilder private var inlineStatus: some View {
         if manager.isModelReady(model) {
-            HStack(spacing: 4) {
-                Image(systemName: "checkmark.circle.fill").foregroundColor(.semantic(.success))
-                Text("Ready").font(.caption).foregroundColor(.semantic(.success))
+            HStack(spacing: Spacing.sm) {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill").foregroundColor(.semantic(.success))
+                   // Text("Ready").font(.caption).foregroundColor(.semantic(.success))
+                }
+                Button(role: .destructive, action: { manager.deleteModel(model) }) {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(.semantic(.error))
+                .accessibilityLabel("Delete model")
             }
         } else if manager.isDownloading(model) {
             Button(action: { manager.cancelDownload(for: model) }) {

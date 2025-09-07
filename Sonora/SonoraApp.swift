@@ -45,20 +45,6 @@ struct SonoraApp: App {
         DIContainer.shared.configure()
         print("🚀 SonoraApp: DIContainer configured with shared services (App init)")
         
-        #if DEBUG
-        // Debug: Print ALL available fonts to find New York variants
-        print("🔤 All Available Fonts:")
-        for family in UIFont.familyNames.sorted() {
-            print("Family: \(family)")
-            for name in UIFont.fontNames(forFamilyName: family) {
-                if name.lowercased().contains("new york") || name.lowercased().contains("newyork") {
-                    print("   ★ \(name) ← New York font found!")
-                } else {
-                    print("   \(name)")
-                }
-            }
-        }
-        #endif
         // Build SwiftData container early and inject ModelContext into DI
         let schema = Schema([
             MemoModel.self,
