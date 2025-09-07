@@ -34,4 +34,16 @@ enum FeatureFlags {
         case .appStore:    return false
         }
     }
+
+    /// Use fixed models for beta (WhisperKit Large v3 and Phi-4 Mini).
+    /// Hides model choosers and focuses UI on status/progress/delete for these two models.
+    static var useFixedModelsForBeta: Bool {
+        if let env = ProcessInfo.processInfo.environment["SONORA_FF_FIXED_MODELS"], let b = Bool(env) { return b }
+        if let override = UserDefaults.standard.object(forKey: "ff_fixedModels") as? Bool { return override }
+        switch BuildConfiguration.shared.distributionType {
+        case .development: return true
+        case .testFlight:  return true
+        case .appStore:    return false
+        }
+    }
 }

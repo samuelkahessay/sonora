@@ -8,6 +8,7 @@ struct ProcessingOptionsSection: View {
     @State private var advancedExpanded = false
     @StateObject private var whisperDownloadManager = DIContainer.shared.modelDownloadManager()
     @StateObject private var localModelDownloadManager = LocalModelDownloadManager.shared
+    @State private var showModelsStatus = false
 
     enum ProcessingMode: String, CaseIterable {
         case cloud
@@ -106,6 +107,14 @@ struct ProcessingOptionsSection: View {
                                 .font(.subheadline)
                                 .foregroundColor(.semantic(.textSecondary))
 
+                            if FeatureFlags.useFixedModelsForBeta {
+                                Button(action: { showModelsStatus = true }) {
+                                    Label("Model Status", systemImage: "square.and.arrow.down")
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
+
                             // Local transcription (WhisperKit)
                             WhisperModelCompactRow(downloadManager: whisperDownloadManager)
 
@@ -127,6 +136,7 @@ struct ProcessingOptionsSection: View {
                     .foregroundColor(.semantic(.textSecondary))
                 }
                 .buttonStyle(.plain)
+                .sheet(isPresented: $showModelsStatus) { ModelsStatusView() }
             }
         }
     }
@@ -228,12 +238,14 @@ private struct WhisperModelCompactRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack(spacing: Spacing.md) {
-                Label("Local Transcription", systemImage: "brain.head.profile")
+                Label("Local Transcription", systemImage: "quote.bubble")
                     .font(.subheadline)
                 Spacer()
-                Button("Manage") { showingSelection = true }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                if !FeatureFlags.useFixedModelsForBeta {
+                    Button("Manage") { showingSelection = true }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                }
             }
             HStack(spacing: Spacing.sm) {
                 Text(selected.displayName)
@@ -251,7 +263,7 @@ private struct WhisperModelCompactRow: View {
                     .tint(.semantic(.brandPrimary))
             }
         }
-        .sheet(isPresented: $showingSelection) { WhisperModelSelectionView() }
+        .sheet(isPresented: $showingSelection) { if !FeatureFlags.useFixedModelsForBeta { WhisperModelSelectionView() } }
     }
 
     @ViewBuilder private var inlineStatus: some View {
@@ -320,11 +332,13 @@ private struct LocalAnalysisModelCompactRow: View {
                 Label("Local Analysis", systemImage: "cpu")
                     .font(.subheadline)
                 Spacer()
-                NavigationLink(destination: ModelDownloadView(), isActive: $presentManage) { EmptyView() }
-                    .hidden()
-                Button("Manage") { presentManage = true }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                if !FeatureFlags.useFixedModelsForBeta {
+                    NavigationLink(destination: ModelDownloadView(), isActive: $presentManage) { EmptyView() }
+                        .hidden()
+                    Button("Manage") { presentManage = true }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                }
             }
             HStack(spacing: Spacing.sm) {
                 Text(model.displayName)

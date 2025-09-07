@@ -37,18 +37,19 @@ struct LocalAISectionView: View {
                             .font(.caption)
                             .foregroundColor(.semantic(.textSecondary))
                     }
-                    
-                    NavigationLink(destination: ModelDownloadView()) {
-                        HStack {
-                            Label("Manage Model", systemImage: "square.and.arrow.down")
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.semantic(.textTertiary))
-                                .font(.caption.weight(.semibold))
+                    if !FeatureFlags.useFixedModelsForBeta {
+                        NavigationLink(destination: ModelDownloadView()) {
+                            HStack {
+                                Label("Manage Model", systemImage: "square.and.arrow.down")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.semantic(.textTertiary))
+                                    .font(.caption.weight(.semibold))
+                            }
                         }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.top, Spacing.sm)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.top, Spacing.sm)
                 }
             }
         }
