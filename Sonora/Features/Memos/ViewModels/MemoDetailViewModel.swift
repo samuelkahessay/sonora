@@ -591,6 +591,25 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
            let score = meta.qualityScore {
             updateLanguageDetection(language: lang, qualityScore: score)
         }
+
+        // Auto-restore Distill results on appear without requiring another tap
+        // Prefer Distill as the default mode when none is selected
+        if selectedAnalysisMode == nil {
+            selectedAnalysisMode = .distill
+        }
+
+        // If we are (or defaulted to) Distill and no result is currently in memory, restore from cache if available
+        if selectedAnalysisMode == .distill, analysisResult == nil {
+            if let env: AnalyzeEnvelope<DistillData> = DIContainer.shared
+                .analysisRepository()
+                .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
+                analysisResult = env.data
+                analysisEnvelope = env
+                isAnalyzing = false
+                analysisCacheStatus = "✅ Restored from cache"
+                analysisPerformanceInfo = "Restored on appear"
+            }
+        }
     }
     
         /// Restore analysis UI state when returning from background or view re-appear
@@ -975,24 +994,12 @@ extension MemoDetailViewModel {
     
     var analysisResult: Any? {
         get { state.analysis.result }
-        set { 
-            if let value = newValue as? AnyHashable {
-                state.analysis.result = value 
-            } else {
-                state.analysis.result = nil
-            }
-        }
+        set { state.analysis.result = newValue }
     }
     
     var analysisEnvelope: Any? {
         get { state.analysis.envelope }
-        set { 
-            if let value = newValue as? AnyHashable {
-                state.analysis.envelope = value 
-            } else {
-                state.analysis.envelope = nil
-            }
-        }
+        set { state.analysis.envelope = newValue }
     }
     
     var isAnalyzing: Bool {

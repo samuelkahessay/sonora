@@ -46,4 +46,15 @@ enum FeatureFlags {
         case .appStore:    return false
         }
     }
+
+    /// Disable WhisperKit intelligent prewarming (avoid warming models on app activate) for beta builds
+    static var disableWhisperPrewarmInBeta: Bool {
+        if let env = ProcessInfo.processInfo.environment["SONORA_FF_DISABLE_PREWARM"], let b = Bool(env) { return b }
+        if let override = UserDefaults.standard.object(forKey: "ff_disablePrewarm") as? Bool { return override }
+        switch BuildConfiguration.shared.distributionType {
+        case .development: return true
+        case .testFlight:  return true
+        case .appStore:    return false
+        }
+    }
 }

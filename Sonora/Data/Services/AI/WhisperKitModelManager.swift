@@ -316,6 +316,12 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
     private func handleAppBecameActive() async {
         logger.info("🚀 WhisperKitModelManager: App became active - starting intelligent prewarming")
         
+        // Only prewarm if enabled and user has used transcription recently
+        if FeatureFlags.disableWhisperPrewarmInBeta {
+            logger.debug("🚀 WhisperKitModelManager: Prewarming disabled by feature flag")
+            return
+        }
+        
         // Only prewarm if user has used transcription recently
         let shouldPrewarm = shouldPerformIntelligentPrewarming()
         
@@ -382,9 +388,12 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
     private func scheduleIdleUnloadTimer() {
         cancelUnloadTimer()
         
-        let timeout = isUnderMemoryPressure ? 
+        var timeout = isUnderMemoryPressure ? 
             ModelManagementConfig.memoryPressureUnloadTimeout : 
             ModelManagementConfig.idleUnloadTimeout
+        if FeatureFlags.useFixedModelsForBeta {
+            timeout = min(timeout, 10.0) // Aggressive idle unload in beta to avoid background residency
+        }
         
         unloadTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] _ in
             Task { @MainActor in

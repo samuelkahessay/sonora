@@ -48,8 +48,9 @@ struct MemoDetailViewState: Equatable {
     /// Analysis processing state
     struct AnalysisState: Equatable {
         var selectedMode: AnalysisMode? = nil
-        var result: AnyHashable? = nil
-        var envelope: AnyHashable? = nil
+        // Store analysis payloads that are not Hashable (e.g., DistillData, AnalyzeEnvelope<...>)
+        var result: Any? = nil
+        var envelope: Any? = nil
         var isAnalyzing: Bool = false
         var error: String? = nil
         var cacheStatus: String? = nil
@@ -60,6 +61,17 @@ struct MemoDetailViewState: Equatable {
         var distillProgress: DistillProgressUpdate? = nil
         var partialDistillData: PartialDistillData? = nil
         
+        // Custom Equatable: intentionally ignore `result` and `envelope`
+        static func == (lhs: AnalysisState, rhs: AnalysisState) -> Bool {
+            return lhs.selectedMode == rhs.selectedMode
+            && lhs.isAnalyzing == rhs.isAnalyzing
+            && lhs.error == rhs.error
+            && lhs.cacheStatus == rhs.cacheStatus
+            && lhs.performanceInfo == rhs.performanceInfo
+            && lhs.isParallelDistillEnabled == rhs.isParallelDistillEnabled
+            && lhs.distillProgress == rhs.distillProgress
+            && lhs.partialDistillData == rhs.partialDistillData
+        }
     }
     
     /// Language detection and display state
