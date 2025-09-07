@@ -7,59 +7,55 @@ struct AnalysisSectionView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 8) {
-                Text("AI Analysis")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .accessibilityAddTraits(.isHeader)
-            }
-            
-            // Analysis Buttons
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 12) {
-                ForEach(AnalysisMode.uiVisibleCases, id: \.self) { mode in
-                    Button(action: {
-                        HapticManager.shared.playSelection()
-                        viewModel.performAnalysis(mode: mode, transcript: transcript)
-                    }) {
-                        VStack(spacing: 8) {
-                            Image(systemName: mode.iconName)
-                                .font(.title2)
-                                .foregroundColor(.semantic(.textOnColored))
-                                .frame(minWidth: 44, minHeight: 44)
-                                .background(Color.semantic(.brandPrimary))
-                                .clipShape(Circle())
-                            
-                            Text(mode.displayName)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.semantic(.fillSecondary))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.semantic(.brandPrimary).opacity(0.2), lineWidth: 1)
-                        )
+            // Analysis error banner at top with retry
+            if let err = viewModel.analysisError {
+                NotificationBanner(
+                    type: .error,
+                    message: err,
+                    onPrimaryAction: {
+                        viewModel.performAnalysis(mode: .distill, transcript: transcript)
+                    },
+                    onDismiss: {
+                        viewModel.analysisError = nil
                     }
-                    .buttonStyle(.plain)
-                    .disabled(viewModel.isAnalyzing)
-                    .opacity(viewModel.isAnalyzing ? 0.6 : 1.0)
-                    .accessibilityLabel("\(mode.displayName) analysis")
-                    .accessibilityHint("Double tap to analyze transcript for \(mode.displayName.lowercased())")
-                    // Disabled state is conveyed by .disabled(); keep traits minimal
-                    .accessibilityAddTraits([])
-                }
+                )
             }
-            
+            Button(action: {
+                HapticManager.shared.playSelection()
+                viewModel.performAnalysis(mode: .distill, transcript: transcript)
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: AnalysisMode.distill.iconName)
+                        .font(.title2)
+                        .foregroundColor(.semantic(.textOnColored))
+                        .frame(width: 44, height: 44)
+                        .background(Color.semantic(.brandPrimary))
+                        .clipShape(Circle())
+                    Text(AnalysisMode.distill.displayName)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+                .padding(.vertical, 14)
+                .padding(.horizontal, 12)
+                .background(Color.semantic(.fillSecondary))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.semantic(.brandPrimary).opacity(0.2), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.isAnalyzing)
+            .opacity(viewModel.isAnalyzing ? 0.6 : 1.0)
+            .accessibilityLabel("Distill")
+            .accessibilityHint("Double tap to generate AI insights for this memo")
+
             // Loading State
             if viewModel.isAnalyzing {
                 HStack(spacing: 12) {
                     LoadingIndicator(size: .small)
-                    Text("Analyzing with AI...")
+                    Text("Analyzing your memo...")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     Spacer()

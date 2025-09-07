@@ -9,10 +9,20 @@ struct AnalysisResultsView: View {
     var body: some View {
         // Avoid nested ScrollViews; parent provides scrolling.
         VStack(alignment: .leading, spacing: 16) {
-                // Header with model info
-                if let env = envelope as? AnalyzeEnvelope<DistillData> {
-                    HeaderInfoView(envelope: env)
-                } else if let env = envelope as? AnalyzeEnvelope<AnalysisData> {
+                // Header with model info (suppressed for Distill mode)
+                if mode != .distill {
+                    if let env = envelope as? AnalyzeEnvelope<AnalysisData> {
+                        HeaderInfoView(envelope: env)
+                    } else if let env = envelope as? AnalyzeEnvelope<ThemesData> {
+                        HeaderInfoView(envelope: env)
+                    } else if let env = envelope as? AnalyzeEnvelope<TodosData> {
+                        HeaderInfoView(envelope: env)
+                    } else if let env = envelope as? AnalyzeEnvelope<DistillData> {
+                        // Keep header hidden for Distill; preserve envelope for performance info inside DistillResultView
+                        EmptyView()
+                    }
+                }
+                 else if let env = envelope as? AnalyzeEnvelope<AnalysisData> {
                     HeaderInfoView(envelope: env)
                 } else if let env = envelope as? AnalyzeEnvelope<ThemesData> {
                     HeaderInfoView(envelope: env)

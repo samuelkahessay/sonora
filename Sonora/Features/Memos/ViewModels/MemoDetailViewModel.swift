@@ -502,6 +502,13 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                 print("📝 MemoDetailViewModel: Parallel Distill analysis completed in \(Int(duration * 1000))ms")
             }
             
+            // Record total duration metric
+            PerformanceMetricsService.shared.recordDuration(
+                name: "DistillTotalDuration",
+                start: Date(timeIntervalSinceNow: -duration),
+                extras: ["mode": "parallel"]
+            )
+            
         } catch {
             await MainActor.run {
                 analysisError = error.localizedDescription
@@ -536,6 +543,13 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                 
                 print("📝 MemoDetailViewModel: Regular Distill analysis completed (cached: \(wasCached))")
             }
+            
+            // Record total duration metric
+            PerformanceMetricsService.shared.recordDuration(
+                name: "DistillTotalDuration",
+                start: Date(timeIntervalSinceNow: -duration),
+                extras: ["mode": "regular"]
+            )
             
         } catch {
             await MainActor.run {
@@ -579,15 +593,23 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         }
     }
     
-    func onViewDisappear() {
-        print("📝 MemoDetailViewModel: View disappeared")
-        Task { [weak self] in
-            guard let self else { return }
-            operationCoordinator.setStatusDelegate(nil)
+        /// Restore analysis UI state when returning from background or view re-appear
+    func restoreAnalysisStateIfNeeded() {
+        guard let memo = currentMemo else { return }
+        if selectedAnalysisMode == .distill, analysisResult == nil {
+            if let env: AnalyzeEnvelope<DistillData> = DIContainer.shared
+                .analysisRepository()
+                .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
+                analysisResult = env.data
+                analysisEnvelope = env
+                isAnalyzing = false
+                analysisCacheStatus = "✅ Restored from cache"
+                analysisPerformanceInfo = "Restored on return"
+            }
         }
     }
 
-    // MARK: - OperationStatusDelegate
+
     func operationStatusDidUpdate(_ update: OperationStatusUpdate) async {
         guard update.operationType.category == .transcription,
               let memo = currentMemo,

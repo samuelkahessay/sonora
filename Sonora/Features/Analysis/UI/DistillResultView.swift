@@ -3,6 +3,8 @@ import SwiftUI
 /// Comprehensive view for displaying Distill analysis results
 /// Shows summary, action items, themes, and reflection questions in a mentor-like format
 /// Supports progressive rendering of partial data as components complete
+import UIKit
+
 struct DistillResultView: View {
     let data: DistillData?
     let envelope: AnalyzeEnvelope<DistillData>?
@@ -65,7 +67,25 @@ struct DistillResultView: View {
             } else if let progress = progress {
                 progressPerformanceInfo(progress)
             }
+            
+            // Copy results action (also triggers smart transcript expand via notification)
+            HStack {
+                Spacer()
+                Button(action: {
+                    let text = buildCopyText()
+                    UIPasteboard.general.string = text
+                    HapticManager.shared.playLightImpact()
+                    NotificationCenter.default.post(name: Notification.Name("AnalysisCopyTriggered"), object: nil)
+                }) {
+                    Label("Copy Results", systemImage: "doc.on.doc")
+                        .labelStyle(.titleAndIcon)
+                        .font(.callout)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel("Copy analysis results")
+            }
         }
+        .textSelection(.enabled)
         .padding()
         .background(Color.semantic(.bgSecondary))
         .cornerRadius(12)
@@ -493,8 +513,28 @@ struct DistillResultView: View {
             return .semantic(.success)
         }
     }
-}
 
+    // Build a concatenated text representation for copying
+    private func buildCopyText() -> String {
+        var parts: [String] = []
+        if let s = effectiveSummary, !s.isEmpty {
+            parts.append("Summary:\n" + s)
+        }
+        if let items = effectiveActionItems, !items.isEmpty {
+            let list = items.enumerated().map { "\($0.offset + 1). \($0.element.text) [\($0.element.priority.rawValue)]" }.joined(separator: "\n")
+            parts.append("Action Items:\n" + list)
+        }
+        if let themes = effectiveKeyThemes, !themes.isEmpty {
+            parts.append("Key Themes:\n" + themes.joined(separator: ", "))
+        }
+        if let questions = effectiveReflectionQuestions, !questions.isEmpty {
+            let list = questions.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
+            parts.append("Reflection Questions:\n" + list)
+        }
+        return parts.joined(separator: "\n\n")
+    }
+
+}
 
 // MARK: - Preview
 

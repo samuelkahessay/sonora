@@ -60,8 +60,31 @@ struct MemoDetailView: View {
                 
                 VStack(alignment: .leading, spacing: 20) {
                     audioControlsView
-                    transcriptionSectionView
+
+                    // Inline status/error banners
+                    if case .failed(let err) = viewModel.transcriptionState, !dismissTranscriptionErrorBanner {
+                        NotificationBanner(
+                            type: .warning,
+                            message: err,
+                            onPrimaryAction: viewModel.canRetryTranscription ? { viewModel.retryTranscription() } : nil,
+                            onDismiss: { dismissTranscriptionErrorBanner = true }
+                        )
+                        .padding(.horizontal)
+                    }
+
+                    // Subtle hint when transcript doesn't exist yet
+                    if viewModel.transcriptionState.isNotStarted {
+                        Text("Record a memo to unlock AI insights")
+                            .font(.caption)
+                            .foregroundColor(.semantic(.textSecondary))
+                            .padding(.horizontal)
+                    }
+
+                    // Show Distill section only when a transcript is available
                     analysisSectionView
+
+                    // Collapsed transcript below Distill
+                    transcriptCollapsedView
                 }
                 .padding(.horizontal)
             }
@@ -111,6 +134,12 @@ struct MemoDetailView: View {
             viewModel.configure(with: memo)
             viewModel.onViewAppear()
         }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AnalysisCopyTriggered"))) { _ in
+            isTranscriptExpanded = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            viewModel.restoreAnalysisStateIfNeeded()
+        }
         .initialFocus {
             focusedElement = .playButton
         }
@@ -127,6 +156,7 @@ struct MemoDetailView: View {
         }
         .onChange(of: viewModel.analysisResult != nil) { _, hasResult in
             if hasResult {
+                HapticManager.shared.playProcessingComplete()
                 FocusManager.shared.announceAndFocus(
                     "AI analysis completed.",
                     delay: FocusManager.contentDelay
@@ -136,9 +166,6 @@ struct MemoDetailView: View {
             }
         }
         .handleErrorFocus($viewModel.error)
-        .onDisappear {
-            viewModel.onViewDisappear()
-        }
         .onTapGesture {
             // Dismiss title editing when tapping outside
             if viewModel.isRenamingTitle {
@@ -169,7 +196,11 @@ struct MemoDetailView: View {
     @State private var quickAddEvents: [EventsData.DetectedEvent] = []
     @State private var showQuickAddRemindersSheet: Bool = false
     @State private var quickAddReminders: [RemindersData.DetectedReminder] = []
-
+    
+    // Collapsed transcript + banners state
+    @State private var isTranscriptExpanded: Bool = false
+    @State private var dismissTranscriptionErrorBanner: Bool = false
+    
     @ViewBuilder
     private var languageBannerView: some View {
         if viewModel.showNonEnglishBanner {
@@ -182,7 +213,7 @@ struct MemoDetailView: View {
             .animation(.easeInOut(duration: 0.3), value: viewModel.showNonEnglishBanner)
         }
     }
-
+    
     @ViewBuilder
     private var headerInfoView: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -244,7 +275,7 @@ struct MemoDetailView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(viewModel.isRenamingTitle ? "Editing memo title" : "Memo: \(viewModel.currentMemoTitle), Duration: \(memo.durationString)")
     }
-
+    
     @ViewBuilder
     private var audioControlsView: some View {
         VStack(spacing: 16) {
@@ -282,7 +313,7 @@ struct MemoDetailView: View {
         .background(Color.semantic(.fillSecondary))
         .cornerRadius(12)
     }
-
+    
     @ViewBuilder
     private var transcriptionSectionView: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -290,7 +321,7 @@ struct MemoDetailView: View {
                 Text("Transcription")
                     .font(.headline)
                     .fontWeight(.semibold)
-
+                
                 Spacer()
                 if viewModel.transcriptionState.isFailed {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -311,7 +342,40 @@ struct MemoDetailView: View {
         .cornerRadius(12)
         .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
     }
-
+    
+    @ViewBuilder
+    private var transcriptCollapsedView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            DisclosureGroup(isExpanded: $isTranscriptExpanded) {
+                // Body
+                transcriptionStateView
+                    .padding(.top, 8)
+            } label: {
+                HStack(spacing: 8) {
+                    Text("Transcription")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    if viewModel.transcriptionState.isInProgress {
+                        LoadingIndicator(size: .small)
+                    } else if viewModel.transcriptionState.isFailed {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.semantic(.warning))
+                            .font(.body)
+                    } else if viewModel.transcriptionState.isCompleted {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.semantic(.success))
+                            .font(.body)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.semantic(.bgSecondary))
+        .cornerRadius(12)
+        .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
+    }
+    
     @ViewBuilder
     private var transcriptionStateView: some View {
         switch viewModel.transcriptionState {
@@ -366,7 +430,7 @@ struct MemoDetailView: View {
             failedTranscriptionView(error: error)
         }
     }
-
+    
     @ViewBuilder
     private func completedTranscriptionView(text: String) -> some View {
         if viewModel.transcriptionModerationFlagged {
@@ -415,7 +479,7 @@ struct MemoDetailView: View {
             }
         }
     }
-
+    
     @ViewBuilder
     private func failedTranscriptionView(error: String) -> some View {
         VStack(spacing: 12) {
@@ -460,7 +524,7 @@ struct MemoDetailView: View {
         .background(Color.semantic(.warning).opacity(0.05))
         .cornerRadius(8)
     }
-
+    
     @ViewBuilder
     private var analysisSectionView: some View {
         if viewModel.isTranscriptionCompleted, let transcriptText = viewModel.transcriptionText {
