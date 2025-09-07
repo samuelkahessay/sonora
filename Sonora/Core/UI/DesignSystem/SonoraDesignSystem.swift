@@ -137,8 +137,7 @@ enum SonoraDesignSystem {
             .monospacedDigit()
         
         /// Recording timer display (Large title, bold, monospaced)
-        static let timerDisplay = Font.system(.largeTitle, design: .rounded)
-            .weight(.bold)
+        static let timerDisplay = Font(nyUIFont(size: 34, textStyle: .largeTitle, weight: .semibold))
             .monospacedDigit()
         
         // MARK: - UI Elements
