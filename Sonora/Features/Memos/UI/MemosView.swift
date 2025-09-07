@@ -26,7 +26,13 @@ struct MemosView: View {
     /// Group memos by time periods for contextual headers (cached)
     private func computeGroupedMemos() -> [MemoSection] {
         let signState = Signpost.beginInterval("MemoListGrouping")
-        defer { Signpost.endInterval("MemoListGrouping", signState) }
+        let t0 = PerformanceMetricsService.shared.mark()
+        defer {
+            Signpost.endInterval("MemoListGrouping", signState)
+            PerformanceMetricsService.shared.recordDuration(name: "MemoListGrouping", start: t0, extras: [
+                "totalMemos": String(viewModel.memos.count)
+            ])
+        }
 
         let calendar = Calendar.current
         let now = Date()

@@ -234,7 +234,8 @@ export const EventsJsonSchema = {
             sourceText: { type: 'string' },
             memoId: { type: ['string', 'null'] }
           },
-          required: ['id', 'title', 'startDate', 'endDate', 'confidence', 'sourceText'],
+          // Responses API requires required[] to include every key in properties.
+          required: ['id', 'title', 'startDate', 'endDate', 'location', 'participants', 'confidence', 'sourceText', 'memoId'],
           additionalProperties: false
         }
       }
@@ -262,7 +263,8 @@ export const RemindersJsonSchema = {
             sourceText: { type: 'string' },
             memoId: { type: ['string', 'null'] }
           },
-          required: ['id', 'title', 'dueDate', 'priority', 'confidence', 'sourceText'],
+          // Responses API requires required[] to include every key in properties.
+          required: ['id', 'title', 'dueDate', 'priority', 'confidence', 'sourceText', 'memoId'],
           additionalProperties: false
         }
       }

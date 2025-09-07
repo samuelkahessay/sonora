@@ -3,7 +3,19 @@ import EventKit
 
 struct EventConfirmationView: View {
     let detectedEvents: [EventsData.DetectedEvent]
-    init(detectedEvents: [EventsData.DetectedEvent]) { self.detectedEvents = detectedEvents }
+    init(detectedEvents: [EventsData.DetectedEvent]) {
+        self.detectedEvents = detectedEvents
+        // Precompute editable state so rows render immediately
+        var map: [String: EditableEvent] = [:]
+        var defaults = Set<String>()
+        for ev in detectedEvents {
+            map[ev.id] = EditableEvent(from: ev)
+            if ev.confidence >= 0.8 { defaults.insert(ev.id) }
+        }
+        _editableEvents = State(initialValue: map)
+        let initialSelection = !defaults.isEmpty ? defaults : Set(detectedEvents.map { $0.id })
+        _selectedEventIds = State(initialValue: initialSelection)
+    }
 
     @SwiftUI.Environment(\.diContainer) private var container: DIContainer
     @SwiftUI.Environment(\.dismiss) private var dismiss: DismissAction
@@ -104,25 +116,30 @@ struct EventConfirmationView: View {
 
     private func loadData() async {
         // Build editable copies and default selections
-        var map: [String: EditableEvent] = [:]
-        var defaults = Set<String>()
-        for ev in detectedEvents {
-            map[ev.id] = EditableEvent(from: ev)
-            if ev.confidence >= 0.8 { defaults.insert(ev.id) }
-        }
-        editableEvents = map
-        selectedEventIds = defaults.isEmpty ? Set(detectedEvents.map { $0.id }) : defaults
+        // Already precomputed in init; retain in case of future changes
+        // Ensure any UI mutations are on MainActor
+        await MainActor.run {}
 
         do {
-            // Request permission and fetch calendars
-            _ = try await container.eventKitPermissionService().requestCalendarAccess()
+            // Refresh permission state and only request if needed
+            let perm = container.eventKitPermissionService()
+            await perm.checkCalendarPermission(ignoreCache: true)
+            if perm.calendarPermissionState.canRequest {
+                _ = try await perm.requestCalendarAccess()
+                // Allow permission state to stabilize to prevent race condition
+                try await Task.sleep(nanoseconds: 200_000_000) // 200ms
+                // Re-check permission state after stabilization
+                await perm.checkCalendarPermission(ignoreCache: true)
+            }
+
             let cals = try await container.eventKitRepository().getCalendars()
-            calendars = cals
-            if selectedCalendar == nil {
-                selectedCalendar = try await container.eventKitRepository().getDefaultCalendar() ?? cals.first
+            let def = try await container.eventKitRepository().getDefaultCalendar() ?? cals.first
+            await MainActor.run {
+                calendars = cals
+                if selectedCalendar == nil { selectedCalendar = def }
             }
         } catch {
-            errorMessage = error.localizedDescription
+            await MainActor.run { errorMessage = error.localizedDescription }
         }
     }
 

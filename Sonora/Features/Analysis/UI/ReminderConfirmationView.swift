@@ -3,7 +3,19 @@ import EventKit
 
 struct ReminderConfirmationView: View {
     let detectedReminders: [RemindersData.DetectedReminder]
-    init(detectedReminders: [RemindersData.DetectedReminder]) { self.detectedReminders = detectedReminders }
+    init(detectedReminders: [RemindersData.DetectedReminder]) {
+        self.detectedReminders = detectedReminders
+        // Precompute editable state so rows render immediately
+        var m: [String: EditableReminder] = [:]
+        var defaults: Set<String> = []
+        for r in detectedReminders {
+            m[r.id] = EditableReminder(from: r)
+            if r.confidence >= 0.8 { defaults.insert(r.id) }
+        }
+        _editable = State(initialValue: m)
+        let initialSelection = !defaults.isEmpty ? defaults : Set(detectedReminders.map { $0.id })
+        _selectedIds = State(initialValue: initialSelection)
+    }
 
     @SwiftUI.Environment(\.diContainer) private var container: DIContainer
     @SwiftUI.Environment(\.dismiss) private var dismiss: DismissAction
@@ -81,24 +93,27 @@ struct ReminderConfirmationView: View {
 
     private func loadData() async {
         // Editable copies & defaults: preselect high confidence
-        var m: [String: EditableReminder] = [:]
-        var defaults: Set<String> = []
-        for r in detectedReminders {
-            m[r.id] = EditableReminder(from: r)
-            if r.confidence >= 0.8 { defaults.insert(r.id) }
-        }
-        editable = m
-        selectedIds = defaults.isEmpty ? Set(detectedReminders.map { $0.id }) : defaults
+        await MainActor.run {}
 
         do {
-            _ = try await container.eventKitPermissionService().requestReminderAccess()
+            let perm = container.eventKitPermissionService()
+            await perm.checkReminderPermission(ignoreCache: true)
+            if perm.reminderPermissionState.canRequest {
+                _ = try await perm.requestReminderAccess()
+                // Allow permission state to stabilize to prevent race condition
+                try await Task.sleep(nanoseconds: 200_000_000) // 200ms
+                // Re-check permission state after stabilization
+                await perm.checkReminderPermission(ignoreCache: true)
+            }
+
             let fetched = try await container.eventKitRepository().getReminderLists()
-            lists = fetched
-            if selectedList == nil {
-                selectedList = try await container.eventKitRepository().getDefaultReminderList() ?? fetched.first
+            let def = try await container.eventKitRepository().getDefaultReminderList() ?? fetched.first
+            await MainActor.run {
+                lists = fetched
+                if selectedList == nil { selectedList = def }
             }
         } catch {
-            errorMessage = error.localizedDescription
+            await MainActor.run { errorMessage = error.localizedDescription }
         }
     }
 

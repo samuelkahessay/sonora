@@ -40,6 +40,7 @@ struct SonoraApp: App {
     init() {
         // Signpost: begin app startup interval
         Signpost.beginAppStartup()
+        PerformanceMetricsService.shared.startSession()
         // Configure DI and register event handlers before any views initialize
         DIContainer.shared.configure()
         print("🚀 SonoraApp: DIContainer configured with shared services (App init)")
@@ -134,6 +135,7 @@ struct SonoraApp: App {
                     // Signpost: end app startup when first ContentView appears
                     Signpost.endAppStartup()
                     Signpost.event("ContentViewVisible")
+                    PerformanceMetricsService.shared.recordStartupCompleted()
                 }
                 // Debug handler validation disabled by default (kept for manual testing)
                 .onOpenURL { url in

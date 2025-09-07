@@ -130,8 +130,12 @@ final class EventKitRepositoryImpl: EventKitRepository {
             }
             // If cache is empty but we now have access, refetch to avoid sticky empty cache
             let status = EKEventStore.authorizationStatus(for: .event)
-            if status == .denied || status == .restricted || status == .notDetermined {
-                logger.debug("Returning cached calendars (0 items) - authorization not sufficient to refetch",
+            if status == .notDetermined {
+                logger.debug("Permission state transitional (.notDetermined), fetching fresh calendars without caching empty result",
+                            category: .eventkit, context: LogContext())
+                // Don't return cached empty result when permission is transitional - proceed to fresh fetch
+            } else if status == .denied || status == .restricted {
+                logger.debug("Returning cached calendars (0 items) - authorization denied/restricted",
                             category: .eventkit, context: LogContext())
                 return cached
             }
@@ -177,8 +181,12 @@ final class EventKitRepositoryImpl: EventKitRepository {
             }
             // If cache is empty but we now have access, refetch
             let status = EKEventStore.authorizationStatus(for: .reminder)
-            if status == .denied || status == .restricted || status == .notDetermined {
-                logger.debug("Returning cached reminder lists (0 items) - authorization not sufficient to refetch",
+            if status == .notDetermined {
+                logger.debug("Permission state transitional (.notDetermined), fetching fresh reminder lists without caching empty result",
+                            category: .eventkit, context: LogContext())
+                // Don't return cached empty result when permission is transitional - proceed to fresh fetch
+            } else if status == .denied || status == .restricted {
+                logger.debug("Returning cached reminder lists (0 items) - authorization denied/restricted",
                             category: .eventkit, context: LogContext())
                 return cached
             }

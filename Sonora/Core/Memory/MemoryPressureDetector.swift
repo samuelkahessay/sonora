@@ -30,11 +30,21 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
     
     private struct DetectionConfig {
         static let monitoringInterval: TimeInterval = 15.0 // Check every 15 seconds
-        static let memoryPressureThreshold: Double = 150.0 // MB
-        static let criticalMemoryThreshold: Double = 200.0 // MB
+        // Static floors to avoid thresholds that are too low on newer devices
+        static let minPressureMB: Double = 250.0
+        static let minCriticalMB: Double = 500.0
         static let lowStorageThreshold: Double = 1.0 // GB
         static let batteryLowThreshold: Float = 0.2 // 20%
-        static let thermalWarningThreshold: Int = 1 // .nominal = 0, .fair = 1, .serious = 2, .critical = 3
+        static let thermalWarningThreshold: Int = 2 // Only warn at .serious or higher
+    }
+
+    /// Compute dynamic thresholds based on device RAM (with sensible floors)
+    private func dynamicThresholds() -> (pressure: Double, critical: Double) {
+        let totalMB = Double(ProcessInfo.processInfo.physicalMemory) / (1024.0 * 1024.0)
+        // Pressure at ~8% of RAM, Critical at ~15% of RAM, bounded by floors
+        let pressure = max(DetectionConfig.minPressureMB, totalMB * 0.08)
+        let critical = max(DetectionConfig.minCriticalMB, totalMB * 0.15)
+        return (pressure, critical)
     }
     
     // MARK: - Published Properties
@@ -117,12 +127,14 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
         let metrics = currentMemoryMetrics
         var recommendations = ResourceRecommendations()
         
+        let thresholds = dynamicThresholds()
+
         // Memory-based recommendations
-        if metrics.memoryUsageMB > DetectionConfig.criticalMemoryThreshold {
+        if metrics.memoryUsageMB > thresholds.critical {
             recommendations.shouldAggressivelyCleanup = true
             recommendations.shouldUnloadCaches = true
             recommendations.shouldReduceQuality = true
-        } else if metrics.memoryUsageMB > DetectionConfig.memoryPressureThreshold {
+        } else if metrics.memoryUsageMB > thresholds.pressure {
             recommendations.shouldUnloadCaches = true
             recommendations.shouldReduceQuality = true
         }
@@ -197,8 +209,9 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
         currentMemoryMetrics = metrics
         
         // Determine memory pressure based on multiple factors
-        let memoryPressure = metrics.memoryUsageMB > DetectionConfig.memoryPressureThreshold
-        let thermalPressure = metrics.thermalState.rawValue >= 2 // .serious or .critical
+        let thresholds = dynamicThresholds()
+        let memoryPressure = metrics.memoryUsageMB > thresholds.pressure
+        let thermalPressure = metrics.thermalState.rawValue >= DetectionConfig.thermalWarningThreshold
         let storagePressure = metrics.availableStorageGB < DetectionConfig.lowStorageThreshold
         let batteryPressure = metrics.batteryLevel >= 0 && metrics.batteryLevel < DetectionConfig.batteryLowThreshold
         
@@ -210,7 +223,8 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
         
         // Log significant changes
         if newPressureState {
-            logger.debug("🧠 MemoryPressureDetector: Pressure factors - Memory: \(memoryPressure), Thermal: \(thermalPressure), Storage: \(storagePressure), Battery: \(batteryPressure)")
+            let thresholds = dynamicThresholds()
+            logger.debug("🧠 MemoryPressureDetector: Pressure factors - Memory: \(memoryPressure) (\(String(format: "%.0f", metrics.memoryUsageMB))MB > \(String(format: "%.0f", thresholds.pressure))MB), Thermal: \(thermalPressure), Storage: \(storagePressure), Battery: \(batteryPressure)")
         }
     }
     
@@ -318,9 +332,10 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
         var stressScore = 0
         
         // Memory stress
-        if metrics.memoryUsageMB > DetectionConfig.criticalMemoryThreshold {
+        let thresholds = dynamicThresholds()
+        if metrics.memoryUsageMB > thresholds.critical {
             stressScore += 3
-        } else if metrics.memoryUsageMB > DetectionConfig.memoryPressureThreshold {
+        } else if metrics.memoryUsageMB > thresholds.pressure {
             stressScore += 2
         }
         
