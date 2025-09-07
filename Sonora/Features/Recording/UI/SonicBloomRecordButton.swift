@@ -341,7 +341,7 @@ extension SonicBloomRecordButton {
     var accessibilityHint: String {
         isRecording 
         ? "Double tap to stop the current recording and save your voice memo"
-        : "Double tap to begin recording a voice memo for up to 60 seconds"
+        : "Double tap to begin recording a voice memo for up to 3 minutes"
     }
     
     /// Apply accessibility modifiers
