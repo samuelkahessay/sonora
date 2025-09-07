@@ -109,6 +109,9 @@ struct MemoRowView: View {
         
         /// Accent line spacing - proportional to iconToTextSpacing for visual balance
         static let accentLineSpacing: CGFloat = 8
+
+        /// Reserved gutter width when in edit mode for selection control
+        static let editGutterWidth: CGFloat = 44
     }
     
     // MARK: - Animation Configuration
@@ -189,17 +192,17 @@ struct MemoRowView: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            // Reserved gutter for edit mode selection control to prevent layout jumps
-            Color.clear
-                .frame(width: viewModel.isEditMode ? 44 : 0)
-                .animation(.spring(response: 0.25), value: viewModel.isEditMode)
-
-            // Selection control enters with smooth leading transition
-            if viewModel.isEditMode {
-                selectionIndicator
-                    .frame(width: 44, alignment: .leading)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+            // Single reserved gutter for the selection control.
+            // Using an overlay avoids adding extra width beyond the gutter itself.
+            ZStack(alignment: .leading) {
+                Color.clear
+                if viewModel.isEditMode {
+                    selectionIndicator
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
             }
+            .frame(width: viewModel.isEditMode ? Layout.editGutterWidth : 0)
+            .animation(.spring(response: 0.25), value: viewModel.isEditMode)
 
             // Main card content
             SonoraMemocCard(memo: memo, viewModel: viewModel)
