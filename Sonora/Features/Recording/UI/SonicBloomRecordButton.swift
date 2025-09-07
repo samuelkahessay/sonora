@@ -23,10 +23,10 @@ struct SonicBloomRecordButton: View {
     let action: () -> Void
     
     // Animation state
-    @State private var waveformPhase: CGFloat = 0
+    @SwiftUI.Environment(\.accessibilityReduceMotion) private var reduceMotion: Bool
+    @State private var isAnimating: Bool = false
     @State private var bloomScale: CGFloat = 1.0
     @State private var pulseOpacity: Double = 0.0
-    @State private var innerRotation: Double = 0
     @State private var bloomEvent: BloomEvent = BloomEvent(id: UUID(), style: .expand)
     
     // Constants
@@ -69,11 +69,12 @@ struct SonicBloomRecordButton: View {
             }
         }
         .onAppear {
-            startContinuousAnimations()
+            // Start value-driven animations tied to a single trigger
+            isAnimating = true
         }
         .onDisappear {
-            phaseTask?.cancel()
-            phaseTask = nil
+            // Stop animations to save battery when off-screen
+            isAnimating = false
         }
     }
     
@@ -131,7 +132,7 @@ struct SonicBloomRecordButton: View {
             ForEach(0..<waveformCount, id: \.self) { index in
                 WaveformPetal(
                     angle: Double(index) * (360.0 / Double(waveformCount)),
-                    phase: waveformPhase,
+                    phase: reduceMotion ? 0 : (isAnimating ? .pi * 2 : 0),
                     isActive: isRecording,
                     petalIndex: index
                 )
@@ -148,7 +149,21 @@ struct SonicBloomRecordButton: View {
                 .blendMode(isRecording ? .overlay : .normal)
             }
         }
-        .rotationEffect(.degrees(innerRotation))
+        // Smooth, display-synced rotation for the bloom container
+        .rotationEffect(.degrees(reduceMotion ? 0 : (isAnimating ? 360 : 0)))
+        .animation(
+            reduceMotion
+            ? .default
+            : .linear(duration: 20.0).repeatForever(autoreverses: false),
+            value: isAnimating
+        )
+        // Drive the petal phase animation via the same trigger
+        .animation(
+            reduceMotion
+            ? .default
+            : .linear(duration: 3.0).repeatForever(autoreverses: false),
+            value: isAnimating
+        )
         .opacity(isRecording ? 1.0 : 0.7)
     }
     
@@ -166,11 +181,15 @@ struct SonicBloomRecordButton: View {
                 Image(systemName: "mic.fill")
                     .font(.system(size: 48, weight: .medium))
                     .foregroundColor(Color.textOnColored)
-                    .scaleEffect(1.0 + sin(waveformPhase * 0.5) * 0.05) // Subtle breathing
+                    .scaleEffect(reduceMotion ? 1.0 : (isAnimating ? 1.05 : 1.0))
                     .transition(.scale.combined(with: .opacity))
             }
         }
         .animation(SonoraDesignSystem.Animation.bloomTransition, value: isRecording)
+        .animation(
+            reduceMotion ? .default : SonoraDesignSystem.Animation.breathing,
+            value: isAnimating
+        )
     }
     
     /// Inner geometric pattern that emerges during recording
@@ -183,9 +202,17 @@ struct SonicBloomRecordButton: View {
                         .fill(Color.clear)
                         .frame(width: 60, height: 2)
                         .offset(y: -20)
-                        .rotationEffect(.degrees(Double(index) * 60 + innerRotation * 0.5))
+                        // Inner geometry rotates at half the outer rate previously
+                        .rotationEffect(.degrees(Double(index) * 60))
                 }
             }
+            .rotationEffect(.degrees(reduceMotion ? 0 : (isAnimating ? 180 : 0)))
+            .animation(
+                reduceMotion
+                ? .default
+                : .linear(duration: 20.0).repeatForever(autoreverses: false),
+                value: isAnimating
+            )
             .transition(.scale.combined(with: .opacity))
             .animation(SonoraDesignSystem.Animation.gentleSpring.delay(0.2), value: isRecording)
         }
@@ -231,28 +258,7 @@ struct SonicBloomRecordButton: View {
         }
     }
     
-    /// Start continuous background animations
-    private func startContinuousAnimations() {
-        // Continuous waveform phase animation on main actor; cancel on disappear
-        phaseTask?.cancel()
-        phaseTask = Task { @MainActor in
-            while !Task.isCancelled {
-                waveformPhase += 0.02
-                if waveformPhase > .pi * 2 { waveformPhase = 0 }
-                try? await Task.sleep(nanoseconds: 16_000_000) // ~60fps
-            }
-        }
-        
-        // Continuous inner rotation
-        innerRotation = 0
-        withAnimation(
-            Animation.linear(duration: 20.0).repeatForever(autoreverses: false)
-        ) {
-            innerRotation = 360
-        }
-    }
-    
-    @State private var phaseTask: Task<Void, Never>? = nil
+    // No manual frame loop; animations are value-driven and display-synced
 }
 
 // MARK: - Waveform Petal Shape
@@ -260,9 +266,15 @@ struct SonicBloomRecordButton: View {
 /// Individual petal shape that forms the waveform bloom pattern
 struct WaveformPetal: Shape {
     let angle: Double
-    let phase: CGFloat
+    var phase: CGFloat // animatable
     let isActive: Bool
     let petalIndex: Int
+    
+    // Animate smoothly by exposing `phase` as animatable data
+    var animatableData: CGFloat {
+        get { phase }
+        set { phase = newValue }
+    }
     
     func path(in rect: CGRect) -> Path {
         var path = Path()
