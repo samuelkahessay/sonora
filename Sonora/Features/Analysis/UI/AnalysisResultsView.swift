@@ -7,8 +7,8 @@ struct AnalysisResultsView: View {
     let envelope: Any
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+        // Avoid nested ScrollViews; parent provides scrolling.
+        VStack(alignment: .leading, spacing: 16) {
                 // Header with model info
                 if let env = envelope as? AnalyzeEnvelope<DistillData> {
                     HeaderInfoView(envelope: env)
@@ -67,8 +67,7 @@ struct AnalysisResultsView: View {
                     }
                 }
             }
-            .padding()
-        }
+        .padding()
     }
 
     private func isModerationFlagged(_ anyEnvelope: Any) -> Bool {
@@ -78,7 +77,9 @@ struct AnalysisResultsView: View {
         if let e = anyEnvelope as? AnalyzeEnvelope<TodosData> { return e.moderation?.flagged ?? false }
         return false
     }
+
 }
+
 
 struct HeaderInfoView<T: Codable & Sendable>: View {
     let envelope: AnalyzeEnvelope<T>

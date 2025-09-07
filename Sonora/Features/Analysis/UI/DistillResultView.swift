@@ -315,7 +315,8 @@ struct DistillResultView: View {
                     .scaleEffect(x: 0.75, anchor: .leading)
             }
         }
-        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: UUID())
+        .redacted(reason: .placeholder)
+        .frame(minHeight: 130)
     }
     
     @ViewBuilder
@@ -350,7 +351,8 @@ struct DistillResultView: View {
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: UUID())
+        .redacted(reason: .placeholder)
+        .frame(minHeight: 180)
     }
     
     @ViewBuilder
@@ -378,7 +380,8 @@ struct DistillResultView: View {
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: UUID())
+        .redacted(reason: .placeholder)
+        .frame(minHeight: 120)
     }
     
     @ViewBuilder
@@ -425,7 +428,8 @@ struct DistillResultView: View {
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: UUID())
+        .redacted(reason: .placeholder)
+        .frame(minHeight: 180)
     }
     
     // MARK: - Performance Info

@@ -144,9 +144,11 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
       }
 
       if (!response.ok) {
-        console.error('OpenAI error', data);
+        // Avoid logging upstream bodies; emit minimal error context
+        const message = data?.error?.message || data?.message || 'transcription failed';
+        console.error('OpenAI transcription error:', { status: response.status, message });
         return res.status(response.status).json({ 
-          error: data.error?.message || 'transcription failed' 
+          error: message 
         });
       }
     }

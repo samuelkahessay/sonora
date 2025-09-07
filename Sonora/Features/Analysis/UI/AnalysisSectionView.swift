@@ -78,7 +78,8 @@ struct AnalysisSectionView: View {
                        let partialData = viewModel.partialDistillData,
                        let progress = viewModel.distillProgress {
                         DistillResultView(partialData: partialData, progress: progress)
-                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                            // Avoid scale transitions that can cause visual overlap with siblings
+                            .transition(.opacity)
                             .animation(.easeInOut(duration: 0.3), value: progress.completedComponents)
                     } else if let result = viewModel.analysisResult,
                               let envelope = viewModel.analysisEnvelope {
@@ -93,6 +94,8 @@ struct AnalysisSectionView: View {
                     AIDisclaimerView.analysis()
                         .accessibilityLabel("AI disclaimer: Analysis results may contain inaccuracies or subjective interpretations")
                 }
+                // Do not animate container height when toggling analyzing state
+                .animation(nil, value: viewModel.isAnalyzing)
                 .accessibilityElement(children: .contain)
             }
         }

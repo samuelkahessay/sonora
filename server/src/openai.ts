@@ -48,7 +48,7 @@ function logResponseDetails(data: any, startTime: number, requestParams: any) {
       }
     });
     
-    // Log full response structure in development
+    // Log full response structure in development only
     console.log('📋 Full Response Structure:', JSON.stringify(data, null, 2));
   }
   
@@ -133,11 +133,14 @@ export async function createChatJSON({
       
       if (!response.ok) {
         const text = await response.text().catch(() => '');
-        const errorMessage = `GPT-5-nano Responses API error: ${response.status} - ${text || 'Unknown error'}`;
+        // Do not emit upstream response bodies to logs in production
+        const isDev = process.env.NODE_ENV === 'development';
+        const errorMessage = `GPT-5-nano Responses API error: ${response.status} - ${response.statusText}`;
         console.error('🚨 Responses API Error:', {
           status: response.status,
           statusText: response.statusText,
-          responseBody: text,
+          // Only include upstream body in development to avoid leaking content
+          ...(isDev ? { responseBody: text } : { bodyLength: text ? text.length : 0 }),
           requestParams: {
             model: requestBody.model,
             reasoningEffort: requestBody.reasoning?.effort,
@@ -232,9 +235,18 @@ export async function createChatJSON({
           reasoningEffort: reasoningEffort,
           verbosity: verbosity
         };
-        
+        const isDev = process.env.NODE_ENV === 'development';
         console.error('🚨 GPT-5-nano Response Parsing Failed:', debugInfo);
-        console.error('📋 Full response data:', JSON.stringify(data, null, 2));
+        // Avoid logging full model output in production; structure-only
+        if (isDev) {
+          console.error('📋 Full response data:', JSON.stringify(data, null, 2));
+        } else {
+          console.error('📋 Response redacted (production):', {
+            outputCount: Array.isArray(data?.output) ? data.output.length : 0,
+            hasUsage: !!data?.usage,
+            usageKeys: data?.usage ? Object.keys(data.usage) : []
+          });
+        }
         
         throw new Error(`No text content found in GPT-5-nano Responses API response. Debug info: ${JSON.stringify(debugInfo)}`);
       }
@@ -258,12 +270,17 @@ export async function createChatJSON({
             });
           }
         } catch (jsonError) {
-          console.error('🚨 JSON parsing failed after successful text extraction:', {
-            error: jsonError,
+          const isDev = process.env.NODE_ENV === 'development';
+          // Avoid logging extracted content in production
+          const payload: any = {
+            error: (jsonError as any)?.message || String(jsonError),
             textLength: text.length,
-            textPreview: text.substring(0, 200),
             schemaName: schema.name
-          });
+          };
+          if (isDev) {
+            payload.textPreview = text.substring(0, 200);
+          }
+          console.error('🚨 JSON parsing failed after successful text extraction:', payload);
           // Don't throw here - let the caller handle JSON parsing
         }
       }

@@ -872,6 +872,42 @@ August 30-31 marked the UI/UX maturity phase, implementing sophisticated feature
 
 ## 🎨 PHASE 7: DESIGN SYSTEM & BRAND IDENTITY (September 5, 2025)
 
+### Recent Updates (September 7, 2025)
+
+**[62d6b83]** `12 minutes ago` - **📝 Documentation Updates**
+- Updated docs to reflect new 3 minute time limit
+- Configuration documentation maintenance
+
+**[97288f0]** `24 minutes ago` - **⏱️ Extended Recording Limit**
+- Increased cloud recording limit from 1 minute to 3 minutes
+- Enhanced user recording capacity
+
+**[4e35f9f]** `30 minutes ago` - **🔗 Live Site Integration**
+- Updated placeholder TOS, Privacy Policy, and Support links with live sites
+- Production-ready legal documentation
+
+**[126fcc6]** `35 minutes ago` - **📱 Info.plist & EventKit Improvements**
+- Updated Info.plist configuration
+- Enhanced EventKit integration functionality
+
+**[a917bb4]** `30 hours ago` - **🏗️ DI Container Architecture**
+- DI Container split and performance instrumentation added
+- Enhanced dependency injection system
+
+**[9fdd51a]** `31 hours ago` - **🤖 AI Prompt Updates**
+- Updated cloud prompts for event and reminder detection
+- Improved AI analysis accuracy
+
+**[d9f22e6]** `31 hours ago` - **📅 Calendar Cache Fix**
+- Fixed stale/cached calendars issue
+- Enhanced EventKit reliability
+
+**[2d13717]** `31 hours ago` - **📋 App Store Preparation**
+- Added App Store submission guide
+- Updated README and created changelog
+- Implemented EventKit integration for Calendar and Reminder integration
+- Major documentation and integration milestone
+
 ### Performance & Testing Infrastructure
 
 **[31bc6f6]** `07:46` - **📅 EventKit Integration**
