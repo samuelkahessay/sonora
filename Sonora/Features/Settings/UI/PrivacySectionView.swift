@@ -3,8 +3,9 @@ import SwiftUI
 struct PrivacySectionView: View {
     @StateObject private var controller = PrivacyController()
 
-    private let privacyURL = URL(string: "https://sonora.app/privacy")!
-    private let termsURL = URL(string: "https://sonora.app/terms")!
+    private let privacyURL = URL(string: "https://samuelkahessay.github.io/sonora/privacy-policy.html")!
+    private let termsURL = URL(string: "https://samuelkahessay.github.io/sonora/terms-of-service.html")!
+    private let supportURL = URL(string: "https://samuelkahessay.github.io/sonora/support.html")!
 
     var body: some View {
         SettingsCard {
@@ -14,7 +15,6 @@ struct PrivacySectionView: View {
 
             // Links (stacked)
             VStack(spacing: Spacing.md) {
-                // TODO: Replace with real Privacy Policy link
                 Link(destination: privacyURL) {
                     label(icon: "hand.raised.fill", title: "Privacy Policy")
                 }
@@ -25,12 +25,21 @@ struct PrivacySectionView: View {
                     HapticManager.shared.playSelection()
                 }
                 
-                // TODO: Replace with real Terms of Use link
                 Link(destination: termsURL) {
-                    label(icon: "doc.text.fill", title: "Terms of Use")
+                    label(icon: "doc.text.fill", title: "Terms of Service")
                 }
-                .accessibilityLabel("Terms of Use")
-                .accessibilityHint("Double tap to open Terms of Use in your browser")
+                .accessibilityLabel("Terms of Service")
+                .accessibilityHint("Double tap to open Terms of Service in your browser")
+                .accessibilityAddTraits(.isLink)
+                .onTapGesture {
+                    HapticManager.shared.playSelection()
+                }
+
+                Link(destination: supportURL) {
+                    label(icon: "questionmark.circle.fill", title: "Support")
+                }
+                .accessibilityLabel("Support")
+                .accessibilityHint("Double tap to open Support in your browser")
                 .accessibilityAddTraits(.isLink)
                 .onTapGesture {
                     HapticManager.shared.playSelection()
