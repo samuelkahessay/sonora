@@ -22,7 +22,7 @@ export function buildPrompt(mode: string, transcript: string): { system: string;
         `Return JSON with these fields:\n` +
         `1. "summary": Brief 2-3 sentence overview\n` +
         `2. "action_items": Array of actionable tasks. Return empty array [] if none are mentioned. Format: [{"text":"...","priority":"high|medium|low"}]\n` +
-        `3. "key_themes": Array of 2-4 main themes/topics as strings\n` +
+        `3. "key_themes": List 2-4 concise theme labels (2-4 words each), e.g., ["User Experience", "Performance Optimization"]\n` +
         `4. "reflection_questions": Array of 2-3 insightful coaching questions to help the user think deeper\n` +
         `IMPORTANT: Always include action_items field. Use empty array [] if no clear tasks are mentioned.`;
       break;
@@ -38,8 +38,8 @@ export function buildPrompt(mode: string, transcript: string): { system: string;
       break;
     case 'distill-themes':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
-        `Identify 2-4 main themes or topics discussed in this voice memo.\n` +
-        `Return JSON: {"key_themes": ["theme1", "theme2", "theme3"]}`;
+        `Identify 2-4 themes using 2-4 word labels (concise, no sentences). Examples: "User Experience", "Performance Optimization".\n` +
+        `Return JSON: {"key_themes": ["Settings Simplification", "Model Selection", "Future Planning"]}`;
       break;
     case 'distill-reflection':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +

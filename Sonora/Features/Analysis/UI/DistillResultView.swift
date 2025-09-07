@@ -221,19 +221,26 @@ struct DistillResultView: View {
                     .foregroundColor(.semantic(.textPrimary))
             }
             
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], spacing: 8) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 120, maximum: .infinity), spacing: 10)],
+                spacing: 10
+            ) {
                 ForEach(themes, id: \.self) { theme in
                     Text(theme)
                         .font(.callout)
                         .foregroundColor(.semantic(.textPrimary))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity)
                         .background(Color.semantic(.brandPrimary).opacity(0.1))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 6)
+                            RoundedRectangle(cornerRadius: 8)
                                 .stroke(Color.semantic(.brandPrimary).opacity(0.3), lineWidth: 1)
                         )
-                        .cornerRadius(6)
+                        .cornerRadius(8)
+                        .accessibilityLabel("Theme: \(theme)")
                 }
             }
         }

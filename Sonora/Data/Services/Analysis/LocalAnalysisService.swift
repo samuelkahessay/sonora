@@ -337,7 +337,7 @@ final class LocalAnalysisService: ObservableObject, AnalysisServiceProtocol {
             Create a comprehensive analysis with these exact components:
             1. Summary: Write 2-3 sentences capturing the main message and purpose
             2. Action items: Extract specific tasks mentioned (write "No clear actions" if none)
-            3. Key themes: Identify 2-4 main topics or areas discussed
+            3. Key themes: List 2-4 concise theme labels (2-4 words each)
             4. Reflection questions: Suggest 2 thoughtful follow-up questions
             
             Format your response exactly like this:
@@ -522,10 +522,11 @@ final class LocalAnalysisService: ObservableObject, AnalysisServiceProtocol {
             Voice memo transcript:
             "\(truncated)"
             
-            Task: Identify 2-4 main topics, themes, or subject areas discussed.
-            List them in order of prominence or time spent discussing.
+            Task: Identify 2-4 themes using 2-4 word labels (e.g., "User Experience", "Performance Optimization").
+            Return concise labels only (no sentences). List in order of prominence.
             
-            THEMES: [Theme 1] | [Theme 2] | [Theme 3] | [Theme 4]
+            Format exactly like this:
+            THEMES: Settings Simplification | Model Selection | Future Planning
             """
             
         case .distillReflection:
