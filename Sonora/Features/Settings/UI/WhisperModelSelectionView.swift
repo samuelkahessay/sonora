@@ -179,6 +179,7 @@ private struct ModelRowView: View {
     let isSelected: Bool
     @ObservedObject var downloadManager: ModelDownloadManager
     let onSelect: () -> Void
+    @State private var showDeleteConfirm = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
@@ -253,7 +254,7 @@ private struct ModelRowView: View {
             .accessibilityHint("Double tap to select this model for local transcription")
             .accessibilityAddTraits(isSelected ? [.isSelected] : [])
             
-            // Installed badge + Download button
+            // Installed badge + actions
             HStack {
                 if downloadManager.getDownloadState(for: model.id) == .downloaded {
                     Text("Installed")
@@ -275,7 +276,24 @@ private struct ModelRowView: View {
                     .accessibilityHint("Deletes and re-downloads the model")
                 }
                 Spacer()
-                ModelDownloadButton(model: model, downloadManager: downloadManager)
+                if downloadManager.getDownloadState(for: model.id) == .downloaded {
+                    Button(role: .destructive, action: { showDeleteConfirm = true }) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.semantic(.error))
+                    .accessibilityHint("Removes the downloaded files to free storage")
+                } else {
+                    ModelDownloadButton(model: model, downloadManager: downloadManager)
+                }
+            }
+            .alert("Delete \(model.displayName)?", isPresented: $showDeleteConfirm) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    downloadManager.deleteModel(model.id)
+                }
+            } message: {
+                Text("This frees storage. You can download it again later.")
             }
         }
     }

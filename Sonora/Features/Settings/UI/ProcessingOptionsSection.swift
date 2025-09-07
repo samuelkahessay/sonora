@@ -6,6 +6,8 @@ import SwiftUI
 struct ProcessingOptionsSection: View {
     @StateObject private var appConfig = AppConfiguration.shared
     @State private var advancedExpanded = false
+    @StateObject private var whisperDownloadManager = DIContainer.shared.modelDownloadManager()
+    @StateObject private var localModelDownloadManager = LocalModelDownloadManager.shared
 
     enum ProcessingMode: String, CaseIterable {
         case cloud
@@ -97,6 +99,19 @@ struct ProcessingOptionsSection: View {
                         .toggleStyle(SwitchToggleStyle(tint: .semantic(.brandPrimary)))
                         .font(.caption)
                         .foregroundColor(.semantic(.textSecondary))
+
+                        // Compact model management (status + actions)
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("Models")
+                                .font(.subheadline)
+                                .foregroundColor(.semantic(.textSecondary))
+
+                            // Local transcription (WhisperKit)
+                            WhisperModelCompactRow(downloadManager: whisperDownloadManager)
+
+                            // Local analysis (Phi-4 Mini)
+                            LocalAnalysisModelCompactRow(appConfig: appConfig, manager: localModelDownloadManager)
+                        }
                     }
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
@@ -197,3 +212,155 @@ struct AIDisclosureMinimal: View {
     }
 }
 
+// MARK: - Compact Rows
+
+private struct WhisperModelCompactRow: View {
+    @State private var showingSelection = false
+    @State private var showDeleteConfirm = false
+    @ObservedObject var downloadManager: ModelDownloadManager
+
+    private var selected: WhisperModelInfo {
+        UserDefaults.standard.selectedWhisperModelInfo
+    }
+    private var state: ModelDownloadState { downloadManager.getDownloadState(for: selected.id) }
+    private var progress: Double { downloadManager.getDownloadProgress(for: selected.id) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack(spacing: Spacing.md) {
+                Label("Local Transcription", systemImage: "brain.head.profile")
+                    .font(.subheadline)
+                Spacer()
+                Button("Manage") { showingSelection = true }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            }
+            HStack(spacing: Spacing.sm) {
+                Text(selected.displayName)
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textPrimary))
+                Text(selected.size)
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+                Spacer()
+                // Inline action button reflecting state
+                inlineStatus
+            }
+            if state == .downloading {
+                ProgressView(value: progress)
+                    .tint(.semantic(.brandPrimary))
+            }
+        }
+        .sheet(isPresented: $showingSelection) { WhisperModelSelectionView() }
+    }
+
+    @ViewBuilder private var inlineStatus: some View {
+        switch state {
+        case .notDownloaded:
+            Button(action: { downloadManager.downloadModel(selected.id) }) {
+                Label("Download", systemImage: "arrow.down.circle")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        case .downloading:
+            Button(action: { downloadManager.cancelDownload(for: selected.id) }) {
+                Label("Cancel", systemImage: "xmark.circle")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        case .downloaded:
+            HStack(spacing: Spacing.sm) {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill").foregroundColor(.semantic(.success))
+                    Text("Ready").font(.caption).foregroundColor(.semantic(.success))
+                }
+                Button(role: .destructive, action: { showDeleteConfirm = true }) {
+                    Label("Delete", systemImage: "trash")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(.semantic(.error))
+            }
+            .alert("Delete \(selected.displayName)?", isPresented: $showDeleteConfirm) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    downloadManager.deleteModel(selected.id)
+                }
+            } message: {
+                Text("This frees storage. You can download it again later.")
+            }
+        case .failed:
+            Button(action: { downloadManager.retryDownload(for: selected.id) }) {
+                Label("Retry", systemImage: "arrow.clockwise.circle")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        case .stale:
+            Button(action: { downloadManager.forceRetryDownload(for: selected.id) }) {
+                Label("Refresh", systemImage: "exclamationmark.triangle")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+    }
+}
+
+private struct LocalAnalysisModelCompactRow: View {
+    @ObservedObject var appConfig: AppConfiguration
+    @ObservedObject var manager: LocalModelDownloadManager
+    @State private var presentManage = false
+
+    private var model: LocalModel {
+        LocalModel(rawValue: appConfig.selectedLocalModel) ?? .defaultModel
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack(spacing: Spacing.md) {
+                Label("Local Analysis", systemImage: "cpu")
+                    .font(.subheadline)
+                Spacer()
+                NavigationLink(destination: ModelDownloadView(), isActive: $presentManage) { EmptyView() }
+                    .hidden()
+                Button("Manage") { presentManage = true }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            }
+            HStack(spacing: Spacing.sm) {
+                Text(model.displayName)
+                    .font(.caption)
+                Text(model.approximateSize)
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+                Spacer()
+                inlineStatus
+            }
+            if manager.isDownloading(model) {
+                ProgressView(value: Double(manager.downloadProgress(for: model)))
+                    .tint(.semantic(.brandPrimary))
+            }
+        }
+    }
+
+    @ViewBuilder private var inlineStatus: some View {
+        if manager.isModelReady(model) {
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark.circle.fill").foregroundColor(.semantic(.success))
+                Text("Ready").font(.caption).foregroundColor(.semantic(.success))
+            }
+        } else if manager.isDownloading(model) {
+            Button(action: { manager.cancelDownload(for: model) }) {
+                Label("Cancel", systemImage: "xmark.circle")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        } else {
+            Button(action: { manager.downloadModel(model) }) {
+                Label("Download", systemImage: "arrow.down.circle")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .disabled(!model.isDeviceCompatible)
+        }
+    }
+}
