@@ -6,220 +6,145 @@ import AppIntents
 struct SonoraLiveActivityLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: SonoraLiveActivityAttributes.self) { context in
-            // Lock Screen and Notification Display - Larger, more prominent
-            VStack(alignment: .leading, spacing: 12) {
-                // Header row with recording indicator and stop button
-                HStack(alignment: .center, spacing: 16) {
-                    // Recording indicator with animation
-                    HStack(alignment: .center, spacing: 10) {
-                        Image(systemName: context.state.isCountdown ? "hourglass.circle.fill" : "mic.circle.fill")
-                            .font(.title)
-                            .foregroundStyle(.white)
-                            .symbolEffect(.pulse, options: .repeating, value: !context.state.isCountdown)
-                            .frame(width: 28, height: 28)
-                        
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(context.state.memoTitle)
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.white)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                            
-                            Text(context.state.isCountdown ? "Auto-stop countdown" : "Live")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.white.opacity(0.8))
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    // Wrap the visual pill in a Button with the StopRecordingIntent
-                    Button(intent: StopRecordingIntent()) {
-                        HStack(alignment: .center, spacing: 8) {
-                            Image(systemName: "stop.circle.fill")
-                                .font(.system(size: 18, weight: .bold))
-                            Text("Stop")
-                                .font(.system(size: 16, weight: .bold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(.red.gradient)
-                                .shadow(color: .red.opacity(0.4), radius: 4, x: 0, y: 2)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 24)
-                                .stroke(.white.opacity(0.2), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain) // Use plain style to avoid system styling interfering with our custom look
-                }
-                
-                // Large monospace timer display
-                HStack(alignment: .center, spacing: 8) {
-                    // Recording pulse indicator
-                    Circle()
-                        .fill(.red)
-                        .frame(width: 12, height: 12)
-                        .opacity(context.state.isCountdown ? 0.0 : 0.9)
-                        .animation(.easeInOut(duration: 1.0).repeatForever(), value: !context.state.isCountdown)
-                    
-                    // Large monospace timer
-                    Text(timerString(from: context.state.startTime, isCountdown: context.state.isCountdown, remaining: context.state.remainingTime))
-                        .font(.system(size: 24, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.white)
-                        .tracking(1.0)
-                    
-                    Spacer()
-                    
-                    // Mini waveform animation
-                    HStack(alignment: .center, spacing: 3) {
-                        ForEach(0..<5, id: \.self) { index in
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(.white.opacity(0.7))
-                                .frame(width: 4, height: CGFloat.random(in: 8...16))
-                                .animation(
-                                    .easeInOut(duration: 0.8)
-                                    .repeatForever()
-                                    .delay(Double(index) * 0.15),
-                                    value: !context.state.isCountdown
-                                )
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 18)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                .blue,
-                                .blue.opacity(0.8)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 4)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(.white.opacity(0.15), lineWidth: 1)
-                    )
-            )
-            .activityBackgroundTint(.clear)
-            .activitySystemActionForegroundColor(.white)
-            // **FIX**: Change the deep link to a neutral "open" action
-            .widgetURL(URL(string: "sonora://open"))
+            // Lock Screen and Notification display
+            PremiumLiveActivityView(context: context)
+                .activityBackgroundTint(.clear)
+                .activitySystemActionForegroundColor(Color.semantic(.textPrimary))
+                .widgetURL(URL(string: "sonora://open"))
 
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded view - full recording interface
+                // Expanded
                 DynamicIslandExpandedRegion(.leading) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(alignment: .center, spacing: 6) {
-                            Image(systemName: context.state.isCountdown ? "hourglass.circle.fill" : "mic.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(context.state.isCountdown ? .orange : .red)
-                                .symbolEffect(.pulse, options: .repeating, value: !context.state.isCountdown)
-                            
-                            Text("Recording")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.primary)
-                        }
+                    HStack(spacing: 6) {
+                        Image(systemName: context.state.isCountdown ? "hourglass.circle.fill" : "mic.fill")
+                            .font(.title3)
+                            .foregroundStyle(Color.semantic(.brandPrimary))
+                            .symbolEffect(.pulse, options: .repeating, value: !context.state.isCountdown)
+                        Text("SONORA")
+                            .font(.caption.smallCaps())
+                            .foregroundStyle(Color.semantic(.textSecondary))
                     }
                 }
-                
                 DynamicIslandExpandedRegion(.trailing) {
-                    // **FIX**: Add an explicit stop button for the expanded island view
                     Button(intent: StopRecordingIntent()) {
-                        Label("Stop", systemImage: "stop.circle.fill")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
+                        Text("Stop")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.semantic(.textOnColored))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(Color.semantic(.brandSecondary)))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.red)
+                    .buttonStyle(.plain)
                 }
-                
                 DynamicIslandExpandedRegion(.bottom) {
-                    HStack(alignment: .center, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(context.state.memoTitle)
-                                .font(.footnote)
-                                .fontWeight(.medium)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                                .foregroundStyle(.primary)
-                            
-                            // **FIX**: Updated text to be more accurate
-                            Text("Tap island to open app")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        // Waveform-like animation
-                        HStack(alignment: .center, spacing: 2) {
-                            ForEach(0..<4, id: \.self) { index in
-                                RoundedRectangle(cornerRadius: 1)
-                                    .fill(.blue.gradient)
-                                    .frame(width: 4, height: CGFloat.random(in: 6...16))
-                                    .animation(
-                                        .easeInOut(duration: 0.6)
-                                        .repeatForever()
-                                        .delay(Double(index) * 0.1),
-                                        value: true
-                                    )
+                    HStack(spacing: 12) {
+                        Text(context.state.isCountdown && context.state.remainingTime != nil ?
+                             countdownString(context.state.remainingTime!) :
+                             elapsedString(from: context.state.startTime))
+                        .font(.system(.body, design: .monospaced).weight(.semibold))
+                        .foregroundStyle(Color.semantic(.textPrimary))
+
+                        Spacer(minLength: 0)
+
+                        if let lvl = context.state.level {
+                            HStack(alignment: .bottom, spacing: 3) {
+                                let bars = barHeights(level: lvl)
+                                ForEach(0..<bars.count, id: \.self) { i in
+                                    RoundedRectangle(cornerRadius: 1)
+                                        .fill(Color.semantic(.textSecondary).opacity(0.9))
+                                        .frame(width: 3, height: bars[i])
+                                }
                             }
                         }
                     }
                     .padding(.horizontal, 8)
                 }
-                
             } compactLeading: {
-                // Compact leading - just the icon with animation
-                Image(systemName: context.state.isCountdown ? "hourglass.circle.fill" : "mic.circle.fill")
+                Image(systemName: "mic.fill")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(context.state.isCountdown ? .orange : .red)
-                    .symbolEffect(.pulse, options: .repeating, value: !context.state.isCountdown)
-                    
+                    .foregroundStyle(Color.semantic(.brandPrimary))
+                    .symbolEffect(.pulse, options: .repeating, value: true)
             } compactTrailing: {
-                // Compact trailing - timer with visual indicator
-                HStack(alignment: .center, spacing: 3) {
-                    if !context.state.isCountdown {
-                        Circle()
-                            .fill(.red)
-                            .frame(width: 6, height: 6)
-                            .opacity(0.8)
-                    }
-                    
-                    if context.state.isCountdown, let rem = context.state.remainingTime {
-                        Text(shortCountdown(rem))
-                            .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.primary)
-                    } else {
-                        Text(shortElapsed(from: context.state.startTime))
-                            .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.primary)
-                    }
-                }
-                
+                Text(shortElapsed(from: context.state.startTime))
+                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
             } minimal: {
-                // Minimal view - animated recording indicator
                 Image(systemName: "mic.fill")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.red)
-                    .symbolEffect(.pulse, options: .repeating, value: true)
+                    .foregroundStyle(Color.semantic(.brandPrimary))
             }
-            // **FIX**: Change the deep link to a neutral "open" action
             .widgetURL(URL(string: "sonora://open"))
+        }
+    }
+}
+
+// MARK: - Premium Live Activity View (Lock Screen / Notification)
+struct PremiumLiveActivityView: View {
+    let context: ActivityViewContext<SonoraLiveActivityAttributes>
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.semantic(.fillSecondary))
+                    .frame(width: 28, height: 28)
+                Image(systemName: context.state.isCountdown ? "hourglass" : "mic.fill")
+                    .foregroundStyle(Color.semantic(.textOnColored))
+                    .symbolEffect(.pulse, options: .repeating, value: !context.state.isCountdown)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("SONORA")
+                    .font(.caption2.smallCaps())
+                    .foregroundStyle(Color.semantic(.textSecondary))
+
+                Group {
+                    if context.state.isCountdown, let rem = context.state.remainingTime {
+                        Text(countdownString(rem))
+                    } else {
+                        Text(context.state.startTime, style: .timer)
+                    }
+                }
+                .font(.system(.title3, design: .monospaced).weight(.semibold))
+                .foregroundStyle(Color.semantic(.textPrimary))
+                .contentTransition(.numericText())
+            }
+
+            Spacer(minLength: 0)
+
+            Button(intent: StopRecordingIntent()) {
+                Text("Stop")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.semantic(.textOnColored))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.semantic(.brandSecondary)))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: gradientColors,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.semantic(.separator), lineWidth: 0.5))
+        )
+    }
+
+    private var gradientColors: [Color] {
+        if colorScheme == .dark {
+            // Softer, darker gradient for OLED
+            return [Color.semantic(.bgSecondary), Color.semantic(.bgPrimary)]
+        } else {
+            // Light, airy gradient aligning with brand
+            return [Color(hex: 0xE8F0FF).opacity(0.9), Color.white]
         }
     }
 }
@@ -238,4 +163,13 @@ private func shortCountdown(_ remaining: TimeInterval) -> String { countdownStri
 private func timerString(from start: Date, isCountdown: Bool, remaining: TimeInterval?) -> String {
     if isCountdown, let rem = remaining { return "Ends in " + countdownString(rem) }
     return elapsedString(from: start)
+}
+
+// Deterministic mini-waveform bar heights (no random). Level: 0..1
+private func barHeights(level: Double) -> [CGFloat] {
+    let l = max(0.0, min(1.0, level))
+    let multipliers: [CGFloat] = [0.6, 0.8, 1.0, 0.8, 0.6]
+    let minHeight: CGFloat = 6
+    let range: CGFloat = 12 // so 6..18 px
+    return multipliers.map { m in minHeight + range * CGFloat(l) * m }
 }

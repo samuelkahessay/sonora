@@ -27,12 +27,14 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     private let recordingTimeSubject = CurrentValueSubject<TimeInterval, Never>(0)
     private let permissionStatusSubject = CurrentValueSubject<MicrophonePermissionStatus, Never>(.notDetermined)
     private let countdownSubject = CurrentValueSubject<(Bool, TimeInterval), Never>((false, 0))
+    private let audioLevelSubject = CurrentValueSubject<Double, Never>(0)
     
     // MARK: - AudioRepository Publishers
     var isRecordingPublisher: AnyPublisher<Bool, Never> { isRecordingSubject.eraseToAnyPublisher() }
     var recordingTimePublisher: AnyPublisher<TimeInterval, Never> { recordingTimeSubject.eraseToAnyPublisher() }
     var permissionStatusPublisher: AnyPublisher<MicrophonePermissionStatus, Never> { permissionStatusSubject.eraseToAnyPublisher() }
     var countdownPublisher: AnyPublisher<(Bool, TimeInterval), Never> { countdownSubject.eraseToAnyPublisher() }
+    var audioLevelPublisher: AnyPublisher<Double, Never> { audioLevelSubject.eraseToAnyPublisher() }
     
     init(backgroundAudioService: BackgroundAudioService) {
         self.backgroundAudioService = backgroundAudioService
@@ -83,6 +85,12 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
                 print("🎵 AudioRepositoryImpl: Recording state changed: \(isRecording)")
             }
             .store(in: &cancellables)
+
+        backgroundAudioService.$audioLevel
+            .sink { [weak self] level in
+                self?.audioLevelSubject.send(level)
+            }
+            .store(in: &cancellables)
         
         print("🎵 AudioRepositoryImpl: BackgroundAudioService configured")
     }
@@ -108,6 +116,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         recordingTimeSubject.send(backgroundAudioService.recordingTime)
         permissionStatusSubject.send(MicrophonePermissionStatus.current())
         countdownSubject.send((backgroundAudioService.isInCountdown, backgroundAudioService.remainingTime))
+        audioLevelSubject.send(backgroundAudioService.audioLevel)
     }
     
     func loadAudioFiles() -> [Memo] {

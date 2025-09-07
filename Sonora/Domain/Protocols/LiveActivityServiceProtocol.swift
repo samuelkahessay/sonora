@@ -12,7 +12,10 @@ public protocol LiveActivityServiceProtocol {
 
     // Lifecycle
     func startRecordingActivity(memoTitle: String, startTime: Date) async throws
-    func updateActivity(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?) async throws
+    func updateActivity(duration: TimeInterval,
+                        isCountdown: Bool,
+                        remainingTime: TimeInterval?,
+                        level: Double?) async throws
     func endCurrentActivity(dismissalPolicy: ActivityDismissalPolicy) async throws
     func restartActivity(memoTitle: String, startTime: Date) async throws
 }
@@ -66,4 +69,3 @@ public enum LiveActivityError: LocalizedError, Sendable {
         }
     }
 }
-

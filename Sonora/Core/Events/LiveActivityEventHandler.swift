@@ -15,6 +15,8 @@ final class LiveActivityEventHandler {
     private let endUseCase: any EndLiveActivityUseCaseProtocol
     
     private var cancellables = Set<AnyCancellable>()
+    private var lastLiveActivityUpdateAt: Date = .distantPast
+    private let minUpdateInterval: TimeInterval = 0.5 // 2 Hz max
     
     init(
         logger: any LoggerProtocol,
@@ -76,17 +78,29 @@ final class LiveActivityEventHandler {
     private func setupRecordingTimeUpdates() {
         // Throttle updates by relying on Combine polling already at 0.1s; ActivityKit handles rate internally.
         audioRepository.isRecordingPublisher
-            .combineLatest(audioRepository.recordingTimePublisher)
+            .combineLatest(audioRepository.recordingTimePublisher, audioRepository.audioLevelPublisher)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] isRecording, time in
+            .sink { [weak self] isRecording, time, level in
                 guard let self = self else { return }
                 guard isRecording else { return }
+                // Throttle updates to 2 Hz
+                let now = Date()
+                if now.timeIntervalSince(self.lastLiveActivityUpdateAt) < self.minUpdateInterval { return }
+                self.lastLiveActivityUpdateAt = now
                 Task { @MainActor in
                     do {
+                        // Use metered level from repository; fall back to calm cycle if NaN/out-of-range
+                        let clamped = max(0.0, min(1.0, level.isFinite ? level : 0.0))
+                        let effectiveLevel: Double
+                        if clamped > 0 { effectiveLevel = clamped } else {
+                            let phase = (time.truncatingRemainder(dividingBy: 3.0)) / 3.0
+                            effectiveLevel = max(0.0, min(1.0, 0.5 + 0.35 * sin(2 * .pi * phase)))
+                        }
                         try await self.updateUseCase.execute(
                             duration: time,
                             isCountdown: self.audioRepository.isInCountdown,
-                            remainingTime: self.audioRepository.isInCountdown ? self.audioRepository.remainingTime : nil
+                            remainingTime: self.audioRepository.isInCountdown ? self.audioRepository.remainingTime : nil,
+                            level: effectiveLevel
                         )
                     } catch {
                         // Ignore update errors when no activity is active

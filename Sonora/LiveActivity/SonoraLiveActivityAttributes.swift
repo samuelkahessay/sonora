@@ -16,6 +16,7 @@ public struct SonoraLiveActivityAttributes: ActivityAttributes {
         public var isCountdown: Bool
         public var remainingTime: TimeInterval?
         public var emoji: String
+        public var level: Double? // 0.0 ... 1.0 (optional, for calm waveform)
         
         public init(
             memoTitle: String,
@@ -23,7 +24,8 @@ public struct SonoraLiveActivityAttributes: ActivityAttributes {
             duration: TimeInterval,
             isCountdown: Bool,
             remainingTime: TimeInterval?,
-            emoji: String
+            emoji: String,
+            level: Double? = nil
         ) {
             self.memoTitle = memoTitle
             self.startTime = startTime
@@ -31,6 +33,7 @@ public struct SonoraLiveActivityAttributes: ActivityAttributes {
             self.isCountdown = isCountdown
             self.remainingTime = remainingTime
             self.emoji = emoji
+            self.level = level
         }
     }
 

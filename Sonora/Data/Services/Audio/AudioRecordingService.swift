@@ -35,6 +35,7 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
     // MARK: - Published Properties
     @Published var isRecording = false
     @Published var currentRecordingURL: URL?
+    @Published var audioLevel: Double = 0 // 0.0 ... 1.0 normalized RMS proxy
     
     // MARK: - Publishers
     var isRecordingPublisher: AnyPublisher<Bool, Never> {
@@ -43,6 +44,7 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
     
     // MARK: - Private Properties
     private var audioRecorder: AVAudioRecorder?
+    private var levelTimer: Timer?
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     
     // MARK: - Configuration
@@ -271,6 +273,7 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
         }
         
         self.isRecording = true
+        startLevelMetering()
         print("🎙️ AudioRecordingService: Recording started for \(recorder.url.lastPathComponent)")
     }
     
@@ -293,6 +296,7 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
         }
         
         self.isRecording = started
+        if started { startLevelMetering() }
         print("🎙️ AudioRecordingService: Recording started for \(recorder.url.lastPathComponent)")
     }
     
@@ -306,6 +310,7 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
         print("🎙️ AudioRecordingService: Stopping recording...")
         recorder.stop()
         self.isRecording = false
+        stopLevelMetering()
         
         // Note: Cleanup happens in delegate method to ensure proper callback handling
         print("🎙️ AudioRecordingService: Recording stop initiated")
@@ -340,13 +345,46 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
         if isRecording {
             audioRecorder?.stop()
         }
-        
+
         audioRecorder?.delegate = nil
         audioRecorder = nil
         self.currentRecordingURL = nil
         self.isRecording = false
+        stopLevelMetering()
         
         print("🎙️ AudioRecordingService: Cleanup completed")
+    }
+
+    // MARK: - Level Metering
+    private func startLevelMetering() {
+        stopLevelMetering()
+        guard let recorder = audioRecorder else { return }
+        recorder.isMeteringEnabled = true
+        levelTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            // Ensure execution on MainActor to satisfy isolation
+            Task { @MainActor in
+                self?.sampleLevel()
+            }
+        }
+        RunLoop.main.add(levelTimer!, forMode: .common)
+    }
+
+    private func stopLevelMetering() {
+        levelTimer?.invalidate()
+        levelTimer = nil
+        audioLevel = 0
+    }
+
+    private func sampleLevel() {
+        guard let recorder = audioRecorder, recorder.isRecording else {
+            audioLevel = 0
+            return
+        }
+        recorder.updateMeters()
+        let power = recorder.averagePower(forChannel: 0) // dBFS (-160...0)
+        let linear = max(0.0, min(1.0, pow(10.0, power / 20.0)))
+        // Exponential smoothing for calmer visualization
+        audioLevel = max(0.0, min(1.0, 0.8 * audioLevel + 0.2 * Double(linear)))
     }
 }
 

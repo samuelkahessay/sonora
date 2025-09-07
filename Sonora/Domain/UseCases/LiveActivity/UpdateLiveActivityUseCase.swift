@@ -1,7 +1,7 @@
 import Foundation
 
 protocol UpdateLiveActivityUseCaseProtocol: Sendable {
-    func execute(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?) async throws
+    func execute(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?, level: Double?) async throws
 }
 
 @MainActor
@@ -12,8 +12,12 @@ final class UpdateLiveActivityUseCase: UpdateLiveActivityUseCaseProtocol, @unche
         self.liveActivityService = liveActivityService
     }
     
-    func execute(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?) async throws {
-        try await liveActivityService.updateActivity(duration: duration, isCountdown: isCountdown, remainingTime: remainingTime)
+    func execute(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?, level: Double?) async throws {
+        try await liveActivityService.updateActivity(
+            duration: duration,
+            isCountdown: isCountdown,
+            remainingTime: remainingTime,
+            level: level
+        )
     }
 }
-

@@ -23,6 +23,8 @@ protocol AudioRepository: ObservableObject {
     var permissionStatusPublisher: AnyPublisher<MicrophonePermissionStatus, Never> { get }
     /// Emits a tuple of (isInCountdown, remainingTime)
     var countdownPublisher: AnyPublisher<(Bool, TimeInterval), Never> { get }
+    /// Normalized audio level (0.0 to 1.0), smoothed; emits only while recording
+    var audioLevelPublisher: AnyPublisher<Double, Never> { get }
     
     // MARK: - File Management
     func loadAudioFiles() -> [Memo]

@@ -25,6 +25,8 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
     // MARK: - Private Properties
     private let activityStateSubject = CurrentValueSubject<LiveActivityState, Never>(.inactive)
     private var cancellables = Set<AnyCancellable>()
+    private var lastUpdateAt: Date = .distantPast
+    private let minUpdateInterval: TimeInterval = 0.5 // 2 Hz max
     #if canImport(ActivityKit)
     @available(iOS 16.1, *)
     private var lastContentState: SonoraLiveActivityAttributes.ContentState?
@@ -132,10 +134,16 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
         #endif
     }
     
-    func updateActivity(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?) async throws {
+    func updateActivity(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?, level: Double?) async throws {
         guard isActivityActive, let activityId = currentActivityId else {
             throw LiveActivityError.notActive
         }
+        // Simple throttle to avoid excessive updates
+        let now = Date()
+        if now.timeIntervalSince(lastUpdateAt) < minUpdateInterval {
+            return
+        }
+        lastUpdateAt = now
         activityStateSubject.send(.updating)
         
         #if canImport(ActivityKit)
@@ -152,7 +160,8 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
                 duration: 0,
                 isCountdown: false,
                 remainingTime: nil,
-                emoji: isCountdown ? "⏳" : "🎤"
+                emoji: isCountdown ? "⏳" : "🎤",
+                level: nil
             )
             let newState = SonoraLiveActivityAttributes.ContentState(
                 memoTitle: base.memoTitle,
@@ -160,7 +169,8 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
                 duration: duration,
                 isCountdown: isCountdown,
                 remainingTime: remainingTime,
-                emoji: isCountdown ? "⏳" : "🎤"
+                emoji: isCountdown ? "⏳" : "🎤",
+                level: level
             )
             if #available(iOS 16.2, *) {
                 await activity.update(ActivityContent(state: newState, staleDate: nil))
@@ -206,7 +216,8 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
                     duration: 0,
                     isCountdown: false,
                     remainingTime: nil,
-                    emoji: "🎤"
+                    emoji: "🎤",
+                    level: nil
                 )
                 // Use Task to handle ActivityContent Sendable limitations
                 await Task { 

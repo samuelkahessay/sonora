@@ -31,6 +31,7 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     @Published var autoStopMessage: String?
     @Published var isInCountdown = false
     @Published var remainingTime: TimeInterval = 0
+    @Published var audioLevel: Double = 0
     
     // MARK: - Focused Services
     private let sessionService: AudioSessionService
@@ -213,6 +214,10 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
         // Recording service bindings
         recordingService.$isRecording
             .assign(to: \.isRecording, on: self)
+            .store(in: &cancellables)
+        
+        recordingService.$audioLevel
+            .assign(to: \.audioLevel, on: self)
             .store(in: &cancellables)
         
         // Background task service bindings

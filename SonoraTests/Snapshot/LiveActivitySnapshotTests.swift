@@ -13,7 +13,8 @@ final class LiveActivitySnapshotTests: SnapshotTestCase {
                 duration: 42,
                 isCountdown: false,
                 remainingTime: nil,
-                emoji: "🎙️"
+                emoji: "🎙️",
+                level: 0.6
             )
             // Render a simple representative view for attributes/state so we at least snapshot data mapping.
             // Full widget UI snapshot requires WidgetKit rendering which is outside this test target.
@@ -39,7 +40,8 @@ final class LiveActivitySnapshotTests: SnapshotTestCase {
                 duration: 42,
                 isCountdown: true,
                 remainingTime: 9,
-                emoji: "🎙️"
+                emoji: "🎙️",
+                level: 0.3
             )
             let view = VStack(alignment: .leading, spacing: 8) {
                 Text(attributes.memoId).font(.headline)
@@ -53,4 +55,3 @@ final class LiveActivitySnapshotTests: SnapshotTestCase {
         throw XCTSkip("ActivityKit not available or not testable in this target.")
     }
 }
-
