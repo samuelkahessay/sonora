@@ -147,11 +147,8 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     }
     
     private func setupOperationMonitoring() {
-        // Set self as progress/status delegate to get live updates
-        Task { [weak self] in
-            guard let self else { return }
-            operationCoordinator.setStatusDelegate(self)
-        }
+        // Register as delegate immediately to avoid missing early updates
+        operationCoordinator.setStatusDelegate(self)
 
         // Update operation summaries every 2 seconds (fallback/debug)
         Timer.publish(every: 2.0, on: .main, in: .common)
@@ -243,6 +240,19 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         updateTranscriptionState(for: memo)
         setupPlayingState(for: memo)
         
+        // Subscribe to transcription state changes for this memo to avoid race conditions
+        DIContainer.shared.transcriptionRepository()
+            .stateChangesPublisher(for: memo.id)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] change in
+                guard let self else { return }
+                // Only update if the change pertains to current memo
+                if self.currentMemo?.id == change.memoId {
+                    self.transcriptionState = change.currentState
+                }
+            }
+            .store(in: &cancellables)
+
         // Start monitoring operations for this memo
         Task {
             await updateOperationStatus()
