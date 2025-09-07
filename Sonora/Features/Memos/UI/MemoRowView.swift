@@ -188,17 +188,25 @@ struct MemoRowView: View {
     // MARK: - View Body
     
     var body: some View {
-        // Always use premium SonoraMemocCard for brand consistency
-        SonoraMemocCard(memo: memo, viewModel: viewModel)
-            .overlay(alignment: .leading) {
-                // Selection indicator overlay in edit mode
-                if viewModel.isEditMode {
-                    selectionIndicator
-                        .padding(.leading, 12)
-                }
+        HStack(spacing: 0) {
+            // Reserved gutter for edit mode selection control to prevent layout jumps
+            Color.clear
+                .frame(width: viewModel.isEditMode ? 44 : 0)
+                .animation(.spring(response: 0.25), value: viewModel.isEditMode)
+
+            // Selection control enters with smooth leading transition
+            if viewModel.isEditMode {
+                selectionIndicator
+                    .frame(width: 44, alignment: .leading)
+                    .transition(.move(edge: .leading).combined(with: .opacity))
             }
-            .contentShape(Rectangle())
-            .contextMenu {
+
+            // Main card content
+            SonoraMemocCard(memo: memo, viewModel: viewModel)
+                .contentShape(Rectangle())
+        }
+        .contentShape(Rectangle())
+        .contextMenu {
                 Button {
                     startRename()
                 } label: {
@@ -217,11 +225,11 @@ struct MemoRowView: View {
                     Label("Delete", systemImage: "trash")
                 }
             }
-            .scaleEffect(viewModel.isEditMode && viewModel.isMemoSelected(memo) ? 0.98 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.isMemoSelected(memo))
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(accessibilityDescription)
-            .accessibilityHint(AccessibilityStrings.rowHint)
+        .scaleEffect(viewModel.isEditMode && viewModel.isMemoSelected(memo) ? 0.98 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.isMemoSelected(memo))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
+        .accessibilityHint(AccessibilityStrings.rowHint)
     }
     
     // MARK: - Content Views

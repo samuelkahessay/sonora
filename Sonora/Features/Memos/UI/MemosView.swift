@@ -174,8 +174,9 @@ struct MemosView: View {
                                         MemoSwipeActionsView(memo: memo, viewModel: viewModel)
                                     }
                             } else {
-                                NavigationLink(value: memo) { rowContent }
-                                    .buttonStyle(.plain)
+                                rowContent
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { viewModel.navigationPath.append(memo) }
                                     .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
                                     .listRowBackground(
                                         SelectedRowBackground(
@@ -325,7 +326,7 @@ struct ContextualSectionHeader: View {
     let memoCount: Int
     
     var body: some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline) {
             // Brand voice header with New York serif (resolved via design system)
             Text(period.headerText)
                 .font(SonoraDesignSystem.Typography.navigationTitle)
@@ -340,9 +341,9 @@ struct ContextualSectionHeader: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 2)
                 .background(
-                    Capsule()
-                        .fill(Color.whisperBlue.opacity(0.6))
+                    Capsule().fill(Color.whisperBlue.opacity(0.6))
                 )
+                .alignmentGuide(.firstTextBaseline) { $0[.firstTextBaseline] }
         }
         .padding(.horizontal, SonoraDesignSystem.Spacing.md)
         .padding(.vertical, SonoraDesignSystem.Spacing.sm)

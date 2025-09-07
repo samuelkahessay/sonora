@@ -49,24 +49,30 @@ struct SonoraMemocCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.md) {
-            // Header with timestamp and waveform preview
-            headerSection
-            
             // Title with thoughtful typography
             titleSection
             
-            // Metadata row with duration and insights
-            metadataSection
+            // Unified metadata row: duration · relative time (+ optional insights)
+            metadataRow
             
 
         }
-        .padding(.all, SonoraDesignSystem.Spacing.breathingRoom)
+        // Consistent, compact vertical rhythm with generous horizontal padding
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: SonoraDesignSystem.Spacing.cardRadius))
         .shadow(
             color: Color.sonoraDep.opacity(0.08),
             radius: 8, x: 0, y: 4
         )
+        // Inline chevron inside card bounds (instead of List accessory)
+        .overlay(alignment: .trailing) {
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundColor(.secondary)
+                .padding(.trailing, 12)
+        }
         .overlay(alignment: .topTrailing) {
             // Subtle state indicator
             stateIndicator
@@ -83,26 +89,6 @@ struct SonoraMemocCard: View {
     
     // MARK: - View Components
     
-    /// Header section with contextual timestamp
-    @ViewBuilder
-    private var headerSection: some View {
-        HStack(alignment: .top) {
-            Text(contextualTimeString)
-                .font(SonoraDesignSystem.Typography.caption)
-                .foregroundColor(.reflectionGray)
-            
-            Spacer()
-            
-            if transcriptionState.isInProgress {
-                // Gentle pulse for active transcription
-                Circle()
-                    .fill(Color.insightGold)
-                    .frame(width: 6, height: 6)
-                    .opacity(waveformShimmer ? 0.4 : 1.0)
-            }
-        }
-    }
-    
     /// Title section with premium typography
     @ViewBuilder
     private var titleSection: some View {
@@ -113,28 +99,23 @@ struct SonoraMemocCard: View {
             .multilineTextAlignment(.leading)
     }
     
-    /// Metadata section with duration and insight hints
+    /// Unified metadata row with duration and relative time (single source of truth)
     @ViewBuilder
-    private var metadataSection: some View {
-        HStack(spacing: SonoraDesignSystem.Spacing.md) {
-            // Duration with subtle icon
-            HStack(spacing: SonoraDesignSystem.Spacing.iconToTextSpacing) {
-                Image(systemName: "clock")
-                    .font(.caption)
-                    .foregroundColor(.reflectionGray)
-                
-                Text(memo.durationString)
-                    .font(SonoraDesignSystem.Typography.caption)
-                    .foregroundColor(.reflectionGray)
-                    .monospacedDigit()
-            }
+    private var metadataRow: some View {
+        HStack(spacing: SonoraDesignSystem.Spacing.iconToTextSpacing) {
+            Image(systemName: "clock")
+                .font(.caption)
+                .foregroundColor(.reflectionGray)
             
-            Spacer()
+            Text("\(memo.durationString) · \(relativeTime)")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .monospacedDigit()
+            
+            Spacer(minLength: 0)
             
             // Insight teaser (if available)
-            if hasInsights {
-                insightHintView
-            }
+            if hasInsights { insightHintView }
         }
     }
     
@@ -181,37 +162,11 @@ struct SonoraMemocCard: View {
     
     // MARK: - Helper Properties
     
-    /// Contextual time string that complements section headers rather than repeating them
-    private var contextualTimeString: String {
-        let calendar = Calendar.current
-        let now = Date()
-        
-        if calendar.isDateInToday(memo.creationDate) {
-            // For today's memos, show relative time (e.g., "2 hours ago", "Just now")
-            let timeInterval = now.timeIntervalSince(memo.creationDate)
-            
-            if timeInterval < 60 {
-                return "Just now"
-            } else if timeInterval < 3600 {
-                let minutes = Int(timeInterval / 60)
-                return "\(minutes)m ago"
-            } else if timeInterval < 86400 {
-                let hours = Int(timeInterval / 3600)
-                return "\(hours)h ago"
-            } else {
-                // Fallback to specific time for edge cases
-                return DateFormatter.timeOnly.string(from: memo.creationDate)
-            }
-        } else if calendar.isDateInYesterday(memo.creationDate) {
-            // For yesterday's memos, show specific time instead of repeating "Yesterday"
-            return DateFormatter.timeOnly.string(from: memo.creationDate)
-        } else {
-            // For older memos, show date and time to distinguish from section header
-            let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            formatter.timeStyle = .short
-            return formatter.string(from: memo.creationDate)
-        }
+    /// Relative time string in compact system style (e.g., "1m ago", "2h ago")
+    private var relativeTime: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: memo.creationDate, relativeTo: Date())
     }
     
 
