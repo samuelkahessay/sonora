@@ -42,7 +42,8 @@ struct SonoraLiveActivityLiveActivity: Widget {
                         Text(context.state.isCountdown && context.state.remainingTime != nil ?
                              countdownString(context.state.remainingTime!) :
                              elapsedString(from: context.state.startTime))
-                        .font(.system(.body, design: .monospaced).weight(.semibold))
+                        .font(.system(.body, design: .serif).weight(.semibold))
+                        .monospacedDigit()
                         .foregroundStyle(Color.semantic(.textPrimary))
 
                         Spacer(minLength: 0)
@@ -67,7 +68,8 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     .symbolEffect(.pulse, options: .repeating, value: true)
             } compactTrailing: {
                 Text(shortElapsed(from: context.state.startTime))
-                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 14, weight: .semibold, design: .serif))
+                    .monospacedDigit()
             } minimal: {
                 Image(systemName: "mic.fill")
                     .font(.system(size: 12, weight: .bold))
@@ -84,47 +86,62 @@ struct PremiumLiveActivityView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             ZStack {
                 Circle()
                     .fill(Color.semantic(.fillSecondary))
-                    .frame(width: 28, height: 28)
+                    .frame(width: 36, height: 36)
                 Image(systemName: context.state.isCountdown ? "hourglass" : "mic.fill")
                     .foregroundStyle(Color.semantic(.textOnColored))
                     .symbolEffect(.pulse, options: .repeating, value: !context.state.isCountdown)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("SONORA")
-                    .font(.caption2.smallCaps())
+                    .font(.caption.smallCaps())
                     .foregroundStyle(Color.semantic(.textSecondary))
 
-                Group {
-                    if context.state.isCountdown, let rem = context.state.remainingTime {
-                        Text(countdownString(rem))
-                    } else {
-                        Text(context.state.startTime, style: .timer)
+                HStack(spacing: 10) {
+                    Group {
+                        if context.state.isCountdown, let rem = context.state.remainingTime {
+                            Text(countdownString(rem))
+                        } else {
+                            Text(context.state.startTime, style: .timer)
+                        }
+                    }
+                    .font(.system(size: 24, weight: .semibold, design: .serif))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.semantic(.textPrimary))
+                    .contentTransition(.numericText())
+
+                    if let lvl = context.state.level {
+                        HStack(alignment: .bottom, spacing: 3) {
+                            let bars = barHeights(level: lvl)
+                            ForEach(0..<bars.count, id: \.self) { i in
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(Color.semantic(.textSecondary).opacity(0.9))
+                                    .frame(width: 3, height: bars[i])
+                            }
+                        }
+                        .transition(.opacity)
                     }
                 }
-                .font(.system(.title3, design: .monospaced).weight(.semibold))
-                .foregroundStyle(Color.semantic(.textPrimary))
-                .contentTransition(.numericText())
             }
 
             Spacer(minLength: 0)
 
             Button(intent: StopRecordingIntent()) {
                 Text("Stop")
-                    .font(.subheadline.weight(.medium))
+                    .font(.headline.weight(.semibold))
                     .foregroundStyle(Color.semantic(.textOnColored))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
                     .background(Capsule().fill(Color.semantic(.brandSecondary)))
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(
