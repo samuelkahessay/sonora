@@ -15,25 +15,11 @@ struct SonoraApp: App {
     @StateObject private var themeManager = ThemeManager()
     private let modelContainer: ModelContainer
     
-    // Prefer New York serif; gracefully fall back to a system serif design
-    private static func findNewYorkFont(size: CGFloat, textStyle: UIFont.TextStyle) -> UIFont {
-        // Candidate PostScript names observed on iOS (New York comes in Large/Medium/Small families)
-        let candidates = [
-            // Semibold/Bold options first for titles
-            "NewYorkLarge-Semibold", "NewYorkMedium-Semibold", "NewYorkSmall-Semibold",
-            "NewYorkLarge-Bold", "NewYorkMedium-Bold", "NewYorkSmall-Bold",
-            // Medium/Regular fallbacks
-            "NewYork-Medium", "NewYork-Regular",
-            // Family name (may resolve on some systems)
-            "New York"
-        ]
-        for name in candidates {
-            if let f = UIFont(name: name, size: size) { return f }
-        }
-        // Serif system fallback at requested size
+    // Compute system serif fonts for nav bar titles using preferred text styles
+    private static func serifUIFont(for textStyle: UIFont.TextStyle) -> UIFont {
         let base = UIFont.preferredFont(forTextStyle: textStyle)
         if let serif = base.fontDescriptor.withDesign(.serif) {
-            return UIFont(descriptor: serif, size: size)
+            return UIFont(descriptor: serif, size: base.pointSize)
         }
         return base
     }
@@ -70,9 +56,9 @@ struct SonoraApp: App {
         navAppearance.configureWithDefaultBackground()
         navAppearance.backgroundColor = UIColor.systemBackground
         navAppearance.shadowColor = UIColor.separator // keep hairline
-        // Apply New York serif font to navigation titles with robust fallbacks
-        let largeTitleFont = Self.findNewYorkFont(size: 34, textStyle: .largeTitle)
-        let titleFont = Self.findNewYorkFont(size: 17, textStyle: .headline)
+        // Apply system serif fonts (no bundled fonts) to navigation titles
+        let largeTitleFont = Self.serifUIFont(for: .largeTitle)
+        let titleFont = Self.serifUIFont(for: .headline)
         navAppearance.largeTitleTextAttributes = [ .font: largeTitleFont ]
         navAppearance.titleTextAttributes = [ .font: titleFont ]
         

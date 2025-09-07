@@ -18,6 +18,7 @@ struct SettingsView: View {
 
                         // Section 4: Support & About
                         SupportAboutSectionView()
+
                     } else {
                         if FeatureFlags.showOnboarding { OnboardingSectionView() }
                         if FeatureFlags.showLanguage { LanguageSectionView() }
@@ -26,6 +27,7 @@ struct SettingsView: View {
                         LocalAISectionView()
                         AIDisclosureSectionView()
                         PrivacySectionView()
+                        
                     }
                     #if DEBUG
                     DiagnosticsSectionView()

@@ -55,63 +55,36 @@ enum SonoraDesignSystem {
     
     // MARK: - Typography System
     
-    /// Typography hierarchy following brand guidelines with SF Pro and New York fonts
+    /// Typography hierarchy following brand guidelines with SF Pro and system serif
     enum Typography {
-        
-        // MARK: - New York Font Resolution (UIKit → SwiftUI)
-        
-        /// Available New York Medium weights
-        private enum NYWeight: String {
-            case regular = "Regular"
-            case medium = "Medium"
-            case semibold = "Semibold"
-            case bold = "Bold"
-        }
-        
-        /// Resolve a UIFont for New York using known PostScript names; fall back to a serif system font.
-        private static func nyUIFont(size: CGFloat, textStyle: UIFont.TextStyle, weight: NYWeight) -> UIFont {
-            // Prefer the NewYorkMedium family variants available on iOS
-            let psName = "NewYorkMedium-\(weight.rawValue)"
-            if let f = UIFont(name: psName, size: size) {
-                return UIFontMetrics(forTextStyle: textStyle).scaledFont(for: f)
-            }
-            // Secondary candidates (defensive, in case family names vary across devices)
-            let candidates = [
-                "NewYorkMedium-\(weight.rawValue)",
-                "NewYork-\(weight.rawValue)",
-                "New York"
-            ]
-            for name in candidates {
-                if let f = UIFont(name: name, size: size) {
-                    return UIFontMetrics(forTextStyle: textStyle).scaledFont(for: f)
-                }
-            }
-            // Serif fallback that respects Dynamic Type
+        // MARK: - System Serif Resolution (UIKit → SwiftUI)
+        /// Resolve a preferred UIKit serif font for a text style, preserving Dynamic Type
+        private static func serifUIFont(for textStyle: UIFont.TextStyle) -> UIFont {
             let base = UIFont.preferredFont(forTextStyle: textStyle)
             if let serifDesc = base.fontDescriptor.withDesign(.serif) {
-                return UIFont(descriptor: serifDesc, size: size)
+                return UIFont(descriptor: serifDesc, size: base.pointSize)
             }
             return base
         }
         
         // MARK: - Heading Hierarchy
         
-        /// H1: Large title for primary headings (28pt, New York Bold)
-        static let headingLarge = Font(nyUIFont(size: 28, textStyle: .largeTitle, weight: .bold))
+        /// H1: Large title for primary headings (system largeTitle serif)
+        static let headingLarge = Font.system(.largeTitle, design: .serif)
             .leading(.tight)
         
-        /// H2: Medium title for section headings (24pt, New York Medium)
-        static let headingMedium = Font(nyUIFont(size: 24, textStyle: .title2, weight: .medium))
+        /// H2: Medium title for section headings (system title2 serif)
+        static let headingMedium = Font.system(.title2, design: .serif)
             .leading(.tight)
         
-        /// H3: Small title for subsections (20pt, New York Medium)
-        static let headingSmall = Font(nyUIFont(size: 20, textStyle: .title3, weight: .medium))
+        /// H3: Small title for subsections (system title3 serif)
+        static let headingSmall = Font.system(.title3, design: .serif)
             .leading(.tight)
         
         // MARK: - Body Text
         
-        /// Large body text for important content (17pt, New York Regular)
-        static let bodyLarge = Font(nyUIFont(size: 17, textStyle: .body, weight: .regular))
+        /// Large body text for important content (system body serif)
+        static let bodyLarge = Font.system(.body, design: .serif)
             .leading(.loose)
         
         /// Regular body text for standard content (15pt, Weight 400)
@@ -128,16 +101,16 @@ enum SonoraDesignSystem {
         
         // MARK: - Special Typography
         
-        /// Serif font for quotes and emotional moments (New York, 17pt)
-        static let insightSerif = Font(nyUIFont(size: 17, textStyle: .body, weight: .regular))
+        /// Serif font for quotes and emotional moments (system serif)
+        static let insightSerif = Font.system(.body, design: .serif)
             .leading(.loose)
         
         /// Monospaced digits for time display and metrics
         static let monospaced = Font.system(.body, design: .monospaced)
             .monospacedDigit()
         
-        /// Recording timer display (Large title, bold, monospaced)
-        static let timerDisplay = Font(nyUIFont(size: 34, textStyle: .largeTitle, weight: .semibold))
+        /// Recording timer display (Large title serif, monospaced)
+        static let timerDisplay = Font.system(.largeTitle, design: .serif)
             .monospacedDigit()
         
         // MARK: - UI Elements
@@ -145,8 +118,8 @@ enum SonoraDesignSystem {
         /// Button text styling
         static let button = Font.system(size: 16, weight: .medium, design: .default)
         
-        /// Navigation title styling (New York Semibold for premium feel)
-        static let navigationTitle = Font(nyUIFont(size: 18, textStyle: .headline, weight: .semibold))
+        /// Navigation title styling (system serif headline)
+        static let navigationTitle = Font(serifUIFont(for: .headline))
         
         /// Tab bar item styling
         static let tabBarItem = Font.system(size: 10, weight: .medium, design: .default)

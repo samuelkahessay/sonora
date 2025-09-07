@@ -16,26 +16,11 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Sonora needs microphone access to record voice memos. Your recordings stay private on your device until you choose to transcribe them using AI.</string>
+	<string>Sonora records voice memos. Recordings are stored locally on your device. When you choose to transcribe, you can use on‑device AI or cloud processing (configurable in Settings). Your audio is never sent anywhere without your explicit action.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
 	<false/>
-	<key>UIAppFonts</key>
-	<array>
-		<string>NewYorkMedium-Regular.otf</string>
-		<string>NewYorkMedium-Medium.otf</string>
-		<string>NewYorkMedium-Semibold.otf</string>
-		<string>NewYorkMedium-Bold.otf</string>
-		<string>NewYorkMedium-Heavy.otf</string>
-		<string>NewYorkMedium-Black.otf</string>
-		<string>NewYorkMedium-RegularItalic.otf</string>
-		<string>NewYorkMedium-MediumItalic.otf</string>
-		<string>NewYorkMedium-SemiboldItalic.otf</string>
-		<string>NewYorkMedium-BoldItalic.otf</string>
-		<string>NewYorkMedium-HeavyItalic.otf</string>
-		<string>NewYorkMedium-BlackItalic.otf</string>
-	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

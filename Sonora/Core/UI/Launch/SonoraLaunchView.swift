@@ -118,17 +118,17 @@ struct SonoraLaunchView: View {
         }
     }
     
-    /// Brand text with New York serif typography
+    /// Brand text with system serif typography
     @ViewBuilder
     private var brandTextSection: some View {
         VStack(spacing: SonoraDesignSystem.Spacing.sm) {
             Text("Sonora")
-                .font(.custom("New York", size: 32, relativeTo: .largeTitle))
+                .font(.system(.largeTitle, design: .serif))
                 .fontWeight(.medium)
                 .foregroundColor(.textPrimary)
             
             Text("Clarity through Voice")
-                .font(.custom("New York", size: 16, relativeTo: .subheadline))
+                .font(.system(.subheadline, design: .serif))
                 .foregroundColor(.reflectionGray)
                 .italic()
         }

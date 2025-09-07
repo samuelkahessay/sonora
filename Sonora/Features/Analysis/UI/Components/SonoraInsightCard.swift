@@ -94,9 +94,9 @@ struct SonoraInsightCard: View {
                 categoryIndicator
             }
             
-            // Main insight text with New York serif
+            // Main insight text with system serif
             Text(insight.text)
-                .font(.custom("New York", size: 17, relativeTo: .body))
+                .font(SonoraDesignSystem.Typography.insightSerif)
                 .foregroundColor(insightColor)
                 .lineSpacing(4)
                 .opacity(textOpacity)
