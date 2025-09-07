@@ -6,10 +6,11 @@ struct SelectedRowBackground: View {
     let colorScheme: ColorScheme
 
     var body: some View {
-        let base = Color(UIColor.systemBackground)
-        let fill = selected ? Color.semantic(.brandPrimary).opacity(0.1) : base
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        // Use a clear background when not selected to let the
+        // list's container background show through and avoid
+        // an unintended white gutter around our card.
+        let fill: Color = selected ? Color.semantic(.brandPrimary).opacity(0.1) : .clear
+        return RoundedRectangle(cornerRadius: 12, style: .continuous)
             .fill(fill)
     }
 }
-
