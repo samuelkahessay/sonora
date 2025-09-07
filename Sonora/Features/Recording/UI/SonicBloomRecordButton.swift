@@ -27,7 +27,7 @@ struct SonicBloomRecordButton: View {
     @State private var bloomScale: CGFloat = 1.0
     @State private var pulseOpacity: Double = 0.0
     @State private var innerRotation: Double = 0
-    @State private var bloomTrigger: Bool = false
+    @State private var bloomEvent: BloomEvent = BloomEvent(id: UUID(), style: .expand)
     
     // Constants
     private let buttonSize: CGFloat = 250
@@ -58,13 +58,14 @@ struct SonicBloomRecordButton: View {
             .scaleEffect(bloomScale)
         }
         .buttonStyle(PlainButtonStyle())
-        .bloomPulse(trigger: $bloomTrigger)
+        .bloomPulse(event: $bloomEvent)
         .sensoryFeedback(.impact(weight: .medium), trigger: isRecording)
-        .onChange(of: isRecording) { _, newValue in
-            animateRecordingState(newValue)
-            // Fire bloom shortly after state changes to enhance visibility
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                bloomTrigger = true
+        .onChange(of: isRecording) { _, started in
+            animateRecordingState(started)
+            if started {
+                bloomEvent = BloomEvent(id: UUID(), style: .expand)
+            } else {
+                bloomEvent = BloomEvent(id: UUID(), style: .collapse)
             }
         }
         .onAppear {
@@ -243,6 +244,7 @@ struct SonicBloomRecordButton: View {
         }
         
         // Continuous inner rotation
+        innerRotation = 0
         withAnimation(
             Animation.linear(duration: 20.0).repeatForever(autoreverses: false)
         ) {

@@ -86,6 +86,27 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         return history.map { $0.timestamp }.max()
     }
 
+    /// Whether a cached Distill result exists in the repository for the current memo
+    var hasCachedDistill: Bool {
+        guard let memo = currentMemo else { return false }
+        return DIContainer.shared.analysisRepository().hasAnalysisResult(for: memo.id, mode: .distill)
+    }
+
+    /// Restore cached Distill result into the UI if present
+    func restoreCachedDistill() {
+        guard let memo = currentMemo else { return }
+        if let env: AnalyzeEnvelope<DistillData> = DIContainer.shared
+            .analysisRepository()
+            .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
+            selectedAnalysisMode = .distill
+            analysisResult = env.data
+            analysisEnvelope = env
+            isAnalyzing = false
+            analysisCacheStatus = "✅ Restored from cache"
+            analysisPerformanceInfo = "Restored on demand"
+        }
+    }
+
     /// Whether retry should be offered in UI
     var canRetryTranscription: Bool {
         if case .failed(let message) = transcriptionState {

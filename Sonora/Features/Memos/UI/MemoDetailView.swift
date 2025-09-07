@@ -221,7 +221,7 @@ struct MemoDetailView: View {
                 // Edit mode: Text field with save/cancel buttons
                 VStack(spacing: 12) {
                     TextField("Memo Title", text: $viewModel.editedTitle)
-                        .font(.title2)
+                        .font(.system(.title2, design: .serif))
                         .fontWeight(.bold)
                         .textFieldStyle(.roundedBorder)
                         .focused($isTitleEditingFocused)
@@ -256,7 +256,7 @@ struct MemoDetailView: View {
             } else {
                 // Display mode: Title with double-tap to edit
                 Text(viewModel.currentMemoTitle)
-                    .font(.title2)
+                    .font(.system(.title2, design: .serif))
                     .fontWeight(.bold)
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityFocused($focusedElement, equals: .memoTitle)
@@ -319,7 +319,7 @@ struct MemoDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
                 Text("Transcription")
-                    .font(.headline)
+                    .font(.system(.headline, design: .serif))
                     .fontWeight(.semibold)
                 
                 Spacer()
@@ -353,7 +353,7 @@ struct MemoDetailView: View {
             } label: {
                 HStack(spacing: 8) {
                     Text("Transcription")
-                        .font(.headline)
+                        .font(.system(.headline, design: .serif))
                         .fontWeight(.semibold)
                     Spacer()
                     if viewModel.transcriptionState.isInProgress {

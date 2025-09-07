@@ -22,7 +22,13 @@ struct AnalysisSectionView: View {
             }
             Button(action: {
                 HapticManager.shared.playSelection()
-                viewModel.performAnalysis(mode: .distill, transcript: transcript)
+                let hasCached = viewModel.hasCachedDistill
+                let hasShown = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
+                if hasCached {
+                    if !hasShown { viewModel.restoreCachedDistill() }
+                } else {
+                    viewModel.performAnalysis(mode: .distill, transcript: transcript)
+                }
             }) {
                 HStack(spacing: 12) {
                     Image(systemName: AnalysisMode.distill.iconName)
@@ -31,10 +37,19 @@ struct AnalysisSectionView: View {
                         .frame(width: 44, height: 44)
                         .background(Color.semantic(.brandPrimary))
                         .clipShape(Circle())
-                    Text(AnalysisMode.distill.displayName)
-                        .font(.headline)
-                        .fontWeight(.semibold)
+                    let hasCached = viewModel.hasCachedDistill
+                    let hasShown = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
+                    Text(
+                        viewModel.isAnalyzing ? "Analyzing…" : (
+                            hasCached ? (hasShown ? "Distilled" : "View Distill") : AnalysisMode.distill.displayName
+                        )
+                    )
+                    .font(.system(.headline, design: .serif))
+                    .fontWeight(.semibold)
                     Spacer()
+                    if viewModel.hasCachedDistill && (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil) {
+                        Image(systemName: "water.waves").foregroundColor(.semantic(.brandPrimary))
+                    }
                 }
                 .padding(.vertical, 14)
                 .padding(.horizontal, 12)
@@ -46,10 +61,10 @@ struct AnalysisSectionView: View {
                 )
             }
             .buttonStyle(.plain)
-            .disabled(viewModel.isAnalyzing)
+            .disabled(viewModel.isAnalyzing || (viewModel.hasCachedDistill && viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil))
             .opacity(viewModel.isAnalyzing ? 0.6 : 1.0)
             .accessibilityLabel("Distill")
-            .accessibilityHint("Double tap to generate AI insights for this memo")
+            .accessibilityHint("Double tap to generate or view AI insights for this memo")
 
             // Loading State
             if viewModel.isAnalyzing {
