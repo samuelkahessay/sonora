@@ -28,6 +28,7 @@ struct SonoraMemocCard: View {
     
     let memo: Memo
     @ObservedObject var viewModel: MemoListViewModel
+    @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var insightHintOpacity: Double = 0
     @State private var waveformShimmer: Bool = false
     
@@ -63,7 +64,9 @@ struct SonoraMemocCard: View {
         .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: SonoraDesignSystem.Spacing.cardRadius))
         .shadow(
-            color: Color.sonoraDep.opacity(0.08),
+            color: colorScheme == .dark
+                ? Color.white.opacity(0.05) // subtle highlight in dark mode
+                : Color.sonoraDep.opacity(0.08),
             radius: 8, x: 0, y: 4
         )
         // Inline chevron inside card bounds (instead of List accessory)
@@ -94,7 +97,7 @@ struct SonoraMemocCard: View {
     private var titleSection: some View {
         Text(memo.displayName)
             .font(SonoraDesignSystem.Typography.headingSmall)
-            .foregroundColor(.textPrimary)
+            .foregroundColor(.semantic(.textPrimary))
             .lineLimit(2)
             .multilineTextAlignment(.leading)
     }
@@ -105,7 +108,7 @@ struct SonoraMemocCard: View {
         HStack(spacing: SonoraDesignSystem.Spacing.iconToTextSpacing) {
             Image(systemName: "clock")
                 .font(.caption)
-                .foregroundColor(.reflectionGray)
+                .foregroundColor(.secondary)
             
             Text("\(memo.durationString) · \(relativeTime)")
                 .font(.footnote)
@@ -153,10 +156,14 @@ struct SonoraMemocCard: View {
     @ViewBuilder
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: SonoraDesignSystem.Spacing.cardRadius)
-            .fill(Color.clarityWhite)
+            .fill(colorScheme == .dark
+                  ? Color.semantic(.bgSecondary)
+                  : Color.clarityWhite)
             .overlay(
                 RoundedRectangle(cornerRadius: SonoraDesignSystem.Spacing.cardRadius)
-                    .fill(Color.whisperBlue.opacity(0.3))
+                    .fill(colorScheme == .dark
+                          ? Color.clear
+                          : Color.whisperBlue.opacity(0.3))
             )
     }
     

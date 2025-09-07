@@ -16,7 +16,8 @@ enum MemoListColors {
     /// - Parameter colorScheme: Current interface color scheme
     /// - Returns: Slightly grey background in dark mode, clear in light mode
     static func rowBackground(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? Color(UIColor.systemGray6) : .clear
+        // Avoid extra gutters/rounded backgrounds in both modes
+        return .clear
     }
     
     /// Container background color that adapts to color scheme  

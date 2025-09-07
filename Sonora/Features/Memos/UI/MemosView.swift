@@ -324,24 +324,29 @@ struct MemoSection {
 struct ContextualSectionHeader: View {
     let period: TimePeriod
     let memoCount: Int
+    @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             // Brand voice header with New York serif (resolved via design system)
             Text(period.headerText)
                 .font(SonoraDesignSystem.Typography.navigationTitle)
-                .foregroundColor(.textPrimary)
+                .foregroundColor(.semantic(.textPrimary))
             
             Spacer()
             
             // Subtle count indicator
             Text("\(memoCount)")
                 .font(SonoraDesignSystem.Typography.caption)
-                .foregroundColor(.reflectionGray)
+                .foregroundColor(.semantic(.textSecondary))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 2)
                 .background(
-                    Capsule().fill(Color.whisperBlue.opacity(0.6))
+                    Capsule().fill(
+                        colorScheme == .dark
+                        ? Color.semantic(.fillSecondary)
+                        : Color.whisperBlue.opacity(0.6)
+                    )
                 )
                 .alignmentGuide(.firstTextBaseline) { $0[.firstTextBaseline] }
         }

@@ -304,7 +304,7 @@ private extension RecordingView {
         VStack(spacing: Spacing.sm) {
             Text(viewModel.formattedRecordingTime)
                 .font(SonoraDesignSystem.Typography.timerDisplay)
-                .foregroundColor(.textPrimary)
+                .foregroundColor(.textOnColored)
                 .contentTransition(.numericText())
                 .accessibilityLabel("Recording duration")
                 .accessibilityValue(getTimeAccessibilityLabel())
