@@ -5,25 +5,29 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: Spacing.lg) {
-                    if FeatureFlags.showOnboarding {
-                        OnboardingSectionView()
+                VStack(spacing: Spacing.xl) {
+                    if FeatureFlags.useConsolidatedSettings {
+                        // Section 1: Processing & Recording
+                        ProcessingOptionsSection()
+
+                        // Section 2: Data & Privacy (existing view already includes export/delete + links)
+                        PrivacySectionView()
+
+                        // Section 3: About & Support (lightweight version info)
+                        AboutSectionView()
+                    } else {
+                        if FeatureFlags.showOnboarding { OnboardingSectionView() }
+                        if FeatureFlags.showLanguage { LanguageSectionView() }
+                        TranscriptionServiceSectionSimple()
+                        if FeatureFlags.showAutoDetection { AutoDetectionSectionView() }
+                        LocalAISectionView()
+                        AIDisclosureSectionView()
+                        PrivacySectionView()
                     }
-                    if FeatureFlags.showLanguage {
-                        LanguageSectionView()
-                    }
-                    // Simplified transcription section for beta
-                    TranscriptionServiceSectionSimple()
-                    if FeatureFlags.showAutoDetection {
-                        AutoDetectionSectionView()
-                    }
-                LocalAISectionView()
-                AIDisclosureSectionView()
-                PrivacySectionView()
-                #if DEBUG
-                DiagnosticsSectionView()
-                DebugSectionView()
-                #endif
+                    #if DEBUG
+                    DiagnosticsSectionView()
+                    DebugSectionView()
+                    #endif
                 }
                 .padding(.horizontal)
                 .padding(.top, Spacing.lg)

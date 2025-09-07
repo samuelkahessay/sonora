@@ -17,5 +17,21 @@ enum FeatureFlags {
 
     /// Use a simplified Local AI section (fixed model text, no selection UI)
     static let useSimplifiedLocalAIUI: Bool = true
-}
 
+    /// Use the consolidated Settings layout (Processing, Data & Privacy, About)
+    /// Enabled by default for Development and TestFlight builds. App Store can opt-in via env/UD override.
+    static var useConsolidatedSettings: Bool {
+        // Optional runtime overrides for quick testing
+        if let env = ProcessInfo.processInfo.environment["SONORA_FF_USE_CONSOLIDATED"], let b = Bool(env) {
+            return b
+        }
+        if let override = UserDefaults.standard.object(forKey: "ff_useConsolidatedSettings") as? Bool {
+            return override
+        }
+        switch BuildConfiguration.shared.distributionType {
+        case .development: return true
+        case .testFlight:  return true
+        case .appStore:    return false
+        }
+    }
+}

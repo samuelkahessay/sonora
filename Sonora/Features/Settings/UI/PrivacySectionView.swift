@@ -9,9 +9,10 @@ struct PrivacySectionView: View {
 
     var body: some View {
         SettingsCard {
-            Text("Privacy & Data")
+            Label("Privacy & Data", systemImage: "lock.shield")
                 .font(SonoraDesignSystem.Typography.headingSmall)
-                .accessibilityAddTraits(.isHeader)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
 
             // Links (stacked)
             VStack(spacing: Spacing.md) {
