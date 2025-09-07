@@ -57,4 +57,17 @@ enum FeatureFlags {
         case .appStore:    return false
         }
     }
+
+    // MARK: - EventKit Integration (Calendar/Reminders)
+    /// Controls whether EventKit (Calendar/Reminders) related features are active.
+    /// Off for TestFlight by default to reduce review risk; can be overridden.
+    static var useEventKitIntegration: Bool {
+        if let env = ProcessInfo.processInfo.environment["SONORA_FF_EVENTKIT"], let b = Bool(env) { return b }
+        if let override = UserDefaults.standard.object(forKey: "ff_eventkit") as? Bool { return override }
+        switch BuildConfiguration.shared.distributionType {
+        case .development: return true
+        case .testFlight:  return false
+        case .appStore:    return true
+        }
+    }
 }

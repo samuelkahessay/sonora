@@ -11,7 +11,11 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
     
     // UI-visible analysis modes (excludes internal component modes)
     public static var uiVisibleCases: [AnalysisMode] {
-        return [.distill, .analysis, .themes, .todos, .events, .reminders]
+        if FeatureFlags.useEventKitIntegration {
+            return [.distill, .analysis, .themes, .todos, .events, .reminders]
+        } else {
+            return [.distill, .analysis, .themes, .todos]
+        }
     }
     
     var displayName: String {

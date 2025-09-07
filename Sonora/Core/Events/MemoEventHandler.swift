@@ -244,7 +244,8 @@ public final class MemoEventHandler {
         // Start tracking analysis time
         analysisStartTime[memoId] = Date()
 
-        // Auto-detect events/reminders if enabled and transcript suggests scheduling language
+        // Auto-detect events/reminders if integration is enabled and transcript suggests scheduling language
+        guard FeatureFlags.useEventKitIntegration else { return }
         let defaults = UserDefaults.standard
         let autoEvents = defaults.object(forKey: "autoDetectEvents") as? Bool ?? true
         let autoReminders = defaults.object(forKey: "autoDetectReminders") as? Bool ?? true
