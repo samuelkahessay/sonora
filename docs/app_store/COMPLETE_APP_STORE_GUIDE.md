@@ -54,7 +54,7 @@ Sonora is a sophisticated voice memo application that bridges the gap between qu
 
 #### **🎤 Intelligent Recording System**
 - **Background Recording**: Continues recording when app is backgrounded using `UIBackgroundModes: audio`
-- **60-Second Focus Sessions**: Optimized recording duration for maximum clarity
+- **3-Minute Focus Sessions**: Optimized recording duration for maximum clarity
 - **Live Activities Integration**: Real-time recording status on lock screen and Dynamic Island
 - **Audio Quality**: High-fidelity recording with automatic noise reduction
 - **Accessibility**: Full VoiceOver support with descriptive labels
@@ -226,7 +226,7 @@ Transform your voice into actionable insights with Sonora - the intelligent voic
 
 🎤 SMART RECORDING
 • Background recording with Live Activities
-• 60-second focused recording sessions  
+• 3-minute focused recording sessions  
 • Dynamic Island integration on iPhone 14 Pro+
 • Continue recording when app is backgrounded
 
@@ -800,7 +800,7 @@ APP REVIEW TESTING INSTRUCTIONS
 
 CORE FUNCTIONALITY TESTING:
 1. Allow microphone permission when prompted upon first launch
-2. Tap the large record button to start recording (60-second maximum)
+2. Tap the large record button to start recording (3-minute maximum)
 3. Speak clearly for 10-20 seconds to create realistic test content
 4. Lock the device - recording continues in background via audio mode
 5. Observe Live Activity on lock screen showing recording status

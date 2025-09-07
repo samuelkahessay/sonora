@@ -16,10 +16,10 @@
 
 ### Recording Duration Defaults
 
-- The app enforces a global 60-second recording limit with a 10-second countdown. For longer tests, set an environment variable in the Xcode scheme:
+- The app enforces a global 3-minute (180-second) recording limit with a 10-second countdown. For longer tests, set an environment variable in the Xcode scheme:
 
 ```
-SONORA_MAX_RECORDING_DURATION=120   # 2 minutes
+SONORA_MAX_RECORDING_DURATION=300   # 5 minutes
 ```
 
 ### How to Test Background Recording:

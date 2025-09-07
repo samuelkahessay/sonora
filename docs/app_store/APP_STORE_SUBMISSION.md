@@ -32,7 +32,7 @@
 
 🎤 **Smart Recording**
 • Background recording with Live Activities
-• 60-second focused recording sessions  
+• 3-minute focused recording sessions  
 • Dynamic Island integration on iPhone 14 Pro+
 • Continue recording when app is backgrounded
 
@@ -279,7 +279,7 @@ Record your thoughts, transcribe with AI, and transform voice into actionable in
   
   Core functionality review steps:
   1. Allow microphone permission when prompted
-  2. Tap record button to start recording (60s max)
+  2. Tap record button to start recording (3-minute max)
   3. Lock device - recording continues via background audio mode
   4. Observe Live Activity on lock screen/Dynamic Island
   5. Tap "Stop" in Live Activity or return to app

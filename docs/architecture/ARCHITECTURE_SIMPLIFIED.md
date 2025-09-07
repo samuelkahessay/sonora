@@ -7,7 +7,7 @@ After successful component consolidation and modernization, Sonora now follows a
 ## Core UI Components
 
 ### Recording & Playback
-- **`RecordingView.swift`** - Main recording interface with 60-second timer and permission handling
+- **`RecordingView.swift`** - Main recording interface with 3-minute timer and permission handling
 - **`RecordingViewModel.swift`** - Recording state management with background audio support
 - **`BackgroundAudioService.swift`** - Background recording functionality and Live Activities
 

@@ -32,7 +32,7 @@ Key systems (verified in repo):
 UI Implementation:
 - **Native SwiftUI**: Standard Apple components with system styling
 - **System Theming**: Automatic light/dark via `ThemeManager` and system colors
-- **Recording Guardrails**: 60-second limit with 10s warning countdown; override via `SONORA_MAX_RECORDING_DURATION` in `AppConfiguration`
+- **Recording Guardrails**: 3-minute (180s) limit with 10s warning countdown; override via `SONORA_MAX_RECORDING_DURATION` in `AppConfiguration`
 
 ## Feature-Based Organization
 

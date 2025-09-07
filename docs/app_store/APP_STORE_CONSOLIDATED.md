@@ -72,7 +72,7 @@ Sonora is a voice memo recording app with background recording, playback, and se
 
 🎤 **Smart Recording**
 • Background recording with Live Activities
-• 60-second focused recording sessions  
+• 3-minute focused recording sessions  
 • Dynamic Island integration on iPhone 14 Pro+
 • Continue recording when app is backgrounded
 

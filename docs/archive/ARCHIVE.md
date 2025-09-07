@@ -7,7 +7,7 @@ This archive summarizes previously separate historical documents that are now co
 - Outcome:
   - Use cases remain synchronous (`StartRecordingUseCase.execute()`, `StopRecordingUseCase.execute()`)
   - `AudioRepositoryImpl` handles background behavior internally
-  - Recording remains stable with a global 60s limit and 10s countdown
+  - Recording remains stable with a global 3-minute (180s) limit and 10s countdown
 - Notes: Legacy adapter examples were removed; the app uses repository-backed flows.
 
 ## 2) Build Errors Fixed — Recording Use Cases (Resolved)
@@ -34,4 +34,3 @@ For current architecture, testing, and development guidance, see:
 - README.md (current architecture, metrics, and defaults)
 - ARCHITECTURE_MIGRATION.md (status and next steps)
 - docs/testing (active testing guides)
-
