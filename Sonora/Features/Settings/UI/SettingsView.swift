@@ -10,11 +10,14 @@ struct SettingsView: View {
                         // Section 1: Processing & Recording
                         ProcessingOptionsSection()
 
-                        // Section 2: Data & Privacy (existing view already includes export/delete + links)
-                        PrivacySectionView()
+                        // Section 2: Data Management (exports + delete)
+                        DataManagementSectionView()
 
-                        // Section 3: About & Support (lightweight version info)
-                        AboutSectionView()
+                        // Section 3: Privacy & Legal (policy + terms)
+                        PrivacyLegalSectionView()
+
+                        // Section 4: Support & About
+                        SupportAboutSectionView()
                     } else {
                         if FeatureFlags.showOnboarding { OnboardingSectionView() }
                         if FeatureFlags.showLanguage { LanguageSectionView() }
