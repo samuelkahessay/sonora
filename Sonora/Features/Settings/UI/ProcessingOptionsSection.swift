@@ -230,7 +230,10 @@ private struct WhisperModelCompactRow: View {
     @ObservedObject var downloadManager: ModelDownloadManager
 
     private var selected: WhisperModelInfo {
-        UserDefaults.standard.selectedWhisperModelInfo
+        if FeatureFlags.useFixedModelsForBeta {
+            return WhisperModelInfo.model(withId: "openai_whisper-large-v3") ?? WhisperModelInfo.defaultModel
+        }
+        return UserDefaults.standard.selectedWhisperModelInfo
     }
     private var state: ModelDownloadState { downloadManager.getDownloadState(for: selected.id) }
     private var progress: Double { downloadManager.getDownloadProgress(for: selected.id) }
@@ -323,7 +326,10 @@ private struct LocalAnalysisModelCompactRow: View {
     @State private var presentManage = false
 
     private var model: LocalModel {
-        LocalModel(rawValue: appConfig.selectedLocalModel) ?? .defaultModel
+        if FeatureFlags.useFixedModelsForBeta {
+            return .phi4_mini
+        }
+        return LocalModel(rawValue: appConfig.selectedLocalModel) ?? .defaultModel
     }
 
     var body: some View {

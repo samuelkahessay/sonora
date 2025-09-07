@@ -91,7 +91,12 @@ extension WhisperModelInfo {
     ]
     
     /// Default model recommendation
-    static var defaultModel: WhisperModelInfo { availableModels.first! }
+    static var defaultModel: WhisperModelInfo {
+        if FeatureFlags.useFixedModelsForBeta {
+            return availableModels.first { $0.id == "openai_whisper-large-v3" } ?? availableModels.first!
+        }
+        return availableModels.first!
+    }
     
     /// Find model by ID
     static func model(withId id: String) -> WhisperModelInfo? {
