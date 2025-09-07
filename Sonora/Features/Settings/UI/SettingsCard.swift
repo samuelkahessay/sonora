@@ -11,6 +11,8 @@ struct SettingsCard<Content: View>: View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             content()
         }
+        // Ensure all cards take the full available width inside SettingsView's padded ScrollView
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color.semantic(.bgSecondary))
         .clipShape(RoundedRectangle(cornerRadius: 12))

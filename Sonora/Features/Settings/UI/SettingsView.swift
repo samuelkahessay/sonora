@@ -6,10 +6,17 @@ struct SettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Spacing.lg) {
-                    OnboardingSectionView()
-                    LanguageSectionView()
-                    WhisperKitSectionView()
-                    AutoDetectionSectionView()
+                    if FeatureFlags.showOnboarding {
+                        OnboardingSectionView()
+                    }
+                    if FeatureFlags.showLanguage {
+                        LanguageSectionView()
+                    }
+                    // Simplified transcription section for beta
+                    TranscriptionServiceSectionSimple()
+                    if FeatureFlags.showAutoDetection {
+                        AutoDetectionSectionView()
+                    }
                 LocalAISectionView()
                 AIDisclosureSectionView()
                 PrivacySectionView()

@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Toggle component for selecting transcription service (Cloud API vs Local WhisperKit)
 struct TranscriptionServiceToggle: View {
+    @StateObject private var appConfig = AppConfiguration.shared
     @ObservedObject var downloadManager: ModelDownloadManager
     @State private var selectedService: TranscriptionServiceType = UserDefaults.standard.selectedTranscriptionService
     
@@ -20,7 +21,11 @@ struct TranscriptionServiceToggle: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             headerSection
-            toggleSection
+            if FeatureFlags.useSimplifiedTranscriptionUI {
+                simplifiedToggle
+            } else {
+                toggleSection
+            }
         }
     }
     
@@ -40,6 +45,34 @@ struct TranscriptionServiceToggle: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Transcription Service")
         .accessibilityAddTraits(.isHeader)
+    }
+
+    // MARK: - Simplified Toggle
+    private var simplifiedToggle: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Toggle("Use Local Transcription", isOn: Binding(
+                get: { UserDefaults.standard.selectedTranscriptionService == .localWhisperKit },
+                set: { isOn in
+                    let target: TranscriptionServiceType = isOn ? .localWhisperKit : .cloudAPI
+                    HapticManager.shared.playSelection()
+                    UserDefaults.standard.selectedTranscriptionService = target
+                    AppConfiguration.shared.strictLocalWhisper = (target == .localWhisperKit)
+                    Logger.shared.info("Selected transcription service (simplified): \(target.displayName)")
+                }
+            ))
+            .toggleStyle(SwitchToggleStyle(tint: .semantic(.brandPrimary)))
+            .accessibilityLabel("Toggle local transcription")
+
+            if UserDefaults.standard.selectedTranscriptionService == .localWhisperKit {
+                Text("On-device model (downloaded as needed). Works offline.")
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+            } else {
+                Text("Cloud API – faster, requires internet.")
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+            }
+        }
     }
     
     // MARK: - Toggle Section

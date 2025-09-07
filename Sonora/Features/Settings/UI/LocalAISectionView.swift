@@ -13,27 +13,43 @@ struct LocalAISectionView: View {
                 Toggle("Use Local Analysis", isOn: $appConfig.useLocalAnalysis)
                     .accessibilityLabel("Toggle local AI analysis")
                 
-                if appConfig.useLocalAnalysis {
-                    Text("Analysis runs on your device using LLaMA 3.2. No data is sent to external servers.")
+                if FeatureFlags.useSimplifiedLocalAIUI {
+                    // Simplified: fixed model text with short explanation
+                    if appConfig.useLocalAnalysis {
+                        Text("On-device analysis enabled.")
+                            .font(.caption)
+                            .foregroundColor(.semantic(.textSecondary))
+                    } else {
+                        Text("Cloud analysis enabled – requires internet.")
+                            .font(.caption)
+                            .foregroundColor(.semantic(.textSecondary))
+                    }
+                    Text("Model: Phi-4 Mini")
                         .font(.caption)
                         .foregroundColor(.semantic(.textSecondary))
                 } else {
-                    Text("Analysis uses cloud services. More accurate but requires internet connection.")
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                }
-                
-                NavigationLink(destination: ModelDownloadView()) {
-                    HStack {
-                        Label("Manage Model", systemImage: "square.and.arrow.down")
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.semantic(.textTertiary))
-                            .font(.caption.weight(.semibold))
+                    if appConfig.useLocalAnalysis {
+                        Text("Analysis runs on your device using LLaMA 3.2. No data is sent to external servers.")
+                            .font(.caption)
+                            .foregroundColor(.semantic(.textSecondary))
+                    } else {
+                        Text("Analysis uses cloud services. More accurate but requires internet connection.")
+                            .font(.caption)
+                            .foregroundColor(.semantic(.textSecondary))
                     }
+                    
+                    NavigationLink(destination: ModelDownloadView()) {
+                        HStack {
+                            Label("Manage Model", systemImage: "square.and.arrow.down")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.semantic(.textTertiary))
+                                .font(.caption.weight(.semibold))
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.top, Spacing.sm)
                 }
-                .buttonStyle(PlainButtonStyle())
-                .padding(.top, Spacing.sm)
             }
         }
     }
