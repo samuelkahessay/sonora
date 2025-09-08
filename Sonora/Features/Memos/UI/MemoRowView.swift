@@ -204,9 +204,28 @@ struct MemoRowView: View {
             .frame(width: viewModel.isEditMode ? Layout.editGutterWidth : 0)
             .animation(.spring(response: 0.25), value: viewModel.isEditMode)
 
-            // Main card content
-            SonoraMemocCard(memo: memo, viewModel: viewModel)
-                .contentShape(Rectangle())
+            // Main card content with inline rename overlay when editing
+            ZStack(alignment: .leading) {
+                SonoraMemocCard(memo: memo, viewModel: viewModel)
+                    .contentShape(Rectangle())
+
+                if viewModel.isEditing(memo: memo) {
+                    // Inline editing field aligned with card padding
+                    HStack {
+                        TextField("Memo Title", text: $editedTitle, onCommit: { submitRename() })
+                            .font(Typography.titleFont)
+                            .textInputAutocapitalization(.words)
+                            .disableAutocorrection(true)
+                            .focused($isEditingFocused)
+                            .onAppear {
+                                editedTitle = memo.displayName
+                                isEditingFocused = true
+                            }
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                }
+            }
         }
         .contentShape(Rectangle())
         .contextMenu {
