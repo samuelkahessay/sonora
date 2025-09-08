@@ -49,14 +49,17 @@ struct SonoraLiveActivityLiveActivity: Widget {
                         Spacer(minLength: 0)
 
                         if let lvl = context.state.level {
-                            HStack(alignment: .bottom, spacing: 3) {
-                                let bars = barHeights(level: lvl)
+                            HStack(alignment: .bottom, spacing: 2) {
+                                let bars = expressiveBarHeights(level: lvl, t: context.state.duration, maxHeight: 24)
                                 ForEach(0..<bars.count, id: \.self) { i in
-                                    RoundedRectangle(cornerRadius: 1)
-                                        .fill(Color.semantic(.textSecondary).opacity(0.9))
+                                    RoundedRectangle(cornerRadius: 1.5)
+                                        .fill(Color.semantic(.textPrimary).opacity(0.9))
                                         .frame(width: 3, height: bars[i])
                                 }
                             }
+                            .frame(height: 26)
+                            .animation(.easeInOut(duration: 0.25), value: context.state.level ?? 0)
+                            .animation(.easeInOut(duration: 0.25), value: context.state.duration)
                         }
                     }
                     .padding(.horizontal, 8)
@@ -115,15 +118,18 @@ struct PremiumLiveActivityView: View {
                     .contentTransition(.numericText())
 
                     if let lvl = context.state.level {
-                        HStack(alignment: .bottom, spacing: 3) {
-                            let bars = barHeights(level: lvl)
+                        HStack(alignment: .bottom, spacing: 2) {
+                            let bars = expressiveBarHeights(level: lvl, t: context.state.duration, maxHeight: 32)
                             ForEach(0..<bars.count, id: \.self) { i in
-                                RoundedRectangle(cornerRadius: 1)
-                                    .fill(Color.semantic(.textSecondary).opacity(0.9))
+                                RoundedRectangle(cornerRadius: 1.5)
+                                    .fill(Color.semantic(.textPrimary).opacity(colorScheme == .dark ? 1.0 : 0.95))
                                     .frame(width: 3, height: bars[i])
                             }
                         }
+                        .frame(height: 36)
                         .transition(.opacity)
+                        .animation(.easeInOut(duration: 0.25), value: context.state.level ?? 0)
+                        .animation(.easeInOut(duration: 0.25), value: context.state.duration)
                     }
                 }
             }
@@ -183,10 +189,22 @@ private func timerString(from start: Date, isCountdown: Bool, remaining: TimeInt
 }
 
 // Deterministic mini-waveform bar heights (no random). Level: 0..1
-private func barHeights(level: Double) -> [CGFloat] {
+// Expressive, deterministic bar heights driven by level and elapsed time
+private func expressiveBarHeights(level: Double, t: Double, maxHeight: CGFloat) -> [CGFloat] {
     let l = max(0.0, min(1.0, level))
-    let multipliers: [CGFloat] = [0.6, 0.8, 1.0, 0.8, 0.6]
-    let minHeight: CGFloat = 6
-    let range: CGFloat = 12 // so 6..18 px
-    return multipliers.map { m in minHeight + range * CGFloat(l) * m }
+    // 7 bars with varied multipliers for richer shape
+    let multipliers: [CGFloat] = [0.3, 0.6, 0.9, 1.0, 0.85, 0.7, 0.4]
+    let minHeight: CGFloat = 4
+    let range: CGFloat = maxHeight - minHeight
+
+    // Time-based phase to create subtle motion across updates (no timers in widgets)
+    // t is duration/seconds from ContentState, updated by the app ~2 Hz.
+    return multipliers.enumerated().map { index, m in
+        let phase = Double(index) * 0.7 + t * 2.2
+        // 0.7..1.3 variation envelope applied on top of level
+        let envelope = 1.0 + 0.3 * sin(phase)
+        let barLevel = max(0.0, min(1.0, l * envelope))
+        let height = minHeight + range * CGFloat(barLevel) * m
+        return max(minHeight, min(maxHeight, height))
+    }
 }
