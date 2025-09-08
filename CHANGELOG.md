@@ -872,21 +872,97 @@ August 30-31 marked the UI/UX maturity phase, implementing sophisticated feature
 
 ## 🎨 PHASE 7: DESIGN SYSTEM & BRAND IDENTITY (September 5, 2025)
 
-### Recent Updates (September 7, 2025)
+### Recent Updates (September 7-8, 2025)
 
-**[62d6b83]** `12 minutes ago` - **📝 Documentation Updates**
+**[5a16cf8]** `Latest` - **🎙️ Enhanced Permissions**
+- Updated microphone usage description to be more comprehensive
+- Better user privacy communication
+
+**[91760dd]** `Latest` - **📊 Live Activity Enhancement**
+- Made audio waveform visualization more prominent in Live Activity
+- Better visual feedback for background recording
+
+**[5921afb]** - **📱 Live Activity Size Optimization**
+- Increased size of Live Activity for better visibility
+- Enhanced lock screen experience
+
+**[21d9e54]** - **🔧 Live Activity Updates**
+- Further Live Activity improvements and refinements
+- Better user interaction patterns
+
+**[b9dafec]** - **🌙 Dark Mode Enhancement**
+- Improved memo list appearance in dark mode
+- Better visual hierarchy and readability
+
+**[b49a050]** - **🎯 Animation Fix**
+- Fixed erratic spinning behavior of recording button petals
+- Smooth, consistent animation performance
+
+**[e2b9513]** - **📝 Edit Mode Polish**
+- Reduced inset for toggle control in bulk edit mode
+- Better touch targets and visual alignment
+
+**[d026445]** - **🗂️ List View Cleanup**
+- Removed unnecessary gutter space from memo list view
+- Cleaner, more spacious layout
+
+**[57ca786]** - **📋 Memo List Improvements**
+- Enhanced UI for memo list view with better spacing
+- Improved visual consistency
+
+**[fd79d8e]** - **🎊 Recording Animation Fix**
+- Bloom animation now triggers consistently on each record/stop action
+- Resolved single-use animation bug
+
+**[a74ce6b]** - **🔄 Transcription Bug Fix**
+- Fixed infinite loop bug with in-progress transcription status
+- Improved state management and UI updates
+
+**[b6060a3]** - **📦 Font Optimization**
+- Removed bundled fonts to reduce app size
+- Using system fonts for better performance
+
+**[c0c6bb1]** - **🏗️ Feature Flag Implementation**
+- Hidden EventKit integration behind feature flags for beta build
+- Selective feature rollout capability
+
+### Beta Preparation Highlights (September 7-8, 2025)
+
+`★ Insight ─────────────────────────────────────`
+This series of commits focused on preparing Sonora for TestFlight beta testing, addressing UI polish, animation stability, and feature flag implementation for controlled rollout.
+`─────────────────────────────────────────────────`
+
+#### Key Beta-Ready Features:
+- **🎙️ Enhanced Permissions**: Comprehensive microphone usage descriptions for App Store review
+- **📊 Improved Live Activity**: More prominent waveform visualization for better user feedback
+- **🎯 Stable Animations**: Fixed erratic spinning petals and consistent bloom animations
+- **🌙 Dark Mode Polish**: Better visual hierarchy in memo lists for all users
+- **🏗️ Feature Flags**: EventKit integration hidden for focused beta testing
+- **📦 Size Optimization**: Removed bundled fonts to reduce download size
+- **🔄 Bug Fixes**: Resolved transcription infinite loop and animation timing issues
+
+#### Technical Improvements:
+- Better state management for transcription progress
+- Improved UI layout consistency across light/dark modes  
+- Enhanced Live Activity visibility and interaction
+- Optimized animation performance and reliability
+- Selective feature rollout capability for gradual deployment
+
+### Previous Updates (September 7, 2025)
+
+**[62d6b83]** - **📝 Documentation Updates**
 - Updated docs to reflect new 3 minute time limit
 - Configuration documentation maintenance
 
-**[97288f0]** `24 minutes ago` - **⏱️ Extended Recording Limit**
+**[97288f0]** - **⏱️ Extended Recording Limit**
 - Increased cloud recording limit from 1 minute to 3 minutes
 - Enhanced user recording capacity
 
-**[4e35f9f]** `30 minutes ago` - **🔗 Live Site Integration**
+**[4e35f9f]** - **🔗 Live Site Integration**
 - Updated placeholder TOS, Privacy Policy, and Support links with live sites
 - Production-ready legal documentation
 
-**[126fcc6]** `35 minutes ago` - **📱 Info.plist & EventKit Improvements**
+**[126fcc6]** - **📱 Info.plist & EventKit Improvements**
 - Updated Info.plist configuration
 - Enhanced EventKit integration functionality
 
