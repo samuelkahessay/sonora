@@ -204,28 +204,9 @@ struct MemoRowView: View {
             .frame(width: viewModel.isEditMode ? Layout.editGutterWidth : 0)
             .animation(.spring(response: 0.25), value: viewModel.isEditMode)
 
-            // Main card content with inline rename overlay when editing
-            ZStack(alignment: .leading) {
-                SonoraMemocCard(memo: memo, viewModel: viewModel)
-                    .contentShape(Rectangle())
-
-                if viewModel.isEditing(memo: memo) {
-                    // Inline editing field aligned with card padding
-                    HStack {
-                        TextField("Memo Title", text: $editedTitle, onCommit: { submitRename() })
-                            .font(Typography.titleFont)
-                            .textInputAutocapitalization(.words)
-                            .disableAutocorrection(true)
-                            .focused($isEditingFocused)
-                            .onAppear {
-                                editedTitle = memo.displayName
-                                isEditingFocused = true
-                            }
-                    }
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 16)
-                }
-            }
+            // Main card content
+            SonoraMemocCard(memo: memo, viewModel: viewModel)
+                .contentShape(Rectangle())
         }
         .contentShape(Rectangle())
         .contextMenu {
@@ -252,6 +233,40 @@ struct MemoRowView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
         .accessibilityHint(AccessibilityStrings.rowHint)
+        // Clean rename flow via a small sheet (serif styling, no list layout shifts)
+        .sheet(isPresented: Binding<Bool>(
+            get: { viewModel.isEditing(memo: memo) },
+            set: { newValue in if !newValue { viewModel.stopEditing() } }
+        )) {
+            NavigationStack {
+                VStack(spacing: 16) {
+                    TextField("Memo Title", text: $editedTitle)
+                        .font(SonoraDesignSystem.Typography.headingSmall)
+                        .textInputAutocapitalization(.words)
+                        .disableAutocorrection(true)
+                        .focused($isEditingFocused)
+                        .onAppear {
+                            editedTitle = memo.displayName
+                            DispatchQueue.main.async { isEditingFocused = true }
+                        }
+                    Spacer(minLength: 0)
+                }
+                .padding()
+                .navigationTitle("Rename Memo")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { viewModel.stopEditing() }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") { submitRename() }
+                            .disabled(editedTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || editedTitle.trimmingCharacters(in: .whitespacesAndNewlines) == memo.displayName)
+                    }
+                }
+            }
+            .presentationDetents([.fraction(0.25), .medium])
+            .presentationDragIndicator(.visible)
+        }
     }
     
     // MARK: - Content Views
