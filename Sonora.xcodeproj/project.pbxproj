@@ -580,7 +580,7 @@
 				INFOPLIST_FILE = Sonora/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Sonora;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs access to the microphone to record audio memos.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonora records your voice memos. Recordings are saved on your device. If you enable cloud transcription, audio is sent securely for processing; on-device transcription is also available.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -621,7 +621,7 @@
 				INFOPLIST_FILE = Sonora/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Sonora;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs access to the microphone to record audio memos.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonora records your voice memos. Recordings are saved on your device. If you enable cloud transcription, audio is sent securely for processing; on-device transcription is also available.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

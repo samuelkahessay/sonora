@@ -16,7 +16,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Sonora records voice memos. Recordings are stored locally on your device. When you choose to transcribe, you can use on‑device AI or cloud processing (configurable in Settings). Your audio is never sent anywhere without your explicit action.</string>
+	<string>Sonora records your voice memos. Recordings are saved on your device. If you enable cloud transcription, audio is sent securely for processing; on-device transcription is also available.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
