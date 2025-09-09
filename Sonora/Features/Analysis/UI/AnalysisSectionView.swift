@@ -80,8 +80,7 @@ struct AnalysisSectionView: View {
                 .cornerRadius(8)
             }
             
-            
-            // Results with AI disclaimer
+            // Results with AI disclaimer (only when there are results)
             if let mode = viewModel.selectedAnalysisMode {
                 VStack(alignment: .leading, spacing: 12) {
                     // Show progressive results for parallel distill or final results
@@ -92,6 +91,13 @@ struct AnalysisSectionView: View {
                             // Avoid scale transitions that can cause visual overlap with siblings
                             .transition(.opacity)
                             .animation(.easeInOut(duration: 0.3), value: progress.completedComponents)
+
+                        // Show disclaimer when any partial results are present
+                        if progress.completedComponents > 0 {
+                            AIDisclaimerView.analysis()
+                                .transition(.opacity)
+                                .animation(.easeIn(duration: 0.3), value: progress.completedComponents)
+                        }
                     } else if let result = viewModel.analysisResult,
                               let envelope = viewModel.analysisEnvelope {
                         AnalysisResultsView(
@@ -99,11 +105,11 @@ struct AnalysisSectionView: View {
                             result: result,
                             envelope: envelope
                         )
+
+                        // Show disclaimer only with actual results
+                        AIDisclaimerView.analysis()
+                            .accessibilityLabel("AI disclaimer. Review for accuracy. Learn more.")
                     }
-                    
-//                     AI Disclaimer for analysis results
-                    AIDisclaimerView.analysis()
-                        .accessibilityLabel("AI disclaimer: Analysis results may contain inaccuracies or subjective interpretations")
                 }
                 // Do not animate container height when toggling analyzing state
                 .animation(nil, value: viewModel.isAnalyzing)

@@ -137,42 +137,8 @@ struct AIDisclaimerView: View {
     // MARK: - Detailed Disclaimer
     @ViewBuilder
     private var detailedDisclaimer: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(alignment: .top, spacing: Spacing.sm) {
-                Image(systemName: style.iconName)
-                    .font(.title3)
-                    .foregroundColor(style.foregroundColor)
-                
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("Important")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(style.foregroundColor)
-                    
-                    Text(contentType.description)
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                        .lineSpacing(2)
-                }
-                
-                Spacer()
-            }
-            
-            Text("Always review AI-generated content for accuracy and completeness.")
-                .font(.caption)
-                .italic()
-                .foregroundColor(.semantic(.textSecondary))
-        }
-        .padding(Spacing.sm)
-        .background(style.backgroundColor)
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(style.foregroundColor.opacity(0.3), lineWidth: 1)
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(contentType.accessibilityDescription). Always review AI-generated content for accuracy and completeness.")
-        .accessibilityAddTraits(.isStaticText)
+        // Compact, on-brand copy with a Learn more link to the AI disclosure sheet
+        DetailedDisclosureRow(contentType: contentType, tint: style.foregroundColor, bg: style.backgroundColor)
     }
     
     // MARK: - Inline Disclaimer
@@ -193,6 +159,54 @@ struct AIDisclaimerView: View {
         .background(style.backgroundColor)
         .cornerRadius(4)
         .accessibilityLabel("AI generated content")
+        .accessibilityAddTraits(.isStaticText)
+    }
+}
+
+// MARK: - Detailed Disclosure Row (with Learn more)
+
+private struct DetailedDisclosureRow: View {
+    let contentType: AIDisclaimerView.AIContentType
+    let tint: Color
+    let bg: Color
+    @State private var showFullDisclosure = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(alignment: .top, spacing: Spacing.sm) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.title3)
+                    .foregroundColor(tint)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    // Requested concise copy
+                    Text("AI-generated. Review for accuracy.")
+                        .font(.subheadline)
+                        .foregroundColor(.semantic(.textPrimary))
+
+                    Button("Learn more") { showFullDisclosure = true }
+                        .font(.caption)
+                        .foregroundColor(.semantic(.brandPrimary))
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Learn more about AI features")
+                }
+
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(Spacing.sm)
+        .background(bg)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(tint.opacity(0.3), lineWidth: 1)
+        )
+        .sheet(isPresented: $showFullDisclosure) {
+            ScrollView { AIDisclosureSectionView().padding() }
+                .presentationDetents([.medium, .large])
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("AI disclaimer. Review for accuracy. Learn more about AI features.")
         .accessibilityAddTraits(.isStaticText)
     }
 }
