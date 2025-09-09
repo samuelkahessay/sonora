@@ -78,7 +78,9 @@ struct MemoDetailView: View {
                     audioControlsView
 
                     // Inline status/error banners
-                    if case .failed(let err) = viewModel.transcriptionState, !dismissTranscriptionErrorBanner {
+                    if case .failed(let err) = viewModel.transcriptionState,
+                       err != TranscriptionError.noSpeechDetected.errorDescription,
+                       !dismissTranscriptionErrorBanner {
                         NotificationBanner(
                             type: .warning,
                             message: err,
@@ -156,6 +158,17 @@ struct MemoDetailView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             viewModel.restoreAnalysisStateIfNeeded()
+        }
+        .onChange(of: viewModel.transcriptionState) { _, state in
+            if case .failed(let err) = state, err == TranscriptionError.noSpeechDetected.errorDescription {
+                // Ensure the transcription section is visible without expanding
+                isTranscriptExpanded = true
+            }
+        }
+        .onAppear {
+            if case .failed(let err) = viewModel.transcriptionState, err == TranscriptionError.noSpeechDetected.errorDescription {
+                isTranscriptExpanded = true
+            }
         }
         .initialFocus {
             focusedElement = .playButton
@@ -344,10 +357,13 @@ struct MemoDetailView: View {
                 
                 Spacer()
                 if viewModel.transcriptionState.isFailed {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.semantic(.warning))
-                        .font(.body)
-                        .accessibilityLabel("Transcription failed")
+                    if case .failed(let err) = viewModel.transcriptionState,
+                       err != TranscriptionError.noSpeechDetected.errorDescription {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.semantic(.warning))
+                            .font(.body)
+                            .accessibilityLabel("Transcription failed")
+                    }
                 } else if viewModel.transcriptionState.isCompleted {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.semantic(.success))
@@ -379,9 +395,12 @@ struct MemoDetailView: View {
                     if viewModel.transcriptionState.isInProgress {
                         LoadingIndicator(size: .small)
                     } else if viewModel.transcriptionState.isFailed {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.semantic(.warning))
-                            .font(.body)
+                        if case .failed(let err) = viewModel.transcriptionState,
+                           err != TranscriptionError.noSpeechDetected.errorDescription {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.semantic(.warning))
+                                .font(.body)
+                        }
                     } else if viewModel.transcriptionState.isCompleted {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.semantic(.success))
@@ -504,27 +523,37 @@ struct MemoDetailView: View {
     @ViewBuilder
     private func failedTranscriptionView(error: String) -> some View {
         VStack(spacing: 12) {
-            HStack {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.semantic(.warning))
-                Text(getErrorTitle(for: error))
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.semantic(.warning))
-            }
             if error == TranscriptionError.noSpeechDetected.errorDescription {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("We couldn't detect any speech in this recording.")
-                        .font(.caption)
+                // Option A: Minimal inline message with neutral tone
+                HStack(spacing: 12) {
+                    Image(systemName: "mic.slash")
+                        .font(.title3)
                         .foregroundColor(.semantic(.textSecondary))
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(alignment: .top, spacing: 6) { Text("•").bold(); Text("Try re-recording closer to the microphone.").font(.caption).foregroundColor(.semantic(.textSecondary)) }
-                        HStack(alignment: .top, spacing: 6) { Text("•").bold(); Text("Move to a quieter area to reduce background noise.").font(.caption).foregroundColor(.semantic(.textSecondary)) }
-                        HStack(alignment: .top, spacing: 6) { Text("•").bold(); Text("Start speaking right away to avoid long silence at the beginning.").font(.caption).foregroundColor(.semantic(.textSecondary)) }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("No speech detected")
+                            .font(.subheadline)
+                            .foregroundColor(.semantic(.textPrimary))
+
+                        Text("Try recording again with clearer speech")
+                            .font(.caption)
+                            .foregroundColor(.semantic(.textSecondary))
                     }
+
+                    Spacer()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(Color.semantic(.fillSecondary))
+                .cornerRadius(8)
             } else {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.semantic(.warning))
+                    Text(getErrorTitle(for: error))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.semantic(.warning))
+                }
                 Text(error)
                     .font(.caption)
                     .foregroundColor(.semantic(.textSecondary))
@@ -542,7 +571,7 @@ struct MemoDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color.semantic(.warning).opacity(0.05))
+        .background(error == TranscriptionError.noSpeechDetected.errorDescription ? Color.clear : Color.semantic(.warning).opacity(0.05))
         .cornerRadius(8)
     }
     
