@@ -64,8 +64,8 @@ struct DistillResultView: View {
             // Performance info
             if let envelope = envelope {
                 performanceInfo(envelope)
-            } else if let progress = progress {
-                progressPerformanceInfo(progress)
+            } else if progress != nil {
+                // Keep progress UI minimal; omit technical details
             }
             
             // Copy results action (also triggers smart transcript expand via notification)
@@ -77,11 +77,11 @@ struct DistillResultView: View {
                     HapticManager.shared.playLightImpact()
                     NotificationCenter.default.post(name: Notification.Name("AnalysisCopyTriggered"), object: nil)
                 }) {
-                    Label("Copy Results", systemImage: "doc.on.doc")
-                        .labelStyle(.titleAndIcon)
-                        .font(.callout)
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 16, weight: .medium))
                 }
                 .buttonStyle(.bordered)
+                .controlSize(.small)
                 .accessibilityLabel("Copy analysis results")
             }
         }
@@ -481,25 +481,7 @@ struct DistillResultView: View {
         .padding(.top, 8)
     }
     
-    @ViewBuilder
-    private func progressPerformanceInfo(_ progress: DistillProgressUpdate) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "clock.arrow.2.circlepath")
-                .font(.caption)
-                .foregroundColor(.semantic(.textSecondary))
-            
-            Text("Processing in parallel (\(Int(progress.progress * 100))%)")
-                .font(.caption)
-                .foregroundColor(.semantic(.textSecondary))
-            
-            Spacer()
-            
-            Text("GPT-5-nano")
-                .font(.caption)
-                .foregroundColor(.semantic(.textSecondary))
-        }
-        .padding(.top, 8)
-    }
+    // Removed progressPerformanceInfo — simplified progress UI (no technical details)
     
     // MARK: - Helper Methods
     

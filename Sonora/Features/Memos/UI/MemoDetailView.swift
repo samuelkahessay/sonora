@@ -8,6 +8,7 @@ struct MemoDetailView: View {
     @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createMemoDetailViewModel()
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
     @FocusState private var isTitleEditingFocused: Bool
+    @State private var scrollOffset: CGFloat = 0
     
     enum AccessibleElement {
         case playButton
@@ -17,8 +18,23 @@ struct MemoDetailView: View {
         case memoTitle
     }
     
+    private var dynamicNavigationTitle: String {
+        let title = viewModel.currentMemoTitle
+        if scrollOffset < -100 {
+            let truncated = String(title.prefix(20))
+            return title.count > 20 ? "\(truncated)..." : truncated
+        }
+        return "Details"
+    }
+
     var body: some View {
         ScrollView {
+            // Track scroll offset for dynamic title
+            GeometryReader { proxy in
+                Color.clear
+                    .preference(key: ScrollViewOffsetPreferenceKey.self, value: proxy.frame(in: .named("memoScroll")).minY)
+            }
+            .frame(height: 0)
             VStack(alignment: .leading, spacing: 0) {
                 languageBannerView
                     .padding(.horizontal)
@@ -89,11 +105,12 @@ struct MemoDetailView: View {
                 .padding(.horizontal)
             }
         }
+        .coordinateSpace(name: "memoScroll")
         // Add a small top inset so content doesn't touch nav bar hairline
         .safeAreaInset(edge: .top) {
             Color.clear.frame(height: 8)
         }
-        .navigationTitle("Memo Details")
+        .navigationTitle(dynamicNavigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -181,6 +198,9 @@ struct MemoDetailView: View {
             error: $viewModel.error
         ) {
             viewModel.retryLastOperation()
+        }
+        .onPreferenceChange(ScrollViewOffsetPreferenceKey.self) { newValue in
+            scrollOffset = newValue
         }
         .onKeyPress(.escape) {
             if viewModel.isRenamingTitle {
@@ -292,8 +312,8 @@ struct MemoDetailView: View {
                             .background(Color.semantic(.brandPrimary))
                             .clipShape(Circle())
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(viewModel.isPlaying ? "Now Playing" : "Play Recording")
-                                .font(.headline)
+                            Text(viewModel.isPlaying ? "Pause" : "Play")
+                                .font(.system(.headline, design: .serif))
                                 .fontWeight(.semibold)
                             Text(memo.durationString)
                                 .font(.subheadline)
@@ -435,14 +455,14 @@ struct MemoDetailView: View {
     private func completedTranscriptionView(text: String) -> some View {
         if viewModel.transcriptionModerationFlagged {
             HStack(alignment: .top, spacing: 8) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.semantic(.warning))
+                Image(systemName: "info.circle.fill")
+                    .foregroundColor(.semantic(.textSecondary))
                 Text("This AI-generated transcription may contain sensitive or harmful content.")
                     .font(.caption)
                     .foregroundColor(.semantic(.textSecondary))
             }
             .padding(8)
-            .background(Color.semantic(.warning).opacity(0.08))
+            .background(Color.semantic(.fillSecondary))
             .cornerRadius(8)
         }
         VStack(alignment: .leading, spacing: 12) {
@@ -463,19 +483,20 @@ struct MemoDetailView: View {
             .accessibilityValue(text)
             .accessibilityHint("Transcribed text formatted in paragraphs for better readability.")
             .accessibilityFocused($focusedElement, equals: .transcriptionText)
-            AIDisclaimerView.transcription()
             HStack {
+                AIDisclaimerView.transcription()
                 Spacer()
                 Button(action: {
                     HapticManager.shared.playLightImpact()
                     copyText(text)
                 }) {
                     Image(systemName: "doc.on.doc")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 14, weight: .medium))
                 }
                 .buttonStyle(.bordered)
-                .accessibilityLabel("Copy transcription text")
-                .accessibilityHint("Double tap to copy the transcribed text to clipboard")
+                .controlSize(.small)
+                .accessibilityLabel("Copy transcription")
+                .accessibilityHint("Copies the transcription to the clipboard")
             }
         }
     }

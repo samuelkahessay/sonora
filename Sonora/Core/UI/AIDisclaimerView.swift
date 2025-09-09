@@ -65,7 +65,7 @@ struct AIDisclaimerView: View {
             case .compact, .inline:
                 return "sparkles"
             case .detailed:
-                return "exclamationmark.triangle.fill"
+                return "info.circle.fill"
             }
         }
         
@@ -74,7 +74,7 @@ struct AIDisclaimerView: View {
             case .compact:
                 return .semantic(.info).opacity(0.1)
             case .detailed:
-                return .semantic(.warning).opacity(0.1)
+                return .semantic(.fillSecondary)
             case .inline:
                 return .semantic(.brandPrimary).opacity(0.1)
             }
@@ -85,7 +85,7 @@ struct AIDisclaimerView: View {
             case .compact:
                 return .semantic(.info)
             case .detailed:
-                return .semantic(.warning)
+                return .semantic(.textSecondary)
             case .inline:
                 return .semantic(.brandPrimary)
             }
@@ -174,7 +174,7 @@ private struct DetailedDisclosureRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack(alignment: .top, spacing: Spacing.sm) {
-                Image(systemName: "exclamationmark.triangle.fill")
+                Image(systemName: "info.circle.fill")
                     .font(.title3)
                     .foregroundColor(tint)
 
@@ -199,7 +199,7 @@ private struct DetailedDisclosureRow: View {
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(tint.opacity(0.3), lineWidth: 1)
+                .stroke(Color.semantic(.textTertiary).opacity(0.25), lineWidth: 1)
         )
         .sheet(isPresented: $showFullDisclosure) {
             ScrollView { AIDisclosureSectionView().padding() }
