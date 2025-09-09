@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PrivacyLegalSectionView: View {
+    @State private var showLicenses = false
     private let privacyURL = URL(string: "https://samuelkahessay.github.io/sonora/privacy-policy.html")!
     private let termsURL = URL(string: "https://samuelkahessay.github.io/sonora/terms-of-service.html")!
 
@@ -23,6 +24,17 @@ struct PrivacyLegalSectionView: View {
                         SettingsRowLink(icon: "doc.text", title: "Terms of Service", subtitle: "Terms and conditions")
                     }
                     .buttonStyle(.plain)
+
+                    Divider().padding(.vertical, 8)
+
+                    Button(action: { showLicenses = true }) {
+                        SettingsRowLink(
+                            icon: "text.badge.checkmark",
+                            title: "Open Source Licenses",
+                            subtitle: "Third‑party acknowledgments"
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 HStack(spacing: Spacing.sm) {
@@ -36,6 +48,7 @@ struct PrivacyLegalSectionView: View {
                 .padding(.top, Spacing.xs)
             }
         }
+        .sheet(isPresented: $showLicenses) { OpenSourceLicensesView() }
     }
 }
 
@@ -69,4 +82,3 @@ private struct SettingsRowLink: View {
         .padding(.vertical, 4)
     }
 }
-
