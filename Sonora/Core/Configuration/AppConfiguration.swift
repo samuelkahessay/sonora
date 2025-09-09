@@ -69,9 +69,9 @@ public final class AppConfiguration: ObservableObject {
     
     // MARK: - Recording Configuration
     
-    /// Maximum recording duration in seconds
+    /// Maximum recording duration in seconds (legacy parameter)
     /// Can be overridden with SONORA_MAX_RECORDING_DURATION environment variable
-    /// Default is 180 seconds (3 minutes) globally across all build types
+    /// Note: Not used to enforce per-session caps anymore; daily quota is enforced at the domain level.
     public private(set) var maxRecordingDuration: TimeInterval = 180.0
     
     /// Maximum file size for recordings in bytes (50MB default)
@@ -230,13 +230,12 @@ public final class AppConfiguration: ObservableObject {
 
     // MARK: - Effective Recording Cap (by service)
     /// Returns the effective recording cap in seconds based on the user's selected transcription service.
-    /// - cloud API: returns the configured maxRecordingDuration (default 180s)
-    /// - local WhisperKit: returns nil (no cap)
+    /// Daily quota is enforced elsewhere; there is no global per-session cap.
     public var effectiveRecordingCapSeconds: TimeInterval? {
         let selected = UserDefaults.standard.selectedTranscriptionService
         switch selected {
         case .cloudAPI:
-            return maxRecordingDuration
+            return nil // no fixed per-session limit; use remaining daily quota if needed
         case .localWhisperKit:
             return nil // unlimited recording when using local transcription
         }
@@ -357,8 +356,7 @@ public final class AppConfiguration: ObservableObject {
             healthCheckTimeoutInterval = 5.0
         }
         
-        // Recording Configuration - Global limit
-        // Enforce 180-second (3 minutes) maximum duration across all build types
+        // Recording Configuration - Legacy parameter (no per-session cap enforced)
         maxRecordingDuration = 180.0
         if buildConfig.isDebug {
             maxRecordingFileSize = 100 * 1024 * 1024 // 100MB

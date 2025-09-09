@@ -40,6 +40,9 @@ protocol AudioRepository: ObservableObject {
     func isAudioPlaying(for memo: Memo) -> Bool
     
     // MARK: - Recording Control
+    /// Start recording with optional per-session cap override (seconds). Pass nil for default behavior.
+    func startRecording(allowedCap: TimeInterval?) async throws -> UUID
+    /// Backward-compatible start method (calls startRecording(allowedCap: nil))
     func startRecording() async throws -> UUID
     func stopRecording()
     func checkMicrophonePermissions()

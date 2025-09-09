@@ -56,7 +56,7 @@ enum OnboardingPage: String, CaseIterable {
         case .microphone:
             return "Sonora needs microphone access to record voice memos. We'll never record without your explicit action."
         case .features:
-            return "You're all set! Record focused 3-minute memos with background recording, Live Activities, and AI-powered insights."
+            return "You're all set! Record voice memos with background recording, Live Activities, and AI-powered insights."
         }
     }
     
@@ -85,7 +85,7 @@ enum OnboardingPage: String, CaseIterable {
             ]
         case .features:
             return [
-                "3-minute focused recordings",
+                "Daily cloud limit: 10 minutes",
                 "Background recording with Live Activities",
                 "AI transcription in 100+ languages",
                 "Smart summaries, themes, and todos"

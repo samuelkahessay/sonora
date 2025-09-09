@@ -42,5 +42,16 @@ extension DIContainer {
         guard let repo = _analysisRepository else { fatalError("DIContainer not configured: analysisRepository") }
         return repo
     }
-}
 
+    /// Recording usage repository (UserDefaults-backed)
+    @MainActor
+    func recordingUsageRepository() -> any RecordingUsageRepository {
+        ensureConfigured()
+        if let repo = _recordingUsageRepository { return repo }
+        guard let repo = resolve((any RecordingUsageRepository).self) else {
+            fatalError("DIContainer not configured: recordingUsageRepository")
+        }
+        _recordingUsageRepository = repo
+        return repo
+    }
+}

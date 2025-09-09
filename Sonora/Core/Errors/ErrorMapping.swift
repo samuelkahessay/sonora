@@ -13,6 +13,13 @@ public final class ErrorMapping {
         if let sonoraError = error as? SonoraError {
             return sonoraError
         }
+        // Recording quota domain errors
+        if let quotaError = error as? RecordingQuotaError {
+            switch quotaError {
+            case .limitReached:
+                return .transcriptionQuotaExceeded
+            }
+        }
         
         if let repositoryError = error as? RepositoryError {
             return repositoryError.asSonoraError

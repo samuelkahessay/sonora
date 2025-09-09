@@ -16,10 +16,20 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     private let audioRepository: any AudioRepository
     private let operationCoordinator: any OperationCoordinatorProtocol
     private let systemNavigator: any SystemNavigator
+    // Quota dependencies
+    private let canStartRecordingUseCase: any CanStartRecordingUseCaseProtocol
+    private let consumeRecordingUsageUseCase: any ConsumeRecordingUsageUseCaseProtocol
+    private let resetDailyUsageIfNeededUseCase: any ResetDailyUsageIfNeededUseCaseProtocol
+    private let getRemainingDailyQuotaUseCase: any GetRemainingDailyQuotaUseCaseProtocol
+    private let modelDownloadManager: ModelDownloadManager
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Debounce Management
     private var recordButtonDebounceTask: Task<Void, Never>?
+    private var wasRecording = false
+    private var lastKnownRecordingTime: TimeInterval = 0
+    private var currentSessionCap: TimeInterval?
+    private var currentSessionService: TranscriptionServiceType = .cloudAPI
     
     // MARK: - Consolidated State
     
@@ -42,6 +52,9 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     var formattedRemainingTime: String {
         state.countdown.formattedRemainingTime
     }
+
+    /// Quota status label
+    var quotaStatusText: String { state.quota.statusText }
     
     /// Recording button color based on state
     var recordingButtonColor: Color {
@@ -86,7 +99,12 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         handleNewRecordingUseCase: any HandleNewRecordingUseCaseProtocol,
         audioRepository: any AudioRepository,
         operationCoordinator: any OperationCoordinatorProtocol,
-        systemNavigator: any SystemNavigator
+        systemNavigator: any SystemNavigator,
+        canStartRecordingUseCase: any CanStartRecordingUseCaseProtocol,
+        consumeRecordingUsageUseCase: any ConsumeRecordingUsageUseCaseProtocol,
+        resetDailyUsageIfNeededUseCase: any ResetDailyUsageIfNeededUseCaseProtocol,
+        getRemainingDailyQuotaUseCase: any GetRemainingDailyQuotaUseCaseProtocol,
+        modelDownloadManager: ModelDownloadManager
     ) {
         self.startRecordingUseCase = startRecordingUseCase
         self.stopRecordingUseCase = stopRecordingUseCase
@@ -95,10 +113,20 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         self.audioRepository = audioRepository
         self.operationCoordinator = operationCoordinator
         self.systemNavigator = systemNavigator
-        
+        self.canStartRecordingUseCase = canStartRecordingUseCase
+        self.consumeRecordingUsageUseCase = consumeRecordingUsageUseCase
+        self.resetDailyUsageIfNeededUseCase = resetDailyUsageIfNeededUseCase
+        self.getRemainingDailyQuotaUseCase = getRemainingDailyQuotaUseCase
+        self.modelDownloadManager = modelDownloadManager
+
         setupBindings()
         setupRecordingCallback()
         setupOperationStatusMonitoring()
+
+        // Initialize quota view
+        Task { @MainActor in
+            await refreshQuota()
+        }
         
         print("🎬 RecordingViewModel: Initialized with dependency injection")
     }
@@ -115,11 +143,44 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     private func setupBindings() {
         // Bind to AudioRepository publishers (repository manages its own polling)
         audioRepository.isRecordingPublisher
-            .sink { [weak self] value in self?.isRecording = value }
+            .sink { [weak self] value in
+                guard let self = self else { return }
+                let didStop = self.wasRecording && !value
+                self.isRecording = value
+                if didStop {
+                    // When recording stops automatically (cap reached), finalize operation and consume usage
+                    if self.audioRepository.recordingStoppedAutomatically {
+                        self.showAutoStopAlert = true
+                        self.autoStopMessage = self.audioRepository.autoStopMessage
+                        Task { [weak self] in
+                            guard let self = self else { return }
+                            // Complete operation
+                            if let opId = self.currentRecordingOperationId,
+                               let op = await self.operationCoordinator.getOperation(opId) {
+                                try? await self.stopRecordingUseCase.execute(memoId: op.type.memoId)
+                            }
+                            // Consume usage for cloud sessions
+                            if self.currentSessionService == .cloudAPI {
+                                let elapsed = self.lastKnownRecordingTime
+                                let consumed = self.currentSessionCap.map { min($0, elapsed) } ?? elapsed
+                                await self.consumeRecordingUsageUseCase.execute(elapsed: consumed, service: .cloudAPI)
+                            }
+                            // Reset session cap after stop
+                            self.currentSessionCap = nil
+                            // Refresh quota after auto-stop consumption
+                            await self.refreshQuota()
+                        }
+                    }
+                }
+                self.wasRecording = value
+            }
             .store(in: &cancellables)
-        
+
         audioRepository.recordingTimePublisher
-            .sink { [weak self] value in self?.recordingTime = value }
+            .sink { [weak self] value in
+                self?.recordingTime = value
+                self?.lastKnownRecordingTime = value
+            }
             .store(in: &cancellables)
         
         audioRepository.permissionStatusPublisher
@@ -135,6 +196,20 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
                 self?.remainingTime = remaining
             }
             .store(in: &cancellables)
+    }
+
+    /// Refresh the quota state (service + remaining seconds)
+    private func refreshQuota() async {
+        // Determine effective service
+        let effective = UserDefaults.standard.getEffectiveTranscriptionService(downloadManager: modelDownloadManager)
+        state.quota.service = effective
+        if effective == .cloudAPI {
+            let rem = await getRemainingDailyQuotaUseCase.execute(service: .cloudAPI)
+            state.quota.remainingDailySeconds = rem ?? 0
+        } else {
+            state.quota.remainingDailySeconds = nil // unlimited
+        }
+        objectWillChange.send()
     }
     
     private func setupOperationStatusMonitoring() {
@@ -183,21 +258,49 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         print("▶️ RecordingViewModel: Starting recording")
         Task {
             do {
-                let memoId = try await startRecordingUseCase.execute()
+                // Ensure daily rollover
+                await resetDailyUsageIfNeededUseCase.execute(now: Date())
+
+                // Determine effective service
+                let selectedService = UserDefaults.standard.getEffectiveTranscriptionService(downloadManager: modelDownloadManager)
+                self.currentSessionService = selectedService
+
+                var capToApply: TimeInterval? = nil
+                if selectedService == .cloudAPI {
+                    // Enforce quota and per-session cap
+                    do {
+                        if let allowed = try await canStartRecordingUseCase.execute(service: .cloudAPI) {
+                            capToApply = allowed
+                        }
+                    } catch {
+                        // Surface quota errors
+                        self.error = ErrorMapping.mapError(error)
+                        // Also refresh quota for UI
+                        await refreshQuota()
+                        return
+                    }
+                }
+
+                let memoId = try await startRecordingUseCase.execute(capSeconds: capToApply)
                 
                 if let validMemoId = memoId {
                     // Get the recording operation for this memoId
                     currentRecordingOperationId = await operationCoordinator.getActiveOperations(for: validMemoId).first?.id
                     print("✅ RecordingViewModel: Recording started with memo ID: \(validMemoId.uuidString)")
+                    // Persist session cap for usage consumption
+                    self.currentSessionCap = capToApply
                 } else {
                     // Recording failed to start - no valid memoId returned
                     currentRecordingOperationId = nil
                     print("❌ RecordingViewModel: Recording failed to start - no memoId returned")
                 }
+                // Update quota label right after start (no consumption yet)
+                await refreshQuota()
             } catch {
                 currentRecordingOperationId = nil
                 self.error = ErrorMapping.mapError(error)
                 print("❌ RecordingViewModel: Failed to start recording: \(error)")
+                await refreshQuota()
             }
         }
     }
@@ -214,12 +317,23 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
             do {
                 // Get memo ID from operation
                 if let operation = await operationCoordinator.getOperation(operationId) {
+                    // Consume usage for cloud sessions on manual stop
+                    if self.currentSessionService == .cloudAPI {
+                        let elapsed = self.lastKnownRecordingTime
+                        let consumed = self.currentSessionCap.map { min($0, elapsed) } ?? elapsed
+                        await self.consumeRecordingUsageUseCase.execute(elapsed: consumed, service: .cloudAPI)
+                    }
+                    // Reset session cap after stop
+                    self.currentSessionCap = nil
                     try await stopRecordingUseCase.execute(memoId: operation.type.memoId)
                     print("✅ RecordingViewModel: Recording stopped successfully")
+                    // Refresh quota after consumption
+                    await self.refreshQuota()
                 }
             } catch {
                 self.error = ErrorMapping.mapError(error)
                 print("❌ RecordingViewModel: Failed to stop recording: \(error)")
+                await refreshQuota()
             }
         }
     }
@@ -492,10 +606,11 @@ extension RecordingViewModel {
 
 extension RecordingViewModel: ErrorHandling {
     var recordingProgress: Double {
-        let maxDur = AppConfiguration.shared.maxRecordingDuration
-        if maxDur <= 0 { return 0 }
-        let ratio = recordingTime / maxDur
-        return max(0.0, min(1.0, ratio))
+        if let cap = currentSessionCap, cap > 0 {
+            let ratio = recordingTime / cap
+            return max(0.0, min(1.0, ratio))
+        }
+        return 0
     }
     var isLoading: Bool {
         state.permission.isRequestingPermission || state.recording.currentRecordingOperationId != nil

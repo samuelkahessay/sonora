@@ -104,6 +104,7 @@ struct RecordingView: View {
                                 viewModel.toggleRecording()
                             }
                         )
+                        .disabled(viewModel.state.isRecordButtonDisabled)
                         .accessibilityLabel(getRecordButtonAccessibilityLabel())
                         .accessibilityHint(getRecordButtonAccessibilityHint())
                         .accessibilityFocused($focusedElement, equals: .recordButton)
@@ -118,6 +119,11 @@ struct RecordingView: View {
                         }
                         .frame(height: 80)
                         .animation(.easeInOut(duration: 0.25), value: viewModel.isRecording)
+
+                        // Quota status (Cloud vs Local)
+                        Text(viewModel.quotaStatusText)
+                            .font(.footnote)
+                            .foregroundColor(.semantic(.textSecondary))
                     }
                     .padding(.horizontal)
                 }

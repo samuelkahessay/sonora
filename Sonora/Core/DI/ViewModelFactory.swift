@@ -44,7 +44,12 @@ final class DefaultViewModelFactory: ViewModelFactory {
             handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository, eventBus: container.eventBus()),
             audioRepository: audioRepository,
             operationCoordinator: container.operationCoordinator(),
-            systemNavigator: container.systemNavigator()
+            systemNavigator: container.systemNavigator(),
+            canStartRecordingUseCase: container.canStartRecordingUseCase(),
+            consumeRecordingUsageUseCase: container.consumeRecordingUsageUseCase(),
+            resetDailyUsageIfNeededUseCase: container.resetDailyUsageIfNeededUseCase(),
+            getRemainingDailyQuotaUseCase: container.getRemainingDailyQuotaUseCase(),
+            modelDownloadManager: container.modelDownloadManager()
         )
     }
     

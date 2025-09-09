@@ -30,6 +30,7 @@ final class DIContainer: ObservableObject, Resolver {
     var _memoRepository: MemoRepositoryImpl?
     var _transcriptionRepository: (any TranscriptionRepository)?
     var _analysisRepository: (any AnalysisRepository)?
+    var _recordingUsageRepository: (any RecordingUsageRepository)?
     var _logger: (any LoggerProtocol)?
     var _backgroundAudioService: BackgroundAudioService?
     var _audioRepository: (any AudioRepository)?
@@ -195,6 +196,11 @@ final class DIContainer: ObservableObject, Resolver {
         register((any AudioRepository).self) { resolver in
             let backgroundService = resolver.resolve(BackgroundAudioService.self)!
             return AudioRepositoryImpl(backgroundAudioService: backgroundService) as any AudioRepository
+        }
+
+        // Register RecordingUsageRepository (UserDefaults-backed)
+        register((any RecordingUsageRepository).self) { _ in
+            return RecordingUsageRepositoryImpl() as any RecordingUsageRepository
         }
         
         // Register StartRecordingUseCase (resolve coordinator directly to avoid early DI accessor)

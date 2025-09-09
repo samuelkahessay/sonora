@@ -110,6 +110,36 @@ struct RecordingViewState: Equatable {
     var alert: AlertState = AlertState()
     var operations: OperationState = OperationState()
     var ui: UIState = UIState()
+
+    /// Quota state (daily remaining and service type)
+    struct QuotaState: Equatable {
+        var service: TranscriptionServiceType = .cloudAPI
+        /// Remaining daily seconds for Cloud service; nil for Local (unlimited)
+        var remainingDailySeconds: TimeInterval? = nil
+
+        var isLimited: Bool { remainingDailySeconds != nil }
+
+        /// Button disabled if cloud and remaining <= 0
+        var isRecordDisabledByQuota: Bool {
+            if let rem = remainingDailySeconds { return rem <= 0 }
+            return false
+        }
+
+        /// User-facing summary
+        var statusText: String {
+            switch service {
+            case .cloudAPI:
+                let rem = Int(max(0, (remainingDailySeconds ?? 0).rounded()))
+                let mm = rem / 60
+                let ss = rem % 60
+                return String(format: "Remaining Today: %d:%02d (Cloud)", mm, ss)
+            case .localWhisperKit:
+                return "Unlimited (Local)"
+            }
+        }
+    }
+
+    var quota: QuotaState = QuotaState()
     
     // MARK: - Convenience Computed Properties
     
@@ -171,6 +201,12 @@ struct RecordingViewState: Equatable {
         return permission.hasPermission && 
                !permission.isRequestingPermission &&
                operations.recordingOperationStatus == nil
+    }
+
+    /// Whether the record button should be disabled considering quota
+    var isRecordButtonDisabled: Bool {
+        if !isReadyForRecording { return true }
+        return quota.isRecordDisabledByQuota
     }
 }
 

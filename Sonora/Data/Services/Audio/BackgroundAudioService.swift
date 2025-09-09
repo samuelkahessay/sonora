@@ -110,7 +110,8 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     // MARK: - Public Interface
     
     /// Starts audio recording with proper orchestration of all services
-    func startRecording() throws {
+    /// - Parameter capOverride: Optional per-session cap overriding AppConfiguration.effectiveRecordingCapSeconds
+    func startRecording(capOverride: TimeInterval? = nil) throws {
         guard hasPermission else {
             throw AudioServiceError.permissionDenied
         }
@@ -153,7 +154,7 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
             }
             
             // 5. Start timer with current time provider and recording cap
-            let recordingCap = config.effectiveRecordingCapSeconds
+            let recordingCap = capOverride ?? config.effectiveRecordingCapSeconds
             timerService.startTimer(
                 with: { [weak self] in self?.recordingService.getCurrentTime() ?? 0 },
                 recordingCap: recordingCap

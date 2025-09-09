@@ -60,7 +60,7 @@ final class RecordingFlowTestUseCase {
             
             // Phase 2: Start Recording
             print("🧪 Phase 2: Starting background recording...")
-            currentMemoId = try await startRecordingUseCase.execute()
+            currentMemoId = try await startRecordingUseCase.execute(capSeconds: nil)
             
             guard currentMemoId != nil else {
                 print("❌ RecordingFlowTestUseCase: Test failed - no memoId returned from start recording")
@@ -164,7 +164,7 @@ final class RecordingFlowTestUseCase {
                 print("🧪 Rapid test cycle \(i)")
                 
                 // Start recording
-                let cycleMemoId = try await startRecordingUseCase.execute()
+                let cycleMemoId = try await startRecordingUseCase.execute(capSeconds: nil)
                 guard let memoId = cycleMemoId else {
                     print("❌ RecordingFlowTestUseCase: Rapid test failed - no memoId returned for cycle \(i)")
                     return
@@ -205,14 +205,14 @@ final class RecordingFlowTestUseCase {
         do {
             let hasPermission = await permissionUseCase.execute()
             if hasPermission.allowsRecording {
-                let firstStart = try await startRecordingUseCase.execute()
+                let firstStart = try await startRecordingUseCase.execute(capSeconds: nil)
                 guard let firstMemoId = firstStart else {
                     print("❌ Error handling test failed: First start returned nil memoId")
                     return
                 }
                 
                 // Try to start again while recording
-                _ = try await startRecordingUseCase.execute()
+                _ = try await startRecordingUseCase.execute(capSeconds: nil)
                 print("❌ Error handling test failed: Second start should have thrown error")
                 
                 // Cleanup

@@ -4,7 +4,8 @@ import Foundation
 /// Encapsulates the business logic for initiating recording sessions with background support
 @MainActor
 protocol StartRecordingUseCaseProtocol {
-    func execute() async throws -> UUID?
+    /// Start recording with an optional per-session cap (seconds). Pass nil for default behavior.
+    func execute(capSeconds: TimeInterval?) async throws -> UUID?
 }
 
 @MainActor
@@ -29,7 +30,7 @@ final class StartRecordingUseCase: StartRecordingUseCaseProtocol {
     
     
     // MARK: - Use Case Execution
-    func execute() async throws -> UUID? {
+    func execute(capSeconds: TimeInterval?) async throws -> UUID? {
         // Pre-checks (already on MainActor)
         guard !audioRepository.isRecording else {
             throw RecordingError.alreadyRecording
@@ -40,7 +41,7 @@ final class StartRecordingUseCase: StartRecordingUseCaseProtocol {
         }
 
         // Start recording via repository; repository returns the actual memoId
-        let memoId = try await audioRepository.startRecording()
+        let memoId = try await audioRepository.startRecording(allowedCap: capSeconds)
         let context = LogContext(additionalInfo: ["memoId": memoId.uuidString])
         logger.info("Background recording started successfully", category: .audio, context: context)
 

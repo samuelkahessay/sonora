@@ -254,7 +254,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     // MARK: - Recording Functionality (BackgroundAudioService Integration)
     
     /// Start recording with proper background support and return memo ID
-    func startRecording() async throws -> UUID {
+    func startRecording(allowedCap: TimeInterval?) async throws -> UUID {
         // Generate memo ID for this recording session
         let memoId = UUID()
         
@@ -265,12 +265,17 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         
         print("🎵 AudioRepositoryImpl: Starting background recording for memo: \(memoId)")
         do {
-            try backgroundAudioService.startRecording()
+            try backgroundAudioService.startRecording(capOverride: allowedCap)
         } catch {
             throw mapToRecordingError(error)
         }
         
         return memoId
+    }
+
+    /// Backward-compatible start method
+    func startRecording() async throws -> UUID {
+        return try await startRecording(allowedCap: nil)
     }
     
     /// Start recording synchronously (for use case compatibility)
