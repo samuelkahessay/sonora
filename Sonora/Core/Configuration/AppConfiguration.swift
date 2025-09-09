@@ -55,11 +55,11 @@ public final class AppConfiguration: ObservableObject {
     @Published public var selectedLocalModel: String = {
         let saved = UserDefaults.standard.string(forKey: "selectedLocalModel")
         let hasUserExplicitlySelected = UserDefaults.standard.object(forKey: "hasUserSelectedModel") != nil
-        // If user has never explicitly selected a model, use smart default
-        if !hasUserExplicitlySelected || saved == nil {
-            return LocalModel.defaultModel.rawValue
+        // Only allow Phi‑4 Mini for now; clamp any legacy value
+        if let s = saved, hasUserExplicitlySelected, let model = LocalModel(rawValue: s), model == .phi4_mini {
+            return s
         }
-        return saved ?? LocalModel.defaultModel.rawValue
+        return LocalModel.defaultModel.rawValue
     }() {
         didSet {
             UserDefaults.standard.set(selectedLocalModel, forKey: "selectedLocalModel")

@@ -9,6 +9,8 @@ struct CurrentUsageSectionView: View {
     @State private var midnightTicker: AnyCancellable?
 
     @StateObject private var downloadManager = DIContainer.shared.modelDownloadManager()
+    @StateObject private var localManager = LocalModelDownloadManager.shared
+    @State private var whisperApproxBytes: Int64 = 0
 
     private let totalDailyLimit: TimeInterval = 600 // 10 minutes for cloud
 
@@ -31,6 +33,12 @@ struct CurrentUsageSectionView: View {
                     Text("Unlimited (Local)")
                         .font(.body)
                         .foregroundColor(.semantic(.textPrimary))
+                    // Show model storage when using local
+                    if let modelsText = modelsStorageText() {
+                        Text(modelsText)
+                            .font(.caption)
+                            .foregroundColor(.semantic(.textSecondary))
+                    }
                 } else {
                     // Cloud: show remaining and used
                     let remaining = max(0, Int(round(remainingSeconds ?? max(0, totalDailyLimit - usedSeconds))))
@@ -53,12 +61,15 @@ struct CurrentUsageSectionView: View {
                         .font(.caption2)
                         .foregroundColor(.semantic(.textTertiary))
                 }
+                // Selected vs Effective indicator
+                selectedEffectiveBanner()
             }
         }
         .onAppear {
             refreshServiceAndUsage()
             subscribeToUsage()
             startMidnightWatcher()
+            refreshWhisperApprox()
         }
         .onDisappear {
             cancellable?.cancel()
@@ -87,7 +98,7 @@ struct CurrentUsageSectionView: View {
                     remainingSeconds = nil
                 }
             }
-        }
+            }
     }
 
     private func subscribeToUsage() {
@@ -123,5 +134,34 @@ struct CurrentUsageSectionView: View {
         let m = seconds / 60
         let s = seconds % 60
         return String(format: "%d:%02d", m, s)
+    }
+
+    private func refreshWhisperApprox() {
+        let provider = DIContainer.shared.whisperKitModelProvider()
+        let ids = provider.installedModelIds()
+        var sum: Int64 = 0
+        for id in ids { if let info = WhisperModelInfo.model(withId: id), let b = StorageManager.parseApproxSize(info.size) { sum += b } }
+        whisperApproxBytes = sum
+    }
+
+    private func modelsStorageText() -> String? {
+        let analysis = localManager.getTotalDiskSpaceUsed()
+        let total = Int64(analysis) + whisperApproxBytes
+        if total > 0 { return "Models: \(StorageManager.formatBytes(total))" }
+        return nil
+    }
+
+    @ViewBuilder private func selectedEffectiveBanner() -> some View {
+        let selected = UserDefaults.standard.selectedTranscriptionService
+        let effective = UserDefaults.standard.getEffectiveTranscriptionService(downloadManager: downloadManager)
+        if selected != effective {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.semantic(.warning))
+                Text("Selected: \(selected.displayName) • Effective: \(effective.displayName)")
+                    .font(.caption2)
+                    .foregroundColor(.semantic(.warning))
+            }
+            .padding(.top, 2)
+        }
     }
 }

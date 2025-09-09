@@ -9,6 +9,8 @@ struct ProcessingOptionsSection: View {
     @StateObject private var whisperDownloadManager = DIContainer.shared.modelDownloadManager()
     @StateObject private var localModelDownloadManager = LocalModelDownloadManager.shared
     @State private var showModelsStatus = false
+    @State private var showWhisperAlert = false
+    @State private var showAnalysisAlert = false
 
     enum ProcessingMode: String, CaseIterable {
         case cloud
@@ -85,12 +87,26 @@ struct ProcessingOptionsSection: View {
                                 HapticManager.shared.playSelection()
                                 UserDefaults.standard.selectedTranscriptionService = target
                                 AppConfiguration.shared.strictLocalWhisper = (target == .localWhisperKit)
+                                if isOn {
+                                    // Pre-flight checks for Whisper model
+                                    if !UserDefaults.standard.isSelectedTranscriptionServiceAvailable(downloadManager: whisperDownloadManager) {
+                                        showWhisperAlert = true
+                                    }
+                                }
                             }
                         ))
                         .toggleStyle(SwitchToggleStyle(tint: .semantic(.brandPrimary)))
 
                         Toggle("Use Local Analysis", isOn: $appConfig.useLocalAnalysis)
                             .toggleStyle(SwitchToggleStyle(tint: .semantic(.brandPrimary)))
+                            .onChange(of: appConfig.useLocalAnalysis) { _, enabled in
+                                if enabled {
+                                    let model = LocalModel(rawValue: appConfig.selectedLocalModel) ?? .defaultModel
+                                    if !localModelDownloadManager.isModelReady(model) {
+                                        showAnalysisAlert = true
+                                    }
+                                }
+                            }
 
                         // Optional strict local switch — keep copy short for beta
                         Toggle("Prefer On‑Device Only", isOn: Binding(
@@ -143,14 +159,74 @@ struct ProcessingOptionsSection: View {
                 }
                 .buttonStyle(.plain)
                 .sheet(isPresented: $showModelsStatus) { ModelsStatusView() }
+                .sheet(isPresented: $showWhisperAlert) { whisperAlertView }
+                .sheet(isPresented: $showAnalysisAlert) { analysisAlertView }
             }
         }
+    }
+}
+
+// MARK: - Preflight Alerts
+
+private extension ProcessingOptionsSection {
+    var whisperAlertView: some View {
+        let info = UserDefaults.standard.selectedWhisperModelInfo
+        let size = info.size
+        let available = StorageManager.availableFreeBytes().map { StorageManager.formatBytes($0) }
+        let onWiFi = StorageManager.isOnWiFi()
+        return ModelDownloadAlert(
+            title: "Download \(info.displayName)?",
+            modelName: info.displayName,
+            sizeText: size,
+            availableText: available,
+            wifiRequired: !onWiFi,
+            descriptionText: "This model enables on‑device transcription with full privacy.",
+            onDownloadNow: {
+                showWhisperAlert = false
+                whisperDownloadManager.downloadModel(info.id)
+            },
+            onLater: { showWhisperAlert = false }
+        )
+    }
+
+    var analysisAlertView: some View {
+        let model = LocalModel(rawValue: appConfig.selectedLocalModel) ?? .defaultModel
+        let size = model.approximateSize
+        let available = StorageManager.availableFreeBytes().map { StorageManager.formatBytes($0) }
+        let onWiFi = StorageManager.isOnWiFi()
+        return ModelDownloadAlert(
+            title: "Download \(model.displayName)?",
+            modelName: model.displayName,
+            sizeText: size,
+            availableText: available,
+            wifiRequired: !onWiFi,
+            descriptionText: "On‑device analysis keeps your data private.",
+            onDownloadNow: {
+                showAnalysisAlert = false
+                localModelDownloadManager.downloadModel(model)
+            },
+            onLater: { showAnalysisAlert = false }
+        )
     }
 }
 
 // Trade-off visualization using existing semantic colors
 struct ProcessingModeCard: View {
     let mode: ProcessingOptionsSection.ProcessingMode
+    private var storageImpactText: String? {
+        // Estimate combined storage requirement if device/hybrid
+        let svc = UserDefaults.standard.selectedTranscriptionService
+        let whisperSize = WhisperModelInfo.model(withId: UserDefaults.standard.selectedWhisperModel)?.size
+        let analysisModel = LocalModel(rawValue: AppConfiguration.shared.selectedLocalModel) ?? .defaultModel
+        var bytes: Int64 = 0
+        if svc == .localWhisperKit, let size = whisperSize, let b = StorageManager.parseApproxSize(size) { bytes += b }
+        if AppConfiguration.shared.useLocalAnalysis {
+            // Approximate from LocalModel
+            if let b = StorageManager.parseApproxSize(analysisModel.approximateSize) { bytes += b }
+        }
+        if bytes > 0 { return "Requires ~\(StorageManager.formatBytes(bytes)) storage" }
+        return nil
+    }
 
     private func prosForMode(_ mode: ProcessingOptionsSection.ProcessingMode) -> [String] {
         switch mode {
@@ -162,7 +238,10 @@ struct ProcessingModeCard: View {
     private func consForMode(_ mode: ProcessingOptionsSection.ProcessingMode) -> [String] {
         switch mode {
         case .cloud: return ["Requires internet", "Data sent to servers"]
-        case .device: return ["Slower processing", "Uses device storage"]
+        case .device:
+            var items = ["Slower processing"]
+            if let impact = storageImpactText { items.append(impact) } else { items.append("Uses device storage") }
+            return items
         case .hybrid: return ["More to configure"]
         }
     }
@@ -267,6 +346,15 @@ private struct WhisperModelCompactRow: View {
                 // Inline action button reflecting state
                 inlineStatus
             }
+            // Requirements text
+            if state == .notDownloaded {
+                HStack(spacing: 6) {
+                    Image(systemName: "wifi").foregroundColor(.semantic(.warning))
+                    Text("Wi‑Fi required • \(selected.size)")
+                        .font(.caption2)
+                        .foregroundColor(.semantic(.textSecondary))
+                }
+            }
             if state == .downloading {
                 ProgressView(value: progress)
                     .tint(.semantic(.brandPrimary))
@@ -361,6 +449,14 @@ private struct LocalAnalysisModelCompactRow: View {
                     .foregroundColor(.semantic(.textSecondary))
                 Spacer()
                 inlineStatus
+            }
+            if !manager.isModelReady(model) {
+                HStack(spacing: 6) {
+                    Image(systemName: "wifi").foregroundColor(.semantic(.warning))
+                    Text("Wi‑Fi required • \(model.approximateSize)")
+                        .font(.caption2)
+                        .foregroundColor(.semantic(.textSecondary))
+                }
             }
             if manager.isDownloading(model) {
                 ProgressView(value: Double(manager.downloadProgress(for: model)))

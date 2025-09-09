@@ -10,7 +10,7 @@ final class WhisperKitModelProvider {
     private lazy var cacheURL: URL = {
         // Bump cache filename to force refresh when curated set changes
         let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        return caches.appendingPathComponent("WhisperKit/models_cache_v2.json")
+        return caches.appendingPathComponent("WhisperKit/models_cache_v3.json")
     }()
     private lazy var foldersURL: URL = {
         let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
@@ -382,18 +382,6 @@ final class WhisperKitModelProvider {
         }
     }
     static let curatedModels: [WhisperModel] = [
-        WhisperModel(
-            id: WKModel.small.rawValue,
-            displayName: "Small",
-            sizeBytes: 488 * 1024 * 1024,
-            description: "Higher accuracy, moderate speed."
-        ),
-        WhisperModel(
-            id: WKModel.medium.rawValue,
-            displayName: "Medium",
-            sizeBytes: 1_550 * 1024 * 1024,
-            description: "High accuracy. Heavier model; slower and larger."
-        ),
         WhisperModel(
             id: WKModel.largeV3.rawValue,
             displayName: "Large v3",

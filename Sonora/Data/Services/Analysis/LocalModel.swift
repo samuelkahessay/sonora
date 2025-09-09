@@ -272,11 +272,8 @@ enum LocalModel: String, CaseIterable {
 }
 
 extension LocalModel {
-    /// Default model for new installations (prefer latest/best model for device)
-    static var defaultModel: LocalModel {
-        // Prefer Phi-4 mini; fallback to LLaMA 3.2 3B
-        return LocalModel.phi4_mini.isDeviceCompatible ? LocalModel.phi4_mini : LocalModel.llama32_3B
-    }
+    /// Default model for new installations (single-model setup)
+    static var defaultModel: LocalModel { .phi4_mini }
     
     /// Get recommended model for the current device tier
     static var recommendedModel: LocalModel {
@@ -284,19 +281,16 @@ extension LocalModel {
     }
     
     /// Get compatible models for the current device
-    static var compatibleModels: [LocalModel] {
-        return allCases.filter { $0.isDeviceCompatible }
-    }
+    static var compatibleModels: [LocalModel] { allCases.filter { $0.isDeviceCompatible } }
     
     /// Get models for a specific tier
-    static func modelsForTier(_ tier: ModelTier) -> [LocalModel] {
-        return allCases.filter { $0.tier == tier }
-    }
+    static func modelsForTier(_ tier: ModelTier) -> [LocalModel] { allCases.filter { $0.tier == tier } }
     
     /// Get models grouped by tier
-    static var modelsByTier: [ModelTier: [LocalModel]] {
-        var grouped: [ModelTier: [LocalModel]] = [:]
-        for tier in ModelTier.allCases { grouped[tier] = modelsForTier(tier) }
-        return grouped
-    }
+    static var modelsByTier: [ModelTier: [LocalModel]] { [.fast: allCases] }
+}
+
+// Limit exposed models to a single choice to reduce cognitive load
+extension LocalModel {
+    static var allCases: [LocalModel] { [.phi4_mini] }
 }
