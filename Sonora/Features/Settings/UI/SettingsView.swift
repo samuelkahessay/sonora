@@ -6,6 +6,8 @@ struct SettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Spacing.xl) {
+                    // Current Usage at the very top
+                    CurrentUsageSectionView()
                     if FeatureFlags.useConsolidatedSettings {
                         // Section 1: Processing & Recording
                         ProcessingOptionsSection()
