@@ -6,6 +6,7 @@ struct AnalysisSectionView: View {
     @ObservedObject var viewModel: MemoDetailViewModel
     
     var body: some View {
+        let isDistillCompleted = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
         VStack(alignment: .leading, spacing: 16) {
             // Analysis error banner at top with retry
             if let err = viewModel.analysisError {
@@ -20,51 +21,66 @@ struct AnalysisSectionView: View {
                     }
                 )
             }
-            Button(action: {
-                HapticManager.shared.playSelection()
-                let hasCached = viewModel.hasCachedDistill
-                let hasShown = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
-                if hasCached {
-                    if !hasShown { viewModel.restoreCachedDistill() }
-                } else {
-                    viewModel.performAnalysis(mode: .distill, transcript: transcript)
+            if isDistillCompleted {
+                // Flatter header once analysis is complete
+                HStack(spacing: 8) {
+                    Image(systemName: "drop.fill")
+                        .font(.subheadline)
+                        .foregroundColor(.semantic(.brandPrimary))
+                    Text("Distilled")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.semantic(.textPrimary))
+                    Spacer()
                 }
-            }) {
-                HStack(spacing: 12) {
-                    Image(systemName: AnalysisMode.distill.iconName)
-                        .font(.title2)
-                        .foregroundColor(.semantic(.textOnColored))
-                        .frame(width: 44, height: 44)
-                        .background(Color.semantic(.brandPrimary))
-                        .clipShape(Circle())
+                .padding(.bottom, 8)
+            } else {
+                Button(action: {
+                    HapticManager.shared.playSelection()
                     let hasCached = viewModel.hasCachedDistill
                     let hasShown = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
-                    Text(
-                        viewModel.isAnalyzing ? "Analyzing…" : (
-                            hasCached ? (hasShown ? "Distilled" : "View Distill") : AnalysisMode.distill.displayName
-                        )
-                    )
-                    .font(.system(.headline, design: .serif))
-                    .fontWeight(.semibold)
-                    Spacer()
-                    if viewModel.hasCachedDistill && (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil) {
-                        Image(systemName: "water.waves").foregroundColor(.semantic(.brandPrimary))
+                    if hasCached {
+                        if !hasShown { viewModel.restoreCachedDistill() }
+                    } else {
+                        viewModel.performAnalysis(mode: .distill, transcript: transcript)
                     }
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: AnalysisMode.distill.iconName)
+                            .font(.title2)
+                            .foregroundColor(.semantic(.textOnColored))
+                            .frame(width: 44, height: 44)
+                            .background(Color.semantic(.brandPrimary))
+                            .clipShape(Circle())
+                        let hasCached = viewModel.hasCachedDistill
+                        let hasShown = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
+                        Text(
+                            viewModel.isAnalyzing ? "Analyzing…" : (
+                                hasCached ? (hasShown ? "Distilled" : "View Distill") : AnalysisMode.distill.displayName
+                            )
+                        )
+                        .font(.system(.headline, design: .serif))
+                        .fontWeight(.semibold)
+                        Spacer()
+                        if viewModel.hasCachedDistill && (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil) {
+                            Image(systemName: "water.waves").foregroundColor(.semantic(.brandPrimary))
+                        }
+                    }
+                    .padding(.vertical, 14)
+                    .padding(.horizontal, 12)
+                    .background(Color.semantic(.fillSecondary))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.semantic(.brandPrimary).opacity(0.2), lineWidth: 1)
+                    )
                 }
-                .padding(.vertical, 14)
-                .padding(.horizontal, 12)
-                .background(Color.semantic(.fillSecondary))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.semantic(.brandPrimary).opacity(0.2), lineWidth: 1)
-                )
+                .buttonStyle(.plain)
+                .disabled(viewModel.isAnalyzing || (viewModel.hasCachedDistill && viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil))
+                .opacity(viewModel.isAnalyzing ? 0.6 : 1.0)
+                .accessibilityLabel("Distill")
+                .accessibilityHint("Double tap to generate or view AI insights for this memo")
             }
-            .buttonStyle(.plain)
-            .disabled(viewModel.isAnalyzing || (viewModel.hasCachedDistill && viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil))
-            .opacity(viewModel.isAnalyzing ? 0.6 : 1.0)
-            .accessibilityLabel("Distill")
-            .accessibilityHint("Double tap to generate or view AI insights for this memo")
 
             // Loading State
             if viewModel.isAnalyzing {
@@ -116,10 +132,24 @@ struct AnalysisSectionView: View {
                 .accessibilityElement(children: .contain)
             }
         }
-        .padding()
-        .background(Color.semantic(.bgSecondary))
-        .cornerRadius(12)
-        .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
+        .modifier(AnalysisContainerStyle(isCompleted: isDistillCompleted))
         .frame(maxWidth: .infinity)
+    }
+}
+
+// Flatter container when completed; card-like container otherwise
+private struct AnalysisContainerStyle: ViewModifier {
+    let isCompleted: Bool
+    func body(content: Content) -> some View {
+        if isCompleted {
+            content
+                .padding(.vertical, 12)
+        } else {
+            content
+                .padding()
+                .background(Color.semantic(.bgSecondary))
+                .cornerRadius(12)
+                .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
+        }
     }
 }

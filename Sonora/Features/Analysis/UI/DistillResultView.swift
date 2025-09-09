@@ -61,12 +61,7 @@ struct DistillResultView: View {
                 reflectionQuestionsPlaceholder
             }
             
-            // Performance info
-            if let envelope = envelope {
-                performanceInfo(envelope)
-            } else if progress != nil {
-                // Keep progress UI minimal; omit technical details
-            }
+            // Performance info removed for cleaner UI
             
             // Copy results action (also triggers smart transcript expand via notification)
             HStack {
@@ -86,10 +81,6 @@ struct DistillResultView: View {
             }
         }
         .textSelection(.enabled)
-        .padding()
-        .background(Color.semantic(.bgSecondary))
-        .cornerRadius(12)
-        .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
     }
     
     // MARK: - Computed Properties
@@ -217,8 +208,8 @@ struct DistillResultView: View {
                             .background(priorityColor(item.priority))
                             .cornerRadius(4)
                     }
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 8)
                     .background(Color.semantic(.fillSecondary))
                     .cornerRadius(8)
                 }
@@ -459,29 +450,7 @@ struct DistillResultView: View {
         .frame(minHeight: 180)
     }
     
-    // MARK: - Performance Info
-    
-    @ViewBuilder
-    private func performanceInfo(_ envelope: AnalyzeEnvelope<DistillData>) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "speedometer")
-                .font(.caption)
-                .foregroundColor(.semantic(.textSecondary))
-            
-            Text("Analysis completed in \(envelope.latency_ms)ms")
-                .font(.caption)
-                .foregroundColor(.semantic(.textSecondary))
-            
-            Spacer()
-            
-            Text(envelope.model)
-                .font(.caption)
-                .foregroundColor(.semantic(.textSecondary))
-        }
-        .padding(.top, 8)
-    }
-    
-    // Removed progressPerformanceInfo — simplified progress UI (no technical details)
+    // Performance info removed — simplified progress UI (no technical details)
     
     // MARK: - Helper Methods
     
