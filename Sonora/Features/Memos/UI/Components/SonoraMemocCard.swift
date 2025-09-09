@@ -30,7 +30,6 @@ struct SonoraMemocCard: View {
     @ObservedObject var viewModel: MemoListViewModel
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var insightHintOpacity: Double = 0
-    @State private var waveformShimmer: Bool = false
     
     // MARK: - Computed Properties
     
@@ -143,13 +142,8 @@ struct SonoraMemocCard: View {
     /// Subtle state indicator
     @ViewBuilder
     private var stateIndicator: some View {
-        if transcriptionState.isInProgress {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.insightGold)
-                .frame(width: 4, height: 16)
-                .padding(.trailing, 4)
-                .padding(.top, 4)
-        }
+        // Removed transcription progress indicator for cleaner card design
+        EmptyView()
     }
     
     /// Card background with whisper blue tint
@@ -181,13 +175,7 @@ struct SonoraMemocCard: View {
     // MARK: - Animation Helpers
     
     private func configureAnimations() {
-        // Gentle shimmer for active states
-        if transcriptionState.isInProgress {
-            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                waveformShimmer = true
-            }
-        }
-        
+        // Removed shimmer animation during transcription for cleaner UI
         // Animate insight hint if insights exist
         if hasInsights {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {

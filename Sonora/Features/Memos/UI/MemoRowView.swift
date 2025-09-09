@@ -25,7 +25,6 @@ struct MemoRowView: View {
     
     let memo: Memo
     @ObservedObject var viewModel: MemoListViewModel
-    @State private var pulsePhase = false
     @State private var editedTitle: String = ""
     @FocusState private var isEditingFocused: Bool
 
@@ -114,23 +113,7 @@ struct MemoRowView: View {
         static let editGutterWidth: CGFloat = 44
     }
     
-    // MARK: - Animation Configuration
-    
-    /// **Centralized Animation Logic**
-    /// Eliminates duplication and provides consistent animation behavior
-    private func configurePulseAnimation(for isInProgress: Bool) {
-        if isInProgress {
-            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-                pulsePhase.toggle()
-            }
-            print("🎨 MemoRow: Starting pulse animation for \(memo.displayName)")
-        } else {
-            withAnimation(.easeOut(duration: 0.3)) {
-                pulsePhase = false
-            }
-            print("🎨 MemoRow: Stopping pulse animation for \(memo.displayName)")
-        }
-    }
+    // MARK: - Animation Configuration (accent pulse removed)
     
     // MARK: - Selection & Accent Components
     
@@ -159,34 +142,7 @@ struct MemoRowView: View {
         .accessibilityHint("Tap to toggle selection")
     }
     
-    /// **Accent Line View**
-    /// Color-coded status indicator with animated pulse for in-progress states
-    @ViewBuilder
-    private var accentLineView: some View {
-        RoundedRectangle(cornerRadius: MemoRowView.Layout.accentLineCornerRadius)
-            .fill(MemoRowView.Colors.accentColor(for: transcriptionState))
-            .frame(width: MemoRowView.Layout.accentLineWidth)
-            .opacity(transcriptionState.isInProgress ? (pulsePhase ? 0.4 : 1.0) : 1.0)
-            // Force view recreation when state case changes (e.g., inProgress → completed)
-            .id(accentStateKey)
-            .onAppear {
-                configurePulseAnimation(for: transcriptionState.isInProgress)
-            }
-            .onChange(of: transcriptionState.isInProgress) { _, isInProgress in
-                configurePulseAnimation(for: isInProgress)
-            }
-            .onChange(of: transcriptionState) { old, new in
-                if old != new {
-                    print("🎨 MemoRow: State changed for \(memo.displayName): \(old.statusText) → \(new.statusText)")
-                    configurePulseAnimation(for: new.isInProgress)
-                }
-            }
-            .onDisappear {
-                // Stop animations when cell goes off-screen
-                pulsePhase = false
-            }
-            .accessibilityHidden(true)
-    }
+    // Accent line removed for cleaner design
     
     // MARK: - View Body
     
@@ -293,10 +249,7 @@ struct MemoRowView: View {
         return components.joined(separator: ", ")
     }
     
-    /// Key for forcing view recreation when the transcription state changes case
-    private var accentStateKey: String {
-        TranscriptionStateKey.key(for: transcriptionState)
-    }
+    // accentStateKey removed with accent line
     
     // MARK: - Constants
     
