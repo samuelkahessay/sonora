@@ -22,7 +22,7 @@ struct AnalysisSectionView: View {
                 )
             }
             if isDistillCompleted {
-                // Flatter header once analysis is complete
+                // Flatter header once analysis is complete (centered)
                 HStack(spacing: 8) {
                     Image(systemName: "drop.fill")
                         .font(.subheadline)
@@ -31,8 +31,8 @@ struct AnalysisSectionView: View {
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(.semantic(.textPrimary))
-                    Spacer()
                 }
+                .frame(maxWidth: .infinity)
                 .padding(.bottom, 8)
             } else {
                 Button(action: {
