@@ -33,11 +33,8 @@ public final class WhisperKitEventHandler {
     private func handle(_ event: AppEvent) async {
         switch event {
         case .recordingStarted:
-            // Prewarm the model during recording to minimize transcription startup latency
-            logger.debug("WhisperKitEventHandler: recordingStarted → prewarm model", category: .transcription, context: LogContext())
-            do { try await DIContainer.shared.whisperKitModelManager().prewarmModel() } catch {
-                logger.warning("Whisper prewarm failed: \(error.localizedDescription)", category: .transcription, context: LogContext(), error: error)
-            }
+            // Prewarm disabled due to strict mutual exclusion + memory constraints
+            logger.debug("WhisperKitEventHandler: recordingStarted → prewarm skipped", category: .transcription, context: LogContext())
 
         case .transcriptionCompleted:
             // Optionally unload after transcription to reduce memory pressure
@@ -55,4 +52,3 @@ public final class WhisperKitEventHandler {
         subscriptionManager.cleanup()
     }
 }
-

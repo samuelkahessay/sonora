@@ -8,6 +8,12 @@ struct AnalysisSectionView: View {
     var body: some View {
         let isDistillCompleted = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
         VStack(alignment: .leading, spacing: 16) {
+            // If transcription fell back due to memory, surface a clear info banner
+            if let msg = viewModel.memoryFallbackMessage {
+                NotificationBanner.info(message: msg) {
+                    viewModel.memoryFallbackMessage = nil
+                }
+            }
             // Analysis error banner at top with retry
             if let err = viewModel.analysisError {
                 NotificationBanner(

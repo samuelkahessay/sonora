@@ -63,6 +63,13 @@ final class LocalAnalysisService: ObservableObject, AnalysisServiceProtocol {
         logger.debug("Local AI model unloaded on background")
     }
     
+    /// Force-unload the local analysis model immediately to free memory
+    func forceUnloadModel() {
+        llm = nil
+        currentLoadedModel = nil
+        logger.debug("Local AI model force-unloaded")
+    }
+    
     private func ensureModelLoaded() async throws {
         let targetModel = selectedModel
 
@@ -169,40 +176,47 @@ final class LocalAnalysisService: ObservableObject, AnalysisServiceProtocol {
         transcript: String,
         responseType: T.Type
     ) async throws -> AnalyzeEnvelope<T> {
-        
-        let startTime = Date()
-        
-        // Basic input validation
-        guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw AnalysisError.invalidInput("Empty transcript")
+        return try await AIModelCoordinator.shared.acquireAnalyzing { [weak self] in
+            guard let self = self else { throw AnalysisError.modelNotAvailable }
+            await AIModelCoordinator.shared.registerUnloadHandlers(unloadPhi: { [weak self] in self?.forceUnloadModel() })
+
+            let startTime = Date()
+
+            // Basic input validation
+            guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw AnalysisError.invalidInput("Empty transcript")
+            }
+
+            // Ensure model is loaded (cached after first use)
+            try await self.ensureModelLoaded()
+
+            guard let llmInstance = self.llm else {
+                throw AnalysisError.modelNotAvailable
+            }
+
+            // Enhanced structured prompt
+            let prompt = self.buildStructuredPrompt(mode: mode, transcript: transcript)
+
+            // Get completion
+            let output = await llmInstance.getCompletion(from: prompt)
+
+            // Parse structured output
+            let parsedData = try self.parseStructuredOutput(output, mode: mode, responseType: responseType)
+
+            let duration = Date().timeIntervalSince(startTime)
+
+            // Unload immediately after analysis
+            self.forceUnloadModel()
+
+            return AnalyzeEnvelope(
+                mode: mode,
+                data: parsedData,
+                model: self.currentLoadedModel?.rawValue ?? "local-llm",
+                tokens: TokenUsage(input: 0, output: 0),
+                latency_ms: Int(duration * 1000),
+                moderation: nil
+            )
         }
-        
-        // Ensure model is loaded (cached after first use)
-        try await ensureModelLoaded()
-        
-        guard let llmInstance = llm else {
-            throw AnalysisError.modelNotAvailable
-        }
-        
-        // Enhanced structured prompt
-        let prompt = buildStructuredPrompt(mode: mode, transcript: transcript)
-        
-        // Get completion - call directly, preconcurrency import handles Sendable warnings
-        let output = await llmInstance.getCompletion(from: prompt)
-        
-        // Parse structured output
-        let parsedData = try parseStructuredOutput(output, mode: mode, responseType: responseType)
-        
-        let duration = Date().timeIntervalSince(startTime)
-        
-        return AnalyzeEnvelope(
-            mode: mode,
-            data: parsedData,
-            model: currentLoadedModel?.rawValue ?? "local-llm",
-            tokens: TokenUsage(input: 0, output: 0),
-            latency_ms: Int(duration * 1000),
-            moderation: nil
-        )
     }
     
     // MARK: - Parallel Distill Analysis (Local)
@@ -210,19 +224,22 @@ final class LocalAnalysisService: ObservableObject, AnalysisServiceProtocol {
     /// Parallel implementation of Distill analysis for local models
     /// Executes 4 component analyses concurrently to match cloud performance
     private func analyzeDistillParallel(transcript: String) async throws -> AnalyzeEnvelope<DistillData> {
-        let startTime = Date()
-        
-        // Basic input validation
-        guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw AnalysisError.invalidInput("Empty transcript")
-        }
-        
-        // Ensure model is loaded (cached after first use)
-        try await ensureModelLoaded()
-        
-        guard let llmInstance = llm else {
-            throw AnalysisError.modelNotAvailable
-        }
+        return try await AIModelCoordinator.shared.acquireAnalyzing { [weak self] in
+            guard let self = self else { throw AnalysisError.modelNotAvailable }
+            await AIModelCoordinator.shared.registerUnloadHandlers(unloadPhi: { [weak self] in self?.forceUnloadModel() })
+            let startTime = Date()
+
+            // Basic input validation
+            guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw AnalysisError.invalidInput("Empty transcript")
+            }
+
+            // Ensure model is loaded (cached after first use)
+            try await self.ensureModelLoaded()
+
+            guard let llmInstance = self.llm else {
+                throw AnalysisError.modelNotAvailable
+            }
         
         // Component modes matching cloud implementation
         let componentModes: [AnalysisMode] = [.distillSummary, .distillActions, .distillThemes, .distillReflection]
@@ -236,7 +253,7 @@ final class LocalAnalysisService: ObservableObject, AnalysisServiceProtocol {
             // Add tasks for each component
             for mode in componentModes {
                 // Build prompt outside the task group to avoid async issues
-                let prompt = buildComponentPrompt(mode: mode, transcript: transcript)
+                let prompt = self.buildComponentPrompt(mode: mode, transcript: transcript)
                 
                 group.addTask {
                     let componentStartTime = Date()
@@ -254,7 +271,7 @@ final class LocalAnalysisService: ObservableObject, AnalysisServiceProtocol {
                 combinedLatency = max(combinedLatency, latency) // Use max since parallel
                 
                 // Parse component output and update partial data
-                try updatePartialDataFromOutput(&partialData, mode: mode, output: output)
+                try self.updatePartialDataFromOutput(&partialData, mode: mode, output: output)
                 
                 logger.debug("Local component \(mode.rawValue) completed in \(latency)ms", 
                            category: .analysis)
@@ -269,18 +286,22 @@ final class LocalAnalysisService: ObservableObject, AnalysisServiceProtocol {
         }
         
         let totalDuration = Date().timeIntervalSince(startTime)
-        
-        logger.info("Local parallel distill analysis completed in \(Int(totalDuration * 1000))ms", 
+
+        self.logger.info("Local parallel distill analysis completed in \(Int(totalDuration * 1000))ms", 
                    category: .analysis)
-        
+
+        // Unload immediately after analysis
+        self.forceUnloadModel()
+
         return AnalyzeEnvelope(
             mode: .distill,
             data: finalData,
-            model: currentLoadedModel?.rawValue ?? "local-llm",
+            model: self.currentLoadedModel?.rawValue ?? "local-llm",
             tokens: TokenUsage(input: 0, output: 0),
             latency_ms: combinedLatency,
             moderation: nil
         )
+        }
     }
     
     // Required protocol methods

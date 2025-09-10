@@ -1,9 +1,9 @@
 # SONORA CHANGELOG
 ## Complete Development History
 
-> **Project Period:** August 23 - September 5, 2025 (14 days)  
+> **Project Period:** August 23 - September 9, 2025 (18 days)  
 > **Architecture Evolution:** Basic MVC → 97% Clean Architecture Compliance  
-> **Total Commits:** 196 commits  
+> **Total Commits:** 210+ commits  
 > **Primary Developer:** Samuel Kahessay
 
 ---
@@ -948,7 +948,67 @@ This series of commits focused on preparing Sonora for TestFlight beta testing, 
 - Optimized animation performance and reliability
 - Selective feature rollout capability for gradual deployment
 
+### Recent Updates (September 9, 2025)
+
+**[7eb33a7]** `Latest` - **✨ UI Polish - Centered Distilled Text**
+- Improved text alignment in memo detail view for better readability
+- Enhanced visual hierarchy in analysis results
+
+**[87982ed]** - **🎨 Memo Details View Enhancement** 
+- Refined memo details interface design
+- Better content organization and spacing
+
+**[4a298c1]** - **⚠️ Improved No Speech Detection**
+- Simplified "no speech detected" warning UI
+- Reduced visual clutter for common scenarios
+- Better user experience for failed transcriptions
+
+**[cb8ee1c]** - **🔧 Memo Details UI Improvements**
+- Additional refinements to memo detail interface
+- Enhanced user interaction patterns
+
+**[42fd0ed]** - **📋 Legal & Privacy Enhancement**
+- Added comprehensive licenses section in Privacy and Legal settings
+- Improved legal compliance and transparency
+
+**[ba335fc]** - **🤖 AI Disclaimer Optimization**
+- Refined AI disclaimer placement and messaging
+- Better progressive disclosure of AI-related warnings
+
+**[49f5ff7]** - **🎯 Transcription UI Polish**
+- Removed accent indicator during transcription progress
+- Cleaner memo card design without visual distractions
+
+**[1a16c1e]** - **⚙️ Cloud Quota Settings**
+- Moved remaining cloud transcription time to Settings
+- Better quota management user experience
+
+**[5f04d04]** - **⏱️ Extended Cloud Transcription**
+- Updated cloud transcription limit to 10 minutes daily
+- Enhanced cloud service offering
+
+**[db20bd1]** - **🔧 Long Press Rename Fix**
+- Fixed long press to rename functionality on memo list
+- Improved gesture handling and user interaction
+
+**[7f3c76b]** - **📝 Memo Renaming Enhancement** 
+- Additional improvements to memo renaming functionality
+- Better error handling and user feedback
+
 ### Previous Updates (September 7, 2025)
+
+**[16ca7ce]** - **📋 Changelog & UI Updates**
+- Updated changelog with comprehensive development history
+- Improved colors for light mode recording timer
+- Enhanced visual consistency across themes
+
+**[5a16cf8]** - **🎙️ Enhanced Permissions**
+- Updated microphone usage description to be more comprehensive
+- Better user understanding of microphone access needs
+
+**[91760dd]** - **📱 Live Activity Enhancement**
+- Made audio waves more prominent in Live Activity
+- Improved visual feedback during recording sessions
 
 **[62d6b83]** - **📝 Documentation Updates**
 - Updated docs to reflect new 3 minute time limit

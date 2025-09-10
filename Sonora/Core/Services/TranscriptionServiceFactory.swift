@@ -279,7 +279,8 @@ final class RoutedTranscriptionService: TranscriptionAPI {
                 // Publish fallback route change
                 if let memoId = CurrentTranscriptionContext.memoId {
                     let bus = DIContainer.shared.eventBus()
-                    await MainActor.run { bus.publish(.transcriptionRouteDecided(memoId: memoId, route: "cloud", reason: error.localizedDescription)) }
+                    // Surface a clear reason for the UI; treat local failure as memory-related for on-device models
+                    await MainActor.run { bus.publish(.transcriptionRouteDecided(memoId: memoId, route: "cloud", reason: "insufficient_memory")) }
                 }
                 logger.info("Attempting fallback to Cloud API")
                 

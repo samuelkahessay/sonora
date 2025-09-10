@@ -43,136 +43,117 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
     }
     
     func transcribe(url: URL, language: String?) async throws -> TranscriptionResponse {
-        logger.info("🎤 Starting adaptive WhisperKit transcription for: \(url.lastPathComponent)")
-        let totalTimer = PerformanceTimer(operation: "WhisperKit transcription", category: .transcription)
-        
-        // Adaptive model routing
-        let routingTimer = PerformanceTimer(operation: "Model routing", category: .transcription)
-        let routingContext = try await buildRoutingContext(audioURL: url)
-        let routingDecision = modelRouter.selectModel(for: routingContext)
-        _ = routingTimer.finish(additionalInfo: "Selected: \(routingDecision.selectedModel.displayName)")
-        
-        // Use model manager with selected model
-        let initTimer = PerformanceTimer(operation: "WhisperKit model retrieval", category: .transcription)
-        // First, ensure the optimal model is selected in UserDefaults for model manager
-        let previousModel = UserDefaults.standard.selectedWhisperModel
-        UserDefaults.standard.selectedWhisperModel = routingDecision.selectedModel.id
-        
-        guard let whisperKit = try await modelManager.getWhisperKit() else {
-            // Restore previous model selection on failure
-            UserDefaults.standard.selectedWhisperModel = previousModel
-            throw WhisperKitTranscriptionError.initializationFailed("WhisperKit not available from model manager")
-        }
-        _ = initTimer.finish()
-        
-        do {
-            // Load and prepare audio
-            let audioTimer = PerformanceTimer(operation: "Audio loading", category: .audio)
-            let audioData = try await loadAudioData(from: url)
-            _ = audioTimer.finish(additionalInfo: "\(audioData.count) samples")
-            
-            // Perform transcription
-            let transcribeTimer = PerformanceTimer(operation: "WhisperKit transcribe", category: .transcription)
-            #if canImport(WhisperKit)
-            let options = buildDecodingOptions(language: language)
-            // Use progress-enabled API
-            let results: [TranscriptionResult]
-            #if compiler(>=6)
-            results = try await whisperKit.transcribe(audioArray: audioData, decodeOptions: options) { @Sendable [weak self] _ in
-                guard let self = self else { return nil }
-                Task { @MainActor in
-                    let fraction = whisperKit.progress.fractionCompleted
-                    self.onProgress?(fraction)
-                }
-                return Task.isCancelled ? false : nil
-            }
-            #else
-            results = try await whisperKit.transcribe(
-                audioArray: audioData,
-                decodeOptions: options
-            )
-            #endif
-            #else
-            let results = try await whisperKit.transcribe(audioArray: audioData)
-            #endif
-            _ = transcribeTimer.finish()
-            
-            // Process results
-            let transcriptionText = extractTextFromResults(results)
-            let detectedLanguage = extractLanguageFromResults(results)
-            let confidence = extractConfidenceFromResults(results)
-            
-            logger.info("🎤 WhisperKit transcription completed")
-            
-            let totalDuration = totalTimer.finish()
-            let response = TranscriptionResponse(
-                text: transcriptionText,
-                detectedLanguage: detectedLanguage,
-                confidence: confidence,
-                avgLogProb: nil,
-                duration: totalDuration
-            )
+        return try await AIModelCoordinator.shared.acquireTranscribing { [weak self] in
+            guard let self = self else { throw WhisperKitTranscriptionError.transcriptionFailed("Service deallocated") }
+            await AIModelCoordinator.shared.registerUnloadHandlers(unloadWhisper: { [weak self] in self?.modelManager.unloadModel() })
+            self.logger.info("🎤 Starting adaptive WhisperKit transcription for: \(url.lastPathComponent)")
+            let totalTimer = PerformanceTimer(operation: "WhisperKit transcription", category: .transcription)
 
-            // Restore previous model selection
-            UserDefaults.standard.selectedWhisperModel = previousModel
-            
-            // Check if we should retry with a larger model
-            if modelRouter.shouldRetryWithLargerModel(result: response, context: routingContext),
-               let largerModel = routingDecision.fallbackModels.first(where: { 
-                   modelSizeOrder($0.id) > modelSizeOrder(routingDecision.selectedModel.id) 
-               }) {
-                
-                logger.info("🎯 Retrying with larger model: \(largerModel.displayName)")
-                
-                // Unload current model first
-                self.modelManager.unloadModel()
-                
-                // Retry with larger model
-                UserDefaults.standard.selectedWhisperModel = largerModel.id
-                
-                if let retryWhisperKit = try? await modelManager.getWhisperKit() {
-                    let retryOptions = buildDecodingOptions(language: language)
-                    if let retryResults = try? await retryWhisperKit.transcribe(audioArray: audioData, decodeOptions: retryOptions),
-                       let retryText = retryResults.first?.text,
-                       !retryText.isEmpty {
-                        
-                        let retryResponse = TranscriptionResponse(
-                            text: retryText,
-                            detectedLanguage: detectedLanguage,
-                            confidence: extractConfidenceFromResults(retryResults),
-                            avgLogProb: nil,
-                            duration: totalDuration
-                        )
-                        
-                        logger.info("🎯 Retry with \(largerModel.displayName) succeeded")
-                        UserDefaults.standard.selectedWhisperModel = previousModel
-                        self.modelManager.unloadModel()
-                        return retryResponse
-                    }
-                }
-                
-                // Retry failed, restore previous model
+            // Adaptive model routing
+            let routingTimer = PerformanceTimer(operation: "Model routing", category: .transcription)
+            let routingContext = try await self.buildRoutingContext(audioURL: url)
+            let routingDecision = self.modelRouter.selectModel(for: routingContext)
+            _ = routingTimer.finish(additionalInfo: "Selected: \(routingDecision.selectedModel.displayName)")
+
+            // Use model manager with selected model
+            let initTimer = PerformanceTimer(operation: "WhisperKit model retrieval", category: .transcription)
+            let previousModel = UserDefaults.standard.selectedWhisperModel
+            UserDefaults.standard.selectedWhisperModel = routingDecision.selectedModel.id
+            guard let whisperKit = try await self.modelManager.getWhisperKit() else {
                 UserDefaults.standard.selectedWhisperModel = previousModel
+                throw WhisperKitTranscriptionError.initializationFailed("WhisperKit not available from model manager")
             }
+            _ = initTimer.finish()
 
-            // Key optimization: Unload model after transcription using model manager
-            self.modelManager.unloadModel()
-            logger.info("🎤 WhisperKit model unloaded after transcription")
+            do {
+                // Load and prepare audio
+                let audioTimer = PerformanceTimer(operation: "Audio loading", category: .audio)
+                let audioData = try await self.loadAudioData(from: url)
+                _ = audioTimer.finish(additionalInfo: "\(audioData.count) samples")
 
-            return response
-            
-        } catch {
-            logger.error("🎤 WhisperKit transcription failed",
-                        category: .transcription,
-                        context: LogContext(additionalInfo: ["audioFile": url.lastPathComponent]),
-                        error: error)
-            
-            // Restore previous model selection on error
-            UserDefaults.standard.selectedWhisperModel = previousModel
-            
-            // Still unload model on error to free memory
-            self.modelManager.unloadModel()
-            throw WhisperKitTranscriptionError.transcriptionFailed(error.localizedDescription)
+                // Perform transcription
+                let transcribeTimer = PerformanceTimer(operation: "WhisperKit transcribe", category: .transcription)
+                #if canImport(WhisperKit)
+                let options = self.buildDecodingOptions(language: language)
+                let results: [TranscriptionResult]
+                #if compiler(>=6)
+                results = try await whisperKit.transcribe(audioArray: audioData, decodeOptions: options) { @Sendable [weak self] _ in
+                    guard let self = self else { return nil }
+                    Task { @MainActor in
+                        let fraction = whisperKit.progress.fractionCompleted
+                        self.onProgress?(fraction)
+                    }
+                    return Task.isCancelled ? false : nil
+                }
+                #else
+                results = try await whisperKit.transcribe(
+                    audioArray: audioData,
+                    decodeOptions: options
+                )
+                #endif
+                #else
+                let results = try await whisperKit.transcribe(audioArray: audioData)
+                #endif
+                _ = transcribeTimer.finish()
+
+                // Process results
+                let transcriptionText = self.extractTextFromResults(results)
+                let detectedLanguage = self.extractLanguageFromResults(results)
+                let confidence = self.extractConfidenceFromResults(results)
+
+                self.logger.info("🎤 WhisperKit transcription completed")
+
+                let totalDuration = totalTimer.finish()
+                let response = TranscriptionResponse(
+                    text: transcriptionText,
+                    detectedLanguage: detectedLanguage,
+                    confidence: confidence,
+                    avgLogProb: nil,
+                    duration: totalDuration
+                )
+
+                // Restore previous model selection
+                UserDefaults.standard.selectedWhisperModel = previousModel
+
+                // Optional retry with larger model
+                if self.modelRouter.shouldRetryWithLargerModel(result: response, context: routingContext),
+                   let largerModel = routingDecision.fallbackModels.first(where: { self.modelSizeOrder($0.id) > self.modelSizeOrder(routingDecision.selectedModel.id) }) {
+                    self.logger.info("🎯 Retrying with larger model: \(largerModel.displayName)")
+                    self.modelManager.unloadModel()
+                    UserDefaults.standard.selectedWhisperModel = largerModel.id
+                    if let retryWhisperKit = try? await self.modelManager.getWhisperKit() {
+                        let retryOptions = self.buildDecodingOptions(language: language)
+                        if let retryResults = try? await retryWhisperKit.transcribe(audioArray: audioData, decodeOptions: retryOptions),
+                           let retryText = retryResults.first?.text,
+                           !retryText.isEmpty {
+                            let retryResponse = TranscriptionResponse(
+                                text: retryText,
+                                detectedLanguage: detectedLanguage,
+                                confidence: self.extractConfidenceFromResults(retryResults),
+                                avgLogProb: nil,
+                                duration: totalDuration
+                            )
+                            self.logger.info("🎯 Retry with \(largerModel.displayName) succeeded")
+                            UserDefaults.standard.selectedWhisperModel = previousModel
+                            self.modelManager.unloadModel()
+                            return retryResponse
+                        }
+                    }
+                    UserDefaults.standard.selectedWhisperModel = previousModel
+                }
+
+                self.modelManager.unloadModel()
+                self.logger.info("🎤 WhisperKit model unloaded after transcription")
+                return response
+            } catch {
+                self.logger.error("🎤 WhisperKit transcription failed",
+                            category: .transcription,
+                            context: LogContext(additionalInfo: ["audioFile": url.lastPathComponent]),
+                            error: error)
+                UserDefaults.standard.selectedWhisperModel = previousModel
+                self.modelManager.unloadModel()
+                throw WhisperKitTranscriptionError.transcriptionFailed(error.localizedDescription)
+            }
         }
     }
     
@@ -181,96 +162,69 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
     }
     
     func transcribeChunks(segments: [VoiceSegment], audioURL: URL, language: String?) async throws -> [ChunkTranscriptionResult] {
-        logger.info("🎤 Starting WhisperKit chunk transcription for \(segments.count) segments")
-        
-        // Use model manager for initialization
-        guard let whisperKit = try await modelManager.getWhisperKit() else {
-            throw WhisperKitTranscriptionError.initializationFailed("WhisperKit not available from model manager")
-        }
-        
-        var results: [ChunkTranscriptionResult] = []
-        
-        do {
-            // Load full audio file
-            let audioData = try await loadAudioData(from: audioURL)
-            let sampleRate = 16000.0 // WhisperKit expects 16kHz audio
-            
-            for segment in segments {
-                do {
-                    // Extract audio segment
-                    let startSample = Int(segment.startTime * sampleRate)
-                    let endSample = Int(segment.endTime * sampleRate)
-                    let segmentData = extractAudioSegment(from: audioData, startSample: startSample, endSample: endSample)
-                    
-                    // Transcribe segment
-                    #if canImport(WhisperKit)
-                    let options = buildDecodingOptions(language: language)
-                    let segmentResults: [TranscriptionResult]
-                    #if compiler(>=6)
-                    segmentResults = try await whisperKit.transcribe(audioArray: segmentData, decodeOptions: options) { @Sendable [weak self] _ in
-                        guard let self = self else { return nil }
-                        Task { @MainActor in
-                            let fraction = whisperKit.progress.fractionCompleted
-                            self.onProgress?(fraction)
-                        }
-                        return Task.isCancelled ? false : nil
-                    }
-                    #else
-                    segmentResults = try await whisperKit.transcribe(
-                        audioArray: segmentData,
-                        decodeOptions: options
-                    )
-                    #endif
-                    #else
-                    let segmentResults = try await whisperKit.transcribe(audioArray: segmentData)
-                    #endif
-                    
-                    let transcriptionText = extractTextFromResults(segmentResults)
-                    let detectedLanguage = extractLanguageFromResults(segmentResults)
-                    let confidence = extractConfidenceFromResults(segmentResults)
-                    
-                    let response = TranscriptionResponse(
-                        text: transcriptionText,
-                        detectedLanguage: detectedLanguage,
-                        confidence: confidence,
-                        avgLogProb: nil,
-                        duration: segment.endTime - segment.startTime
-                    )
-                    
-                    results.append(ChunkTranscriptionResult(segment: segment, response: response))
-                    
-                } catch {
-                    logger.warning("🎤 Failed to transcribe segment \(segment.startTime)-\(segment.endTime): \(error)")
-                    
-                    // Create empty result for failed segment
-                    let response = TranscriptionResponse(
-                        text: "",
-                        detectedLanguage: nil,
-                        confidence: 0.0,
-                        avgLogProb: nil,
-                        duration: segment.endTime - segment.startTime
-                    )
-                    results.append(ChunkTranscriptionResult(segment: segment, response: response))
-                }
+        return try await AIModelCoordinator.shared.acquireTranscribing { [weak self] in
+            guard let self = self else { throw WhisperKitTranscriptionError.transcriptionFailed("Service deallocated") }
+            await AIModelCoordinator.shared.registerUnloadHandlers(unloadWhisper: { [weak self] in self?.modelManager.unloadModel() })
+            self.logger.info("🎤 Starting WhisperKit chunk transcription for \(segments.count) segments")
+
+            // Use model manager for initialization
+            guard let whisperKit = try await self.modelManager.getWhisperKit() else {
+                throw WhisperKitTranscriptionError.initializationFailed("WhisperKit not available from model manager")
             }
-            
-            logger.info("🎤 WhisperKit chunk transcription completed: \(results.count) segments processed")
-            
-            // Unload model after all chunks are processed
-            self.modelManager.unloadModel()
-            logger.info("🎤 WhisperKit model unloaded after chunk transcription")
-            
-            return results
-            
-        } catch {
-            logger.error("🎤 WhisperKit chunk transcription failed",
-                        category: .transcription,
-                        context: LogContext(additionalInfo: ["audioFile": audioURL.lastPathComponent, "segmentCount": "\(segments.count)"]),
-                        error: error)
-            
-            // Still unload model on error
-            self.modelManager.unloadModel()
-            throw WhisperKitTranscriptionError.transcriptionFailed(error.localizedDescription)
+
+            var results: [ChunkTranscriptionResult] = []
+            do {
+                let audioData = try await self.loadAudioData(from: audioURL)
+                let sampleRate = 16000.0
+                for segment in segments {
+                    do {
+                        let startSample = Int(segment.startTime * sampleRate)
+                        let endSample = Int(segment.endTime * sampleRate)
+                        let segmentData = self.extractAudioSegment(from: audioData, startSample: startSample, endSample: endSample)
+                        #if canImport(WhisperKit)
+                        let options = self.buildDecodingOptions(language: language)
+                        let segmentResults: [TranscriptionResult]
+                        #if compiler(>=6)
+                        segmentResults = try await whisperKit.transcribe(audioArray: segmentData, decodeOptions: options) { @Sendable [weak self] _ in
+                            guard let self = self else { return nil }
+                            Task { @MainActor in
+                                let fraction = whisperKit.progress.fractionCompleted
+                                self.onProgress?(fraction)
+                            }
+                            return Task.isCancelled ? false : nil
+                        }
+                        #else
+                        segmentResults = try await whisperKit.transcribe(
+                            audioArray: segmentData,
+                            decodeOptions: options
+                        )
+                        #endif
+                        #else
+                        let segmentResults = try await whisperKit.transcribe(audioArray: segmentData)
+                        #endif
+                        let text = self.extractTextFromResults(segmentResults)
+                        let detectedLanguage = self.extractLanguageFromResults(segmentResults)
+                        let confidence = self.extractConfidenceFromResults(segmentResults)
+                        let response = TranscriptionResponse(text: text, detectedLanguage: detectedLanguage, confidence: confidence, avgLogProb: nil, duration: segment.endTime - segment.startTime)
+                        results.append(ChunkTranscriptionResult(segment: segment, response: response))
+                    } catch {
+                        self.logger.warning("🎤 Failed to transcribe segment \(segment.startTime)-\(segment.endTime): \(error)")
+                        let response = TranscriptionResponse(text: "", detectedLanguage: nil, confidence: 0.0, avgLogProb: nil, duration: segment.endTime - segment.startTime)
+                        results.append(ChunkTranscriptionResult(segment: segment, response: response))
+                    }
+                }
+                self.logger.info("🎤 WhisperKit chunk transcription completed: \(results.count) segments processed")
+                self.modelManager.unloadModel()
+                self.logger.info("🎤 WhisperKit model unloaded after chunk transcription")
+                return results
+            } catch {
+                self.logger.error("🎤 WhisperKit chunk transcription failed",
+                            category: .transcription,
+                            context: LogContext(additionalInfo: ["audioFile": audioURL.lastPathComponent, "segmentCount": "\(segments.count)"]),
+                            error: error)
+                self.modelManager.unloadModel()
+                throw WhisperKitTranscriptionError.transcriptionFailed(error.localizedDescription)
+            }
         }
     }
     

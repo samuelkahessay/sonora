@@ -67,9 +67,8 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
     init(modelProvider: WhisperKitModelProvider) {
         self.modelProvider = modelProvider
         configureLifecycleHandling()
-        setupMemoryPressureMonitoring()
-        
-        logger.info("🚀 WhisperKitModelManager: Initialized with smart prewarming")
+        // Memory pressure monitoring disabled; coordinator + OS handle pressure.
+        logger.info("🚀 WhisperKitModelManager: Initialized (prewarming disabled)")
     }
     
     deinit {
@@ -83,33 +82,8 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
     
     // MARK: - Public Interface
     
-    /// Prewarms the selected model in background for instant access
-    func prewarmModel() async throws {
-        let selectedModel = UserDefaults.standard.selectedWhisperModelInfo
-        
-        // Skip if already warmed with same model
-        if isModelWarmed && currentModelId == selectedModel.id && whisperKit != nil {
-            logger.debug("🚀 WhisperKitModelManager: Model already warmed: \(selectedModel.displayName)")
-            return
-        }
-        // Skip if model is not installed (avoid noisy retries)
-        guard modelProvider.installedModelFolder(id: selectedModel.id) != nil else {
-            throttleMissingModelWarning(modelName: selectedModel.displayName)
-            return
-        }
-        
-        // Cancel any existing prewarm operation
-        prewarmTask?.cancel()
-        
-        logger.info("🚀 WhisperKitModelManager: Starting prewarming for model: \(selectedModel.displayName)")
-        let startTime = CFAbsoluteTimeGetCurrent()
-        
-        prewarmTask = Task { [weak self] in
-            await self?.performPrewarmOperation(modelId: selectedModel.id, modelName: selectedModel.displayName, startTime: startTime)
-        }
-        
-        await prewarmTask?.value
-    }
+    /// Prewarming disabled — no-op on iOS to preserve memory headroom
+    func prewarmModel() async throws { logger.debug("Whisper prewarm skipped"); return }
     
     /// Gets warmed WhisperKit instance or loads synchronously if not available
     func getWhisperKit() async throws -> WhisperKit? {
@@ -142,9 +116,9 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
     
     /// Unloads current model and resets state
     func unloadModel() {
-        logger.info("🚀 WhisperKitModelManager: Manually unloading model")
+        logger.info("🚀 WhisperKitModelManager: Manually unloading model (immediate)")
         unloadModelInternal()
-        scheduleIdleUnloadTimer()
+        // No idle timer; unload immediately.
     }
     
     /// Configures app lifecycle event handling for optimal resource management
@@ -353,14 +327,7 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
     
     // MARK: - Memory Pressure Monitoring
     
-    private func setupMemoryPressureMonitoring() {
-        memoryPressureSource.setEventHandler { [weak self] in
-            Task { @MainActor in
-                self?.handleMemoryPressureChange()
-            }
-        }
-        memoryPressureSource.resume()
-    }
+    private func setupMemoryPressureMonitoring() { /* no-op */ }
     
     private func handleMemoryPressureChange() {
         let memoryPressure = memoryPressureSource.mask
@@ -385,32 +352,9 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
         cancelUnloadTimer()
     }
     
-    private func scheduleIdleUnloadTimer() {
-        cancelUnloadTimer()
-        
-        var timeout = isUnderMemoryPressure ? 
-            ModelManagementConfig.memoryPressureUnloadTimeout : 
-            ModelManagementConfig.idleUnloadTimeout
-        if FeatureFlags.useFixedModelsForBeta {
-            timeout = min(timeout, 10.0) // Aggressive idle unload in beta to avoid background residency
-        }
-        
-        unloadTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] _ in
-            Task { @MainActor in
-                self?.handleIdleTimeout()
-            }
-        }
-    }
+    private func scheduleIdleUnloadTimer() { /* no-op */ }
     
-    private func scheduleMemoryPressureUnload() {
-        cancelUnloadTimer()
-        
-        unloadTimer = Timer.scheduledTimer(withTimeInterval: ModelManagementConfig.memoryPressureUnloadTimeout, repeats: false) { [weak self] _ in
-            Task { @MainActor in
-                self?.handleMemoryPressureTimeout()
-            }
-        }
-    }
+    private func scheduleMemoryPressureUnload() { /* no-op */ }
     
     private func handleIdleTimeout() {
         let idleTime = Date().timeIntervalSince(lastUsedTime)
