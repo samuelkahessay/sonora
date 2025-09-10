@@ -14,17 +14,18 @@ actor AIModelCoordinator {
     private var state: State = .idle
 
     // Optional unload hooks injected by clients (services)
-    private var unloadWhisperHook: (()->Void)?
-    private var unloadPhiHook: (()->Void)?
+    private var unloadWhisperHook: (@MainActor @Sendable () -> Void)?
+    private var unloadPhiHook: (@MainActor @Sendable () -> Void)?
 
     // Register unload hooks; safe to call multiple times, latest wins.
-    func registerUnloadHandlers(unloadWhisper: (() -> Void)? = nil, unloadPhi: (() -> Void)? = nil) {
+    func registerUnloadHandlers(unloadWhisper: (@MainActor @Sendable () -> Void)? = nil,
+                                unloadPhi: (@MainActor @Sendable () -> Void)? = nil) {
         if let uw = unloadWhisper { self.unloadWhisperHook = uw }
         if let up = unloadPhi { self.unloadPhiHook = up }
     }
 
     // Public helpers
-    func acquireTranscribing<T>(_ operation: @Sendable () async throws -> T) async throws -> T {
+    func acquireTranscribing<T: Sendable>(_ operation: @MainActor @Sendable () async throws -> T) async throws -> T {
         try await transition(to: .transcribing)
         do {
             let result = try await withTaskCancellationHandler(operation: {
@@ -40,7 +41,7 @@ actor AIModelCoordinator {
         }
     }
 
-    func acquireAnalyzing<T>(_ operation: @Sendable () async throws -> T) async throws -> T {
+    func acquireAnalyzing<T: Sendable>(_ operation: @MainActor @Sendable () async throws -> T) async throws -> T {
         try await transition(to: .analyzing)
         do {
             let result = try await withTaskCancellationHandler(operation: {
@@ -65,10 +66,10 @@ actor AIModelCoordinator {
             break
         case (.transcribing, .analyzing):
             // Must unload Whisper first
-            unloadWhisperHook?()
+            if let hook = unloadWhisperHook { await hook() }
         case (.analyzing, .transcribing):
             // Must unload Phi‑4 first
-            unloadPhiHook?()
+            if let hook = unloadPhiHook { await hook() }
         default:
             break
         }
@@ -79,4 +80,3 @@ actor AIModelCoordinator {
         state = .idle
     }
 }
-
