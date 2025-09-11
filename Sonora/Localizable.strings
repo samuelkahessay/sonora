@@ -69,5 +69,5 @@
 "prompt.mindfulness.let-go-thought" = "Notice a sticky thought and let it pass.";
 "prompt.mindfulness.gratitude-three" = "Name three things you're grateful for this [WeekPart].";
 "prompt.mindfulness.mindful-walk" = "Take a mindful walk; describe what you observe.";
-"prompt.mindfulness.emotion-labeling" = "Label your current emotion in a word or two.";
+"prompt.mindfulness.emotion-labeling" = "Take 30 seconds to describe how you're feeling and why.";
 "prompt.mindfulness.intention-for-day" = "Set an intention for this [DayPart], [Name].";

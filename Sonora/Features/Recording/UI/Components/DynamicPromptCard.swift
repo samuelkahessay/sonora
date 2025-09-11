@@ -13,16 +13,13 @@ struct DynamicPromptCard: View {
                     .imageScale(.large)
                     .foregroundStyle(.secondary)
                 Text(prompt.text)
-                    .font(.body)
+                    .font(SonoraDesignSystem.Typography.insightSerif)
                     .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(14)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Color.secondary.opacity(0.15))
-            )
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .cardStyle()
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())

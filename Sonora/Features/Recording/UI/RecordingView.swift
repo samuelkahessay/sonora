@@ -100,12 +100,10 @@ struct RecordingView: View {
                                 DynamicPromptCard(prompt: prompt) {
                                     promptViewModel.refresh()
                                 }
-                                .padding(.horizontal)
                             } else {
                                 FallbackPromptCard {
                                     promptViewModel.refresh()
                                 }
-                                .padding(.horizontal)
                             }
                         }
                         
@@ -138,11 +136,26 @@ struct RecordingView: View {
                         )
                         
                         if FeatureFlags.usePrompts, !viewModel.isRecording {
-                            Button("Inspire Me") { promptViewModel.showInspireSheet = true }
-                                .buttonStyle(.bordered)
+                            Button(action: {
+                                HapticManager.shared.playSelection()
+                                promptViewModel.refresh()
+                            }) {
+                                VStack(spacing: 4) {
+                                    Image(systemName: "lightbulb")
+                                        .font(.title3)
+                                        .foregroundStyle(.secondary)
+                                    Text("Inspire Me")
+                                        .font(.caption)
+                                        .foregroundStyle(.primary)
+                                }
+                                .minTouchTarget()
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Inspire Me")
+                            .accessibilityHint("Double tap to shuffle a new prompt")
                         }
                     }
-                    .padding(.horizontal)
+                    // Rely on outer breathingRoom() for horizontal padding
                 }
                 
                 Spacer()
@@ -225,9 +238,7 @@ struct RecordingView: View {
             backgroundView
             contentView
         })
-        .sheet(isPresented: $promptViewModel.showInspireSheet) {
-            InspireMeSheet { _ in /* future: show category list */ }
-        }
+        // Removed category sheet; Inspire Me now shuffles the prompt inline
     }
     
     // MARK: - Permission UI Helpers
