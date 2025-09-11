@@ -84,14 +84,14 @@ struct OnboardingPageView: View {
                     // Title and description
                     VStack(spacing: Spacing.md) {
                         Text(page.title)
-                            .font(.largeTitle)
+                            .font(.system(.largeTitle, design: .serif))
                             .fontWeight(.bold)
                             .foregroundColor(.semantic(.textPrimary))
                             .multilineTextAlignment(.center)
                             .accessibilityAddTraits(.isHeader)
                         
                         Text(page.description)
-                            .font(.body)
+                            .font(.system(.body, design: .serif))
                             .foregroundColor(.semantic(.textSecondary))
                             .multilineTextAlignment(.center)
                             .lineSpacing(4)
@@ -126,20 +126,21 @@ struct OnboardingPageView: View {
                             HStack(spacing: Spacing.sm) {
                                 if isLoading {
                                     LoadingIndicator(size: .small)
-                                        .tint(primaryButtonStyle.foregroundColor)
+                                        .tint(.white)
                                         .accessibilityLabel("Loading")
                                 }
                                 
                                 Text(primaryTitle)
-                                    .font(.body.weight(.semibold))
+                                    .font(.system(.body, design: .serif))
+                                    .fontWeight(.semibold)
                             }
                             .frame(maxWidth: .infinity)
                             .frame(minHeight: 52)
                         }
-                        .buttonStyle(.plain)
-                        .background(primaryButtonStyle.backgroundColor)
-                        .foregroundColor(primaryButtonStyle.foregroundColor)
-                        .cornerRadius(12)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                        .controlSize(.large)
+                        .buttonBorderShape(.roundedRectangle)
                         .disabled(isLoading)
                         .opacity(isLoading ? 0.8 : 1.0)
                         .accessibilityLabel(primaryTitle)
@@ -153,7 +154,7 @@ struct OnboardingPageView: View {
                         HapticManager.shared.playSelection()
                         onSkip()
                     }
-                    .font(.body)
+                    .font(.system(.body, design: .serif))
                     .foregroundColor(.semantic(.textSecondary))
                     .padding(.vertical, Spacing.sm)
                     .accessibilityLabel("Skip onboarding")
@@ -166,6 +167,7 @@ struct OnboardingPageView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.semantic(.bgPrimary))
+        .fontDesign(.serif)
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 focusedElement = .pageContent
@@ -177,14 +179,12 @@ struct OnboardingPageView: View {
     
     private func getPrimaryButtonHint() -> String {
         switch page {
-        case .welcome:
-            return "Double tap to continue to the privacy information"
-        case .privacy:
-            return "Double tap to proceed to microphone permission setup"
-        case .microphone:
-            return "Double tap to request microphone permission for recording voice memos"
-        case .features:
-            return "Double tap to complete onboarding and start using Sonora"
+        case .nameEntry:
+            return "Double tap to continue with your name"
+        case .howItWorks:
+            return "Double tap to continue to the recording prompt"
+        case .firstRecording:
+            return "Double tap to start your first voice memo"
         }
     }
 }
@@ -206,7 +206,7 @@ struct OnboardingFeatureRow: View {
             
             // Feature text
             Text(text)
-                .font(.body)
+                .font(.system(.body, design: .serif))
                 .foregroundColor(.semantic(.textPrimary))
                 .lineSpacing(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -220,11 +220,11 @@ struct OnboardingFeatureRow: View {
 
 // MARK: - Previews
 
-#Preview("Welcome Page") {
+#Preview("Name Entry Page") {
     OnboardingPageView(
-        page: .welcome,
+        page: .nameEntry,
         onPrimaryAction: {
-            print("Welcome primary action")
+            print("Name entry primary action")
         },
         onSkip: {
             print("Skip tapped")
@@ -232,11 +232,11 @@ struct OnboardingFeatureRow: View {
     )
 }
 
-#Preview("Privacy Page") {
+#Preview("How It Works Page") {
     OnboardingPageView(
-        page: .privacy,
+        page: .howItWorks,
         onPrimaryAction: {
-            print("Privacy primary action")
+            print("How it works primary action")
         },
         onSkip: {
             print("Skip tapped")
@@ -244,24 +244,11 @@ struct OnboardingFeatureRow: View {
     )
 }
 
-#Preview("Microphone Page") {
+#Preview("First Recording Page") {
     OnboardingPageView(
-        page: .microphone,
+        page: .firstRecording,
         onPrimaryAction: {
-            print("Microphone primary action")
-        },
-        onSkip: {
-            print("Skip tapped")
-        },
-        isLoading: true
-    )
-}
-
-#Preview("Features Page") {
-    OnboardingPageView(
-        page: .features,
-        onPrimaryAction: {
-            print("Features primary action")
+            print("First recording primary action")
         },
         onSkip: {
             print("Skip tapped")

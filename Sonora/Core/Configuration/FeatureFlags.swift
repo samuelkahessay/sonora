@@ -4,7 +4,7 @@ import Foundation
 /// Toggle these for fast, reversible scope changes without deleting code.
 enum FeatureFlags {
     // MARK: - Settings Sections Visibility
-    static let showOnboarding: Bool = false
+    static let showOnboarding: Bool = true
     static let showLanguage: Bool = false
     static let showAutoDetection: Bool = false
 

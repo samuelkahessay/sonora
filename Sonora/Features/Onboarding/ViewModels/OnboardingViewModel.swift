@@ -3,93 +3,67 @@ import SwiftUI
 
 /// Onboarding page types
 enum OnboardingPage: String, CaseIterable {
-    case welcome = "welcome"
-    case privacy = "privacy"
-    case microphone = "microphone"
-    case features = "features"
+    case nameEntry = "nameEntry"
+    case howItWorks = "howItWorks"
+    case firstRecording = "firstRecording"
     
     var title: String {
         switch self {
-        case .welcome:
+        case .nameEntry:
             return "Welcome to Sonora"
-        case .privacy:
-            return "Your Data, Your Control"
-        case .microphone:
-            return "Enable Recording"
-        case .features:
+        case .howItWorks:
+            return "How It Works"
+        case .firstRecording:
             return "Ready to Start"
         }
     }
     
     var iconName: String {
         switch self {
-        case .welcome:
+        case .nameEntry:
             return "waveform.badge.mic"
-        case .privacy:
-            return "lock.shield"
-        case .microphone:
-            return "mic"
-        case .features:
-            return "sparkles"
+        case .howItWorks:
+            return "lightbulb.circle"
+        case .firstRecording:
+            return "mic.badge.plus"
         }
     }
     
     var primaryButtonTitle: String? {
         switch self {
-        case .welcome:
-            return "Get Started"
-        case .privacy:
-            return "That Sounds Great"
-        case .microphone:
-            return "Allow Microphone"
-        case .features:
-            return "Start Using Sonora"
+        case .nameEntry:
+            return "Continue"
+        case .howItWorks:
+            return "Continue"
+        case .firstRecording:
+            return "Start Recording"
         }
     }
     
     var description: String {
         switch self {
-        case .welcome:
+        case .nameEntry:
+            return "What should I call you?"
+        case .howItWorks:
             return "Transform your voice into actionable insights with privacy-first AI voice memos."
-        case .privacy:
-            return "Your recordings stay securely on your device. We only process them in the cloud when you explicitly choose to transcribe or analyze them."
-        case .microphone:
-            return "Sonora needs microphone access to record voice memos. We'll never record without your explicit action."
-        case .features:
-            return "You're all set! Record voice memos with background recording, Live Activities, and AI-powered insights."
+        case .firstRecording:
+            return "Let's create your first voice memo together."
         }
     }
     
     var detailedPoints: [String] {
         switch self {
-        case .welcome:
+        case .nameEntry:
+            return []
+        case .howItWorks:
             return [
-                "Privacy-first voice memos",
-                "AI transcription & analysis",
-                "Background recording support",
-                "Beautiful native iOS design"
+                "1. Tap record and speak naturally",
+                "2. Automatic transcription & analysis", 
+                "3. Get distilled insights & summaries",
+                "All processing respects your privacy"
             ]
-        case .privacy:
-            return [
-                "Recordings stored locally on device",
-                "Cloud processing only when you tap 'Transcribe'",
-                "No tracking, no analytics, no compromises",
-                "You control when your data leaves your device"
-            ]
-        case .microphone:
-            return [
-                "Required for recording voice memos",
-                "Background recording with Live Activities",
-                "Never accessed without your knowledge",
-                "You can revoke permission anytime in Settings"
-            ]
-        case .features:
-            return [
-                "Daily cloud limit: 10 minutes",
-                "Background recording with Live Activities",
-                "AI transcription in 100+ languages",
-                "Smart summaries, themes, and todos"
-            ]
+        case .firstRecording:
+            return []
         }
     }
 }
@@ -99,14 +73,12 @@ enum OnboardingPage: String, CaseIterable {
 final class OnboardingViewModel: ObservableObject, ErrorHandling {
     
     // MARK: - Dependencies
-    private let requestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCaseProtocol
     private let onboardingConfiguration: OnboardingConfiguration
     
     // MARK: - Published Properties
-    @Published var currentPage: OnboardingPage = .welcome
+    @Published var currentPage: OnboardingPage = .nameEntry
     @Published var currentPageIndex: Int = 0
-    @Published var isRequestingPermission: Bool = false
-    @Published var microphonePermissionStatus: MicrophonePermissionStatus = .notDetermined
+    @Published var userName: String = ""
     @Published var error: SonoraError?
     @Published var isLoading: Bool = false
     
@@ -129,10 +101,12 @@ final class OnboardingViewModel: ObservableObject, ErrorHandling {
     
     var canGoNext: Bool {
         switch currentPage {
-        case .microphone:
-            // Can only proceed if permission is granted or denied (not undetermined)
-            return microphonePermissionStatus != .notDetermined
-        default:
+        case .nameEntry:
+            // Can always proceed (empty name defaults to "friend")
+            return true
+        case .howItWorks:
+            return true
+        case .firstRecording:
             return true
         }
     }
@@ -144,14 +118,12 @@ final class OnboardingViewModel: ObservableObject, ErrorHandling {
     // MARK: - Initialization
     
     init(
-        requestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCaseProtocol,
         onboardingConfiguration: OnboardingConfiguration
     ) {
-        self.requestMicrophonePermissionUseCase = requestMicrophonePermissionUseCase
         self.onboardingConfiguration = onboardingConfiguration
         
-        // Initialize microphone permission status
-        updateMicrophonePermissionStatus()
+        // Load saved user name if available
+        self.userName = onboardingConfiguration.getUserName()
         
         print("📋 OnboardingViewModel: Initialized")
     }
@@ -197,32 +169,23 @@ final class OnboardingViewModel: ObservableObject, ErrorHandling {
     
     // MARK: - Permission Methods
     
-    func requestMicrophonePermission() {
-        print("📋 OnboardingViewModel: Requesting microphone permission")
-        isRequestingPermission = true
-        
-        Task {
-            let status = await requestMicrophonePermissionUseCase.execute()
-            await MainActor.run {
-                self.microphonePermissionStatus = status
-                self.isRequestingPermission = false
-                
-                if status == .granted {
-                    print("✅ OnboardingViewModel: Microphone permission granted")
-                    // Auto-advance to next page on success
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        self.goToNextPage()
-                    }
-                } else {
-                    print("⚠️ OnboardingViewModel: Microphone permission not granted: \(status)")
-                }
-            }
-        }
+    // MARK: - Personalization Methods
+    
+    func saveUserName(_ name: String) {
+        let processedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        userName = processedName.isEmpty ? "friend" : processedName
+        onboardingConfiguration.saveUserName(userName)
+        print("📋 OnboardingViewModel: Saved user name: '\(userName)'")
     }
     
-    private func updateMicrophonePermissionStatus() {
-        microphonePermissionStatus = MicrophonePermissionStatus.current()
-        print("📋 OnboardingViewModel: Updated microphone status: \(microphonePermissionStatus)")
+    func getPersonalizedGreeting() -> String {
+        return onboardingConfiguration.getPersonalizedGreeting()
+    }
+    
+    func startFirstRecording() {
+        print("📋 OnboardingViewModel: Starting first recording")
+        // This will be handled by the recording system
+        completeOnboarding()
     }
     
     // MARK: - Completion Methods
@@ -242,27 +205,16 @@ final class OnboardingViewModel: ObservableObject, ErrorHandling {
     func retryLastOperation() {
         clearError()
         
-        // Retry based on current page context
-        switch currentPage {
-        case .microphone:
-            requestMicrophonePermission()
-        default:
-            // For other pages, just clear the error
-            break
-        }
+        // For the new simplified onboarding, just clear the error
+        // No specific retry actions needed for the 3-screen flow
     }
     
     // MARK: - Utility Methods
     
-    func openSettings() {
-        guard let settingsUrl = URL(string: UIApplication.openSettingsURLString),
-              UIApplication.shared.canOpenURL(settingsUrl) else {
-            print("❌ OnboardingViewModel: Cannot open Settings")
-            return
-        }
-        
-        UIApplication.shared.open(settingsUrl)
-        print("📋 OnboardingViewModel: Opened Settings app")
+    func resetUserName() {
+        userName = ""
+        onboardingConfiguration.saveUserName("")
+        print("📋 OnboardingViewModel: Reset user name")
     }
 }
 
@@ -275,8 +227,6 @@ extension OnboardingViewModel {
         return """
         OnboardingViewModel Debug Info:
         - currentPage: \(currentPage.rawValue) (\(currentPageIndex)/\(totalPages))
-        - microphonePermissionStatus: \(microphonePermissionStatus)
-        - isRequestingPermission: \(isRequestingPermission)
         - canGoNext: \(canGoNext)
         - progressPercentage: \(progressPercentage)
         - error: \(error?.localizedDescription ?? "none")

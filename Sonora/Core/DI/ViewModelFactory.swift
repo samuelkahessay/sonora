@@ -143,7 +143,6 @@ final class DefaultViewModelFactory: ViewModelFactory {
     
     func createOnboardingViewModel() -> OnboardingViewModel {
         return OnboardingViewModel(
-            requestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCase(logger: container.logger()),
             onboardingConfiguration: OnboardingConfiguration.shared
         )
     }

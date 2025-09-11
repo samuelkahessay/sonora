@@ -13,6 +13,7 @@ final class OnboardingConfiguration: ObservableObject {
         static let hasCompletedOnboarding = "app.onboarding.hasCompleted"
         static let onboardingVersion = "app.onboarding.version"
         static let lastOnboardingDate = "app.onboarding.lastDate"
+        static let userName = "app.onboarding.userName"
     }
     
     // MARK: - Constants
@@ -22,6 +23,7 @@ final class OnboardingConfiguration: ObservableObject {
     // MARK: - Published Properties
     @Published var hasCompletedOnboarding: Bool = false
     @Published var shouldShowOnboarding: Bool = false
+    @Published private(set) var currentUserName: String = "friend"
     
     // MARK: - Private Properties
     private let userDefaults = UserDefaults.standard
@@ -67,9 +69,10 @@ final class OnboardingConfiguration: ObservableObject {
         userDefaults.removeObject(forKey: UserDefaultsKey.hasCompletedOnboarding)
         userDefaults.removeObject(forKey: UserDefaultsKey.onboardingVersion)
         userDefaults.removeObject(forKey: UserDefaultsKey.lastOnboardingDate)
+        userDefaults.removeObject(forKey: UserDefaultsKey.userName)
         
         objectWillChange.send()
-        print("🔄 OnboardingConfiguration: Onboarding state reset")
+        print("🔄 OnboardingConfiguration: Onboarding state reset (including user name)")
     }
     
     /// Get onboarding completion date for debugging/analytics
@@ -82,12 +85,56 @@ final class OnboardingConfiguration: ObservableObject {
         return userDefaults.integer(forKey: UserDefaultsKey.onboardingVersion)
     }
     
+    // MARK: - User Name Management
+    
+    /// Save user name from onboarding
+    func saveUserName(_ name: String) {
+        let processedName = processUserName(name)
+        userDefaults.set(processedName, forKey: UserDefaultsKey.userName)
+        currentUserName = processedName
+        print("📋 OnboardingConfiguration: User name saved: '\(processedName)'")
+    }
+    
+    /// Get saved user name, fallback to "friend"
+    func getUserName() -> String {
+        print("📋 OnboardingConfiguration: Retrieved user name: '\(currentUserName)'")
+        return currentUserName
+    }
+    
+    /// Check if user has set a custom name
+    var hasCustomUserName: Bool {
+        return !currentUserName.isEmpty && currentUserName != "friend"
+    }
+    
+    /// Generate personalized greeting
+    func getPersonalizedGreeting() -> String {
+        let name = getUserName()
+        return "How was your day, \(name)?"
+    }
+    
+    /// Process and validate user name input
+    private func processUserName(_ input: String) -> String {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Handle empty input
+        if trimmed.isEmpty {
+            return "friend"
+        }
+        
+        // Truncate if too long (20 char limit for display)
+        let processed = trimmed.count > 20 ? String(trimmed.prefix(20)) : trimmed
+        
+        // Capitalize first letter for consistency
+        return processed.capitalized
+    }
+    
     // MARK: - Private Methods
     
     private func loadOnboardingState() {
         let completed = userDefaults.bool(forKey: UserDefaultsKey.hasCompletedOnboarding)
         hasCompletedOnboarding = completed
         shouldShowOnboarding = shouldShowOnboardingFlow()
+        currentUserName = userDefaults.string(forKey: UserDefaultsKey.userName) ?? "friend"
         
         print("📋 OnboardingConfiguration: Loaded state (completed: \(completed), should show: \(shouldShowOnboarding))")
     }

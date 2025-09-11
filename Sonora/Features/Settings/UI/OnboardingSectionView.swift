@@ -5,6 +5,7 @@ struct OnboardingSectionView: View {
     
     @StateObject private var onboardingConfiguration = OnboardingConfiguration.shared
     @State private var showingOnboarding = false
+    @State private var showingNameChange = false
     
     var body: some View {
         SettingsCard {
@@ -72,7 +73,44 @@ struct OnboardingSectionView: View {
                                 .font(.caption)
                                 .foregroundColor(.semantic(.textSecondary))
                         }
+                        
+                        if onboardingConfiguration.hasCustomUserName {
+                            Text("• Name: '\(onboardingConfiguration.getUserName())'")
+                                .font(.caption)
+                                .foregroundColor(.semantic(.textSecondary))
+                        }
                     }
+                }
+                
+                // Change name option
+                if onboardingConfiguration.hasCompletedOnboarding {
+                    Divider()
+                        .padding(.vertical, Spacing.xs)
+                    
+                    Button(action: {
+                        showingNameChange = true
+                    }) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: Spacing.xs) {
+                                Text("Change Name")
+                                    .font(SonoraDesignSystem.Typography.bodyLarge)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.semantic(.textPrimary))
+                                
+                                Text("Update your personalized name")
+                                    .font(.caption)
+                                    .foregroundColor(.semantic(.textSecondary))
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.semantic(.textSecondary))
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
                 
 #if DEBUG
@@ -98,6 +136,9 @@ struct OnboardingSectionView: View {
         }
         .sheet(isPresented: $showingOnboarding) {
             OnboardingView()
+        }
+        .sheet(isPresented: $showingNameChange) {
+            NameChangeView()
         }
     }
     

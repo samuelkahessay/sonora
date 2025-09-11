@@ -181,24 +181,54 @@ enum SonoraBrandVoice {
     // MARK: - Onboarding and Welcome
     
     enum Onboarding {
-        /// Welcome flow
-        static let welcomeTitle = "Welcome to Clarity"
-        static let welcomeSubtitle = "Transform your thoughts into insights through the power of your voice"
+        // MARK: - Screen 1: Name Entry
+        static let nameEntryTitle = "Welcome to Sonora"
+        static let nameEntrySubtitle = "What should I call you?"
+        static let nameEntryPlaceholder = "Your first name"
+        static let nameEntryPrivacy = "Don't worry, this stays private on your device"
+        static let nameEntryContinue = "Continue"
         
-        /// Step descriptions
-        static let step1Title = "Speak Your Mind"
-        static let step1Description = "Capture your thoughts naturally—no need for perfect words"
+        // MARK: - Screen 2: How It Works
+        static let howItWorksTitle = "How It Works"
+        static let howItWorksSubtitle = "Transform your voice into actionable insights with privacy-first AI voice memos."
         
-        static let step2Title = "Discover Patterns"
-        static let step2Description = "Watch as your reflections reveal themes and insights over time"
+        static let step1Title = "1. Tap Record & Speak"
+        static let step1Description = "Simply tap the record button and speak naturally about anything on your mind."
         
-        static let step3Title = "Grow with Clarity"
-        static let step3Description = "Use your insights to understand yourself better and make thoughtful decisions"
+        static let step2Title = "2. Automatic Transcription"
+        static let step2Description = "Your voice is automatically converted to text with high accuracy."
+        
+        static let step3Title = "3. Get Distilled Insights"
+        static let step3Description = "AI extracts key themes, summaries, and actionable items from your thoughts."
+        
+        static let privacyGuarantee = "All processing respects your privacy"
+        
+        // MARK: - Screen 3: First Recording
+        static let firstRecordingTitle = "Ready to Start"
+        static let firstRecordingEncouragement = "Just speak naturally"
+        static let firstRecordingDescription = "There's no wrong way to start. Share a thought, describe your day, or voice an idea. Sonora will help you discover insights you might have missed."
+        
+        // Recording tips
+        static let tipDuration = "Speak for 30 seconds to 2 minutes for best results"
+        static let tipEnvironment = "Find a quiet space for clearer transcription"
+        static let tipPause = "You can pause and resume recording anytime"
+        
+        // Action buttons
+        static let startRecording = "Start Recording"
+        static let completeSetup = "Complete Setup"
+        static let skip = "Skip"
+        
+        /// Personalized greetings
+        static func personalizedGreeting(for name: String) -> String {
+            return "How was your day, \(name)?"
+        }
+        
+        static func personalizedWelcome(for name: String) -> String {
+            return "Let's create your first voice memo together."
+        }
         
         /// Completion
         static let onboardingComplete = "Your journey to clarity begins"
-        static let getStarted = "Start Reflecting"
-        static let skipForNow = "I'll explore on my own"
     }
     
     // MARK: - Notifications and Reminders
