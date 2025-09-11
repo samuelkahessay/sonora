@@ -58,6 +58,24 @@ public enum AppEvent: Equatable {
     /// Batch reminder creation summary
     case batchReminderCreationCompleted(totalReminders: Int, successCount: Int, failureCount: Int)
 
+    // MARK: - Prompt Events
+
+    /// A dynamic/inspire prompt was shown to the user (privacy-safe; no text)
+    /// - Parameters:
+    ///   - id: stable prompt identifier
+    ///   - category: catalog category (e.g., "growth")
+    ///   - dayPart: context (e.g., "morning")
+    ///   - weekPart: context (e.g., "midWeek")
+    ///   - source: "dynamic" | "inspire"
+    case promptShown(id: String, category: String, dayPart: String, weekPart: String, source: String)
+
+    /// User used a prompt (e.g., started recording or accepted prompt)
+    /// - action: "startRecording" | "accept"
+    case promptUsed(id: String, category: String, dayPart: String, weekPart: String, action: String)
+
+    /// User toggled favorite state for a prompt
+    case promptFavoritedToggled(id: String, isFavorite: Bool)
+
     // MARK: - Navigation/UI Events (migrated from NotificationCenter)
 
     /// Navigate to the root of the Memos view
@@ -104,6 +122,8 @@ public enum AppEvent: Equatable {
             return memoId
         case .eventCreationFailed, .batchEventCreationCompleted, .eventConflictDetected,
              .reminderCreationFailed, .batchReminderCreationCompleted:
+            return nil
+        case .promptShown, .promptUsed, .promptFavoritedToggled:
             return nil
         }
     }
@@ -155,6 +175,12 @@ public enum AppEvent: Equatable {
             return "Reminder creation failed: \(title) — \(message)"
         case .batchReminderCreationCompleted(let total, let success, let failure):
             return "Reminders batch: total=\(total), success=\(success), failure=\(failure)"
+        case .promptShown(let id, let category, let dayPart, let weekPart, let source):
+            return "Prompt shown: id=\(id), cat=\(category), day=\(dayPart), week=\(weekPart), src=\(source)"
+        case .promptUsed(let id, let category, let dayPart, let weekPart, let action):
+            return "Prompt used: id=\(id), cat=\(category), day=\(dayPart), week=\(weekPart), action=\(action)"
+        case .promptFavoritedToggled(let id, let isFav):
+            return "Prompt favorite toggled: id=\(id), isFavorite=\(isFav)"
         }
     }
     
@@ -178,6 +204,8 @@ public enum AppEvent: Equatable {
         case .calendarEventCreated, .eventCreationFailed, .batchEventCreationCompleted, .eventConflictDetected,
              .reminderCreated, .reminderCreationFailed, .batchReminderCreationCompleted:
             return .analysis
+        case .promptShown, .promptUsed, .promptFavoritedToggled:
+            return .recording
         }
     }
 }

@@ -10,6 +10,7 @@ import SwiftUI
 
 struct RecordingView: View {
     @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createRecordingViewModel()
+    @StateObject private var promptViewModel = DIContainer.shared.viewModelFactory().createPromptViewModel()
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
     @SwiftUI.Environment(\.scenePhase) private var scenePhase: ScenePhase
     
@@ -94,6 +95,19 @@ struct RecordingView: View {
                     .accessibilityElement(children: .contain)
                 } else {
                     VStack(spacing: SonoraDesignSystem.Spacing.xl) {
+                        if FeatureFlags.usePrompts, !viewModel.isRecording {
+                            if let prompt = promptViewModel.currentPrompt {
+                                DynamicPromptCard(prompt: prompt) {
+                                    promptViewModel.refresh()
+                                }
+                                .padding(.horizontal)
+                            } else {
+                                FallbackPromptCard {
+                                    promptViewModel.refresh()
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
                         
                         // Sonic Bloom recording button with brand identity
                         SonicBloomRecordButton(
@@ -118,7 +132,15 @@ struct RecordingView: View {
                                 .accessibilityHidden(!viewModel.isRecording)
                         }
                         .frame(height: 80)
-                        .animation(.easeInOut(duration: 0.25), value: viewModel.isRecording)
+                        .animation(
+                            UIAccessibility.isReduceMotionEnabled ? nil : .easeInOut(duration: 0.25),
+                            value: viewModel.isRecording
+                        )
+                        
+                        if FeatureFlags.usePrompts, !viewModel.isRecording {
+                            Button("Inspire Me") { promptViewModel.showInspireSheet = true }
+                                .buttonStyle(.bordered)
+                        }
                     }
                     .padding(.horizontal)
                 }
@@ -134,6 +156,7 @@ struct RecordingView: View {
             .brandThemed()
             .onAppear {
                 viewModel.onViewAppear()
+                promptViewModel.loadInitial()
             }
             .initialFocus {
                 if viewModel.hasPermission {
@@ -202,6 +225,9 @@ struct RecordingView: View {
             backgroundView
             contentView
         })
+        .sheet(isPresented: $promptViewModel.showInspireSheet) {
+            InspireMeSheet { _ in /* future: show category list */ }
+        }
     }
     
     // MARK: - Permission UI Helpers

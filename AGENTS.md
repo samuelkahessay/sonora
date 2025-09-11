@@ -110,27 +110,6 @@ tap({ simulatorUuid: "UUID", x: 187, y: 256 })  # Use exact coordinates
 
 ## Development Tools & MCP Servers
 
-### Apple Documentation (apple-doc-mcp)
-
-Access comprehensive Apple framework documentation directly:
-
-```javascript
-// Search for SwiftUI components
-mcp__apple-doc-mcp__search_symbols({ query: "Button", framework: "SwiftUI" })
-
-// Get detailed documentation for specific APIs
-mcp__apple-doc-mcp__get_documentation({ path: "documentation/SwiftUI/Button" })
-
-// Find AVAudioEngine methods for recording features
-mcp__apple-doc-mcp__search_symbols({ query: "AVAudioEngine*", framework: "AVFoundation" })
-```
-
-**Use Cases:**
-- **UI Components**: Research native SwiftUI elements before implementing custom views
-- **Audio Framework**: Explore AVFoundation APIs for recording/playback features
-- **Live Activities**: Find documentation for ActivityKit integration
-- **Accessibility**: Discover accessibility APIs for VoiceOver support
-
 ### Xcode Build & Testing (XcodeBuildMCP)
 
 Comprehensive iOS development automation:
@@ -168,27 +147,7 @@ mcp__XcodeBuildMCP__build_device({
   projectPath: "/Users/samuelkahessay/Desktop/Sonora/Sonora.xcodeproj",
   scheme: "Sonora"
 })
-```
-
-#### **Testing & UI Automation**
-```javascript
-// Run unit tests
-mcp__XcodeBuildMCP__test_sim({
-  projectPath: "/Users/samuelkahessay/Desktop/Sonora/Sonora.xcodeproj",
-  scheme: "Sonora", 
-  simulatorName: "iPhone 16"
-})
-
-// UI Testing Flow (CRITICAL: Always use describe_ui first)
-// 1. Get UI hierarchy with precise coordinates
-mcp__XcodeBuildMCP__describe_ui({ simulatorUuid: "SIMULATOR_UUID" })
-
-// 2. Use exact coordinates from describe_ui output
-mcp__XcodeBuildMCP__tap({ simulatorUuid: "SIMULATOR_UUID", x: 187, y: 256 })
-
-// 3. Take screenshot for verification
-mcp__XcodeBuildMCP__screenshot({ simulatorUuid: "SIMULATOR_UUID" })
-```
+````
 
 #### **App Management**
 ```javascript

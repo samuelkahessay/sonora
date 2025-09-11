@@ -166,6 +166,55 @@ Cross‑feature communication:
 - Handle `AppEvent` in Core event handlers to update repositories or trigger side effects.
 - Features then react to repository state via Combine publishers (ViewModels subscribe), maintaining decoupling.
 
+## Prompts Module (Dynamic Recording Prompts)
+
+Purpose: Provide intelligent, context‑aware prompts for recording that personalize by time of day/week and user name while preserving Clean Architecture and native SwiftUI.
+
+Layers and types:
+- Domain
+  - Models: `RecordingPrompt`, `InterpolatedPrompt`, enums `PromptCategory`, `EmotionalDepth`, `DayPart`, `WeekPart`
+  - Protocols: `PromptCatalog`, `PromptUsageRepository`
+  - Use Cases: `GetDynamicPromptUseCase`, `GetPromptCategoryUseCase`
+  - Services: `PromptInterpolation` (token resolution)
+- Data
+  - SwiftData model: `PromptUsageRecord` (unique `promptId`, `lastShownAt`, `lastUsedAt`, `useCount`, `isFavorite`)
+  - Repository: `PromptUsageRepositoryImpl` (SwiftData, @MainActor)
+  - Catalog: `PromptCatalogStatic` (48 prompts; static, code‑based catalog)
+- Core
+  - Providers: `DateProvider` (locale/timezone aware day/week parts), `LocalizationProvider`
+  - DI: `DIContainer` registers providers, catalog, repository, and factories for both use cases
+- Presentation
+  - ViewModel: `PromptViewModel` (@MainActor)
+  - UI: `DynamicPromptCard`, `FallbackPromptCard`, `InspireMeSheet` (native SwiftUI)
+  - Integration: `RecordingView` shows a prompt above `SonicBloomRecordButton` (180px) when idle; graceful fallback shown when no prompt available
+
+Behavior:
+- Personalization tokens: `[Name]`, `[DayPart]`, `[WeekPart]` (interpolated via LocalizationProvider)
+- Rotation: 7‑day no‑repeat globally across categories (repository enforced and use‑case filtered)
+- Selection: weight (desc) → least recently used → stable seeded tiebreak (by day/category context)
+- Localization keys: `daypart.*`, `weekpart.*`, and `prompt.<category>.<slug>` in `Localizable.strings`
+- Feature flag: `FeatureFlags.usePrompts`
+
+Events & logging:
+- AppEvents: `promptShown`, `promptUsed`, `promptFavoritedToggled` (privacy‑safe: no prompt text)
+- Logger context includes `id`, `category`, `dayPart`, `weekPart`
+
+Concurrency:
+- Use cases are async and call @MainActor SwiftData repository via `await`
+- Providers are Sendable; repository remains data‑access only
+
+Testing:
+- Use case tests: rotation and token interpolation with fixed `DateProvider`
+- Enum tests: DayPart/WeekPart boundary and locale week‑start
+- Repository tests: in‑memory SwiftData for favorites/usage
+- UI snapshots: covered by existing RecordingView snapshots; update baselines when recording if prompt UI is enabled
+
+Files:
+- Domain: `Sonora/Domain/Models/RecordingPrompt.swift`, `InterpolatedPrompt.swift`, `Domain/Protocols/*`, `Domain/UseCases/Prompts/*`, `Domain/Services/PromptInterpolation.swift`
+- Data: `Sonora/Data/Models/SwiftData/PromptUsageRecord.swift`, `Data/Repositories/Prompts/PromptUsageRepositoryImpl.swift`, `Data/Services/Prompts/PromptCatalogStatic.swift`
+- Core: `Core/Providers/DateProvider.swift`, `Core/Providers/LocalizationProvider.swift`, `Core/DI/DIContainer.swift` (prompt wiring)
+- Presentation: `Features/Recording/ViewModels/PromptViewModel.swift`, `Features/Recording/UI/Components/{DynamicPromptCard, FallbackPromptCard, InspireMeSheet}.swift`, `Features/Recording/UI/RecordingView.swift`
+
 ## Current Status (January 2025)
 
 **🏆 Architecture Excellence Achieved (95% Clean Architecture Compliance)**

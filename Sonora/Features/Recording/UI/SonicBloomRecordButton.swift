@@ -30,7 +30,7 @@ struct SonicBloomRecordButton: View {
     @State private var bloomEvent: BloomEvent = BloomEvent(id: UUID(), style: .expand)
     
     // Constants
-    private let buttonSize: CGFloat = 250
+    private let buttonSize: CGFloat = 180
     private let waveformCount: Int = 8
     private let bloomAnimationDuration: TimeInterval = 0.8
     

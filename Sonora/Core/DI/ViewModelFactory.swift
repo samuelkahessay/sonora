@@ -6,6 +6,7 @@ import Combine
 @MainActor
 protocol ViewModelFactory {
     func createRecordingViewModel() -> RecordingViewModel
+    func createPromptViewModel() -> PromptViewModel
     func createMemoListViewModel() -> MemoListViewModel  
     func createMemoDetailViewModel() -> MemoDetailViewModel
     func createAnalysisViewModel() -> AnalysisViewModel
@@ -50,6 +51,13 @@ final class DefaultViewModelFactory: ViewModelFactory {
             resetDailyUsageIfNeededUseCase: container.resetDailyUsageIfNeededUseCase(),
             getRemainingDailyQuotaUseCase: container.getRemainingDailyQuotaUseCase(),
             modelDownloadManager: container.modelDownloadManager()
+        )
+    }
+
+    func createPromptViewModel() -> PromptViewModel {
+        return PromptViewModel(
+            getDynamic: container.getDynamicPromptUseCase(),
+            getCategory: container.getPromptCategoryUseCase()
         )
     }
     

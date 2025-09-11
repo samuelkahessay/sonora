@@ -71,5 +71,18 @@ enum FeatureFlags {
         }
     }
 
+    // MARK: - Prompts
+    /// Enable dynamic recording prompts UI and logic
+    static var usePrompts: Bool {
+        if let env = ProcessInfo.processInfo.environment["SONORA_FF_PROMPTS"], let b = Bool(env) { return b }
+        if let override = UserDefaults.standard.object(forKey: "ff_prompts") as? Bool { return override }
+        // Enabled by default
+        switch BuildConfiguration.shared.distributionType {
+        case .development: return true
+        case .testFlight:  return true
+        case .appStore:    return true
+        }
+    }
+
     
 }

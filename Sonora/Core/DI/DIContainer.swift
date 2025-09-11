@@ -31,6 +31,11 @@ final class DIContainer: ObservableObject, Resolver {
     var _transcriptionRepository: (any TranscriptionRepository)?
     var _analysisRepository: (any AnalysisRepository)?
     var _recordingUsageRepository: (any RecordingUsageRepository)?
+    // Prompts
+    private var _promptUsageRepository: (any PromptUsageRepository)?
+    private var _promptCatalog: (any PromptCatalog)?
+    private var _dateProvider: (any DateProvider)?
+    private var _localizationProvider: (any LocalizationProvider)?
     var _logger: (any LoggerProtocol)?
     var _backgroundAudioService: BackgroundAudioService?
     var _audioRepository: (any AudioRepository)?
@@ -213,6 +218,17 @@ final class DIContainer: ObservableObject, Resolver {
         // Register LiveActivityService
         register((any LiveActivityServiceProtocol).self) { _ in
             return LiveActivityService() as any LiveActivityServiceProtocol
+        }
+
+        // Register Prompt Catalog & Providers
+        register((any PromptCatalog).self) { _ in
+            return PromptCatalogStatic() as any PromptCatalog
+        }
+        register((any DateProvider).self) { _ in
+            return DefaultDateProvider() as any DateProvider
+        }
+        register((any LocalizationProvider).self) { _ in
+            return DefaultLocalizationProvider() as any LocalizationProvider
         }
     }
     
@@ -580,6 +596,65 @@ final class DIContainer: ObservableObject, Resolver {
         return context
     }
 
+    // MARK: - Prompts: Providers & Catalog
+    @MainActor
+    func dateProvider() -> any DateProvider {
+        ensureConfigured()
+        if _dateProvider == nil { _dateProvider = resolve((any DateProvider).self) }
+        return _dateProvider!
+    }
+
+    @MainActor
+    func localizationProvider() -> any LocalizationProvider {
+        ensureConfigured()
+        if _localizationProvider == nil { _localizationProvider = resolve((any LocalizationProvider).self) }
+        return _localizationProvider!
+    }
+
+    @MainActor
+    func promptCatalog() -> any PromptCatalog {
+        ensureConfigured()
+        if _promptCatalog == nil { _promptCatalog = resolve((any PromptCatalog).self) }
+        return _promptCatalog!
+    }
+
+    @MainActor
+    func promptUsageRepository() -> any PromptUsageRepository {
+        ensureConfigured()
+        if let repo = _promptUsageRepository { return repo }
+        guard let ctx = _modelContext else { fatalError("DIContainer not configured: modelContext") }
+        let repo = PromptUsageRepositoryImpl(context: ctx)
+        _promptUsageRepository = repo
+        return repo
+    }
+
+    // MARK: - Prompts: Use Cases
+    @MainActor
+    func getDynamicPromptUseCase() -> any GetDynamicPromptUseCaseProtocol {
+        ensureConfigured()
+        return GetDynamicPromptUseCase(
+            catalog: promptCatalog(),
+            usageRepository: promptUsageRepository(),
+            dateProvider: dateProvider(),
+            localization: localizationProvider(),
+            logger: logger(),
+            eventBus: eventBus()
+        )
+    }
+
+    @MainActor
+    func getPromptCategoryUseCase() -> any GetPromptCategoryUseCaseProtocol {
+        ensureConfigured()
+        return GetPromptCategoryUseCase(
+            catalog: promptCatalog(),
+            usageRepository: promptUsageRepository(),
+            dateProvider: dateProvider(),
+            localization: localizationProvider(),
+            logger: logger(),
+            eventBus: eventBus()
+        )
+    }
+
     // MARK: - Persistence Initialization
     @MainActor
     func initializePersistenceIfNeeded() {
@@ -617,6 +692,9 @@ final class DIContainer: ObservableObject, Resolver {
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase
         )
+
+        // Initialize PromptUsageRepository (SwiftData)
+        self._promptUsageRepository = PromptUsageRepositoryImpl(context: ctx)
 
         // Spotlight Indexer (optional feature) — requires memoRepository to be initialized
         if let memoRepo = self._memoRepository {

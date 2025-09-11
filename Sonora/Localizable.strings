@@ -1,0 +1,73 @@
+/* Day parts */
+"daypart.morning" = "morning";
+"daypart.afternoon" = "afternoon";
+"daypart.evening" = "evening";
+"daypart.night" = "night";
+
+/* Week parts */
+"weekpart.start" = "start of the week";
+"weekpart.mid" = "mid-week";
+"weekpart.end" = "end of the week";
+
+/* Fallback */
+"prompt.fallback.tap" = "Tap to get an idea";
+
+/* Growth */
+"prompt.growth.micro-win-today" = "What's one small win this [DayPart], [Name]?";
+"prompt.growth.stretch-one-percent" = "Where can you improve 1% this [WeekPart]?";
+"prompt.growth.lesson-from-setback" = "Name a recent setback and the lesson you learned.";
+"prompt.growth.new-perspective" = "What fresh angle could you try today, [Name]?";
+"prompt.growth.three-highlights" = "Capture three [WeekPart] highlights so far.";
+"prompt.growth.next-tiny-step" = "What's the next tiny step right now, [Name]?";
+"prompt.growth.gratitude-for-progress" = "What progress are you grateful for this [WeekPart]?";
+"prompt.growth.teach-someone" = "What could you teach someone today to reinforce your learning?";
+
+/* Work */
+"prompt.work.unblock-one-task" = "Which single task can you unblock this [DayPart]?";
+"prompt.work.define-top-3" = "Define your top three priorities for the [WeekPart].";
+"prompt.work.midweek-checkpoint" = "Mid-week checkpoint: what's on track, what's not?";
+"prompt.work.delegate-or-drop" = "What can you delegate or drop to move faster?";
+"prompt.work.reduce-scope" = "How can you reduce scope to ship sooner, [Name]?";
+"prompt.work.meeting-prep" = "What's your desired outcome for the next meeting?";
+"prompt.work.after-action-review" = "After-action review: what went well, what to improve?";
+"prompt.work.flow-session-plan" = "Plan a focused flow session: when and on what?";
+
+/* Relationships */
+"prompt.relationships.share-a-thank-you" = "Who deserves a genuine thank you this [WeekPart], [Name]?";
+"prompt.relationships.check-in-one-person" = "Who could use a quick check-in from you today?";
+"prompt.relationships.repair-micro-moment" = "Name a small moment you'd like to repair or revisit.";
+"prompt.relationships.celebrate-small-win" = "Celebrate a small win with someone you care about.";
+"prompt.relationships.plan-connection" = "Plan one meaningful connection for the [WeekPart].";
+"prompt.relationships.express-boundary-kindly" = "What boundary can you express kindly and clearly?";
+"prompt.relationships.ask-for-help" = "Where could you ask for help this [DayPart]?";
+"prompt.relationships.reach-out-old-friend" = "Reach out to a friend you haven't spoken to in a while.";
+
+/* Creative */
+"prompt.creative.new-angle-on-old-idea" = "Try a new angle on an old idea this [DayPart].";
+"prompt.creative.constraints-challenge" = "Set one constraint and create within it, [Name].";
+"prompt.creative.mashup-two-things" = "Mash up two unrelated things—what emerges?";
+"prompt.creative.remove-one-element" = "Remove one element—what gets clearer?";
+"prompt.creative.switch-medium" = "Switch mediums for a fresh take this [DayPart].";
+"prompt.creative.divergent-ideas" = "List five divergent ideas without judging them.";
+"prompt.creative.capture-random-detail" = "Capture a random detail from today as a spark.";
+"prompt.creative.storyboard-next-step" = "Storyboard the very next step for your idea.";
+
+/* Goals */
+"prompt.goals.weekly-review" = "Weekly review: what mattered most this [WeekPart]?";
+"prompt.goals.next-milestone" = "What's the next milestone, and why does it matter?";
+"prompt.goals.success-definition" = "Define success for the next [WeekPart] in one sentence.";
+"prompt.goals.risk-one-thing" = "What's one risk worth taking this [WeekPart]?";
+"prompt.goals.today-top-one" = "If you did only one thing today, what would it be?";
+"prompt.goals.remove-nonessential" = "Remove one nonessential commitment to create space.";
+"prompt.goals.habit-streak" = "How's your habit streak? What's the next link?";
+"prompt.goals.reflect-quarter" = "Reflect on this quarter: one win, one lesson.";
+
+/* Mindfulness */
+"prompt.mindfulness.name-three-calm-things" = "Name three calm things around you right now.";
+"prompt.mindfulness.breathing-box" = "Try box breathing—four in, four hold, four out, four hold.";
+"prompt.mindfulness.body-scan" = "Do a quick body scan—what sensations do you notice?";
+"prompt.mindfulness.let-go-thought" = "Notice a sticky thought and let it pass.";
+"prompt.mindfulness.gratitude-three" = "Name three things you're grateful for this [WeekPart].";
+"prompt.mindfulness.mindful-walk" = "Take a mindful walk; describe what you observe.";
+"prompt.mindfulness.emotion-labeling" = "Label your current emotion in a word or two.";
+"prompt.mindfulness.intention-for-day" = "Set an intention for this [DayPart], [Name].";

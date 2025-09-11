@@ -111,6 +111,11 @@ public final class MemoEventHandler {
              .batchReminderCreationCompleted(_, _, _):
             // EventKit-specific events are handled by their respective handlers
             break
+        case .promptShown(_, _, _, _, _),
+             .promptUsed(_, _, _, _, _),
+             .promptFavoritedToggled(_, _):
+            // Prompt analytics handled separately; audit only
+            break
         }
         
         // Update analytics

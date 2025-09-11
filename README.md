@@ -31,6 +31,7 @@ Sonora combines cutting-edge technology with intuitive design:
 
 ### 🎯 **Key Features**
 - **🎤 Smart Recording**: 60-second limit with elegant 10-second countdown
+- **💡 Dynamic Prompts**: Context-aware recording prompts personalized by name, time of day, and week part
 - **📱 Live Activities**: Real-time recording status in Dynamic Island
 - **🧠 AI Analysis Suite**: TLDR summaries, theme extraction, todo identification, content analysis
 - **⚡ Advanced Operations**: Queue management, progress tracking, conflict resolution
@@ -227,6 +228,7 @@ Presentation code is organized by feature for clarity and autonomy:
 Sonora/Features/
   Recording/                    # 🎤 Audio recording interface
     UI/                        # RecordingView, SonicBloomRecordButton
+    UI/Components/             # DynamicPromptCard, FallbackPromptCard, InspireMeSheet
     ViewModels/                # RecordingViewModel, RecordingViewState
   Memos/                       # 📋 Voice memo management
     UI/                        # MemosView, MemoDetailView, MemoRowView
@@ -256,6 +258,17 @@ Guidelines:
 - ViewModels receive protocol dependencies (constructor injection); DI happens in `Core/DI/DIContainer`.
 - Avoid importing one feature into another. Share UI via `Views/Components` and communicate via `EventBus` + repository state.
 - Register long work with `OperationCoordinator` and surface status via ViewModels.
+
+### Prompts Module (At a Glance)
+
+- Domain: `RecordingPrompt`, `InterpolatedPrompt`, `PromptCatalog`, `PromptUsageRepository`
+- Use Cases: `GetDynamicPromptUseCase`, `GetPromptCategoryUseCase`
+- Data: `PromptUsageRecord` (SwiftData), `PromptUsageRepositoryImpl`, `PromptCatalogStatic` (48 prompts)
+- Core: `DateProvider`, `LocalizationProvider` (DI via `DIContainer`)
+- UI: `PromptViewModel`, `DynamicPromptCard` (+ fallback), `InspireMeSheet` integrated in `RecordingView`
+- Behavior: 7‑day no‑repeat, weighted selection, stable daily tiebreak; tokens `[Name]`, `[DayPart]`, `[WeekPart]`
+- Events: `promptShown`, `promptUsed`, `promptFavoritedToggled` (privacy‑safe)
+- Feature flag: `FeatureFlags.usePrompts`
 
 ### Quick Navigation Guide
 
