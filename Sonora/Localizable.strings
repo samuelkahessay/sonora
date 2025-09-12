@@ -21,6 +21,9 @@
 "prompt.growth.next-tiny-step" = "What's the next tiny step right now, [Name]?";
 "prompt.growth.gratitude-for-progress" = "What progress are you grateful for this [WeekPart]?";
 "prompt.growth.teach-someone" = "What could you teach someone today to reinforce your learning?";
+"prompt.growth.advice-to-past-self" = "What advice would you give your past self from last week?";
+"prompt.growth.overcomplicating" = "Where are you overcomplicating things?";
+"prompt.growth.underestimating-small" = "What's something small you're underestimating?";
 
 /* Work */
 "prompt.work.unblock-one-task" = "Which single task can you unblock this [DayPart]?";
@@ -31,6 +34,8 @@
 "prompt.work.meeting-prep" = "What's your desired outcome for the next meeting?";
 "prompt.work.after-action-review" = "After-action review: what went well, what to improve?";
 "prompt.work.flow-session-plan" = "Plan a focused flow session: when and on what?";
+"prompt.work.half-finished" = "What's half-finished that needs closure?";
+"prompt.work.avoidance" = "What's one thing you’re avoiding right now?";
 
 /* Relationships */
 "prompt.relationships.share-a-thank-you" = "Who deserves a genuine thank you this [WeekPart], [Name]?";
@@ -40,17 +45,18 @@
 "prompt.relationships.plan-connection" = "Plan one meaningful connection for the [WeekPart].";
 "prompt.relationships.express-boundary-kindly" = "What boundary can you express kindly and clearly?";
 "prompt.relationships.ask-for-help" = "Where could you ask for help this [DayPart]?";
-"prompt.relationships.reach-out-old-friend" = "Reach out to a friend you haven't spoken to in a while.";
+"prompt.relationships.wish-hear-from" = "Who do you wish you could hear from today?";
+"prompt.relationships.kind-message" = "What’s one kind message you could send?";
+"prompt.relationships.quiet-support" = "Who’s quietly supporting you right now?";
 
 /* Creative */
 "prompt.creative.new-angle-on-old-idea" = "Try a new angle on an old idea this [DayPart].";
 "prompt.creative.constraints-challenge" = "Set one constraint and create within it, [Name].";
-"prompt.creative.mashup-two-things" = "Mash up two unrelated things—what emerges?";
-"prompt.creative.remove-one-element" = "Remove one element—what gets clearer?";
-"prompt.creative.switch-medium" = "Switch mediums for a fresh take this [DayPart].";
-"prompt.creative.divergent-ideas" = "List five divergent ideas without judging them.";
 "prompt.creative.capture-random-detail" = "Capture a random detail from today as a spark.";
 "prompt.creative.storyboard-next-step" = "Storyboard the very next step for your idea.";
+"prompt.creative.reverse-process" = "What if you reversed your usual process?";
+"prompt.creative.describe-as-movie" = "Describe your day as if it were a movie scene.";
+"prompt.creative.problem-random-object" = "Combine your problem with a random object—what happens?";
 
 /* Goals */
 "prompt.goals.weekly-review" = "Weekly review: what mattered most this [WeekPart]?";
@@ -61,6 +67,11 @@
 "prompt.goals.remove-nonessential" = "Remove one nonessential commitment to create space.";
 "prompt.goals.habit-streak" = "How's your habit streak? What's the next link?";
 "prompt.goals.reflect-quarter" = "Reflect on this quarter: one win, one lesson.";
+"prompt.goals.week-anchor" = "What’s your anchor for this week?";
+"prompt.goals.end-week-celebrate" = "What would you celebrate if the week ended now?";
+"prompt.goals.forward-pull" = "What’s pulling you forward lately?";
+"prompt.goals.zoom-out-year" = "If you zoomed out a year, what would matter most?";
+"prompt.goals.no-regret-start" = "What’s one thing you’d regret not starting today?";
 
 /* Mindfulness */
 "prompt.mindfulness.name-three-calm-things" = "Name three calm things around you right now.";
@@ -71,3 +82,16 @@
 "prompt.mindfulness.mindful-walk" = "Take a mindful walk; describe what you observe.";
 "prompt.mindfulness.emotion-labeling" = "Take 30 seconds to describe how you're feeling and why.";
 "prompt.mindfulness.intention-for-day" = "Set an intention for this [DayPart], [Name].";
+"prompt.mindfulness.sound-around" = "What’s one sound you hear right now?";
+"prompt.mindfulness.release-tension" = "What tension can you release in your body?";
+"prompt.mindfulness.color-of-day" = "If today had a color, what would it be?";
+
+/* Morning Focus */
+"prompt.morning.win-today" = "What would make today a win?";
+"prompt.morning.how-feel-tonight" = "How do you want to feel by tonight?";
+"prompt.morning.one-habit" = "Name one habit that matters this morning.";
+
+/* Evening Wind-Down */
+"prompt.evening.one-proud" = "What’s one thing you’re proud of from today?";
+"prompt.evening.tomorrow-easier" = "What could tomorrow be easier if you set up now?";
+"prompt.evening.crossed-mind" = "Who crossed your mind today?";
