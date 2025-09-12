@@ -102,7 +102,6 @@ struct SonoraApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(themeManager)
-                .preferredColorScheme(themeManager.colorSchemeOverride)
                 .onAppear {
                     // Signpost: end app startup when first ContentView appears
                     Signpost.endAppStartup()

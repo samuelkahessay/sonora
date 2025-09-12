@@ -46,7 +46,11 @@ extension SemanticColor {
         // Backgrounds
         case .bgPrimary: return .systemBackground
         case .bgSecondary: return .secondarySystemBackground
-        case .bgTertiary: return .tertiarySystemBackground
+        case .bgTertiary:
+            // Use a truly dark surface in Dark Mode, slightly elevated in Light
+            return UIColor { trait in
+                trait.userInterfaceStyle == .dark ? UIColor.systemGray6 : UIColor.systemGray5
+            }
 
         // Text
         case .textPrimary: return .label

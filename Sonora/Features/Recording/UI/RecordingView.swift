@@ -13,6 +13,7 @@ struct RecordingView: View {
     @StateObject private var promptViewModel = DIContainer.shared.viewModelFactory().createPromptViewModel()
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
     @SwiftUI.Environment(\.scenePhase) private var scenePhase: ScenePhase
+    @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     
     enum AccessibleElement {
         case recordButton
@@ -93,8 +94,8 @@ struct RecordingView: View {
                     .padding()
                     .accessibilityElement(children: .contain)
                 } else {
-                    VStack(spacing: SonoraDesignSystem.Spacing.xl) {
-                        if FeatureFlags.usePrompts, !viewModel.isRecording {
+                    VStack(spacing: SonoraDesignSystem.Spacing.xxl) {
+                        if FeatureFlags.usePrompts {
                             if let prompt = promptViewModel.currentPrompt {
                                 DynamicPromptCard(prompt: prompt) {
                                     promptViewModel.refresh(excludingCurrent: true)
@@ -115,6 +116,7 @@ struct RecordingView: View {
                                 viewModel.toggleRecording()
                             }
                         )
+                        .padding(.top, 25)
                         .disabled(viewModel.state.isRecordButtonDisabled)
                         .accessibilityLabel(getRecordButtonAccessibilityLabel())
                         .accessibilityHint(getRecordButtonAccessibilityHint())
@@ -134,7 +136,7 @@ struct RecordingView: View {
                             value: viewModel.isRecording
                         )
                         
-                        if FeatureFlags.usePrompts, !viewModel.isRecording {
+                        if FeatureFlags.usePrompts {
                             Button(action: {
                                 HapticManager.shared.playSelection()
                                 promptViewModel.refresh(excludingCurrent: true)
@@ -146,7 +148,7 @@ struct RecordingView: View {
                                         .shadow(color: Color.yellow.opacity(0.7), radius: 8, x: 0, y: 0)
                                     Text("Inspire Me")
                                         .font(.system(.caption, design: .serif))
-                                        .foregroundColor(.semantic(.textPrimary))
+                                        .foregroundColor(colorScheme == .dark ? .white : .semantic(.textPrimary))
                                 }
                                 .minTouchTarget()
                             }

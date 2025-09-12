@@ -8,35 +8,32 @@ struct DynamicPromptCard: View {
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
 
     var body: some View {
-        Button(action: onRefresh) {
-            HStack(alignment: .center, spacing: 12) {
-                Image(systemName: "sparkles")
-                    .imageScale(.large)
-                    .foregroundColor(.semantic(.textSecondary))
-                Text(prompt.text)
-                    .font(SonoraDesignSystem.Typography.insightSerif)
-                    .foregroundColor(.semantic(.textPrimary))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.vertical, 18)
-            .padding(.horizontal, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(colorScheme == .dark ? Color.semantic(.bgSecondary) : Color.clarityWhite)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.semantic(.separator).opacity(0.15), lineWidth: 1)
-            )
-            .cardShadow()
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "sparkles")
+                .imageScale(.large)
+                .foregroundColor(colorScheme == .dark ? .white : .semantic(.textPrimary))
+            Text(prompt.text)
+                .font(SonoraDesignSystem.Typography.insightSerif)
+                .foregroundColor(colorScheme == .dark ? .white : .semantic(.textPrimary))
+                .frame(maxWidth: .infinity, alignment: .center)
+                .multilineTextAlignment(.center)
+                .lineLimit(nil)
+                .minimumScaleFactor(0.9)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(.plain)
-        .contentShape(Rectangle())
+        .padding(.vertical, 18)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.semantic(.bgTertiary))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.semantic(.separator).opacity(0.15), lineWidth: 1)
+        )
+        .cardShadow()
         .accessibilityLabel("Prompt: \(prompt.text)")
-        .accessibilityHint("Double tap to get a new prompt")
+        .accessibilityHint("Use the lightbulb button below to get a new prompt")
         .transition(reduceMotion
                     ? .opacity
                     : .asymmetric(

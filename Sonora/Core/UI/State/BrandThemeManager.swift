@@ -360,7 +360,7 @@ struct BrandThemeModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .environmentObject(themeManager)
-            .colorScheme(themeManager.colorScheme)
+            // Do not override system color scheme; rely solely on device setting
             .animation(themeManager.getAppropriateAnimation(for: .themeChange), value: themeManager.colorScheme)
     }
 }
