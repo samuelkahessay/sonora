@@ -24,12 +24,4 @@ struct SettingsCard<Content: View>: View {
     }
 }
 
-struct SettingsCardModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        SettingsCard { content }
-    }
-}
-
-extension View {
-    func settingsCard() -> some View { self.modifier(SettingsCardModifier()) }
-}
+// removed unused SettingsCardModifier and View.settingsCard() helper

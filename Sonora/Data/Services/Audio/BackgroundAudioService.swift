@@ -8,7 +8,7 @@
 //  - BackgroundTaskService: Background task management
 //  - AudioPermissionService: Microphone permission handling
 //  - RecordingTimerService: Recording duration tracking and countdown
-//  - AudioPlaybackService: Audio playback functionality
+//  (Playback is handled by MemoRepository for memo viewing)
 //
 
 import Foundation
@@ -39,7 +39,6 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     private let backgroundTaskService: BackgroundTaskService
     private let permissionService: AudioPermissionService
     private let timerService: RecordingTimerService
-    private let playbackService: AudioPlaybackService
     
     // MARK: - Private Properties
     private var cancellables = Set<AnyCancellable>()
@@ -82,15 +81,13 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
          recordingService: AudioRecordingService = AudioRecordingService(),
          backgroundTaskService: BackgroundTaskService = BackgroundTaskService(),
          permissionService: AudioPermissionService = AudioPermissionService(),
-         timerService: RecordingTimerService = RecordingTimerService(),
-         playbackService: AudioPlaybackService = AudioPlaybackService()) {
+         timerService: RecordingTimerService = RecordingTimerService()) {
         
         self.sessionService = sessionService
         self.recordingService = recordingService
         self.backgroundTaskService = backgroundTaskService
         self.permissionService = permissionService
         self.timerService = timerService
-        self.playbackService = playbackService
         
         super.init()
         

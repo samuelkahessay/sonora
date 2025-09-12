@@ -88,9 +88,4 @@ extension Color {
         let uiColor = UIColor.fromAssets(token.assetName, fallback: token.fallbackUIColor)
         return Color(uiColor)
     }
-
-    /// Named Color asset with fallback UIColor.
-    static func named(_ name: String, fallback: UIColor) -> Color {
-        Color(UIColor.fromAssets(name, fallback: fallback))
-    }
 }

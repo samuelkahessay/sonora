@@ -38,11 +38,4 @@ struct WhisperLanguages {
         }
         return lc.uppercased()
     }
-
-    static func pickerItems() -> [(code: String, name: String)] {
-        let items: [(code: String, name: String)] = supportedCodes.map { code in (code, localizedDisplayName(for: code)) }
-        return items.sorted(by: { (a: (code: String, name: String), b: (code: String, name: String)) -> Bool in
-            a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
-        })
-    }
 }

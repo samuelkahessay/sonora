@@ -4,12 +4,10 @@ import Foundation
 @MainActor
 final class LiveActivityEventHandler {
     private let logger: any LoggerProtocol
-    private let eventBus: any EventBusProtocol
     private let subscriptionManager: EventSubscriptionManager
     
     private let memoRepository: any MemoRepository
     private let audioRepository: any AudioRepository
-    private let liveActivityService: any LiveActivityServiceProtocol
     private let startUseCase: any StartLiveActivityUseCaseProtocol
     private let updateUseCase: any UpdateLiveActivityUseCaseProtocol
     private let endUseCase: any EndLiveActivityUseCaseProtocol
@@ -23,17 +21,14 @@ final class LiveActivityEventHandler {
         eventBus: any EventBusProtocol,
         memoRepository: any MemoRepository,
         audioRepository: any AudioRepository,
-        liveActivityService: any LiveActivityServiceProtocol,
         startUseCase: any StartLiveActivityUseCaseProtocol,
         updateUseCase: any UpdateLiveActivityUseCaseProtocol,
         endUseCase: any EndLiveActivityUseCaseProtocol
     ) {
         self.logger = logger
-        self.eventBus = eventBus
         self.subscriptionManager = EventSubscriptionManager(eventBus: eventBus)
         self.memoRepository = memoRepository
         self.audioRepository = audioRepository
-        self.liveActivityService = liveActivityService
         self.startUseCase = startUseCase
         self.updateUseCase = updateUseCase
         self.endUseCase = endUseCase
@@ -60,7 +55,6 @@ final class LiveActivityEventHandler {
             eventBus: eventBus,
             memoRepository: memoRepo,
             audioRepository: audioRepo,
-            liveActivityService: service,
             startUseCase: start,
             updateUseCase: update,
             endUseCase: end

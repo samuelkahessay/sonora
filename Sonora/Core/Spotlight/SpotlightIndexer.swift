@@ -8,7 +8,6 @@ import UniformTypeIdentifiers
 protocol SpotlightIndexing: AnyObject {
     func index(memoID: UUID) async
     func delete(memoID: UUID) async
-    func reindexAll() async
 }
 
 // MARK: - Implementation
@@ -73,20 +72,6 @@ final class SpotlightIndexer: SpotlightIndexing {
         }
     }
     
-    /// Queue-isolated wrapper for deleting Core Spotlight items by domain
-    private func cs_deleteDomain(_ domainIDs: [String]) async throws {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            csQueue.async {
-                CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: domainIDs) { error in
-                    if let error = error {
-                        cont.resume(throwing: error)
-                    } else {
-                        cont.resume(returning: ())
-                    }
-                }
-            }
-        }
-    }
 
     // MARK: - Public API
     func index(memoID: UUID) async {
@@ -118,42 +103,6 @@ final class SpotlightIndexer: SpotlightIndexing {
         } catch {
             logger.warning("Spotlight delete failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": idStr]), error: error)
         }
-    }
-
-    func reindexAll() async {
-        guard AppConfiguration.shared.searchIndexingEnabled else { return }
-        guard CSSearchableIndex.isIndexingAvailable() else {
-            logger.warning("CSSearchableIndex unavailable; skipping reindexAll", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]), error: nil)
-            return
-        }
-        let start = Date()
-        do {
-            try await cs_deleteDomain(["memo"])
-        } catch {
-            logger.warning("Spotlight domain delete failed; proceeding", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]), error: error)
-        }
-        let all = memoRepository.memos
-        logger.info("Spotlight: reindexing \(all.count) memos", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]))
-
-        let chunkSize = 500
-        var idx = 0
-        while idx < all.count {
-            let chunk = Array(all[idx..<min(idx+chunkSize, all.count)])
-            var items: [CSSearchableItem] = []
-            for memo in chunk {
-                if let item = await self.buildSearchableItem(for: memo) {
-                    items.append(item)
-                }
-            }
-            do {
-                try await cs_index(items)
-            } catch {
-                logger.warning("Spotlight batch index failed", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "batchStart": idx]), error: error)
-            }
-            idx += chunkSize
-        }
-        let duration = Date().timeIntervalSince(start)
-        logger.info("Spotlight reindex completed in \(String(format: "%.2f", duration))s", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight"]))
     }
 
     // MARK: - Private

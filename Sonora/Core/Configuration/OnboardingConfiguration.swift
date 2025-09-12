@@ -53,38 +53,7 @@ final class OnboardingConfiguration: ObservableObject {
         objectWillChange.send()
         print("✅ OnboardingConfiguration: Onboarding marked as completed (version \(currentOnboardingVersion))")
     }
-    
-    /// Force show onboarding (for Settings "View Onboarding" option)
-    func forceShowOnboarding() {
-        shouldShowOnboarding = true
-        objectWillChange.send()
-        print("🔄 OnboardingConfiguration: Forced onboarding display")
-    }
-    
-    /// Reset onboarding state (useful for testing or troubleshooting)
-    func resetOnboardingState() {
-        hasCompletedOnboarding = false
-        shouldShowOnboarding = true
         
-        userDefaults.removeObject(forKey: UserDefaultsKey.hasCompletedOnboarding)
-        userDefaults.removeObject(forKey: UserDefaultsKey.onboardingVersion)
-        userDefaults.removeObject(forKey: UserDefaultsKey.lastOnboardingDate)
-        userDefaults.removeObject(forKey: UserDefaultsKey.userName)
-        
-        objectWillChange.send()
-        print("🔄 OnboardingConfiguration: Onboarding state reset (including user name)")
-    }
-    
-    /// Get onboarding completion date for debugging/analytics
-    var onboardingCompletionDate: Date? {
-        return userDefaults.object(forKey: UserDefaultsKey.lastOnboardingDate) as? Date
-    }
-    
-    /// Get completed onboarding version
-    var completedOnboardingVersion: Int {
-        return userDefaults.integer(forKey: UserDefaultsKey.onboardingVersion)
-    }
-    
     // MARK: - User Name Management
     
     /// Save user name from onboarding
@@ -100,18 +69,7 @@ final class OnboardingConfiguration: ObservableObject {
         print("📋 OnboardingConfiguration: Retrieved user name: '\(currentUserName)'")
         return currentUserName
     }
-    
-    /// Check if user has set a custom name
-    var hasCustomUserName: Bool {
-        return !currentUserName.isEmpty && currentUserName != "friend"
-    }
-    
-    /// Generate personalized greeting
-    func getPersonalizedGreeting() -> String {
-        let name = getUserName()
-        return "How was your day, \(name)?"
-    }
-    
+            
     /// Process and validate user name input
     private func processUserName(_ input: String) -> String {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -151,29 +109,3 @@ final class OnboardingConfiguration: ObservableObject {
         return needsUpdate
     }
 }
-
-// MARK: - Debug Helpers
-
-#if DEBUG
-extension OnboardingConfiguration {
-    
-    /// Get debug information about onboarding state
-    var debugInfo: String {
-        return """
-        OnboardingConfiguration Debug Info:
-        - hasCompletedOnboarding: \(hasCompletedOnboarding)
-        - shouldShowOnboarding: \(shouldShowOnboarding)
-        - currentVersion: \(currentOnboardingVersion)
-        - savedVersion: \(completedOnboardingVersion)
-        - completionDate: \(onboardingCompletionDate?.description ?? "none")
-        - needsUpdate: \(needsOnboardingUpdate())
-        """
-    }
-    
-    /// Force reset for testing
-    func debugResetForTesting() {
-        resetOnboardingState()
-        print("🧪 OnboardingConfiguration: Debug reset completed")
-    }
-}
-#endif

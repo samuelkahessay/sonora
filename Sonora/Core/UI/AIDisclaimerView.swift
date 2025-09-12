@@ -27,19 +27,6 @@ struct AIDisclaimerView: View {
             }
         }
         
-        var description: String {
-            switch self {
-            case .transcription:
-                return "This transcription was created using AI and may contain inaccuracies."
-            case .analysis:
-                return "This analysis was created using AI and may contain inaccuracies or subjective interpretations."
-            case .summary:
-                return "This summary was created using AI and may not capture all important details."
-            case .generic:
-                return "This content was generated using AI and may be inaccurate or incomplete."
-            }
-        }
-        
         var accessibilityDescription: String {
             switch self {
             case .transcription:

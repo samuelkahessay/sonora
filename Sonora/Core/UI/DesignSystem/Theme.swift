@@ -109,5 +109,3 @@ struct DarkTheme: AppTheme {
     let glassIntensity: GlassIntensity = .minimal
     let animations: ThemeAnimations = .standard
 }
-
-// Theme environment is defined in ThemeEnvironment.swift

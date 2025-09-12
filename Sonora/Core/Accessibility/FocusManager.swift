@@ -70,29 +70,7 @@ final class FocusManager {
             delayedFocus(after: FocusDelays.quick, focusAction)
         }
     }
-    
-    /// Manages focus for loading states
-    /// - Parameters:
-    ///   - isLoading: Whether content is loading
-    ///   - loadingMessage: Message for loading state
-    ///   - completedMessage: Message for completed state
-    ///   - focusAction: Focus action when loading completes
-    func handleLoadingFocus(
-        isLoading: Bool,
-        loadingMessage: String,
-        completedMessage: String,
-        focusAction: (() -> Void)? = nil
-    ) {
-        if isLoading {
-            announceChange(loadingMessage)
-        } else {
-            announceChange(completedMessage)
-            if let focusAction = focusAction {
-                delayedFocus(after: FocusDelays.content, focusAction)
-            }
-        }
-    }
-    
+        
     /// Sets initial focus when a view appears
     /// - Parameter focusAction: Focus assignment action
     func setInitialFocus(_ focusAction: @escaping () -> Void) {
@@ -130,28 +108,6 @@ extension View {
             if let error = newError {
                 FocusManager.shared.handleErrorFocus(error, focusAction: focusAction)
             }
-        }
-    }
-    
-    /// Manages focus for loading states
-    /// - Parameters:
-    ///   - isLoading: Binding to loading state
-    ///   - loadingMessage: Message for loading state
-    ///   - completedMessage: Message for completed state
-    ///   - focusAction: Focus action when loading completes
-    func handleLoadingFocus(
-        _ isLoading: Binding<Bool>,
-        loadingMessage: String,
-        completedMessage: String,
-        focusAction: (() -> Void)? = nil
-    ) -> some View {
-        self.onChange(of: isLoading.wrappedValue) { _, loading in
-            FocusManager.shared.handleLoadingFocus(
-                isLoading: loading,
-                loadingMessage: loadingMessage,
-                completedMessage: completedMessage,
-                focusAction: focusAction
-            )
         }
     }
 }

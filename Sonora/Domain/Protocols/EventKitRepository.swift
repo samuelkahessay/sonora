@@ -37,12 +37,7 @@ protocol EventKitRepository: Sendable {
                      calendarMapping: [String: EKCalendar],
                      maxRetries: Int) async throws -> [String: Result<String, Error>]
     
-    /// Update an existing event
-    func updateEvent(eventId: String, 
-                    with updatedData: EventsData.DetectedEvent) async throws
-    
-    /// Delete an event by ID
-    func deleteEvent(eventId: String) async throws
+    // Update/delete operations not shipped; trimmed
     
     // MARK: - Reminder Operations
     
@@ -56,12 +51,7 @@ protocol EventKitRepository: Sendable {
                         listMapping: [String: EKCalendar],
                         maxRetries: Int) async throws -> [String: Result<String, Error>]
     
-    /// Update an existing reminder
-    func updateReminder(reminderId: String,
-                       with updatedData: RemindersData.DetectedReminder) async throws
-    
-    /// Delete a reminder by ID
-    func deleteReminder(reminderId: String) async throws
+    // Update/delete operations not shipped; trimmed
     
     // MARK: - Smart Features
     
@@ -74,36 +64,13 @@ protocol EventKitRepository: Sendable {
     /// Suggest the best reminder list for a reminder based on content
     func suggestReminderList(for reminder: RemindersData.DetectedReminder) async throws -> EKCalendar?
     
-    /// Check if a specific time slot is available
-    func checkAvailability(startDate: Date, endDate: Date, excludeCalendars: [String]?) async throws -> Bool
-    
-    /// Get events in a date range
-    func getEvents(from startDate: Date, to endDate: Date, calendars: [EKCalendar]?) async throws -> [EKEvent]
-    
-    /// Get reminders matching criteria
-    func getReminders(completed: Bool?, 
-                     dueAfter: Date?, 
-                     dueBefore: Date?, 
-                     lists: [EKCalendar]?) async throws -> [EKReminder]
+    // Availability and raw queries not shipped; trimmed
     
     // MARK: - Cache Management
     
-    /// Invalidate all cached data
-    func invalidateCache()
-    
-    /// Clean up temporary detection data and optimize memory usage
-    func cleanupDetectionData()
-    
-    /// Get cache statistics for debugging
-    func getCacheStats() -> [String: Any]
+    // Cache management is internal; trimmed from protocol
     
     // MARK: - Recurring Events
     
-    /// Detect if an event should be recurring based on content
-    func detectRecurrencePattern(for event: EventsData.DetectedEvent) async -> EKRecurrenceRule?
-    
-    /// Create a recurring event
-    func createRecurringEvent(_ event: EventsData.DetectedEvent,
-                             in calendar: EKCalendar,
-                             recurrenceRule: EKRecurrenceRule) async throws -> String
+    // Recurrence not shipped; trimmed
 }

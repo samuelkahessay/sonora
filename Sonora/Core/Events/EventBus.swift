@@ -37,7 +37,6 @@ public final class EventBus: ObservableObject {
         let id: UUID
         let handler: (AppEvent) -> Void
         weak var subscriber: AnyObject?
-        let createdAt: Date
         /// True when the caller provided a subscriber to track; false when no tracking requested
         let tracked: Bool
         
@@ -183,7 +182,6 @@ public final class EventBus: ObservableObject {
             id: subscriptionId,
             handler: handler,
             subscriber: subscriber,
-            createdAt: Date(),
             tracked: (subscriber != nil)
         )
         

@@ -211,15 +211,7 @@ struct ModelsStatusView: View {
     private var warningBadge: some View { Label("Attention", systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundColor(.semantic(.warning)) }
     private var notReadyBadge: some View { Label("Not Ready", systemImage: "arrow.down.circle").font(.caption).foregroundColor(.semantic(.textSecondary)) }
 
-    private func infoPill(icon: String, text: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon).font(.caption)
-            Text(text).font(.caption)
-        }
-        .padding(.horizontal, 8).padding(.vertical, 4)
-        .background(Color.semantic(.fillSecondary))
-        .cornerRadius(6)
-    }
+    // removed unused infoPill helper
 
     private func whisperStatusText() -> String {
         switch whisperState() {

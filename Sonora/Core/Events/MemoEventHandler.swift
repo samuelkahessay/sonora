@@ -7,7 +7,6 @@ public final class MemoEventHandler {
     
     // MARK: - Dependencies
     private let logger: any LoggerProtocol
-    private let eventBus: any EventBusProtocol
     private let transcriptionRepository: any TranscriptionRepository
     private let subscriptionManager: EventSubscriptionManager
     
@@ -27,7 +26,6 @@ public final class MemoEventHandler {
         transcriptionRepository: any TranscriptionRepository
     ) {
         self.logger = logger
-        self.eventBus = eventBus
         self.transcriptionRepository = transcriptionRepository
         self.subscriptionManager = EventSubscriptionManager(eventBus: eventBus)
         

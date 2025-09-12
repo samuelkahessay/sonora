@@ -1,9 +1,6 @@
 import Foundation
 import Combine
 import SwiftData
-
-// Simple dependency registration container
-typealias ResolverType = DIContainer
 protocol Resolver {
     func resolve<T>(_ type: T.Type) -> T?
 }
@@ -22,7 +19,6 @@ final class DIContainer: ObservableObject, Resolver {
     // Protocol types cannot use weak references, so we use a hybrid approach:
     // - Concrete class types: weak references where beneficial
     // - Protocol types: keep as optional strong references with lifecycle tracking
-    var _transcriptionAPI: (any TranscriptionAPI)?
     var _transcriptionServiceFactory: TranscriptionServiceFactory?
     var _modelDownloadManager: ModelDownloadManager?
     var _analysisService: AnalysisService?
@@ -37,11 +33,9 @@ final class DIContainer: ObservableObject, Resolver {
     private var _dateProvider: (any DateProvider)?
     private var _localizationProvider: (any LocalizationProvider)?
     var _logger: (any LoggerProtocol)?
-    var _backgroundAudioService: BackgroundAudioService?
     var _audioRepository: (any AudioRepository)?
     private var _transcriptExporter: (any TranscriptExporting)?
     private var _analysisExporter: (any AnalysisExporting)?
-    private var _startRecordingUseCase: StartRecordingUseCase?
     private var _startTranscriptionUseCase: (any StartTranscriptionUseCaseProtocol)?
     private var _systemNavigator: (any SystemNavigator)?
     private var _liveActivityService: (any LiveActivityServiceProtocol)?
@@ -169,10 +163,6 @@ final class DIContainer: ObservableObject, Resolver {
             return RecordingTimerService()
         }
         
-        register(AudioPlaybackService.self) { resolver in
-            return AudioPlaybackService()
-        }
-        
         // Register BackgroundAudioService with orchestrated services
         register(BackgroundAudioService.self) { resolver in
             let sessionService = resolver.resolve(AudioSessionService.self)!
@@ -180,15 +170,12 @@ final class DIContainer: ObservableObject, Resolver {
             let backgroundTaskService = resolver.resolve(BackgroundTaskService.self)!
             let permissionService = resolver.resolve(AudioPermissionService.self)!
             let timerService = resolver.resolve(RecordingTimerService.self)!
-            let playbackService = resolver.resolve(AudioPlaybackService.self)!
-            
             return BackgroundAudioService(
                 sessionService: sessionService,
                 recordingService: recordingService,
                 backgroundTaskService: backgroundTaskService,
                 permissionService: permissionService,
-                timerService: timerService,
-                playbackService: playbackService
+                timerService: timerService
             )
         }
         
@@ -207,14 +194,7 @@ final class DIContainer: ObservableObject, Resolver {
         register((any RecordingUsageRepository).self) { _ in
             return RecordingUsageRepositoryImpl() as any RecordingUsageRepository
         }
-        
-        // Register StartRecordingUseCase (resolve coordinator directly to avoid early DI accessor)
-        register(StartRecordingUseCase.self) { resolver in
-            let audioRepository = resolver.resolve((any AudioRepository).self)!
-            let coordinator: any OperationCoordinatorProtocol = OperationCoordinator.shared
-            return StartRecordingUseCase(audioRepository: audioRepository, operationCoordinator: coordinator)
-        }
-        
+                
         // Register LiveActivityService
         register((any LiveActivityServiceProtocol).self) { _ in
             return LiveActivityService() as any LiveActivityServiceProtocol
@@ -253,9 +233,8 @@ final class DIContainer: ObservableObject, Resolver {
         // Persistence-backed repositories are initialized once ModelContext is injected
         
         // Initialize services from registrations
-        self._backgroundAudioService = resolve(BackgroundAudioService.self)!
+        // initialize DI-managed services
         self._audioRepository = resolve((any AudioRepository).self)!
-        self._startRecordingUseCase = resolve(StartRecordingUseCase.self)!
         self._systemNavigator = resolve((any SystemNavigator).self)!
         self._liveActivityService = resolve((any LiveActivityServiceProtocol).self)!
 
@@ -287,7 +266,7 @@ final class DIContainer: ObservableObject, Resolver {
         }
         
         // Initialize external API services  
-        self._transcriptionAPI = TranscriptionService()
+        // prefer factory-based creation; remove legacy _transcriptionAPI instance
         self._analysisService = analysisService ?? AnalysisService()
         self._moderationService = ModerationService()
         // Coordinator already initialized above
@@ -318,16 +297,6 @@ final class DIContainer: ObservableObject, Resolver {
     
     // MARK: - Protocol-Based Service Access
     
-    
-    
-    /// Get transcription API service (legacy - prefer using factory)
-    @MainActor
-    func transcriptionAPI() -> any TranscriptionAPI {
-        ensureConfigured()
-        guard let api = _transcriptionAPI else { fatalError("DIContainer not configured: transcriptionAPI") }
-        return api
-    }
-    
     /// Get transcription service factory (modern approach)
     @MainActor
     func transcriptionServiceFactory() -> TranscriptionServiceFactory {
@@ -352,24 +321,6 @@ final class DIContainer: ObservableObject, Resolver {
         return provider
     }
     
-    // Transcription service creation moved to DIContainer+Analysis.swift
-    
-    // Analysis-related methods moved to DIContainer+Analysis.swift
-    
-    // Repository-related methods moved to DIContainer+Repositories.swift
-    
-    // Audio-related methods moved to DIContainer+Audio.swift
-    
-    /// Get start recording use case
-    @MainActor
-    func startRecordingUseCase() -> StartRecordingUseCase {
-        ensureConfigured()
-        guard let useCase = _startRecordingUseCase else {
-            fatalError("DIContainer not configured: startRecordingUseCase")
-        }
-        return useCase
-    }
-
     /// Get start transcription use case (cached)
     @MainActor
     func startTranscriptionUseCase() -> any StartTranscriptionUseCaseProtocol {
@@ -589,13 +540,6 @@ final class DIContainer: ObservableObject, Resolver {
         initializePersistenceIfNeeded()
     }
 
-    @MainActor
-    func modelContext() -> ModelContext {
-        ensureConfigured()
-        guard let context = _modelContext else { fatalError("DIContainer not configured: modelContext") }
-        return context
-    }
-
     // MARK: - Prompts: Providers & Catalog
     @MainActor
     func dateProvider() -> any DateProvider {
@@ -683,14 +627,9 @@ final class DIContainer: ObservableObject, Resolver {
         )
         // Cache for reuse by other orchestrators (e.g., MemoEventHandler)
         self._startTranscriptionUseCase = startTranscriptionUseCase
-        let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(transcriptionRepository: trRepo)
-        let retryTranscriptionUseCase = RetryTranscriptionUseCase(transcriptionRepository: trRepo, transcriptionAPI: transcriptionService)
         self._memoRepository = MemoRepositoryImpl(
             context: ctx,
-            transcriptionRepository: trRepo,
-            startTranscriptionUseCase: startTranscriptionUseCase,
-            getTranscriptionStateUseCase: getTranscriptionStateUseCase,
-            retryTranscriptionUseCase: retryTranscriptionUseCase
+            transcriptionRepository: trRepo
         )
 
         // Initialize PromptUsageRepository (SwiftData)

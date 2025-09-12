@@ -182,56 +182,7 @@ public final class EventHandlerRegistry {
     }
     
     // MARK: - Handler Management
-    
-    /// Enable a specific handler by name
-    func enableHandler(_ handlerName: String) -> Bool {
-        guard registeredHandlers[handlerName] != nil else {
-            logger.warning("Attempted to enable unregistered handler: \(handlerName)", 
-                          category: .system, 
-                          context: LogContext(),
-                          error: nil)
-            return false
-        }
-
-        switch handlerName {
-        case "CalendarEventHandler":
-            calendarEventHandler?.enable()
-            handlerStatus[handlerName] = true
-            return true
-        case "RemindersEventHandler":
-            remindersEventHandler?.enable()
-            handlerStatus[handlerName] = true
-            return true
-        default:
-            logger.info("No-op enable for handler \(handlerName)", category: .system, context: LogContext())
-            return false
-        }
-    }
-    
-    /// Disable a specific handler by name
-    func disableHandler(_ handlerName: String) -> Bool {
-        guard registeredHandlers[handlerName] != nil else {
-            logger.warning("Attempted to disable unregistered handler: \(handlerName)", 
-                          category: .system, 
-                          context: LogContext(),
-                          error: nil)
-            return false
-        }
-        switch handlerName {
-        case "CalendarEventHandler":
-            calendarEventHandler?.disable()
-            handlerStatus[handlerName] = false
-            return true
-        case "RemindersEventHandler":
-            remindersEventHandler?.disable()
-            handlerStatus[handlerName] = false
-            return true
-        default:
-            logger.info("No-op disable for handler \(handlerName)", category: .system, context: LogContext())
-            return false
-        }
-    }
-    
+        
     /// Unregister all handlers (cleanup)
     public func unregisterAllHandlers() {
         logger.info("Unregistering all event handlers", 

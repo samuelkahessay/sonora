@@ -295,27 +295,7 @@ extension StatusIndicator {
 
 // MARK: - Operation Status Support
 
-extension StatusIndicator {
-    /// Create status indicator from OperationStatus
-    static func operation(
-        status: OperationStatus,
-        size: IconSize = .medium,
-        showText: Bool = false
-    ) -> StatusIndicator {
-        switch status {
-        case .pending:
-            return .info("Pending", size: size, showText: showText)
-        case .active:
-            return .inProgress("Processing", size: size, showText: showText)
-        case .completed:
-            return .completed("Completed", size: size, showText: showText)
-        case .failed:
-            return .failed("Failed", size: size, showText: showText)
-        case .cancelled:
-            return .warning("Cancelled", size: size, showText: showText)
-        }
-    }
-}
+// removed unused OperationStatus convenience builder
 
 // MARK: - Previews
 

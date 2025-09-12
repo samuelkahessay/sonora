@@ -107,30 +107,7 @@ final class BrandThemeManager: ObservableObject {
         return baseAnimation.speed(animationIntensity)
     }
     
-    /// Get the current recording button configuration
-    /// - Returns: Recording button theme configuration
-    func getRecordingButtonTheme() -> RecordingButtonTheme {
-        RecordingButtonTheme(
-            activeColor: currentTheme.recordingActive,
-            inactiveColor: currentTheme.recordingInactive,
-            pulseColor: currentTheme.recordingActive.opacity(0.6),
-            shadowColor: currentTheme.recordingActive.opacity(0.25),
-            animationStyle: recordingState == .active ? .energetic : .gentle,
-            isAnimated: !reducedMotion && animationIntensity > 0.5
-        )
-    }
-    
-    /// Get the current insight highlight configuration
-    /// - Returns: Insight theme configuration
-    func getInsightTheme() -> InsightTheme {
-        InsightTheme(
-            highlightColor: currentTheme.insightHighlight,
-            backgroundColor: currentTheme.surface.opacity(0.8),
-            textColor: currentTheme.onSurface,
-            accentColor: currentTheme.secondary,
-            isAnimated: !reducedMotion
-        )
-    }
+    // removed unused theme helper builders
     
     // MARK: - Private Implementation
     
@@ -264,28 +241,7 @@ enum TransitionType {
     }
 }
 
-/// Configuration for recording button theming
-struct RecordingButtonTheme {
-    let activeColor: Color
-    let inactiveColor: Color
-    let pulseColor: Color
-    let shadowColor: Color
-    let animationStyle: AnimationStyle
-    let isAnimated: Bool
-    
-    enum AnimationStyle {
-        case gentle, energetic, dramatic
-    }
-}
-
-/// Configuration for insight display theming
-struct InsightTheme {
-    let highlightColor: Color
-    let backgroundColor: Color
-    let textColor: Color
-    let accentColor: Color
-    let isAnimated: Bool
-}
+// removed unused theme data structs
 
 /// Extended brand theme with dark mode adaptation
 extension SonoraBrandTheme {
@@ -297,60 +253,18 @@ extension SonoraBrandTheme {
         accent: Color.sparkOrange,
         background: Color.sonoraDep,
         surface: Color.sonoraDep.opacity(0.8),
-        onPrimary: Color.clarityWhite,
         onSurface: Color.clarityWhite,
         recordingActive: Color.insightGold,
         recordingInactive: Color.reflectionGray,
         insightHighlight: Color.growthGreen,
         textPrimary: Color.clarityWhite,
-        textSecondary: Color.reflectionGray,
-        isDark: true
+        textSecondary: Color.reflectionGray
     )
 }
 
 // MARK: - Brand Themeable Protocol
 
-/// Protocol for views that respond to brand theme changes
-protocol BrandThemeable: AnyObject {
-    
-    /// Apply current brand styling to the view
-    func applyBrandStyling()
-    
-    /// Update view for new recording state
-    /// - Parameter state: Current recording state
-    func updateForRecordingState(_ state: RecordingState)
-    
-    /// Update view for focus mode changes
-    /// - Parameter enabled: Whether focus mode is enabled
-    func updateForFocusMode(_ enabled: Bool)
-    
-    /// Get appropriate animation for theme changes
-    /// - Parameter type: Type of transition
-    /// - Returns: Animation configured for this view
-    func getAnimation(for type: TransitionType) -> Animation
-}
-
-// MARK: - Default Implementation
-
-extension BrandThemeable {
-    
-    func applyBrandStyling() {
-        // Default implementation - override in conforming views
-    }
-    
-    func updateForRecordingState(_ state: RecordingState) {
-        // Default implementation - override in conforming views
-    }
-    
-    func updateForFocusMode(_ enabled: Bool) {
-        // Default implementation - override in conforming views
-    }
-    
-    @MainActor
-    func getAnimation(for type: TransitionType) -> Animation {
-        BrandThemeManager.shared.getAppropriateAnimation(for: type)
-    }
-}
+// removed unused BrandThemeable protocol and defaults
 
 // MARK: - View Modifier for Theme Management
 

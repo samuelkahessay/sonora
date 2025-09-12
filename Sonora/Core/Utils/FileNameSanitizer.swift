@@ -149,65 +149,9 @@ struct FileNameSanitizer {
         return output
     }
     
-    /// Validates if a filename is safe without modification
-    /// - Parameter filename: The filename to validate
-    /// - Returns: True if the filename is safe to use as-is
-    static func isValid(_ filename: String) -> Bool {
-        let nameWithoutExtension = URL(fileURLWithPath: filename).deletingPathExtension().lastPathComponent
-        let sanitized = sanitize(nameWithoutExtension, withExtension: "")
-        return nameWithoutExtension == sanitized.replacingOccurrences(of: URL(fileURLWithPath: filename).pathExtension, with: "")
-    }
-    
-    /// Generates a unique filename if the proposed name already exists
-    /// - Parameters:
-    ///   - baseName: The base filename (without extension)
-    ///   - fileExtension: The file extension
-    ///   - existingNames: Set of existing filenames to avoid
-    /// - Returns: A unique filename
-    static func makeUnique(baseName: String, fileExtension: String, avoiding existingNames: Set<String>) -> String {
-        let baseFilename = sanitize(baseName, withExtension: fileExtension)
-        
-        if !existingNames.contains(baseFilename) {
-            return baseFilename
-        }
-        
-        let nameWithoutExt = URL(fileURLWithPath: baseFilename).deletingPathExtension().lastPathComponent
-        var counter = 1
-        
-        while counter < 1000 { // Reasonable upper limit
-            let numberedName = "\(nameWithoutExt)_\(counter)\(fileExtension)"
-            if !existingNames.contains(numberedName) {
-                return numberedName
-            }
-            counter += 1
-        }
-        
-        // Fallback with timestamp if we somehow hit the limit
-        let timestamp = Int(Date().timeIntervalSince1970)
-        return "\(nameWithoutExt)_\(timestamp)\(fileExtension)"
-    }
+    // removed unused isValid/makeUnique helpers
 }
 
 // MARK: - Preview Helper
 
-#if DEBUG
-extension FileNameSanitizer {
-    /// Test cases for validation during development
-    static var testCases: [(input: String, expected: String)] {
-        return [
-            ("Meeting Notes", "Meeting_Notes.m4a"),
-            ("File<>Name", "FileName.m4a"),
-            ("CON", "memo_CON.m4a"),
-            ("Multiple   Spaces", "Multiple_Spaces.m4a"),
-            ("", "untitled.m4a"),
-            ("Very Long Filename That Exceeds The Maximum Character Limit And Should Be Truncated Properly Without Breaking", "Very_Long_Filename_That_Exceeds_The_Maximum_Character_Limit_And_Should_Be_Truncated_Pr.m4a"),
-            ("___Leading_Trailing___", "Leading_Trailing.m4a"),
-            ("Special@#$%Characters", "Special@#$%Characters.m4a"),
-            ("Final Meeting Jan 2, 2025", "Final_Meeting_Jan_2,_2025.m4a"),
-            ("📝 Meeting Notes", "memo_Meeting_Notes.m4a"),
-            ("🎤 Voice Memo 🎵", "audio_Voice_Memo_music.m4a"),
-            ("Business Call 💼📞", "Business_Call_business_call.m4a")
-        ]
-    }
-}
-#endif
+// removed preview test cases

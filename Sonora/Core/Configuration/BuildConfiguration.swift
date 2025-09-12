@@ -49,10 +49,6 @@ public final class BuildConfiguration {
                 return "App Store"
             }
         }
-        
-        var isDistribution: Bool {
-            return self == .testFlight || self == .appStore
-        }
     }
     
     // MARK: - Build Properties

@@ -76,92 +76,6 @@ final class TranscriptionServiceFactory {
         }
     }
     
-    /// Creates a transcription service with intelligent routing and fallback
-    /// - Returns: A service that can route between local and cloud based on runtime conditions
-    func createRoutedTranscriptionService() -> TranscriptionAPI {
-        return RoutedTranscriptionService(factory: self)
-    }
-    
-    /// Gets information about the current transcription service that would be used
-    /// - Returns: Service info including type, availability, and any warnings
-    func getCurrentServiceInfo() -> TranscriptionServiceInfo {
-        let userPreference = UserDefaults.standard.selectedTranscriptionService
-        let effectiveService = UserDefaults.standard.getEffectiveTranscriptionService(downloadManager: downloadManager)
-        let isUsingPreferredService = userPreference == effectiveService
-        
-        var warnings: [String] = []
-        var processingType: TranscriptionProcessingType = .unknown
-        var estimatedSpeed: TranscriptionSpeed = .medium
-        
-        if !isUsingPreferredService {
-            switch userPreference {
-            case .cloudAPI:
-                // This shouldn't happen since cloud is always available
-                warnings.append("Cloud API unexpectedly unavailable")
-            case .localWhisperKit:
-                let selectedModel = UserDefaults.standard.selectedWhisperModelInfo
-                let downloadState = downloadManager.getDownloadState(for: selectedModel.id)
-                
-                switch downloadState {
-                case .notDownloaded:
-                    warnings.append("Local model not downloaded, using cloud API instead")
-                case .downloading:
-                    warnings.append("Local model still downloading, using cloud API temporarily")
-                case .failed:
-                    warnings.append("Local model download failed, using cloud API instead")
-                case .downloaded:
-                    warnings.append("Local model downloaded but unavailable, using cloud API")
-                case .stale:
-                    warnings.append("Local model download stuck, using cloud API instead")
-                }
-            }
-        }
-        
-        // Determine processing characteristics
-        switch effectiveService {
-        case .cloudAPI:
-            processingType = .networkBased
-            estimatedSpeed = .fast
-        case .localWhisperKit:
-            processingType = .localProcessing
-            let selectedModel = UserDefaults.standard.selectedWhisperModelInfo
-            estimatedSpeed = estimatedSpeedForModel(selectedModel)
-        }
-        
-        return TranscriptionServiceInfo(
-            userPreference: userPreference,
-            effectiveService: effectiveService,
-            isUsingPreferredService: isUsingPreferredService,
-            warnings: warnings,
-            processingType: processingType,
-            estimatedSpeed: estimatedSpeed
-        )
-    }
-    
-    /// Gets real-time service status for active operations
-    /// - Returns: Current operational status
-    func getServiceStatus() -> TranscriptionServiceStatus {
-        let info = getCurrentServiceInfo()
-        let selectedModel = UserDefaults.standard.selectedWhisperModelInfo
-        let modelDownloadState = downloadManager.getDownloadState(for: selectedModel.id)
-        
-        return TranscriptionServiceStatus(
-            serviceInfo: info,
-            modelDownloadState: modelDownloadState,
-            isReady: info.effectiveService == .cloudAPI || modelDownloadState == .downloaded,
-            fallbackAvailable: info.effectiveService == .localWhisperKit
-        )
-    }
-    
-    private func estimatedSpeedForModel(_ model: WhisperModelInfo) -> TranscriptionSpeed {
-        switch model.speedRating {
-        case .veryHigh: return .veryFast
-        case .high: return .fast
-        case .medium: return .medium
-        case .low: return .slow
-        }
-    }
-    
     /// Invalidates cached services (call when user changes preferences or models)
     func invalidateCache() {
         logger.info("Invalidating transcription service cache")
@@ -206,28 +120,6 @@ final class TranscriptionServiceFactory {
         return RoutedTranscriptionService(factory: self, preferredService: .localWhisperKit)
     }
 }
-
-// MARK: - Service Information
-
-/// Information about the current transcription service configuration
-struct TranscriptionServiceInfo {
-    let userPreference: TranscriptionServiceType
-    let effectiveService: TranscriptionServiceType
-    let isUsingPreferredService: Bool
-    let warnings: [String]
-    let processingType: TranscriptionProcessingType
-    let estimatedSpeed: TranscriptionSpeed
-    
-    /// User-friendly description of the current service status
-    var statusDescription: String {
-        if isUsingPreferredService {
-            return "Using \(effectiveService.displayName) as preferred"
-        } else {
-            return "Using \(effectiveService.displayName) (fallback from \(userPreference.displayName))"
-        }
-    }
-}
-
 
 // MARK: - Routed Transcription Service
 
@@ -302,47 +194,7 @@ final class RoutedTranscriptionService: TranscriptionAPI {
         }
     }
     
-    func transcribeChunks(segments: [VoiceSegment], audioURL: URL) async throws -> [ChunkTranscriptionResult] {
-        return try await transcribeChunks(segments: segments, audioURL: audioURL, language: nil)
-    }
-    
-    func transcribeChunks(segments: [VoiceSegment], audioURL: URL, language: String?) async throws -> [ChunkTranscriptionResult] {
-        logger.info("Starting routed chunk transcription for \(segments.count) segments")
-        
-        let targetService = determineTargetService()
-        logger.debug("Target service determined: \(targetService.displayName)")
-        
-        do {
-            let service = createServiceForType(targetService)
-            let results = try await service.transcribeChunks(segments: segments, audioURL: audioURL, language: language)
-            
-            logger.info("Routed chunk transcription completed successfully using \(targetService.displayName)")
-            return results
-            
-        } catch {
-            logger.warning("Primary service \(targetService.displayName) failed for chunk transcription: \(error.localizedDescription)")
-            
-            // Attempt fallback if primary was local
-            if targetService == .localWhisperKit && shouldFallbackToCloud(error: error) {
-                logger.info("Attempting chunk transcription fallback to Cloud API")
-                
-                do {
-                    let cloudService = factory.createCloudService()
-                    let results = try await cloudService.transcribeChunks(segments: segments, audioURL: audioURL, language: language)
-                    
-                    logger.info("Fallback chunk transcription completed successfully using Cloud API")
-                    return results
-                    
-                } catch let fallbackError {
-                    logger.error("Fallback to Cloud API also failed for chunks: \(fallbackError.localizedDescription)")
-                    // Re-throw the original error as it's more relevant
-                    throw error
-                }
-            }
-            
-            throw error
-        }
-    }
+    // Consolidated surface: callers perform chunking and call transcribe(url:language:) per chunk.
     
     // MARK: - Private Methods
     
@@ -391,19 +243,4 @@ final class RoutedTranscriptionService: TranscriptionAPI {
 
 // MARK: - Error Types
 
-enum TranscriptionServiceError: LocalizedError {
-    case serviceNotImplemented(String)
-    case serviceUnavailable(String)
-    case factoryError(String)
-    
-    var errorDescription: String? {
-        switch self {
-        case .serviceNotImplemented(let message):
-            return "Service not implemented: \(message)"
-        case .serviceUnavailable(let message):
-            return "Service unavailable: \(message)"
-        case .factoryError(let message):
-            return "Factory error: \(message)"
-        }
-    }
-}
+// Removed unused TranscriptionServiceError

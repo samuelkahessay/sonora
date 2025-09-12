@@ -69,29 +69,7 @@ final class HapticManager {
         impactMedium.impactOccurred()
         print("💥 HapticManager: Medium impact feedback")
     }
-    
-    /// Play heavy impact feedback (important actions, confirmation dialogs)
-    func playHeavyImpact() {
-        guard isEnabled else { return }
-        impactHeavy.impactOccurred()
-        print("💢 HapticManager: Heavy impact feedback")
-    }
-    
-    /// Play custom impact feedback with specified intensity
-    func playImpact(intensity: CGFloat) {
-        guard isEnabled else { return }
         
-        let clampedIntensity = max(0, min(1, intensity))
-        
-        if #available(iOS 13.0, *) {
-            let customImpact = UIImpactFeedbackGenerator(style: .medium)
-            customImpact.impactOccurred(intensity: clampedIntensity)
-            print("🎯 HapticManager: Custom impact feedback (intensity: \(clampedIntensity))")
-        } else {
-            playMediumImpact()
-        }
-    }
-    
     // MARK: - Context-Specific Methods
     
     /// Haptic feedback for recording operations
@@ -116,13 +94,7 @@ final class HapticManager {
         playSuccess()
         print("🧠 HapticManager: Processing complete feedback")
     }
-    
-    /// Haptic feedback for navigation changes
-    func playNavigationFeedback() {
-        playSelection()
-        print("🧭 HapticManager: Navigation feedback")
-    }
-    
+        
     /// Haptic feedback for permission granted
     func playPermissionGranted() {
         playSuccess()
@@ -145,90 +117,5 @@ final class HapticManager {
         selectionFeedback.prepare()
         notificationFeedback.prepare()
     }
-    
-    // MARK: - Public Configuration
-    
-    /// Enable or disable haptic feedback
-    func setEnabled(_ enabled: Bool) {
-        isEnabled = enabled
-        print("⚙️ HapticManager: Haptic feedback \(enabled ? "enabled" : "disabled")")
-        
-        if enabled {
-            prepareGenerators()
-        }
-    }
-    
-    /// Prepare generators for upcoming use (call before anticipated feedback)
-    func prepareForUse() {
-        guard isEnabled else { return }
-        prepareGenerators()
-        print("🔧 HapticManager: Generators prepared")
-    }
 }
 
-// MARK: - Convenience Extensions
-
-extension HapticManager {
-    
-    /// Quick access methods for common patterns
-    enum FeedbackType {
-        case success
-        case warning
-        case error
-        case selection
-        case lightImpact
-        case mediumImpact
-        case heavyImpact
-    }
-    
-    /// Play feedback by type
-    func play(_ type: FeedbackType) {
-        switch type {
-        case .success:
-            playSuccess()
-        case .warning:
-            playWarning()
-        case .error:
-            playError()
-        case .selection:
-            playSelection()
-        case .lightImpact:
-            playLightImpact()
-        case .mediumImpact:
-            playMediumImpact()
-        case .heavyImpact:
-            playHeavyImpact()
-        }
-    }
-}
-
-// MARK: - Debug Helpers
-
-#if DEBUG
-extension HapticManager {
-    
-    /// Test all haptic feedback types (for debugging)
-    func testAllFeedback() {
-        print("🧪 HapticManager: Testing all feedback types...")
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.playSuccess() }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { self.playWarning() }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.playError() }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { self.playSelection() }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { self.playLightImpact() }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { self.playMediumImpact() }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) { self.playHeavyImpact() }
-        
-        print("🧪 HapticManager: Test sequence started")
-    }
-    
-    /// Get debug information about haptic manager state
-    var debugInfo: String {
-        return """
-        HapticManager Debug Info:
-        - isEnabled: \(isEnabled)
-        - generators prepared: true
-        """
-    }
-}
-#endif

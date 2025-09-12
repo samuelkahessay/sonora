@@ -120,16 +120,7 @@ final class BackgroundTaskService: NSObject, BackgroundTaskServiceProtocol, @unc
         }
     }
     
-    /// Gets remaining background time
-    func getRemainingBackgroundTime() -> TimeInterval {
-        guard isBackgroundTaskActive else { return 0 }
-        return UIApplication.shared.backgroundTimeRemaining
-    }
-    
-    /// Checks if background task is available
-    func isBackgroundTaskAvailable() -> Bool {
-        return UIApplication.shared.backgroundRefreshStatus == .available
-    }
+    // removed unused helpers for remaining time and availability
     
     // MARK: - Private Methods
     

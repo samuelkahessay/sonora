@@ -55,16 +55,10 @@ extension Color {
     /// Inactive recording state - uses Reflection Gray for subtle presence
     static let recordingInactive = reflectionGray
     
-    /// Recording error state - uses Spark Orange for gentle but clear warning
-    static let recordingError = sparkOrange
-    
     // MARK: - Content & Insights
     
     /// Highlight color for key insights and important content
     static let insightHighlight = growthGreen
-    
-    /// Background color for insight cards and analysis content
-    static let insightBackground = whisperBlue
     
     /// Text color for inspirational quotes and meaningful moments
     static let wisdomText = depthPurple
@@ -86,8 +80,7 @@ extension Color {
     /// Warning states and important notifications
     static let warningState = sparkOrange
     
-    /// Information and neutral states
-    static let infoState = reflectionGray
+    // (removed unused info state)
     
     // MARK: - Text Hierarchy
     
@@ -100,22 +93,15 @@ extension Color {
     /// Text on dark or colored backgrounds
     static let textOnColored = clarityWhite
     
-    /// Subtle text for tertiary information
-    static let textTertiary = reflectionGray.opacity(0.7)
+    // (removed unused textTertiary)
     
     // MARK: - Backgrounds
     
     /// Primary background - uses system adaptation with Clarity White preference
     static let backgroundPrimary = Color(UIColor.systemBackground)
     
-    /// Secondary background for cards and sections
-    static let backgroundSecondary = whisperBlue.opacity(0.3)
-    
     /// Elevated content background
     static let backgroundElevated = clarityWhite
-    
-    /// Glass/frosted background effect
-    static let backgroundGlass = reflectionGray.opacity(0.1)
 }
 
 // MARK: - Color Utilities
@@ -190,7 +176,6 @@ struct SonoraBrandTheme {
     let accent: Color
     let background: Color
     let surface: Color
-    let onPrimary: Color
     let onSurface: Color
     
     // Semantic mappings
@@ -200,9 +185,6 @@ struct SonoraBrandTheme {
     let textPrimary: Color
     let textSecondary: Color
     
-    /// Whether this theme uses dark appearance
-    let isDark: Bool
-    
     /// Designated initializer with sensible defaults for the light theme
     init(
         primary: Color = .insightGold,
@@ -210,94 +192,26 @@ struct SonoraBrandTheme {
         accent: Color = .sparkOrange,
         background: Color = .clarityWhite,
         surface: Color = .whisperBlue,
-        onPrimary: Color = .sonoraDep,
         onSurface: Color = .sonoraDep,
         recordingActive: Color = .recordingActive,
         recordingInactive: Color = .recordingInactive,
         insightHighlight: Color = .insightHighlight,
         textPrimary: Color = .textPrimary,
         textSecondary: Color = .textSecondary,
-        isDark: Bool = false
     ) {
         self.primary = primary
         self.secondary = secondary
         self.accent = accent
         self.background = background
         self.surface = surface
-        self.onPrimary = onPrimary
         self.onSurface = onSurface
         self.recordingActive = recordingActive
         self.recordingInactive = recordingInactive
         self.insightHighlight = insightHighlight
         self.textPrimary = textPrimary
         self.textSecondary = textSecondary
-        self.isDark = isDark
     }
     
     /// Default Sonora brand theme (light)
     static let `default` = SonoraBrandTheme()
 }
-
-// MARK: - Preview Support
-
-#if DEBUG
-struct SonoraBrandColors_Previews: PreviewProvider {
-    static var previews: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                colorSection("Primary Palette", colors: [
-                    ("Sonora Deep", Color.sonoraDep),
-                    ("Clarity White", Color.clarityWhite),
-                    ("Insight Gold", Color.insightGold)
-                ])
-                
-                colorSection("Secondary Palette", colors: [
-                    ("Reflection Gray", Color.reflectionGray),
-                    ("Whisper Blue", Color.whisperBlue),
-                    ("Growth Green", Color.growthGreen)
-                ])
-                
-                colorSection("Accent Colors", colors: [
-                    ("Spark Orange", Color.sparkOrange),
-                    ("Depth Purple", Color.depthPurple)
-                ])
-                
-                colorSection("Semantic Mappings", colors: [
-                    ("Recording Active", Color.recordingActive),
-                    ("Insight Highlight", Color.insightHighlight),
-                    ("Brand Primary", Color.brandPrimary),
-                    ("Success State", Color.successState)
-                ])
-            }
-            .padding()
-        }
-        .previewDisplayName("Sonora Brand Colors")
-    }
-    
-    static func colorSection(_ title: String, colors: [(String, Color)]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
-                .foregroundColor(.textPrimary)
-            
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
-                ForEach(Array(colors.enumerated()), id: \.offset) { _, colorInfo in
-                    HStack {
-                        Rectangle()
-                            .fill(colorInfo.1)
-                            .frame(width: 30, height: 30)
-                            .cornerRadius(6)
-                        
-                        Text(colorInfo.0)
-                            .font(.caption)
-                            .foregroundColor(.textSecondary)
-                        
-                        Spacer()
-                    }
-                    .padding(.vertical, 4)
-                }
-            }
-        }
-    }
-}
-#endif

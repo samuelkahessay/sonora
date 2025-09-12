@@ -9,9 +9,7 @@ protocol ViewModelFactory {
     func createPromptViewModel() -> PromptViewModel
     func createMemoListViewModel() -> MemoListViewModel  
     func createMemoDetailViewModel() -> MemoDetailViewModel
-    func createAnalysisViewModel() -> AnalysisViewModel
     func createOnboardingViewModel() -> OnboardingViewModel
-    func createOperationStatusViewModel() -> OperationStatusViewModel
 }
 
 /// Default implementation of ViewModelFactory using DIContainer
@@ -145,20 +143,9 @@ final class DefaultViewModelFactory: ViewModelFactory {
         )
     }
     
-    func createAnalysisViewModel() -> AnalysisViewModel {
-        return AnalysisViewModel()
-    }
-    
     func createOnboardingViewModel() -> OnboardingViewModel {
         return OnboardingViewModel(
             onboardingConfiguration: OnboardingConfiguration.shared
-        )
-    }
-    
-    func createOperationStatusViewModel() -> OperationStatusViewModel {
-        return OperationStatusViewModel(
-            operationCoordinator: container.operationCoordinator(),
-            logger: container.logger()
         )
     }
 }

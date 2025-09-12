@@ -179,7 +179,8 @@ final class OnboardingViewModel: ObservableObject, ErrorHandling {
     }
     
     func getPersonalizedGreeting() -> String {
-        return onboardingConfiguration.getPersonalizedGreeting()
+        let name = onboardingConfiguration.getUserName()
+        return "How was your day, \(name)?"
     }
     
     func startFirstRecording() {

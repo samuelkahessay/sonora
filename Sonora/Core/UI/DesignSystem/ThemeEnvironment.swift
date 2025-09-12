@@ -11,10 +11,3 @@ extension EnvironmentValues {
         set { self[ThemeEnvironmentKey.self] = newValue }
     }
 }
-
-extension View {
-    /// Inject a custom theme for this view hierarchy.
-    func theme(_ theme: AppTheme) -> some View {
-        environment(\.theme, theme)
-    }
-}

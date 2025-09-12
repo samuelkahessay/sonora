@@ -26,13 +26,6 @@ protocol AudioRepository: ObservableObject {
     /// Normalized audio level (0.0 to 1.0), smoothed; emits only while recording
     var audioLevelPublisher: AnyPublisher<Double, Never> { get }
     
-    // MARK: - File Management
-    func loadAudioFiles() -> [Memo]
-    func deleteAudioFile(at url: URL) throws
-    func saveAudioFile(from sourceURL: URL, to destinationURL: URL) throws
-    func getAudioMetadata(for url: URL) throws -> (duration: TimeInterval, creationDate: Date)
-    func getDocumentsDirectory() -> URL
-    
     // MARK: - Playback Control
     func playAudio(at url: URL) throws
     func pauseAudio()

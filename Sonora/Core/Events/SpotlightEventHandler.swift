@@ -3,8 +3,6 @@ import Foundation
 /// Event handler that keeps Core Spotlight index in sync with memo lifecycle
 @MainActor
 final class SpotlightEventHandler {
-    private let logger: any LoggerProtocol
-    private let eventBus: any EventBusProtocol
     private let subscriptionManager: EventSubscriptionManager
     private let indexer: any SpotlightIndexing
 
@@ -13,8 +11,6 @@ final class SpotlightEventHandler {
         eventBus: any EventBusProtocol,
         indexer: any SpotlightIndexing
     ) {
-        self.logger = logger
-        self.eventBus = eventBus
         self.subscriptionManager = EventSubscriptionManager(eventBus: eventBus)
         self.indexer = indexer
 

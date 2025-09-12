@@ -6,7 +6,6 @@ import Foundation
 @MainActor
 public final class WhisperKitEventHandler {
     private let logger: any LoggerProtocol
-    private let eventBus: any EventBusProtocol
     private let subscriptionManager: EventSubscriptionManager
     private let config = AppConfiguration.shared
 
@@ -15,7 +14,6 @@ public final class WhisperKitEventHandler {
         eventBus: any EventBusProtocol = EventBus.shared
     ) {
         self.logger = logger
-        self.eventBus = eventBus
         self.subscriptionManager = EventSubscriptionManager(eventBus: eventBus)
 
         setupSubscriptions()

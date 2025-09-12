@@ -14,12 +14,10 @@ import UIKit
 protocol MemoryPressureDetectorProtocol: Sendable {
     var isUnderMemoryPressure: Bool { get }
     var currentMemoryMetrics: MemoryMetrics { get }
-    var onMemoryPressureChanged: ((Bool) -> Void)? { get set }
     
     func startMonitoring()
     func stopMonitoring()
     func forceMemoryPressureCheck() -> Bool
-    func getResourceRecommendations() -> ResourceRecommendations
 }
 
 /// Advanced memory pressure detection and system resource monitoring
@@ -53,8 +51,6 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
     @Published var currentMemoryMetrics = MemoryMetrics()
     
     // MARK: - Properties
-    
-    var onMemoryPressureChanged: ((Bool) -> Void)?
     
     private let logger = Logger.shared
     private var monitoringTimer: Task<Void, Never>?
@@ -122,53 +118,6 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
         return isUnderMemoryPressure
     }
     
-    /// Returns resource optimization recommendations based on current conditions
-    func getResourceRecommendations() -> ResourceRecommendations {
-        let metrics = currentMemoryMetrics
-        var recommendations = ResourceRecommendations()
-        
-        let thresholds = dynamicThresholds()
-
-        // Memory-based recommendations
-        if metrics.memoryUsageMB > thresholds.critical {
-            recommendations.shouldAggressivelyCleanup = true
-            recommendations.shouldUnloadCaches = true
-            recommendations.shouldReduceQuality = true
-        } else if metrics.memoryUsageMB > thresholds.pressure {
-            recommendations.shouldUnloadCaches = true
-            recommendations.shouldReduceQuality = true
-        }
-        
-        // Storage-based recommendations  
-        if metrics.availableStorageGB < DetectionConfig.lowStorageThreshold {
-            recommendations.shouldCompressData = true
-            recommendations.shouldCleanupOldFiles = true
-            recommendations.shouldReduceQuality = true
-        }
-        
-        // Battery-based recommendations
-        if metrics.batteryLevel >= 0 && metrics.batteryLevel < DetectionConfig.batteryLowThreshold {
-            recommendations.shouldReduceQuality = true
-            recommendations.shouldDisableBackgroundProcessing = true
-        }
-        
-        // Thermal-based recommendations
-        if metrics.thermalState.rawValue >= DetectionConfig.thermalWarningThreshold {
-            recommendations.shouldThrottleOperations = true
-            recommendations.shouldReduceQuality = true
-            
-            if metrics.thermalState == .critical {
-                recommendations.shouldAggressivelyCleanup = true
-                recommendations.shouldUnloadCaches = true
-                recommendations.shouldDisableBackgroundProcessing = true
-            }
-        }
-        
-        // Overall system stress assessment
-        recommendations.systemStressLevel = calculateSystemStressLevel(metrics)
-        
-        return recommendations
-    }
     
     // MARK: - Private Implementation
     
@@ -236,9 +185,6 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
             let stateDescription = underPressure ? "detected" : "relieved"
             logger.info("🧠 MemoryPressureDetector: Memory pressure \(stateDescription)")
             
-            // Notify observers
-            onMemoryPressureChanged?(underPressure)
-            
             // Post system-wide notification
             NotificationCenter.default.post(
                 name: .memoryPressureStateChanged,
@@ -260,7 +206,6 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
             device.isBatteryMonitoringEnabled = true
         }
         metrics.batteryLevel = device.batteryLevel
-        metrics.batteryState = device.batteryState
         
         // Thermal state
         metrics.thermalState = ProcessInfo.processInfo.thermalState
@@ -270,9 +215,6 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
         
         // CPU usage
         metrics.cpuUsage = getCPUUsage()
-        
-        // System uptime
-        metrics.systemUptime = ProcessInfo.processInfo.systemUptime
         
         return metrics
     }
@@ -327,54 +269,6 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
         
         return 0.0
     }
-    
-    private func calculateSystemStressLevel(_ metrics: MemoryMetrics) -> SystemStressLevel {
-        var stressScore = 0
-        
-        // Memory stress
-        let thresholds = dynamicThresholds()
-        if metrics.memoryUsageMB > thresholds.critical {
-            stressScore += 3
-        } else if metrics.memoryUsageMB > thresholds.pressure {
-            stressScore += 2
-        }
-        
-        // Thermal stress
-        stressScore += metrics.thermalState.rawValue
-        
-        // Battery stress
-        if metrics.batteryLevel >= 0 && metrics.batteryLevel < 0.1 {
-            stressScore += 3
-        } else if metrics.batteryLevel >= 0 && metrics.batteryLevel < DetectionConfig.batteryLowThreshold {
-            stressScore += 1
-        }
-        
-        // Storage stress
-        if metrics.availableStorageGB < 0.5 {
-            stressScore += 2
-        } else if metrics.availableStorageGB < DetectionConfig.lowStorageThreshold {
-            stressScore += 1
-        }
-        
-        // CPU stress
-        if metrics.cpuUsage > 80.0 {
-            stressScore += 2
-        } else if metrics.cpuUsage > 60.0 {
-            stressScore += 1
-        }
-        
-        // Convert score to level
-        switch stressScore {
-        case 0...2:
-            return .low
-        case 3...6:
-            return .medium
-        case 7...10:
-            return .high
-        default:
-            return .critical
-        }
-    }
 }
 
 // MARK: - Memory Metrics
@@ -384,115 +278,8 @@ public struct MemoryMetrics: Sendable {
     var memoryUsageMB: Double = 0
     var availableStorageGB: Double = 0
     var batteryLevel: Float = -1 // -1 if unknown
-    var batteryState: UIDevice.BatteryState = .unknown
     var thermalState: ProcessInfo.ThermalState = .nominal
     var cpuUsage: Double = 0
-    var systemUptime: TimeInterval = 0
-    
-    /// Whether the device is in a low-resource state
-    var isResourceConstrained: Bool {
-        let lowMemory = memoryUsageMB > 150.0
-        let lowBattery = batteryLevel >= 0 && batteryLevel < 0.2
-        let lowStorage = availableStorageGB < 1.0
-        let thermalStress = thermalState.rawValue >= 2
-        
-        return lowMemory || lowBattery || lowStorage || thermalStress
-    }
-    
-    /// Overall system health score (0.0 to 1.0, where 1.0 is excellent)
-    var systemHealthScore: Double {
-        var score = 1.0
-        
-        // Memory impact (up to -0.3)
-        if memoryUsageMB > 200 {
-            score -= 0.3
-        } else if memoryUsageMB > 150 {
-            score -= 0.15
-        }
-        
-        // Battery impact (up to -0.2)
-        if batteryLevel >= 0 {
-            if batteryLevel < 0.1 {
-                score -= 0.2
-            } else if batteryLevel < 0.2 {
-                score -= 0.1
-            }
-        }
-        
-        // Storage impact (up to -0.2)
-        if availableStorageGB < 0.5 {
-            score -= 0.2
-        } else if availableStorageGB < 1.0 {
-            score -= 0.1
-        }
-        
-        // Thermal impact (up to -0.3)
-        score -= Double(thermalState.rawValue) * 0.1
-        
-        return max(0.0, score)
-    }
-}
-
-// MARK: - Resource Recommendations
-
-/// Intelligent recommendations for resource optimization
-public struct ResourceRecommendations: Sendable {
-    var shouldUnloadCaches = false
-    var shouldAggressivelyCleanup = false
-    var shouldReduceQuality = false
-    var shouldCompressData = false
-    var shouldCleanupOldFiles = false
-    var shouldThrottleOperations = false
-    var shouldDisableBackgroundProcessing = false
-    var systemStressLevel: SystemStressLevel = .low
-    
-    /// Whether any optimization is recommended
-    var hasRecommendations: Bool {
-        return shouldUnloadCaches || shouldAggressivelyCleanup || shouldReduceQuality ||
-               shouldCompressData || shouldCleanupOldFiles || shouldThrottleOperations ||
-               shouldDisableBackgroundProcessing
-    }
-    
-    /// Priority score for recommendations (higher = more urgent)
-    var priorityScore: Int {
-        var score = 0
-        if shouldAggressivelyCleanup { score += 3 }
-        if shouldUnloadCaches { score += 2 }
-        if shouldDisableBackgroundProcessing { score += 2 }
-        if shouldThrottleOperations { score += 2 }
-        if shouldReduceQuality { score += 1 }
-        if shouldCompressData { score += 1 }
-        if shouldCleanupOldFiles { score += 1 }
-        return score
-    }
-}
-
-// MARK: - System Stress Level
-
-/// Overall system stress assessment
-public enum SystemStressLevel: Int, CaseIterable, Sendable {
-    case low = 0
-    case medium = 1
-    case high = 2
-    case critical = 3
-    
-    var displayName: String {
-        switch self {
-        case .low: return "Low"
-        case .medium: return "Medium"
-        case .high: return "High"
-        case .critical: return "Critical"
-        }
-    }
-    
-    var description: String {
-        switch self {
-        case .low: return "System resources are adequate"
-        case .medium: return "Moderate resource pressure detected"
-        case .high: return "High resource pressure - optimizations recommended"
-        case .critical: return "Critical resource pressure - aggressive optimization required"
-        }
-    }
 }
 
 // MARK: - Notification Extensions

@@ -17,12 +17,7 @@ protocol TranscriptionAPI {
     /// - Returns: Detailed transcription response including optional metadata
     func transcribe(url: URL, language: String?) async throws -> TranscriptionResponse
 
-    /// Transcribe voiced chunks and return per-segment results in original order.
-    /// Implementations should handle per-chunk failures gracefully and continue others.
-    func transcribeChunks(segments: [VoiceSegment], audioURL: URL) async throws -> [ChunkTranscriptionResult]
-
-    /// Transcribe voiced chunks with an optional language hint.
-    func transcribeChunks(segments: [VoiceSegment], audioURL: URL, language: String?) async throws -> [ChunkTranscriptionResult]
+    // Consolidated surface: callers handle chunking and call transcribe(url:language:) per chunk.
 }
 
 /// Optional progress reporting for long-running transcriptions.

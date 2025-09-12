@@ -32,20 +32,6 @@ extension DIContainer {
         return _analysisService!
     }
 
-    /// Optional progressive analysis router (tiny -> base). Falls back to standard service when disabled.
-    @MainActor
-    func progressiveAnalysisService() -> any AnalysisServiceProtocol {
-        ensureConfigured()
-        if AppConfiguration.shared.enableProgressiveAnalysisRouting {
-            let tiny = localAnalysisService()
-            let baseSvc: any AnalysisServiceProtocol
-            if let existing = _analysisService { baseSvc = existing } else { _analysisService = AnalysisService(); baseSvc = _analysisService! }
-            return ProgressiveAnalysisService(tiny: tiny, base: baseSvc, logger: logger())
-        } else {
-            return analysisService()
-        }
-    }
-
     /// Explicit local analysis service (on-device)
     @MainActor
     func localAnalysisService() -> any AnalysisServiceProtocol {
@@ -64,4 +50,3 @@ extension DIContainer {
         return svc
     }
 }
-

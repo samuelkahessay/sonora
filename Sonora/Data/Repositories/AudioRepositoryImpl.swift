@@ -19,7 +19,6 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     private var audioPlayer: AVAudioPlayer?
     private var audioPlayerProxy = AudioPlayerProxy()
     private let backgroundAudioService: BackgroundAudioService
-    private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     
     // MARK: - Combine
     private var cancellables = Set<AnyCancellable>()
@@ -119,68 +118,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         audioLevelSubject.send(backgroundAudioService.audioLevel)
     }
     
-    func loadAudioFiles() -> [Memo] {
-        do {
-            let files = try FileManager.default.contentsOfDirectory(
-                at: documentsPath, 
-                includingPropertiesForKeys: [.creationDateKey], 
-                options: []
-            )
-            
-            let audioFiles = files.filter { $0.pathExtension == "m4a" }
-            var loadedMemos: [Memo] = []
-            
-            for file in audioFiles {
-                let resourceValues = try file.resourceValues(forKeys: [.creationDateKey])
-                let creationDate = resourceValues.creationDate ?? Date()
-                
-                let memo = Memo(
-                    filename: file.lastPathComponent,
-                    fileURL: file,
-                    creationDate: creationDate
-                )
-                loadedMemos.append(memo)
-            }
-            
-            return loadedMemos.sorted { $0.creationDate > $1.creationDate }
-        } catch {
-            print("❌ AudioRepository: Error loading audio files: \(error)")
-            return []
-        }
-    }
     
-    func deleteAudioFile(at url: URL) throws {
-        do {
-            try FileManager.default.removeItem(at: url)
-            if playingMemo?.fileURL == url {
-                stopAudio()
-            }
-        } catch {
-            throw SonoraError.storageDeleteFailed(error.localizedDescription)
-        }
-    }
-    
-    func saveAudioFile(from sourceURL: URL, to destinationURL: URL) throws {
-        do {
-            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
-        } catch {
-            throw SonoraError.storageWriteFailed(error.localizedDescription)
-        }
-    }
-    
-    func getAudioMetadata(for url: URL) throws -> (duration: TimeInterval, creationDate: Date) {
-        do {
-            let audioFile = try AVAudioFile(forReading: url)
-            let frames = Double(audioFile.length)
-            let sampleRate = audioFile.fileFormat.sampleRate
-            let duration = frames / sampleRate
-            let resourceValues = try url.resourceValues(forKeys: [.creationDateKey])
-            let creationDate = resourceValues.creationDate ?? Date()
-            return (duration: duration, creationDate: creationDate)
-        } catch {
-            throw SonoraError.storageReadFailed(error.localizedDescription)
-        }
-    }
     
     func playAudio(at url: URL) throws {
         // Stop any active recording before playing
@@ -247,9 +185,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         return playingMemo?.id == memo.id && isPlaying
     }
     
-    func getDocumentsDirectory() -> URL {
-        return documentsPath
-    }
+    
     
     // MARK: - Recording Functionality (BackgroundAudioService Integration)
     
@@ -278,23 +214,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         return try await startRecording(allowedCap: nil)
     }
     
-    /// Start recording synchronously (for use case compatibility)
-    func startRecordingSync() throws {
-        // Stop any playing audio before recording
-        if isPlaying {
-            stopAudio()
-        }
-        
-        print("🎵 AudioRepositoryImpl: Starting background recording (sync)")
-        
-        do {
-            try backgroundAudioService.startRecording()
-            print("🎵 AudioRepositoryImpl: Background recording started successfully (sync)")
-        } catch {
-            print("❌ AudioRepositoryImpl: Failed to start recording (sync): \(error)")
-            throw mapToRecordingError(error)
-        }
-    }
+    
     
     /// Stop the current recording
     func stopRecording() {
@@ -458,36 +378,5 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         """
     }
     
-    // MARK: - Testing Functionality
-    
-    /// Test background recording functionality
-    /// This method helps verify that recording continues when the device is locked
-    func testBackgroundRecording() async {
-        print("🧪 AudioRepositoryImpl: Starting background recording test")
-        
-        do {
-            // Start recording
-            _ = try await startRecording()
-            print("🧪 AudioRepositoryImpl: Recording started successfully")
-            print("🧪 Background task active: \(isBackgroundTaskActive)")
-            
-            // Log state every 2 seconds for 10 seconds
-            for i in 1...5 {
-                try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-                print("🧪 AudioRepositoryImpl: Test \(i * 2)s - Recording: \(isRecording), Time: \(recordingTime)s, Background: \(isBackgroundTaskActive)")
-            }
-            
-            // Stop recording
-            stopRecording()
-            print("🧪 AudioRepositoryImpl: Recording stopped")
-            print("🧪 AudioRepositoryImpl: Background recording test completed")
-            print("🧪 Instructions: To test background recording:")
-            print("🧪   1. Call this method")
-            print("🧪   2. Lock your phone during the 10-second recording")
-            print("🧪   3. Check logs to verify recording continued in background")
-            
-        } catch {
-            print("❌ AudioRepositoryImpl: Background recording test failed: \(error)")
-        }
-    }
+    // Testing helper removed as unused
 }

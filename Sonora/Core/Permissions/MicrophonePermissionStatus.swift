@@ -103,8 +103,6 @@ public enum MicrophonePermissionStatus: String, CaseIterable, Equatable, Sendabl
     }
 }
 
-// Legacy NotificationCenter identifiers removed — migrated to EventBus
-
 // MARK: - Permission Request API (Core layer)
 
 /// Requests microphone permission using platform APIs and returns final status.

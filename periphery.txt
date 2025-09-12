@@ -1,0 +1,526 @@
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/Memory/MemoryPressureDetector.swift:15:9: warning: Property 'isUnderMemoryPressure' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/Memory/MemoryPressureDetector.swift:16:9: warning: Property 'currentMemoryMetrics' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/Memory/MemoryPressureDetector.swift:18:10: warning: Function 'startMonitoring()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/Memory/MemoryPressureDetector.swift:19:10: warning: Function 'stopMonitoring()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/Memory/MemoryPressureDetector.swift:20:10: warning: Function 'forceMemoryPressureCheck()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/Services/TranscriptionServiceFactory.swift:84:10: warning: Function 'invalidateCache()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/Spotlight/SpotlightIndexer.swift:20:17: warning: Property 'analysisRepository' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/AIDisclaimerView.swift:156:9: warning: Property 'contentType' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ColorPalette.swift:3:8: warning: Struct 'ColorPalette' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ColorPalette.swift:33:11: warning: Extension 'ColorPalette' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ColorPalette.swift:98:11: warning: Extension 'ColorPalette' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:64:16: warning: Property 'wisdomText' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:69:16: warning: Property 'brandPrimary' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:72:16: warning: Property 'brandSecondary' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:78:16: warning: Property 'successState' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:101:16: warning: Property 'backgroundPrimary' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:104:16: warning: Property 'backgroundElevated' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:178:9: warning: Property 'surface' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:179:9: warning: Property 'onSurface' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:182:9: warning: Property 'recordingActive' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:183:9: warning: Property 'recordingInactive' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:184:9: warning: Property 'insightHighlight' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:185:9: warning: Property 'textPrimary' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraBrandColors.swift:186:9: warning: Property 'textSecondary' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraDesignSystem.swift:100:20: warning: Property 'monospaced' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraDesignSystem.swift:200:10: warning: Function 'monospacedStyle()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraDesignSystem.swift:206:10: warning: Function 'serifStyle()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/SonoraDesignSystem.swift:216:10: warning: Function 'gentleShadow()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:4:9: warning: Property 'palette' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:5:9: warning: Property 'typography' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:6:9: warning: Property 'glassIntensity' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:7:9: warning: Property 'animations' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:17:9: warning: Property 'displayName' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:32:9: warning: Property 'blurRadius' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:40:9: warning: Property 'materialOpacity' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:48:9: warning: Property 'displayName' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:58:8: warning: Struct 'ThemeAnimations' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:84:9: warning: Property 'palette' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:85:9: warning: Property 'typography' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:86:9: warning: Property 'glassIntensity' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:87:9: warning: Property 'animations' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:91:8: warning: Struct 'LiquidGlassDarkTheme' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:99:8: warning: Struct 'LightTheme' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Theme.swift:106:8: warning: Struct 'DarkTheme' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ThemeEnvironment.swift:4:16: warning: Struct 'ThemeEnvironmentKey' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ThemeEnvironment.swift:9:9: warning: Property 'theme' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ThemeManager.swift:14:20: warning: Property 'reducedTransparency' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ThemeManager.swift:34:9: warning: Property 'activeTheme' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ThemeManager.swift:48:9: warning: Property 'effectiveColorPalette' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ThemeManager.swift:60:9: warning: Property 'effectiveTypography' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ThemeManager.swift:64:9: warning: Property 'effectiveAnimations' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ThemeManager.swift:69:9: warning: Property 'colorSchemeOverride' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ThemeManager.swift:79:10: warning: Function 'toggle()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ThemeManager.swift:87:10: warning: Function 'cycleGlassIntensity()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/ThemeManager.swift:95:10: warning: Function 'resetToDefaults()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Typography.swift:3:8: warning: Struct 'Typography' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Typography.swift:29:11: warning: Extension 'Typography' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/DesignSystem/Typography.swift:95:11: warning: Extension 'Typography' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/State/BrandThemeManager.swift:46:17: warning: Property 'persistenceKey' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Core/UI/State/BrandThemeManager.swift:393:8: warning: Struct 'BrandThemeManager_Previews' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AnalysisRepositoryImpl.swift:66:18: warning: Function 'validateEnvelopeJSON(data:expectedMode:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AnalysisRepositoryImpl.swift:195:10: warning: Function 'deleteAnalysisResult(for:mode:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AnalysisRepositoryImpl.swift:240:10: warning: Function 'getCacheSize()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AudioRepositoryImpl.swift:123:10: warning: Function 'playAudio(at:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AudioRepositoryImpl.swift:164:10: warning: Function 'pauseAudio()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AudioRepositoryImpl.swift:184:10: warning: Function 'isAudioPlaying(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AudioRepositoryImpl.swift:213:10: warning: Function 'startRecording()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AudioRepositoryImpl.swift:231:9: warning: Property 'recordingTime' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AudioRepositoryImpl.swift:246:9: warning: Property 'isBackgroundTaskActive' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AudioRepositoryImpl.swift:278:10: warning: Function 'setRecordingFailedHandler(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AudioRepositoryImpl.swift:285:18: warning: Function 'configureAudioSessionForPlayback()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/AudioRepositoryImpl.swift:365:9: warning: Property 'debugInfo' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/EventKitRepositoryImpl.swift:57:10: warning: Function 'requestCalendarAccess()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/EventKitRepositoryImpl.swift:61:18: warning: Function 'requestCalendarAccessOnMainActor()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/EventKitRepositoryImpl.swift:87:10: warning: Function 'requestReminderAccess()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/EventKitRepositoryImpl.swift:91:18: warning: Function 'requestReminderAccessOnMainActor()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/EventKitRepositoryImpl.swift:646:10: warning: Function 'cleanupDetectionData()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/MemoRepositoryImpl.swift:164:18: warning: Function 'mapStateStringToTranscriptionState(_:text:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/MemoRepositoryImpl.swift:318:10: warning: Function 'saveMemo(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/MemoRepositoryImpl.swift:359:10: warning: Function 'getMemo(by:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/MemoRepositoryImpl.swift:409:10: warning: Function 'updateMemoMetadata(_:metadata:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/MemoRepositoryImpl.swift:438:6: warning: Enum 'MemoRepositoryError' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/TranscriptionRepositoryImpl.swift:178:10: warning: Function 'hasTranscriptionData(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Repositories/TranscriptionRepositoryImpl.swift:239:10: warning: Function 'getAllTranscriptionStates()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:19:9: warning: Property 'isModelWarmed' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:20:9: warning: Property 'currentModelId' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:21:9: warning: Property 'onModelReady' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:23:10: warning: Function 'prewarmModel()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:26:10: warning: Function 'configureLifecycleHandling()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:27:10: warning: Function 'getModelPerformanceMetrics()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:38:20: warning: Property 'idleUnloadTimeout' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:39:20: warning: Property 'memoryPressureUnloadTimeout' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:40:20: warning: Property 'maxRetryAttempts' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:41:20: warning: Property 'retryDelay' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:48:9: warning: Property 'onModelReady' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:136:18: warning: Function 'performPrewarmOperation(modelId:modelName:startTime:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:178:18: warning: Function 'loadModelWithRetry(modelId:modelName:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:205:17: warning: Property 'hasWarnedMissingModel' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:206:18: warning: Function 'throttleMissingModelWarning(modelName:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:324:18: warning: Function 'setupMemoryPressureMonitoring()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:326:18: warning: Function 'handleMemoryPressureChange()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:349:18: warning: Function 'scheduleIdleUnloadTimer()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:351:18: warning: Function 'scheduleMemoryPressureUnload()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:353:18: warning: Function 'handleIdleTimeout()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:366:18: warning: Function 'handleMemoryPressureTimeout()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:410:18: warning: Function 'recordTranscriptionUsage()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:432:9: warning: Property 'lastPrewarmTime' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:433:9: warning: Property 'lastColdLoadTime' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/AI/WhisperKitModelManager.swift:442:9: warning: Property 'prewarmSuccessRate' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:14:6: warning: Enum 'Guardrails' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:223:10: warning: Enum case 'normal' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:224:10: warning: Enum case 'moderate' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:225:10: warning: Enum case 'high' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:226:10: warning: Enum case 'critical' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:228:9: warning: Property 'description' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:239:10: warning: Enum case 'proceedNormally' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:240:10: warning: Enum case 'proceedWithMonitoring' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:241:10: warning: Enum case 'deferInference' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:242:10: warning: Enum case 'blockInference' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:244:9: warning: Property 'description' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:254:8: warning: Struct 'SystemHealthStatus' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:284:6: warning: Enum 'GuardrailError' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/Guardrails.swift:326:11: warning: Extension 'Guardrails' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/LocalAnalysisService.swift:655:70: warning: Parameter 'mode' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/LocalAnalysisService.swift:983:16: warning: Property 'modelNotDownloaded' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/LocalAnalysisService.swift:987:17: warning: Function 'deviceIncompatible(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/LocalModel.swift:149:9: warning: Property 'performanceBadge' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/LocalModel.swift:205:9: warning: Property 'requiresHighEndDevice' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/LocalModel.swift:284:16: warning: Property 'compatibleModels' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/LocalModel.swift:290:16: warning: Property 'modelsByTier' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/LocalModelDownloadManager.swift:46:10: warning: Function 'modelPath(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/LocalModelDownloadManager.swift:363:10: warning: Function 'getModelStatus()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/ModelTier.swift:32:9: warning: Property 'deviceRequirement' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/ModelTier.swift:62:9: warning: Property 'minRAMRequired' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/ModelTier.swift:72:9: warning: Property 'isDeviceCompatible' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/ModelTier.swift:78:9: warning: Property 'recommendationPriority' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/ModelTier.swift:90:16: warning: Property 'supportedTiers' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/ModelTier.swift:95:16: warning: Property 'highestSupportedTier' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Analysis/ModelTier.swift:100:16: warning: Property 'recommendedTier' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:18:9: warning: Property 'hasPermission' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:19:9: warning: Property 'permissionStatus' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:20:9: warning: Property 'permissionStatusPublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:22:10: warning: Function 'checkPermissions()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:23:10: warning: Function 'requestPermission()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:24:10: warning: Function 'getCurrentPermissionStatus()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:36:9: warning: Property 'permissionStatusPublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:57:10: warning: Function 'requestPermission()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:75:10: warning: Function 'ensurePermission()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:88:10: warning: Function 'canRecord()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:111:18: warning: Function 'requestMicrophonePermission(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioPermissionService.swift:130:6: warning: Enum 'AudioPermissionError' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:16:9: warning: Property 'currentProfile' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:17:9: warning: Property 'isAdaptiveMode' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:19:10: warning: Function 'setProfile(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:20:10: warning: Function 'getOptimalSettings(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:21:10: warning: Function 'enableAdaptiveMode(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:22:10: warning: Function 'getQualityMetrics()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:71:10: warning: Function 'setProfile(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:106:10: warning: Function 'enableAdaptiveMode(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:281:9: warning: Property 'format' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:284:9: warning: Property 'estimatedFileSizePerMinute' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:290:9: warning: Property 'batteryImpactFactor' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:303:9: warning: Property 'displayName' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:374:9: warning: Property 'batteryState' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:392:9: warning: Property 'lastProfileChange' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:393:9: warning: Property 'lastAdaptation' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioQualityManager.swift:402:9: warning: Property 'totalOptimizations' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:17:9: warning: Property 'isRecording' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:18:9: warning: Property 'currentRecordingURL' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:19:9: warning: Property 'isRecordingPublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:21:10: warning: Function 'createRecorder(url:sampleRate:channels:quality:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:22:10: warning: Function 'startRecording(with:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:23:10: warning: Function 'stopRecording()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:24:10: warning: Function 'getCurrentTime()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:27:9: warning: Property 'onRecordingFinished' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:28:9: warning: Property 'onRecordingFailed' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:41:9: warning: Property 'isRecordingPublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:73:24: warning: Property 'sampleRate' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:79:24: warning: Property 'bitRate' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:85:24: warning: Property 'quality' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:91:36: warning: Function 'adaptiveQuality(batteryLevel:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:104:16: warning: Struct 'HighQuality' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:141:10: warning: Function 'createRecorder(url:sampleRate:channels:quality:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:157:10: warning: Function 'createOptimizedRecorder(url:contentType:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:214:96: warning: Parameter 'quality' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:337:10: warning: Function 'isRecorderActive()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:468:9: warning: Property 'recoveryAction' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioRecordingService.swift:484:6: warning: Enum 'RecoveryAction' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioSessionService.swift:16:9: warning: Property 'isSessionActive' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioSessionService.swift:17:9: warning: Property 'sessionActivePublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioSessionService.swift:19:10: warning: Function 'configureForRecording(sampleRate:channels:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioSessionService.swift:20:10: warning: Function 'configureForPlayback()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioSessionService.swift:21:10: warning: Function 'deactivateSession()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioSessionService.swift:22:10: warning: Function 'handleInterruption(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioSessionService.swift:23:10: warning: Function 'logCurrentRoute(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioSessionService.swift:34:9: warning: Property 'sessionActivePublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioSessionService.swift:41:17: warning: Property 'wasRecordingBeforeInterruption' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/AudioSessionService.swift:94:10: warning: Function 'configureForPlayback()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundAudioService.swift:66:13: warning: Property 'recordingStartTime' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundAudioService.swift:194:10: warning: Function 'requestMicrophonePermission()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundAudioService.swift:437:10: warning: Function 'configureAudioSession()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundAudioService.swift:445:10: warning: Function 'deactivateAudioSession()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundTaskService.swift:16:9: warning: Property 'isBackgroundTaskActive' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundTaskService.swift:17:9: warning: Property 'backgroundTaskActivePublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundTaskService.swift:19:10: warning: Function 'beginBackgroundTask()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundTaskService.swift:20:10: warning: Function 'endBackgroundTask()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundTaskService.swift:21:10: warning: Function 'handleAppDidEnterBackground()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundTaskService.swift:22:10: warning: Function 'handleAppWillEnterForeground()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundTaskService.swift:25:9: warning: Property 'onBackgroundTaskExpired' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundTaskService.swift:36:9: warning: Property 'backgroundTaskActivePublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/BackgroundTaskService.swift:172:6: warning: Enum 'BackgroundTaskError' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:15:9: warning: Property 'recordingTime' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:16:9: warning: Property 'isInCountdown' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:17:9: warning: Property 'remainingTime' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:18:9: warning: Property 'recordingStoppedAutomatically' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:19:9: warning: Property 'autoStopMessage' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:21:9: warning: Property 'recordingTimePublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:22:9: warning: Property 'countdownPublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:24:10: warning: Function 'startTimer(with:recordingCap:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:25:10: warning: Function 'stopTimer()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:26:10: warning: Function 'resetTimer()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:29:9: warning: Property 'onAutoStop' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:44:9: warning: Property 'recordingTimePublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:48:9: warning: Property 'countdownPublisher' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:144:10: warning: Function 'getFormattedRecordingTime()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:149:10: warning: Function 'getFormattedRemainingTime()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:155:10: warning: Function 'shouldAutoStop()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Audio/RecordingTimerService.swift:248:6: warning: Enum 'RecordingTimerError' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/EventKit/EventKitPermissionService.swift:45:13: warning: Property 'systemIconName' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/EventKit/EventKitPermissionService.swift:56:13: warning: Property 'statusColor' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/EventKit/EventKitPermissionService.swift:274:10: warning: Function 'refreshPermissions()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/EventKit/EventKitPermissionService.swift:284:9: warning: Property 'hasAllPermissions' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/EventKit/EventKitPermissionService.swift:289:9: warning: Property 'hasAnyPermissions' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/EventKit/EventKitPermissionService.swift:294:9: warning: Property 'detailedStatus' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/EventKit/EventKitPermissionService.swift:305:9: warning: Property 'analyticsData' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/EventKit/EventKitPermissionService.swift:323:9: warning: Property 'isRequestingPermission' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/EventKit/EventKitPermissionService.swift:324:9: warning: Property 'hasAllPermissions' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/EventKit/EventKitPermissionService.swift:325:9: warning: Property 'hasAnyPermissions' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/EventKit/EventKitPermissionService.swift:331:10: warning: Function 'refreshPermissions()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Moderation/NoopModerationService.swift:3:13: warning: Class 'NoopModerationService' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/AudioChunkManager.swift:7:9: warning: Property 'duration' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/ClientLanguageDetectionService.swift:19:8: warning: Struct 'CombinedLanguageResult' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/ClientLanguageDetectionService.swift:29:10: warning: Function 'computeQualityScore(for:textLength:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/ClientLanguageDetectionService.swift:78:10: warning: Function 'computeQualityScore(for:textLength:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/ClientLanguageDetectionService.swift:131:6: warning: Function 'combineDetectionResults(serverResponse:clientDetection:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/ModelManagement/ModelDownloadManager.swift:283:10: warning: Function 'clearAllDownloadStates()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/ModelManagement/ModelDownloadManager.swift:347:10: warning: Function 'maybePrefetchDefaultModelOnWiFi()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/ModelManagement/ModelDownloadManager.swift:588:9: warning: Property 'isActionable' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/ModelManagement/TokenizerFetcher.swift:56:10: warning: Function 'currentMetrics()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/ModelManagement/WhisperKitInstall.swift:59:17: warning: Function 'makeConfig(model:background:autoDownload:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/ModelManagement/WhisperKitModelProvider.swift:25:10: warning: Function 'isInstalled(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/ModelManagement/WhisperKitModelProvider.swift:362:10: warning: Function 'clearDownloadState(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/VADSplittingService.swift:10:9: warning: Property 'confidence' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/WhisperKitTranscriptionService.swift:14:17: warning: Property 'downloadManager' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/WhisperKitTranscriptionService.swift:34:17: warning: Initializer 'init(downloadManager:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Data/Services/Transcription/WhisperKitTranscriptionService.swift:251:49: warning: Parameter 'results' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Models/DetectionContext.swift:6:9: warning: Property 'memoId' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Models/DetectionContext.swift:12:9: warning: Property 'localeIdentifier' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Models/EventKitError.swift:23:13: warning: Property 'permissionKey' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Models/EventKitError.swift:163:50: warning: Parameter 'status' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Models/EventKitError.swift:163:63: warning: Parameter 'type' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AnalysisRepository.swift:10:10: warning: Function 'deleteAnalysisResult(for:mode:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AnalysisRepository.swift:13:10: warning: Function 'getCacheSize()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AudioRepository.swift:7:9: warning: Property 'playingMemo' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AudioRepository.swift:8:9: warning: Property 'isPlaying' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AudioRepository.swift:12:9: warning: Property 'recordingTime' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AudioRepository.swift:14:9: warning: Property 'isBackgroundTaskActive' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AudioRepository.swift:30:10: warning: Function 'playAudio(at:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AudioRepository.swift:31:10: warning: Function 'pauseAudio()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AudioRepository.swift:32:10: warning: Function 'stopAudio()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AudioRepository.swift:33:10: warning: Function 'isAudioPlaying(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AudioRepository.swift:39:10: warning: Function 'startRecording()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/AudioRepository.swift:45:10: warning: Function 'setRecordingFailedHandler(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/EventKitRepository.swift:10:10: warning: Function 'requestCalendarAccess()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/EventKitRepository.swift:13:10: warning: Function 'requestReminderAccess()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/MemoRepository.swift:22:10: warning: Function 'saveMemo(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/MemoRepository.swift:25:10: warning: Function 'getMemo(by:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/MemoRepository.swift:28:10: warning: Function 'updateMemoMetadata(_:metadata:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/SystemNavigator.swift:5:10: warning: Function 'open(_:completion:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/TranscriptionAPI.swift:49:5: warning: Initializer 'init(segment:text:confidence:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/TranscriptionRepository.swift:8:9: warning: Property 'previousState' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/TranscriptionRepository.swift:10:9: warning: Property 'timestamp' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/TranscriptionRepository.swift:31:10: warning: Function 'hasTranscriptionData(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Protocols/TranscriptionRepository.swift:37:10: warning: Function 'getAllTranscriptionStates()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/AdaptiveModelRouter.swift:20:9: warning: Property 'audioURL' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/AdaptiveModelRouter.swift:27:9: warning: Property 'networkCondition' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/AdaptiveModelRouter.swift:45:14: warning: Enum case 'cellular' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/AdaptiveModelRouter.swift:46:14: warning: Enum case 'poor' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/AdaptiveModelRouter.swift:47:14: warning: Enum case 'offline' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/AdaptiveModelRouter.swift:54:9: warning: Property 'rationale' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/AdaptiveModelRouter.swift:56:9: warning: Property 'estimatedProcessingTime' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/AdaptiveModelRouter.swift:57:9: warning: Property 'confidenceThreshold' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/AdaptiveModelRouter.swift:70:20: warning: Property 'maxModelSize' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/AdaptiveModelRouter.swift:92:17: warning: Property 'modelProvider' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/LanguageQualityEvaluator.swift:21:9: warning: Property 'serverConfidence' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/LanguageQualityEvaluator.swift:22:9: warning: Property 'clientConfidence' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/LanguageQualityEvaluator.swift:23:9: warning: Property 'textLength' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/LanguageQualityEvaluator.swift:24:9: warning: Property 'avgLogProb' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/RecordingQuotaPolicy.swift:16:40: warning: Parameter 'service' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/SwiftDataQueryOptimizer.swift:13:10: warning: Protocol 'SwiftDataQueryOptimizerProtocol' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/SwiftDataQueryOptimizer.swift:31:13: warning: Class 'SwiftDataQueryOptimizer' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/SwiftDataQueryOptimizer.swift:207:10: warning: Function 'chunked(into:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/Services/SwiftDataQueryOptimizer.swift:217:6: warning: Enum 'QueryOptimizationStrategy' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Analysis/AnalyzeContentUseCase.swift:15:17: warning: Property 'eventBus' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Analysis/AnalyzeDistillParallelUseCase.swift:59:17: warning: Property 'eventBus' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Analysis/AnalyzeDistillParallelUseCase.swift:272:83: warning: Parameter 'memoId' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Analysis/AnalyzeDistillParallelUseCase.swift:310:77: warning: Parameter 'mode' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Analysis/AnalyzeDistillUseCase.swift:15:17: warning: Property 'eventBus' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Analysis/AnalyzeThemesUseCase.swift:14:17: warning: Property 'logger' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Analysis/AnalyzeThemesUseCase.swift:15:17: warning: Property 'eventBus' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Analysis/AnalyzeTodosUseCase.swift:14:17: warning: Property 'logger' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Analysis/CreateAnalysisShareFileUseCase.swift:223:34: warning: Parameter 'env' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Base/BaseUseCase.swift:23:19: warning: Function 'generateCorrelationId()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Base/BaseUseCase.swift:28:19: warning: Function 'createLogContext(correlationId:additionalInfo:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Base/BaseUseCase.swift:36:19: warning: Function 'validateNonEmptyString(_:fieldName:context:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Base/BaseUseCase.swift:48:19: warning: Function 'validateUUID(_:fieldName:context:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Base/BaseUseCase.swift:60:19: warning: Function 'validateMinimumLength(_:fieldName:minimumLength:context:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Base/BaseUseCase.swift:74:19: warning: Function 'logExecutionStart(operation:context:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Base/BaseUseCase.swift:82:19: warning: Function 'logExecutionSuccess(operation:context:additionalInfo:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Base/BaseUseCase.swift:93:19: warning: Function 'logAndWrapError(operation:context:error:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/EventKit/DetectEventsAndRemindersUseCase.swift:15:9: warning: Property 'totalDetections' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/EventKit/DetectEventsAndRemindersUseCase.swift:17:9: warning: Property 'highConfidenceCount' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/EventKit/DetectEventsAndRemindersUseCase.swift:19:9: warning: Property 'analysisMode' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/EventKit/DetectEventsAndRemindersUseCase.swift:21:9: warning: Property 'detectionQuality' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/EventKit/DetectEventsAndRemindersUseCase.swift:30:10: warning: Enum 'DetectionQuality' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/EventKit/DetectEventsAndRemindersUseCase.swift:54:17: warning: Property 'eventBus' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/EventKit/DetectEventsAndRemindersUseCase.swift:234:9: warning: Parameter 'memoId' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/EventKit/DetectEventsAndRemindersUseCase.swift:276:9: warning: Parameter 'memoId' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/EventKit/DetectEventsAndRemindersUseCase.swift:421:6: warning: Enum 'EventReminderAnalysisType' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Memo/DeleteMemoUseCase.swift:34:17: warning: Initializer 'init(memoRepository:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Memo/HandleNewRecordingUseCase.swift:13:17: warning: Property 'eventBus' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Memo/HandleNewRecordingUseCase.swift:129:18: warning: Function 'verifyRecordingProcessed(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Memo/HandleNewRecordingUseCase.swift:149:9: warning: Property 'size' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Memo/HandleNewRecordingUseCase.swift:150:9: warning: Property 'creationDate' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Memo/HandleNewRecordingUseCase.swift:151:9: warning: Property 'format' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Recording/RecordingFlowTestUseCase.swift:13:13: warning: Class 'RecordingFlowTestUseCase' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Recording/RequestMicrophonePermissionUseCase.swift:7:10: warning: Function 'getCurrentStatus()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/System/DeleteAllUserDataUseCase.swift:7:10: warning: Protocol 'DeleteAllUserDataUseCaseProtocol' is redundant as it's never used as an existential type
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/System/DeleteAllUserDataUseCase.swift:12:39: warning: Protocol 'DeleteAllUserDataUseCaseProtocol' conformance is redundant
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Transcription/StartTranscriptionUseCase.swift:34:17: warning: Property 'clientLanguageService' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Transcription/StartTranscriptionUseCase.swift:433:18: warning: Function 'transcribeChunksWithProgress(operationId:chunks:baseFraction:fractionBudget:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Transcription/StartTranscriptionUseCase.swift:457:18: warning: Function 'aggregateResults(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Transcription/StartTranscriptionUseCase.swift:521:18: warning: Function 'saveAndComplete(operationId:memoId:text:context:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Transcription/TranscriptionAggregator.swift:7:9: warning: Property 'totalChunks' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Transcription/TranscriptionAggregator.swift:8:9: warning: Property 'failures' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Transcription/TranscriptionAggregator.swift:11:6: warning: Enum 'ChunkResult' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Transcription/TranscriptionAggregator.swift:17:9: warning: Property 'segment' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Transcription/TranscriptionAggregator.swift:18:9: warning: Property 'error' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Transcription/TranscriptionAggregator.swift:19:9: warning: Property 'retryable' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Domain/UseCases/Transcription/TranscriptionAggregator.swift:47:10: warning: Function 'handlePartialFailures(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Analysis/UI/Components/SonoraInsightCard.swift:300:9: warning: Property 'timestamp' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Analysis/UI/DistillResultView.swift:10:9: warning: Property 'envelope' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Analysis/UI/DistillResultView.swift:493:8: warning: Struct 'DistillResultView_Previews' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Analysis/ViewModels/AnalysisViewModel.swift:5:13: warning: Class 'AnalysisViewModel' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/Components/DragSelectionAccessibility.swift:37:17: warning: Function 'announceSelectionStart()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/Components/DragSelectionAccessibility.swift:48:17: warning: Function 'announceSelectionProgress(count:total:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/Components/DragSelectionAccessibility.swift:71:17: warning: Function 'announceSelectionCancelled()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/Components/DragSelectionAccessibility.swift:87:17: warning: Function 'selectRange(from:to:viewModel:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/Components/DragSelectionAccessibility.swift:153:41: warning: Parameter 'memo' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/Components/SelectedRowBackground.swift:6:9: warning: Property 'colorScheme' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/Components/SonoraMemocCard.swift:36:17: warning: Property 'transcriptionState' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/Components/SonoraMemocCard.swift:197:16: warning: Property 'timeOnly' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoDetailView.swift:351:17: warning: Property 'transcriptionSectionView' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoDetailView.swift:588:18: warning: Function 'shareText(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoListConstants.swift:18:35: warning: Parameter 'colorScheme' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoListConstants.swift:43:10: warning: Enum 'ListStyling' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:32:17: warning: Property 'transcriptionState' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:40:18: warning: Enum 'Typography' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:56:18: warning: Enum 'Colors' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:86:20: warning: Property 'verticalPadding' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:89:20: warning: Property 'titleToMetadataSpacing' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:92:20: warning: Property 'metadataElementSpacing' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:95:20: warning: Property 'iconToTextSpacing' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:98:20: warning: Property 'titleLineLimit' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:104:20: warning: Property 'accentLineWidth' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:107:20: warning: Property 'accentLineCornerRadius' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:110:20: warning: Property 'accentLineSpacing' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoRowView.swift:258:18: warning: Enum 'SystemIconNames' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemoUIConstants.swift:34:6: warning: Enum 'TranscriptionStateKey' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemosView.swift:13:9: warning: Property 'popToRoot' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemosView.swift:251:18: warning: Function 'contextualTranscriptionActions(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemosView.swift:258:18: warning: Function 'transcribeButton(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemosView.swift:263:18: warning: Function 'retryTranscriptionButton(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemosView.swift:270:18: warning: Function 'deleteButton(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/UI/MemosView.swift:276:17: warning: Property 'bottomDeleteBar' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewModel.swift:29:17: warning: Property 'eventSubscriptionId' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewModel.swift:440:10: warning: Function 'cancelOperation(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewModel.swift:448:10: warning: Function 'cancelAllOperations()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewModel.swift:750:9: warning: Property 'debugInfo' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewModel.swift:935:18: warning: Function 'getShareableAnalysisText()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewState.swift:39:13: warning: Property 'isInProgress' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewState.swift:43:13: warning: Property 'isFailed' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewState.swift:107:13: warning: Property 'hasActiveOperations' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewState.swift:139:9: warning: Property 'hasCompletedTranscription' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewState.swift:144:9: warning: Property 'hasAnalysisAvailable' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewState.swift:149:9: warning: Property 'hasActiveOperations' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewState.swift:160:19: warning: Function 'reset()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewState.swift:175:19: warning: Function 'updateTranscriptionProgress(percent:step:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewState.swift:181:19: warning: Function 'updateAnalysisProgress(isAnalyzing:error:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoDetailViewState.swift:187:19: warning: Function 'configureShareOptions(hasTranscription:hasAnalysis:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:59:9: warning: Property 'emptyStateTitle' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:64:9: warning: Property 'emptyStateSubtitle' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:69:9: warning: Property 'emptyStateIcon' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:86:9: warning: Property 'canDelete' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:96:9: warning: Property 'selectedMemoIds' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:138:9: warning: Property 'playingMemo' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:143:9: warning: Property 'isPlaying' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:401:10: warning: Function 'deleteMemos(at:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:419:10: warning: Function 'playMemo(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:622:10: warning: Function 'playButtonIcon(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:631:10: warning: Function 'isMemoPaying(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:636:10: warning: Function 'transcriptionActionText(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:649:10: warning: Function 'transcriptionActionColor(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:661:10: warning: Function 'canPerformTranscriptionAction(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:667:10: warning: Function 'performTranscriptionAction(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:678:10: warning: Function 'onViewAppear()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:683:10: warning: Function 'onViewDisappear()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:820:10: warning: Function 'memoRowState(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:836:10: warning: Function 'memoWithState(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:908:9: warning: Property 'canDelete' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:926:10: warning: Function 'state(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:954:10: warning: Function 'isPlaying(memo:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:959:10: warning: Function 'playButtonIcon(for:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:993:9: warning: Property 'displayName' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:994:9: warning: Property 'filename' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:995:9: warning: Property 'creationDate' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:996:9: warning: Property 'fileURL' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:1000:8: warning: Struct 'MemoRowState' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:1028:9: warning: Property 'debugInfo' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:1052:10: warning: Function 'cleanup()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/UI/Components/OnboardingPageView.swift:14:9: warning: Property 'primaryButtonStyle' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/UI/Components/OnboardingPageView.swift:28:14: warning: Enum case 'secondary' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/UI/Components/OnboardingPageView.swift:29:14: warning: Enum case 'warning' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/UI/Components/OnboardingPageView.swift:31:13: warning: Property 'backgroundColor' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/UI/Components/OnboardingPageView.swift:42:13: warning: Property 'foregroundColor' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/UI/OnboardingView.swift:12:42: warning: Property 'focusedElement' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/UI/OnboardingView.swift:18:14: warning: Enum case 'primaryButton' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/UI/OnboardingView.swift:19:14: warning: Enum case 'nextButton' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/UI/OnboardingView.swift:20:14: warning: Enum case 'backButton' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/UI/OnboardingView.swift:21:14: warning: Enum case 'skipButton' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/ViewModels/OnboardingViewModel.swift:83:20: warning: Property 'isLoading' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/ViewModels/OnboardingViewModel.swift:94:9: warning: Property 'isFirstPage' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/ViewModels/OnboardingViewModel.swift:102:9: warning: Property 'canGoNext' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/ViewModels/OnboardingViewModel.swift:114:9: warning: Property 'progressPercentage' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/ViewModels/OnboardingViewModel.swift:148:10: warning: Function 'goToPreviousPage()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/ViewModels/OnboardingViewModel.swift:181:10: warning: Function 'getPersonalizedGreeting()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/ViewModels/OnboardingViewModel.swift:215:10: warning: Function 'resetUserName()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Onboarding/ViewModels/OnboardingViewModel.swift:227:9: warning: Property 'debugInfo' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Operations/ViewModels/OperationStatusViewModel.swift:9:13: warning: Class 'OperationStatusViewModel' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Operations/ViewModels/OperationStatusViewModel.swift:265:11: warning: Extension 'OperationStatusViewModel' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Operations/ViewModels/OperationStatusViewModel.swift:302:11: warning: Extension 'OperationStatusViewModel' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/UI/Components/DynamicPromptCard.swift:5:9: warning: Property 'onRefresh' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/UI/Components/FallbackPromptCard.swift:4:9: warning: Property 'onRefresh' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/UI/SonicBloomRecordButton.swift:18:9: warning: Property 'progress' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/UI/SonicBloomRecordButton.swift:35:17: warning: Property 'bloomAnimationDuration' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/UI/SonicBloomRecordButton.swift:374:8: warning: Struct 'SonicBloomRecordButton_Previews' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/PromptViewModel.swift:56:10: warning: Function 'toggleFavorite()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:42:9: warning: Property 'recordingStatusText' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:52:9: warning: Property 'formattedRemainingTime' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:57:9: warning: Property 'quotaStatusText' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:60:9: warning: Property 'recordingButtonColor' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:65:9: warning: Property 'shouldShowRecordingIndicator' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:70:9: warning: Property 'enhancedStatusText' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:75:9: warning: Property 'systemLoadText' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:88:9: warning: Property 'canCancelRecording' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:342:10: warning: Function 'cancelRecording()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:428:10: warning: Function 'formatTime(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:455:10: warning: Function 'onViewDisappear()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:473:9: warning: Property 'recordingButtonIconName' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:478:9: warning: Property 'recordingButtonScale' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:483:9: warning: Property 'countdownScale' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:488:9: warning: Property 'statusTextColor' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:501:9: warning: Property 'countdownTextColor' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:554:9: warning: Property 'debugInfo' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:569:10: warning: Function 'testRapidButtonTapping()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:596:10: warning: Function 'retryLastOperation()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewModel.swift:615:9: warning: Property 'isLoading' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:32:13: warning: Property 'recordingButtonColor' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:37:13: warning: Property 'shouldShowRecordingIndicator' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:49:13: warning: Property 'statusText' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:73:13: warning: Property 'formattedRemainingTime' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:120:13: warning: Property 'isLimited' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:129:13: warning: Property 'statusText' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:147:9: warning: Property 'recordingStatusText' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:173:9: warning: Property 'enhancedStatusText' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:218:19: warning: Function 'reset()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:228:19: warning: Function 'updateRecordingProgress(time:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:233:19: warning: Function 'startCountdown(remainingTime:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:239:19: warning: Function 'updateCountdown(remainingTime:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:247:19: warning: Function 'updatePermission(status:hasPermission:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:254:19: warning: Function 'setError(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Recording/ViewModels/RecordingViewState.swift:259:19: warning: Function 'clearError()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/Models/WhisperModelInfo.swift:18:13: warning: Property 'color' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/UI/Components/TranscriptionServiceToggle.swift:5:30: warning: Property 'appConfig' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/UI/Components/TranscriptionServiceToggle.swift:9:17: warning: Property 'isLocalServiceAvailable' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/UI/Components/TranscriptionServiceToggle.swift:13:17: warning: Property 'selectedModel' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/UI/Components/TranscriptionServiceToggle.swift:17:17: warning: Property 'selectedModelDownloadState' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/UI/Components/TranscriptionServiceToggle.swift:47:17: warning: Property 'simplifiedToggle' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/UI/Components/TranscriptionServiceToggle.swift:102:17: warning: Property 'unavailableLocalServiceSection' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/UI/Components/TranscriptionServiceToggle.swift:129:17: warning: Property 'localServiceUnavailableMessage' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/UI/Components/TranscriptionServiceToggle.swift:147:37: warning: Parameter 'service' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/ViewModels/PrivacyController.swift:7:17: warning: Property 'resolver' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/ViewModels/PrivacyController.swift:10:17: warning: Property 'logger' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/ViewModels/PrivacyController.swift:50:9: warning: Property 'hasDataToExport' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/ViewModels/PrivacyController.swift:151:6: warning: Enum 'PrivacyControllerError' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Features/Settings/ViewModels/PrivacyController.swift:164:8: warning: Struct 'StubDataExportService' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Models/AnalysisModels.swift:48:9: warning: Property 'isDistillComponent' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Models/AnalysisModels.swift:85:17: warning: Property 'color' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Models/AnalysisModels.swift:127:9: warning: Property 'sentimentColor' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Models/AnalysisModels.swift:259:17: warning: Property 'sortOrder' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Models/TranscriptionState.swift:34:9: warning: Property 'errorMessage' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Models/TranscriptionState.swift:52:9: warning: Property 'iconName' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Models/TranscriptionState.swift:65:9: warning: Property 'iconColor' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Presentation/Views/TierSectionView.swift:126:9: warning: Property 'tier' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Presentation/Views/TierSectionView.swift:131:9: warning: Property 'isSupported' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Views/Components/ErrorAlertModifier.swift:106:9: warning: Property 'onRetry' is assigned, but never used
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Views/Components/ErrorAlertModifier.swift:185:9: warning: Property 'isLoading' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Views/Components/ErrorAlertModifier.swift:187:10: warning: Function 'handleError(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Views/Components/ErrorAlertModifier.swift:189:10: warning: Function 'retryLastOperation()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Views/Components/ErrorAlertModifier.swift:195:10: warning: Function 'handleError(_:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Views/Components/ErrorAlertModifier.swift:203:10: warning: Function 'retryLastOperation()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Views/Components/NotificationBanner.swift:181:17: warning: Function 'networkError(compact:onRetry:onDismiss:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Views/Components/UnifiedStateView.swift:218:17: warning: Function 'noTranscription()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Views/Components/UnifiedStateView.swift:229:17: warning: Function 'noAnalysis()' is unused
+/Users/samuelkahessay/Desktop/Sonora/Sonora/Views/Components/UnifiedStateView.swift:240:17: warning: Function 'noSearchResults(query:)' is unused
+/Users/samuelkahessay/Desktop/Sonora/SonoraLiveActivity/StopRecordingIntent.swift:10:16: warning: Property 'description' is unused

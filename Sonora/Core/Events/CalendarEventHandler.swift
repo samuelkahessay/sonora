@@ -6,7 +6,6 @@ import EventKit
 final class CalendarEventHandler {
     // MARK: - Dependencies
     private let logger: any LoggerProtocol
-    private let eventBus: any EventBusProtocol
     private let subscriptionManager: EventSubscriptionManager
     private let eventKitRepository: any EventKitRepository
     private let permissionService: any EventKitPermissionServiceProtocol
@@ -26,7 +25,6 @@ final class CalendarEventHandler {
         detectUseCase: any DetectEventsAndRemindersUseCaseProtocol
     ) {
         self.logger = logger
-        self.eventBus = eventBus
         self.subscriptionManager = EventSubscriptionManager(eventBus: eventBus)
         self.eventKitRepository = eventKitRepository
         self.permissionService = permissionService
@@ -103,12 +101,6 @@ final class CalendarEventHandler {
         guard !isEnabled else { return }
         isEnabled = true
         setupEventSubscriptions()
-    }
-
-    func disable() {
-        guard isEnabled else { return }
-        isEnabled = false
-        subscriptionManager.cleanup()
     }
 
     // MARK: - Debug

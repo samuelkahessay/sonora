@@ -254,28 +254,7 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
     
     // MARK: - Helper Methods
     
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .medium
-        return formatter.string(from: date)
-    }
-    
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-    
-    private func dismissalPolicyDescription(_ policy: ActivityDismissalPolicy) -> String {
-        switch policy {
-        case .immediate:
-            return "immediately"
-        case .afterDelay(let seconds):
-            return "after \(seconds) seconds"
-        case .userDismissal:
-            return "when user dismisses"
-        }
-    }
+    // removed unused formatting helpers
 }
 
 // MARK: - Future ActivityKit Integration Notes

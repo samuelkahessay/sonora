@@ -157,76 +157,7 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
         }
     }
     
-    func transcribeChunks(segments: [VoiceSegment], audioURL: URL) async throws -> [ChunkTranscriptionResult] {
-        return try await transcribeChunks(segments: segments, audioURL: audioURL, language: nil)
-    }
-    
-    func transcribeChunks(segments: [VoiceSegment], audioURL: URL, language: String?) async throws -> [ChunkTranscriptionResult] {
-        return try await AIModelCoordinator.shared.acquireTranscribing { [weak self] in
-            guard let self = self else { throw WhisperKitTranscriptionError.transcriptionFailed("Service deallocated") }
-            await AIModelCoordinator.shared.registerUnloadHandlers(unloadWhisper: { [weak self] in self?.modelManager.unloadModel() })
-            self.logger.info("🎤 Starting WhisperKit chunk transcription for \(segments.count) segments")
-
-            // Use model manager for initialization
-            guard let whisperKit = try await self.modelManager.getWhisperKit() else {
-                throw WhisperKitTranscriptionError.initializationFailed("WhisperKit not available from model manager")
-            }
-
-            var results: [ChunkTranscriptionResult] = []
-            do {
-                let audioData = try await self.loadAudioData(from: audioURL)
-                let sampleRate = 16000.0
-                for segment in segments {
-                    do {
-                        let startSample = Int(segment.startTime * sampleRate)
-                        let endSample = Int(segment.endTime * sampleRate)
-                        let segmentData = self.extractAudioSegment(from: audioData, startSample: startSample, endSample: endSample)
-                        #if canImport(WhisperKit)
-                        let options = self.buildDecodingOptions(language: language)
-                        let segmentResults: [TranscriptionResult]
-                        #if compiler(>=6)
-                        segmentResults = try await whisperKit.transcribe(audioArray: segmentData, decodeOptions: options) { @Sendable [weak self] _ in
-                            guard let self = self else { return nil }
-                            Task { @MainActor in
-                                let fraction = whisperKit.progress.fractionCompleted
-                                self.onProgress?(fraction)
-                            }
-                            return Task.isCancelled ? false : nil
-                        }
-                        #else
-                        segmentResults = try await whisperKit.transcribe(
-                            audioArray: segmentData,
-                            decodeOptions: options
-                        )
-                        #endif
-                        #else
-                        let segmentResults = try await whisperKit.transcribe(audioArray: segmentData)
-                        #endif
-                        let text = self.extractTextFromResults(segmentResults)
-                        let detectedLanguage = self.extractLanguageFromResults(segmentResults)
-                        let confidence = self.extractConfidenceFromResults(segmentResults)
-                        let response = TranscriptionResponse(text: text, detectedLanguage: detectedLanguage, confidence: confidence, avgLogProb: nil, duration: segment.endTime - segment.startTime)
-                        results.append(ChunkTranscriptionResult(segment: segment, response: response))
-                    } catch {
-                        self.logger.warning("🎤 Failed to transcribe segment \(segment.startTime)-\(segment.endTime): \(error)")
-                        let response = TranscriptionResponse(text: "", detectedLanguage: nil, confidence: 0.0, avgLogProb: nil, duration: segment.endTime - segment.startTime)
-                        results.append(ChunkTranscriptionResult(segment: segment, response: response))
-                    }
-                }
-                self.logger.info("🎤 WhisperKit chunk transcription completed: \(results.count) segments processed")
-                self.modelManager.unloadModel()
-                self.logger.info("🎤 WhisperKit model unloaded after chunk transcription")
-                return results
-            } catch {
-                self.logger.error("🎤 WhisperKit chunk transcription failed",
-                            category: .transcription,
-                            context: LogContext(additionalInfo: ["audioFile": audioURL.lastPathComponent, "segmentCount": "\(segments.count)"]),
-                            error: error)
-                self.modelManager.unloadModel()
-                throw WhisperKitTranscriptionError.transcriptionFailed(error.localizedDescription)
-            }
-        }
-    }
+    // Consolidated surface: callers perform chunking and call transcribe(url:language:) per chunk.
     
     // MARK: - Audio Processing
     
@@ -305,16 +236,7 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
         }
     }
     
-    private func extractAudioSegment(from audioData: [Float], startSample: Int, endSample: Int) -> [Float] {
-        let safeStart = max(0, startSample)
-        let safeEnd = min(audioData.count, endSample)
-        
-        guard safeStart < safeEnd else {
-            return []
-        }
-        
-        return Array(audioData[safeStart..<safeEnd])
-    }
+    // Removed chunk extraction helper; not needed with consolidated API.
     
     // MARK: - Result Processing
     

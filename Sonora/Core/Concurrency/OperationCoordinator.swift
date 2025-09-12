@@ -58,9 +58,6 @@ public actor OperationCoordinator {
     private var lastCleanupTime = Date()
     private var cleanupTimer: Task<Void, Never>?
     
-    /// EventBus for coarse operation events (e.g. recording started/completed, transcription progress)
-    private let eventBus: any EventBusProtocol
-    
     /// Logger for diagnostics and debugging
     private let logger: any LoggerProtocol
     
@@ -81,10 +78,8 @@ public actor OperationCoordinator {
     
     // MARK: - Initialization
     private init(
-        eventBus: any EventBusProtocol = EventBus.shared,
         logger: any LoggerProtocol = Logger.shared
     ) {
-        self.eventBus = eventBus
         self.logger = logger
         
         // Start the sliding window cleanup timer after initialization

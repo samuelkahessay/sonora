@@ -272,11 +272,11 @@ struct RecordingView: View {
     private func getPermissionDescription() -> String {
         switch viewModel.permissionStatus {
         case .notDetermined:
-            return SonoraBrandVoice.Permissions.microphoneDescription
+            return "Sonora needs microphone access to capture your voice."
         case .denied:
-            return SonoraBrandVoice.Permissions.microphoneDeniedDescription
+            return "Enable microphone access in Settings to record voice memos."
         case .restricted:
-            return SonoraBrandVoice.Permissions.restrictedDescription
+            return "Microphone access is restricted. Check device settings."
         case .granted:
             return "Your voice is ready to be captured"
         }
@@ -286,7 +286,7 @@ struct RecordingView: View {
     private func getPermissionButton() -> some View {
         switch viewModel.permissionStatus {
         case .notDetermined:
-            Button(SonoraBrandVoice.Permissions.allowMicrophone) { 
+            Button("Enable Voice Capture") { 
                 HapticManager.shared.playSelection()
                 viewModel.requestPermission()
             }
@@ -296,7 +296,7 @@ struct RecordingView: View {
             .accessibilityHint("Double tap to allow Sonora to listen and capture your thoughts")
             
         case .denied:
-            Button(SonoraBrandVoice.Permissions.openSettings) { 
+            Button("Open Settings") { 
                 HapticManager.shared.playSelection()
                 viewModel.openSettings()
             }
@@ -305,7 +305,7 @@ struct RecordingView: View {
             .accessibilityHint("Double tap to open Settings where you can enable microphone access for voice capture")
             
         case .restricted:
-            Button(SonoraBrandVoice.Permissions.checkRestrictions) { 
+            Button("Review Settings") { 
                 HapticManager.shared.playSelection()
                 viewModel.openSettings()
             }
@@ -337,7 +337,7 @@ struct RecordingView: View {
         if viewModel.isRecording {
             return "Stop capturing your thoughts"
         } else {
-            return SonoraBrandVoice.Recording.readyToRecord
+            return "Share your thoughts"
         }
     }
     

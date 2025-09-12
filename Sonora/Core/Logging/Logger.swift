@@ -354,21 +354,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
         
         return components.joined(separator: " ")
     }
-    
-    private func sanitizeMessage(_ message: String) -> String {
-        // Legacy method for backward compatibility - now uses cache
-        let truncated = String(message.prefix(maxMessageLength))
-        let messageKey = NSString(string: truncated)
         
-        if let cached = sanitizationCache.object(forKey: messageKey) {
-            return String(cached)
-        }
-        
-        let sanitized = performSanitization(truncated)
-        sanitizationCache.setObject(NSString(string: sanitized), forKey: messageKey)
-        return sanitized
-    }
-    
     private func performSanitization(_ message: String) -> String {
         var sanitized = message
         
@@ -433,7 +419,14 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     }
     
     private func sendToRemoteService(_ message: String, url: URL, level: LogLevel, category: LogCategory) {
-        // Placeholder for remote logging implementation
+        // No-op remote logging; acknowledge parameters to avoid unused warnings
+        os_log("Remote logging not configured (%{public}@) [%{public}@/%{public}@]: %{public}@",
+               log: osLog,
+               type: .info,
+               url.absoluteString,
+               level.displayName,
+               category.rawValue,
+               message)
     }
 }
 

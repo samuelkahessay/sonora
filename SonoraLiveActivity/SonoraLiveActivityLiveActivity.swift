@@ -182,11 +182,7 @@ private func countdownString(_ remaining: TimeInterval) -> String {
     let t = max(0, Int(remaining))
     return String(format: "%d:%02d", t/60, t%60)
 }
-private func shortCountdown(_ remaining: TimeInterval) -> String { countdownString(remaining) }
-private func timerString(from start: Date, isCountdown: Bool, remaining: TimeInterval?) -> String {
-    if isCountdown, let rem = remaining { return "Ends in " + countdownString(rem) }
-    return elapsedString(from: start)
-}
+// removed unused helpers shortCountdown and timerString
 
 // Deterministic mini-waveform bar heights (no random). Level: 0..1
 // Expressive, deterministic bar heights driven by level and elapsed time

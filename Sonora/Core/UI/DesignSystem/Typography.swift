@@ -135,9 +135,7 @@ enum IconSize: CGFloat, CaseIterable {
     }
     
     /// Frame size for SwiftUI views
-    var frame: CGSize {
-        CGSize(width: rawValue, height: rawValue)
-    }
+    // removed unused frame property
 }
 
 /// Icon style modifiers for consistent appearance
@@ -158,16 +156,6 @@ extension Image {
 extension View {
     /// Apply standard font weight for status indicators
     func statusIndicatorStyle() -> some View {
-        self.fontWeight(.medium)
-    }
-    
-    /// Apply standard font weight for secondary text
-    func secondaryTextStyle() -> some View {
-        self.fontWeight(.regular)
-    }
-    
-    /// Apply standard font weight for UI labels
-    func labelStyle() -> some View {
         self.fontWeight(.medium)
     }
 }

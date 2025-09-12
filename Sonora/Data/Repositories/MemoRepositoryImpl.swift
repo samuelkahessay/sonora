@@ -35,24 +35,15 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     private let memosDirectoryPath: URL
     // Legacy sidecar metadata removed with SwiftData migration
     
-    // MARK: - Transcription Use Cases
-    private let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
-    private let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
-    private let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
+    // MARK: - Transcription dependencies
     
     // MARK: - Initialization
     init(
         context: ModelContext,
-        transcriptionRepository: any TranscriptionRepository,
-        startTranscriptionUseCase: StartTranscriptionUseCaseProtocol,
-        getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
-        retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
+        transcriptionRepository: any TranscriptionRepository
     ) {
         self.context = context
         self.transcriptionRepository = transcriptionRepository
-        self.startTranscriptionUseCase = startTranscriptionUseCase
-        self.getTranscriptionStateUseCase = getTranscriptionStateUseCase
-        self.retryTranscriptionUseCase = retryTranscriptionUseCase
 
         self.memosDirectoryPath = documentsPath.appendingPathComponent("Memos")
         createDirectoriesIfNeeded()

@@ -29,17 +29,7 @@ final class ReportingTranscriptionService: TranscriptionAPI {
         return resp
     }
 
-    func transcribeChunks(segments: [VoiceSegment], audioURL: URL) async throws -> [ChunkTranscriptionResult] {
-        let results = try await base.transcribeChunks(segments: segments, audioURL: audioURL)
-        await saveSource()
-        return results
-    }
-
-    func transcribeChunks(segments: [VoiceSegment], audioURL: URL, language: String?) async throws -> [ChunkTranscriptionResult] {
-        let results = try await base.transcribeChunks(segments: segments, audioURL: audioURL, language: language)
-        await saveSource()
-        return results
-    }
+    // Consolidated surface: callers perform chunking and call transcribe(url:language:) per chunk.
 
     private func saveSource() async {
         guard let memoId = CurrentTranscriptionContext.memoId else { return }

@@ -21,9 +21,6 @@ enum SonoraDesignSystem {
         /// Breathing room - minimum margins for mental calm (24pt)
         static let breathingRoom: CGFloat = 24
         
-        /// Base grid unit for all spacing calculations
-        static let gridUnit: CGFloat = 8
-        
         /// Extra small spacing (4pt)
         static let xs: CGFloat = 4
         
@@ -42,15 +39,9 @@ enum SonoraDesignSystem {
         /// Extra extra large spacing (48pt)
         static let xxl: CGFloat = 48
         
-        /// Massive spacing for hero sections (64pt)
-        static let massive: CGFloat = 64
-        
         // Component-specific spacing
         static let cardRadius: CGFloat = 8
-        static let waveformHeight: CGFloat = 120
-        static let recordButtonSize: CGFloat = 160
         static let iconToTextSpacing: CGFloat = 6
-        static let sectionSpacing: CGFloat = 32
     }
     
     // MARK: - Typography System
@@ -115,14 +106,8 @@ enum SonoraDesignSystem {
         
         // MARK: - UI Elements
         
-        /// Button text styling
-        static let button = Font.system(size: 16, weight: .medium, design: .default)
-        
         /// Navigation title styling (system serif headline)
         static let navigationTitle = Font(serifUIFont(for: .headline))
-        
-        /// Tab bar item styling
-        static let tabBarItem = Font.system(size: 10, weight: .medium, design: .default)
     }
     
     // MARK: - Animation System
@@ -159,113 +144,28 @@ enum SonoraDesignSystem {
         /// Quick ease for immediate feedback
         static let quickFeedback = SwiftUI.Animation.easeInOut(duration: 0.25)
         
-        /// Waveform pulse animation for recording visualization
-        static let waveformPulse = SwiftUI.Animation
-            .easeInOut(duration: 1.0)
-            .repeatForever(autoreverses: true)
-        
         /// Breathing animation for calm, meditative elements
         static let breathing = SwiftUI.Animation
             .easeInOut(duration: 2.0)
             .repeatForever(autoreverses: true)
         
         // MARK: - Timing Functions
-        
-        /// Duration for quick micro-interactions
-        static let microDuration: TimeInterval = 0.15
-        
-        /// Duration for standard transitions
-        static let standardDuration: TimeInterval = 0.3
-        
-        /// Duration for complex state changes
-        static let complexDuration: TimeInterval = 0.6
-        
-        /// Duration for dramatic reveals
-        static let dramaticDuration: TimeInterval = 1.0
+        // (unused explicit duration constants removed)
     }
     
     // MARK: - Shadow & Elevation
     
-    /// Shadow definitions for creating subtle depth
-    struct Shadow {
-        let color: Color
-        let radius: CGFloat
-        let x: CGFloat
-        let y: CGFloat
-        
-        init(color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-            self.color = color
-            self.radius = radius
-            self.x = x
-            self.y = y
-        }
-        
-        func apply(to view: some View) -> some View {
-            view.shadow(color: color, radius: radius, x: x, y: y)
-        }
-    }
-    
-    /// Preset shadow styles
-    enum Shadows {
-        /// Gentle shadow for floating elements
-        static let gentle = Shadow(
-            color: Color.black.opacity(0.08),
-            radius: 8,
-            x: 0,
-            y: 2
-        )
-        
-        /// Medium shadow for elevated cards
-        static let medium = Shadow(
-            color: Color.black.opacity(0.12),
-            radius: 12,
-            x: 0,
-            y: 4
-        )
-        
-        /// Strong shadow for prominent elements
-        static let strong = Shadow(
-            color: Color.black.opacity(0.16),
-            radius: 16,
-            x: 0,
-            y: 6
-        )
-        
-        /// Recording button shadow with brand warmth
-        static let recordButton = Shadow(
-            color: Color.insightGold.opacity(0.25),
-            radius: 12,
-            x: 0,
-            y: 4
-        )
-    }
+    // Shadow presets struct/enum removed; keep simple view modifiers below
     
     // MARK: - Layout Constraints
     
     /// Layout specifications for consistent component sizing
     enum Layout {
         
-        // Button dimensions
-        static let buttonHeight: CGFloat = 44
-        static let buttonMinWidth: CGFloat = 88
-        static let largeButtonHeight: CGFloat = 56
-        
-        // Card dimensions
-        static let cardMinHeight: CGFloat = 80
-        static let cardMaxWidth: CGFloat = 400
-        
-        // List and grid
-        static let listRowHeight: CGFloat = 72
-        static let gridItemSpacing: CGFloat = 16
-        
         // Icon sizes
-        static let iconSmall: CGFloat = 16
-        static let iconMedium: CGFloat = 24
-        static let iconLarge: CGFloat = 32
         static let iconExtraLarge: CGFloat = 48
         
         // Content constraints
-        static let maxContentWidth: CGFloat = 600
         static let minTouchTarget: CGFloat = 44
     }
 }
@@ -279,11 +179,6 @@ extension View {
     /// Apply standard breathing room padding
     func breathingRoom() -> some View {
         self.padding(SonoraDesignSystem.Spacing.breathingRoom)
-    }
-    
-    /// Apply grid-based padding
-    func gridPadding(_ multiplier: CGFloat = 1) -> some View {
-        self.padding(SonoraDesignSystem.Spacing.gridUnit * multiplier)
     }
     
     // MARK: - Typography Modifiers
@@ -314,21 +209,6 @@ extension View {
     }
     
     // MARK: - Animation Modifiers
-    
-    /// Apply bloom animation with value binding
-    func bloomAnimation<V: Equatable>(value: V) -> some View {
-        self.animation(SonoraDesignSystem.Animation.bloomTransition, value: value)
-    }
-    
-    /// Apply gentle interaction animation
-    func gentleAnimation<V: Equatable>(value: V) -> some View {
-        self.animation(SonoraDesignSystem.Animation.gentleSpring, value: value)
-    }
-    
-    /// Apply energetic feedback animation
-    func energeticAnimation<V: Equatable>(value: V) -> some View {
-        self.animation(SonoraDesignSystem.Animation.energeticSpring, value: value)
-    }
     
     // MARK: - Shadow Modifiers
     
@@ -363,19 +243,6 @@ extension View {
     }
     
     // MARK: - Layout Modifiers
-    
-    /// Apply standard card styling
-    func cardStyle() -> some View {
-        self
-            .background(Color.backgroundElevated)
-            .cornerRadius(SonoraDesignSystem.Spacing.cardRadius)
-            .cardShadow()
-    }
-    
-    /// Apply maximum content width constraint
-    func maxContentWidth() -> some View {
-        self.frame(maxWidth: SonoraDesignSystem.Layout.maxContentWidth)
-    }
     
     /// Apply minimum touch target size
     func minTouchTarget() -> some View {
@@ -412,144 +279,3 @@ enum BodySize {
         }
     }
 }
-
-// (Removed duplicate Shadow helper; presets are under SonoraDesignSystem.Shadows)
-
-// MARK: - Preview Support
-
-#if DEBUG
-struct SonoraDesignSystem_Previews: PreviewProvider {
-    static var previews: some View {
-        ScrollView {
-            VStack(spacing: SonoraDesignSystem.Spacing.xl) {
-                typographySection
-                spacingSection
-                colorSection
-                shadowSection
-            }
-            .breathingRoom()
-        }
-        .background(Color.backgroundPrimary)
-        .previewDisplayName("Sonora Design System")
-    }
-    
-    static var typographySection: some View {
-        VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.md) {
-            Text("Typography")
-                .headingStyle(.medium)
-            
-            VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.sm) {
-                Text("Heading Large")
-                    .headingStyle(.large)
-                
-                Text("Heading Medium")
-                    .headingStyle(.medium)
-                
-                Text("Heading Small")
-                    .headingStyle(.small)
-                
-                Text("Body Large - Lorem ipsum dolor sit amet, consectetur adipiscing elit.")
-                    .bodyStyle(.large)
-                
-                Text("Body Regular - Lorem ipsum dolor sit amet, consectetur adipiscing elit.")
-                    .bodyStyle(.regular)
-                
-                Text("Body Small - Lorem ipsum dolor sit amet.")
-                    .bodyStyle(.small)
-                
-                Text("Caption text")
-                    .bodyStyle(.caption)
-                
-                Text("\"Wisdom flows through mindful listening.\"")
-                    .serifStyle()
-                
-                Text("12:34:56")
-                    .monospacedStyle()
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    
-    static var spacingSection: some View {
-        VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.md) {
-            Text("Spacing System")
-                .headingStyle(.medium)
-            
-            VStack(spacing: SonoraDesignSystem.Spacing.xs) {
-                spacingExample("Breathing Room", SonoraDesignSystem.Spacing.breathingRoom)
-                spacingExample("Extra Large", SonoraDesignSystem.Spacing.xl)
-                spacingExample("Large", SonoraDesignSystem.Spacing.lg)
-                spacingExample("Medium", SonoraDesignSystem.Spacing.md)
-                spacingExample("Small", SonoraDesignSystem.Spacing.sm)
-                spacingExample("Extra Small", SonoraDesignSystem.Spacing.xs)
-            }
-        }
-    }
-    
-    static func spacingExample(_ name: String, _ size: CGFloat) -> some View {
-        HStack {
-            Rectangle()
-                .fill(Color.insightGold)
-                .frame(width: size, height: 20)
-            Text("\(name) - \(Int(size))pt")
-                .bodyStyle(.small)
-            Spacer()
-        }
-    }
-    
-    static var colorSection: some View {
-        VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.md) {
-            Text("Brand Colors")
-                .headingStyle(.medium)
-            
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                colorSwatch("Primary", Color.brandPrimary)
-                colorSwatch("Secondary", Color.brandSecondary)
-                colorSwatch("Accent", Color.sparkOrange)
-                colorSwatch("Recording", Color.recordingActive)
-                colorSwatch("Insight", Color.insightHighlight)
-                colorSwatch("Success", Color.successState)
-            }
-        }
-    }
-    
-    static func colorSwatch(_ name: String, _ color: Color) -> some View {
-        VStack(spacing: 4) {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(color)
-                .frame(height: 40)
-            
-            Text(name)
-                .bodyStyle(.caption)
-        }
-    }
-    
-    static var shadowSection: some View {
-        VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.md) {
-            Text("Shadows")
-                .headingStyle(.medium)
-            
-            HStack(spacing: SonoraDesignSystem.Spacing.lg) {
-                shadowExample("Gentle") { view in AnyView(view.gentleShadow()) }
-                shadowExample("Card") { view in AnyView(view.cardShadow()) }
-                shadowExample("Brand") { view in AnyView(view.brandShadow()) }
-            }
-        }
-    }
-    
-    static func shadowExample(_ name: String, _ modifier: @escaping (AnyView) -> some View) -> some View {
-        VStack(spacing: 8) {
-            modifier(
-                AnyView(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.backgroundElevated)
-                        .frame(width: 60, height: 40)
-                )
-            )
-            
-            Text(name)
-                .bodyStyle(.caption)
-        }
-    }
-}
-#endif
