@@ -19,7 +19,10 @@ enum FeatureFlags {
     static let useSimplifiedLocalAIUI: Bool = true
 
     /// Use the consolidated Settings layout (Processing, Data & Privacy, About)
-    /// Enabled by default for Development and TestFlight builds. App Store can opt-in via env/UD override.
+    /// App Store: off by default
+    /// Development: on by default
+    /// TestFlight: now gated by the same debug UI env var used for onboarding/debug tools
+    ///   - Set SONORA_SHOW_DEBUG_UI=true to enable consolidated Settings in TestFlight
     static var useConsolidatedSettings: Bool {
         // Optional runtime overrides for quick testing
         if let env = ProcessInfo.processInfo.environment["SONORA_FF_USE_CONSOLIDATED"], let b = Bool(env) {
@@ -29,9 +32,13 @@ enum FeatureFlags {
             return override
         }
         switch BuildConfiguration.shared.distributionType {
-        case .development: return true
-        case .testFlight:  return true
-        case .appStore:    return false
+        case .development:
+            return true
+        case .testFlight:
+            // Require explicit debug UI toggle to expose TestFlight-only settings
+            return Environment.shared.showDebugUI
+        case .appStore:
+            return false
         }
     }
 

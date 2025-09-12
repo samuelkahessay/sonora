@@ -10,7 +10,7 @@
 "weekpart.end" = "end of the week";
 
 /* Fallback */
-"prompt.fallback.tap" = "Tap to get an idea";
+"prompt.fallback.tap" = "Tap the lightbulb for ideas";
 
 /* Growth */
 "prompt.growth.micro-win-today" = "What's one small win this [DayPart], [Name]?";

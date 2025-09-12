@@ -440,18 +440,3 @@ public final class Environment: @unchecked Sendable {
         loadConfiguration()
     }
 }
-
-// MARK: - Bool Extension for String Parsing
-
-private extension Bool {
-    init?(_ string: String) {
-        switch string.lowercased() {
-        case "true", "yes", "1", "on", "enabled":
-            self = true
-        case "false", "no", "0", "off", "disabled":
-            self = false
-        default:
-            return nil
-        }
-    }
-}

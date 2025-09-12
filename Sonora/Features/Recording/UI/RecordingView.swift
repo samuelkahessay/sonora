@@ -97,7 +97,9 @@ struct RecordingView: View {
                     VStack(spacing: SonoraDesignSystem.Spacing.xxl) {
                         if FeatureFlags.usePrompts {
                             Group {
-                                if let prompt = promptViewModel.currentPrompt {
+                                if promptViewModel.isLoading {
+                                    PromptPlaceholderCard()
+                                } else if let prompt = promptViewModel.currentPrompt {
                                     DynamicPromptCard(prompt: prompt) {
                                         promptViewModel.refresh(excludingCurrent: true)
                                     }
