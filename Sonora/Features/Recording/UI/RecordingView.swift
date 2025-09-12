@@ -57,7 +57,6 @@ struct RecordingView: View {
     private var contentView: some View {
         NavigationStack {
             VStack(spacing: SonoraDesignSystem.Spacing.xxl) {
-                Spacer()
                 
                 if !viewModel.hasPermission {
                     VStack(spacing: SonoraDesignSystem.Spacing.lg) {
@@ -98,11 +97,11 @@ struct RecordingView: View {
                         if FeatureFlags.usePrompts, !viewModel.isRecording {
                             if let prompt = promptViewModel.currentPrompt {
                                 DynamicPromptCard(prompt: prompt) {
-                                    promptViewModel.refresh()
+                                    promptViewModel.refresh(excludingCurrent: true)
                                 }
                             } else {
                                 FallbackPromptCard {
-                                    promptViewModel.refresh()
+                                    promptViewModel.refresh(excludingCurrent: true)
                                 }
                             }
                         }
@@ -138,15 +137,16 @@ struct RecordingView: View {
                         if FeatureFlags.usePrompts, !viewModel.isRecording {
                             Button(action: {
                                 HapticManager.shared.playSelection()
-                                promptViewModel.refresh()
+                                promptViewModel.refresh(excludingCurrent: true)
                             }) {
                                 VStack(spacing: 4) {
-                                    Image(systemName: "lightbulb")
-                                        .font(.title3)
-                                        .foregroundStyle(.secondary)
+                                    Image(systemName: "lightbulb.fill")
+                                        .font(.system(size: 30, weight: .regular))
+                                        .foregroundColor(.yellow)
+                                        .shadow(color: Color.yellow.opacity(0.7), radius: 8, x: 0, y: 0)
                                     Text("Inspire Me")
-                                        .font(.caption)
-                                        .foregroundStyle(.primary)
+                                        .font(.system(.caption, design: .serif))
+                                        .foregroundColor(.semantic(.textPrimary))
                                 }
                                 .minTouchTarget()
                             }
@@ -195,6 +195,8 @@ struct RecordingView: View {
             }
             .onChange(of: viewModel.isRecording) { _, isRecording in
                 if isRecording {
+                    // Mark the current prompt as used when recording begins
+                    if FeatureFlags.usePrompts { promptViewModel.markUsed() }
                     FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
                         focusedElement = .statusText
                     }

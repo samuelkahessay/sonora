@@ -40,6 +40,17 @@ final class FakePromptUsageRepository: PromptUsageRepository {
     func lastUsedAt(for promptId: String) throws -> Date? {
         map[promptId]?.lastUsedAt
     }
+
+    func recentlyShownPromptIds(since date: Date) throws -> Set<String> {
+        Set(map.compactMap { key, v in
+            if let d = v.lastShownAt, d >= date { return key }
+            return nil
+        })
+    }
+
+    func lastShownAt(for promptId: String) throws -> Date? {
+        map[promptId]?.lastShownAt
+    }
 }
 
 struct FixedDateProvider: DateProvider, Sendable {
@@ -178,4 +189,3 @@ private func components(year: Int, month: Int, day: Int, hour: Int, minute: Int 
     cal.timeZone = .gmt
     return cal.date(from: comp)!
 }
-

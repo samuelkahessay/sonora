@@ -63,4 +63,18 @@ final class PromptUsageRepositoryImpl: PromptUsageRepository {
     func lastUsedAt(for promptId: String) throws -> Date? {
         return fetchRecord(for: promptId)?.lastUsedAt
     }
+
+    func recentlyShownPromptIds(since date: Date) throws -> Set<String> {
+        let descriptor = FetchDescriptor<PromptUsageRecord>(predicate: #Predicate { $0.lastShownAt != nil })
+        let results = try context.fetch(descriptor)
+        let filtered = results.filter { rec in
+            if let last = rec.lastShownAt { return last >= date }
+            return false
+        }
+        return Set(filtered.map { $0.promptId })
+    }
+
+    func lastShownAt(for promptId: String) throws -> Date? {
+        return fetchRecord(for: promptId)?.lastShownAt
+    }
 }

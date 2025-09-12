@@ -14,5 +14,9 @@ public protocol PromptUsageRepository: Sendable {
     func recentlyUsedPromptIds(since date: Date) throws -> Set<String>
     @MainActor
     func lastUsedAt(for promptId: String) throws -> Date?
+    // Recently shown support for avoiding immediate repeats on shuffle
+    @MainActor
+    func recentlyShownPromptIds(since date: Date) throws -> Set<String>
+    @MainActor
+    func lastShownAt(for promptId: String) throws -> Date?
 }
-

@@ -184,6 +184,15 @@ public final class AppConfiguration: ObservableObject {
     /// Can be overridden with SONORA_DISK_CACHE_ENABLED environment variable
     public private(set) var diskCacheEnabled: Bool = true
 
+    // MARK: - Prompts Configuration
+    /// Cooldown for recently shown prompts (minutes)
+    /// Can be overridden with SONORA_PROMPT_COOLDOWN_MINUTES environment variable
+    public private(set) var promptCooldownMinutes: Int = 3
+
+    /// Minimum candidate target for exploration mode variety
+    /// Can be overridden with SONORA_PROMPT_MIN_VARIETY environment variable
+    public private(set) var promptMinVarietyTarget: Int = 10
+
     // MARK: - WhisperKit / Routing
     /// When true, disables fallback from Local WhisperKit to Cloud during routing.
     /// Can be toggled via UserDefaults key "strictLocalWhisper" or env SONORA_STRICT_LOCAL_WHISPER
@@ -416,6 +425,10 @@ public final class AppConfiguration: ObservableObject {
         
         diskCacheEnabled = true // Always enable disk cache
 
+        // Prompts Configuration - Defaults
+        promptCooldownMinutes = 3
+        promptMinVarietyTarget = 10
+
         // Log the loaded configuration
         logLoadedConfiguration()
 
@@ -634,6 +647,18 @@ public final class AppConfiguration: ObservableObject {
            let diskCache = Bool(diskCacheString) {
             diskCacheEnabled = diskCache
             print("🔧 AppConfiguration: Disk cache overridden to \(diskCacheEnabled)")
+        }
+
+        // Prompts configuration
+        if let cooldownStr = ProcessInfo.processInfo.environment["SONORA_PROMPT_COOLDOWN_MINUTES"],
+           let mins = Int(cooldownStr) {
+            promptCooldownMinutes = max(0, mins)
+            print("🔧 AppConfiguration: Prompt cooldown overridden to \(promptCooldownMinutes) min")
+        }
+        if let varietyStr = ProcessInfo.processInfo.environment["SONORA_PROMPT_MIN_VARIETY"],
+           let count = Int(varietyStr) {
+            promptMinVarietyTarget = max(1, count)
+            print("🔧 AppConfiguration: Prompt min variety target overridden to \(promptMinVarietyTarget)")
         }
 
         // Phase 2: default to unloading WhisperKit after transcription to reduce memory

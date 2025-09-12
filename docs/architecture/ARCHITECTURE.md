@@ -192,6 +192,10 @@ Behavior:
 - Personalization tokens: `[Name]`, `[DayPart]`, `[WeekPart]` (interpolated via LocalizationProvider)
 - Rotation: 7‑day no‑repeat globally across categories (repository enforced and use‑case filtered)
 - Selection: weight (desc) → least recently used → stable seeded tiebreak (by day/category context)
+- Exploration ("Inspire Me"): policy-driven selection that progressively relaxes filters
+  to guarantee variety (min 10 candidates) with a short 3‑minute cooldown for recently
+  shown prompts and a rotation token to avoid in‑session repeats. `AppEvent.promptShown`
+  uses `source = "inspire"` in this mode; default dynamic selection uses `source = "dynamic"`.
 - Localization keys: `daypart.*`, `weekpart.*`, and `prompt.<category>.<slug>` in `Localizable.strings`
 - Feature flag: `FeatureFlags.usePrompts`
 

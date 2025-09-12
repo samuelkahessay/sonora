@@ -5,32 +5,42 @@ import Combine
 final class PromptViewModel: ObservableObject {
     @Published var currentPrompt: InterpolatedPrompt?
     @Published var isLoading: Bool = false
-    @Published var showInspireSheet: Bool = false
 
     private let getDynamic: any GetDynamicPromptUseCaseProtocol
     private let getCategory: any GetPromptCategoryUseCaseProtocol
     private var refreshTask: Task<Void, Never>?
+    private var rotationToken: PromptRotationToken? = nil
 
     init(getDynamic: any GetDynamicPromptUseCaseProtocol, getCategory: any GetPromptCategoryUseCaseProtocol) {
         self.getDynamic = getDynamic
         self.getCategory = getCategory
-    }
+}
 
     func loadInitial() {
         guard FeatureFlags.usePrompts else { return }
         refresh()
     }
 
-    func refresh() {
+    func refresh(excludingCurrent: Bool = false) {
         guard FeatureFlags.usePrompts else { return }
         refreshTask?.cancel()
         isLoading = true
         let name = OnboardingConfiguration.shared.getUserName()
+        let currentId = excludingCurrent ? currentPrompt?.id : nil
         refreshTask = Task { [weak self] in
             do {
-                let prompt = try await self?.getDynamic.execute(userName: name)
+                // Use policy-driven selection with rotation for exploration
+                let policy: PromptSelectionPolicy = excludingCurrent ? .exploration : .contextAware
+                let req = SelectPromptRequest(userName: name, policy: policy, currentPromptId: currentId, rotationToken: excludingCurrent ? self?.rotationToken : nil)
+                let res = try await self?.getDynamic.next(req)
                 await MainActor.run { [weak self] in
-                    self?.currentPrompt = prompt
+                    self?.currentPrompt = res?.prompt
+                    // Reset or update rotation token based on policy
+                    if excludingCurrent {
+                        self?.rotationToken = res?.rotationToken
+                    } else {
+                        self?.rotationToken = nil
+                    }
                     self?.isLoading = false
                 }
             } catch {
@@ -53,4 +63,3 @@ final class PromptViewModel: ObservableObject {
         try? getCategory.markUsed(promptId: id)
     }
 }
-
