@@ -161,6 +161,7 @@ struct RecordingView: View {
                                 .accessibilityHint("Double tap to shuffle a new prompt")
                             }
                         }
+                        .padding(.top, SonoraDesignSystem.Spacing.xl) // add extra separation from prompt card
                     }
                     // Rely on outer breathingRoom() for horizontal padding
                 }
