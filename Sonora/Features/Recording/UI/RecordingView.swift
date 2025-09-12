@@ -100,22 +100,20 @@ struct RecordingView: View {
                     .accessibilityElement(children: .contain)
                 } else {
                     VStack(spacing: SonoraDesignSystem.Spacing.xxl) {
-                        if FeatureFlags.usePrompts {
-                            Group {
-                                if promptViewModel.isLoading {
-                                    PromptPlaceholderCard()
-                                } else if let prompt = promptViewModel.currentPrompt {
-                                    DynamicPromptCard(prompt: prompt) {
-                                        promptViewModel.refresh(excludingCurrent: true)
-                                    }
-                                } else {
-                                    FallbackPromptCard {
-                                        promptViewModel.refresh(excludingCurrent: true)
-                                    }
+                        Group {
+                            if promptViewModel.isLoading {
+                                PromptPlaceholderCard()
+                            } else if let prompt = promptViewModel.currentPrompt {
+                                DynamicPromptCard(prompt: prompt) {
+                                    promptViewModel.refresh(excludingCurrent: true)
+                                }
+                            } else {
+                                FallbackPromptCard {
+                                    promptViewModel.refresh(excludingCurrent: true)
                                 }
                             }
-                            .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
                         }
+                        .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
 
                         // Recording cluster: button, timer overlay, inspire me (tighter spacing)
                         VStack(spacing: SonoraDesignSystem.Spacing.md) {
@@ -147,31 +145,29 @@ struct RecordingView: View {
                                 value: viewModel.isRecording
                             )
 
-                            if FeatureFlags.usePrompts {
-                                Button(action: {
-                                    HapticManager.shared.playSelection()
-                                    promptViewModel.refresh(excludingCurrent: true)
-                                    hasSeenInspireMe = true
-                                    resetIdlePulse()
-                                }) {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "lightbulb.fill")
-                                            .font(.system(size: 28, weight: .regular))
-                                            .foregroundColor(.yellow)
-                                            .scaleEffect(inspireButtonScale)
-                                            .opacity(inspireButtonOpacity)
-                                        Text("Inspire Me")
-                                            .font(SonoraDesignSystem.Typography.insightSerif)
-                                            .foregroundColor(colorScheme == .dark ? .white : .semantic(.textPrimary))
-                                    }
-                                    .minTouchTarget()
+                            Button(action: {
+                                HapticManager.shared.playSelection()
+                                promptViewModel.refresh(excludingCurrent: true)
+                                hasSeenInspireMe = true
+                                resetIdlePulse()
+                            }) {
+                                VStack(spacing: 4) {
+                                    Image(systemName: "lightbulb.fill")
+                                        .font(.system(size: 28, weight: .regular))
+                                        .foregroundColor(.yellow)
+                                        .scaleEffect(inspireButtonScale)
+                                        .opacity(inspireButtonOpacity)
+                                    Text("Inspire Me")
+                                        .font(SonoraDesignSystem.Typography.insightSerif)
+                                        .foregroundColor(colorScheme == .dark ? .white : .semantic(.textPrimary))
                                 }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("Inspire Me")
-                                .accessibilityHint(getInspireMeAccessibilityHint())
-                                .onAppear { setupInspireMeAnimation() }
-                                .onDisappear { cancelIdlePulse() }
+                                .minTouchTarget()
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Inspire Me")
+                            .accessibilityHint(getInspireMeAccessibilityHint())
+                            .onAppear { setupInspireMeAnimation() }
+                            .onDisappear { cancelIdlePulse() }
                         }
                         .padding(.top, SonoraDesignSystem.Spacing.xl) // add extra separation from prompt card
                     }
@@ -216,7 +212,7 @@ struct RecordingView: View {
             .onChange(of: viewModel.isRecording) { _, isRecording in
                 if isRecording {
                     // Mark the current prompt as used when recording begins
-                    if FeatureFlags.usePrompts { promptViewModel.markUsed() }
+                    promptViewModel.markUsed()
                     FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
                         focusedElement = .statusText
                     }
@@ -254,7 +250,7 @@ struct RecordingView: View {
                         }
                     }
                     // Resume idle pulse when returning active
-                    if FeatureFlags.usePrompts { resetIdlePulse() }
+                    resetIdlePulse()
                 }
                 else {
                     // Stop any attention animation when not active

@@ -109,7 +109,7 @@ public final class EventHandlerRegistry {
     /// Register the calendar event handler
     private func registerCalendarEventHandler() {
         let handlerName = "CalendarEventHandler"
-        let isEnabled = enabledHandlers.contains(handlerName) && FeatureFlags.useEventKitIntegration
+        let isEnabled = enabledHandlers.contains(handlerName)
 
         calendarEventHandler = CalendarEventHandler(logger: logger, eventBus: eventBus)
         registeredHandlers[handlerName] = calendarEventHandler
@@ -124,7 +124,7 @@ public final class EventHandlerRegistry {
     /// Register the reminders event handler
     private func registerRemindersEventHandler() {
         let handlerName = "RemindersEventHandler"
-        let isEnabled = enabledHandlers.contains(handlerName) && FeatureFlags.useEventKitIntegration
+        let isEnabled = enabledHandlers.contains(handlerName)
 
         remindersEventHandler = RemindersEventHandler(logger: logger, eventBus: eventBus)
         registeredHandlers[handlerName] = remindersEventHandler

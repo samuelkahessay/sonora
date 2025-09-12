@@ -21,11 +21,7 @@ struct TranscriptionServiceToggle: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             headerSection
-            if FeatureFlags.useSimplifiedTranscriptionUI {
-                simplifiedToggle
-            } else {
-                toggleSection
-            }
+            toggleSection
         }
     }
     

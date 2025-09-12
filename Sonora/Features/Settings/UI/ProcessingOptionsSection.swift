@@ -129,19 +129,17 @@ struct ProcessingOptionsSection: View {
                             // Local analysis (Phi-4 Mini)
                             LocalAnalysisModelCompactRow(appConfig: appConfig, manager: localModelDownloadManager)
 
-                            if FeatureFlags.useFixedModelsForBeta {
-                                // Place Model Status control at the bottom, centered
-                                HStack {
-                                    Spacer()
-                                    Button(action: { showModelsStatus = true }) {
-                                        Label("Model Status", systemImage: "square.and.arrow.down")
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.regular)
-                                    Spacer()
+                            // Place Model Status control at the bottom, centered
+                            HStack {
+                                Spacer()
+                                Button(action: { showModelsStatus = true }) {
+                                    Label("Model Status", systemImage: "square.and.arrow.down")
                                 }
-                                .padding(.top, Spacing.sm)
+                                .buttonStyle(.bordered)
+                                .controlSize(.regular)
+                                Spacer()
                             }
+                            .padding(.top, Spacing.sm)
                         }
                     }
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -315,9 +313,6 @@ private struct WhisperModelCompactRow: View {
     @ObservedObject var downloadManager: ModelDownloadManager
 
     private var selected: WhisperModelInfo {
-        if FeatureFlags.useFixedModelsForBeta {
-            return WhisperModelInfo.model(withId: "openai_whisper-large-v3") ?? WhisperModelInfo.defaultModel
-        }
         return UserDefaults.standard.selectedWhisperModelInfo
     }
     private var state: ModelDownloadState { downloadManager.getDownloadState(for: selected.id) }
@@ -329,11 +324,9 @@ private struct WhisperModelCompactRow: View {
                 Label("Local Transcription", systemImage: "quote.bubble")
                     .font(.subheadline)
                 Spacer()
-                if !FeatureFlags.useFixedModelsForBeta {
-                    Button("Manage") { showingSelection = true }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                }
+                Button("Manage") { showingSelection = true }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
             }
             HStack(spacing: Spacing.sm) {
                 Text(selected.displayName)
@@ -360,7 +353,7 @@ private struct WhisperModelCompactRow: View {
                     .tint(.semantic(.brandPrimary))
             }
         }
-        .sheet(isPresented: $showingSelection) { if !FeatureFlags.useFixedModelsForBeta { WhisperModelSelectionView() } }
+        .sheet(isPresented: $showingSelection) { WhisperModelSelectionView() }
     }
 
     @ViewBuilder private var inlineStatus: some View {
@@ -421,9 +414,6 @@ private struct LocalAnalysisModelCompactRow: View {
     @State private var presentManage = false
 
     private var model: LocalModel {
-        if FeatureFlags.useFixedModelsForBeta {
-            return .phi4_mini
-        }
         return LocalModel(rawValue: appConfig.selectedLocalModel) ?? .defaultModel
     }
 
@@ -433,13 +423,11 @@ private struct LocalAnalysisModelCompactRow: View {
                 Label("Local Analysis", systemImage: "cpu")
                     .font(.subheadline)
                 Spacer()
-                if !FeatureFlags.useFixedModelsForBeta {
-                    NavigationLink(destination: ModelDownloadView(), isActive: $presentManage) { EmptyView() }
-                        .hidden()
-                    Button("Manage") { presentManage = true }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                }
+                NavigationLink(destination: ModelDownloadView(), isActive: $presentManage) { EmptyView() }
+                    .hidden()
+                Button("Manage") { presentManage = true }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
             }
             HStack(spacing: Spacing.sm) {
                 Text(model.displayName)

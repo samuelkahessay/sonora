@@ -17,7 +17,6 @@ final class PromptViewModel: ObservableObject {
 }
 
     func loadInitial() {
-        guard FeatureFlags.usePrompts else { return }
         // Preserve current prompt across tab switches; only load if empty
         if currentPrompt == nil {
             refresh()
@@ -25,7 +24,6 @@ final class PromptViewModel: ObservableObject {
     }
 
     func refresh(excludingCurrent: Bool = false) {
-        guard FeatureFlags.usePrompts else { return }
         refreshTask?.cancel()
         isLoading = true
         let name = OnboardingConfiguration.shared.getUserName()

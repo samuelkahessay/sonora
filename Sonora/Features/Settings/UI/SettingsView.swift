@@ -8,29 +8,17 @@ struct SettingsView: View {
                 VStack(spacing: Spacing.xl) {
                     // Current Usage at the very top
                     CurrentUsageSectionView()
-                    if FeatureFlags.useConsolidatedSettings {
-                        // Section 1: Processing & Recording
-                        ProcessingOptionsSection()
+                    // Section 1: Processing & Recording
+                    ProcessingOptionsSection()
 
-                        // Section 2: Data Management (exports + delete)
-                        DataManagementSectionView()
+                    // Section 2: Data Management (exports + delete)
+                    DataManagementSectionView()
 
-                        // Section 3: Privacy & Legal (policy + terms)
-                        PrivacyLegalSectionView()
+                    // Section 3: Privacy & Legal (policy + terms)
+                    PrivacyLegalSectionView()
 
-                        // Section 4: Support & About
-                        SupportAboutSectionView()
-
-                    } else {
-                        if FeatureFlags.showOnboarding { OnboardingSectionView() }
-                        if FeatureFlags.showLanguage { LanguageSectionView() }
-                        TranscriptionServiceSectionSimple()
-                        if FeatureFlags.showAutoDetection { AutoDetectionSectionView() }
-                        LocalAISectionView()
-                        AIDisclosureSectionView()
-                        PrivacySectionView()
-                        
-                    }
+                    // Section 4: Support & About
+                    SupportAboutSectionView()
                     #if DEBUG
                     DiagnosticsSectionView()
                     DebugSectionView()

@@ -246,26 +246,21 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             if let cats = meta.moderationCategories { transcriptionModerationCategories = cats }
         }
 
-        // Auto-detected Events/Reminders banner trigger (only when EventKit integration is enabled)
-        if FeatureFlags.useEventKitIntegration {
-            let analysisRepo = DIContainer.shared.analysisRepository()
-            if let eventsEnvelope: AnalyzeEnvelope<EventsData> = analysisRepo.getAnalysisResult(for: memo.id, mode: .events, responseType: EventsData.self) {
-                let count = eventsEnvelope.data.events.count
-                if count > 0 && autoBannerDismissedForMemo[memo.id] != true {
-                    eventDetectionCount = count
-                    showEventDetectionBanner = true
-                }
+        // Auto-detected Events/Reminders banner trigger
+        let analysisRepo = DIContainer.shared.analysisRepository()
+        if let eventsEnvelope: AnalyzeEnvelope<EventsData> = analysisRepo.getAnalysisResult(for: memo.id, mode: .events, responseType: EventsData.self) {
+            let count = eventsEnvelope.data.events.count
+            if count > 0 && autoBannerDismissedForMemo[memo.id] != true {
+                eventDetectionCount = count
+                showEventDetectionBanner = true
             }
-            if let remEnvelope: AnalyzeEnvelope<RemindersData> = analysisRepo.getAnalysisResult(for: memo.id, mode: .reminders, responseType: RemindersData.self) {
-                let count = remEnvelope.data.reminders.count
-                if count > 0 && autoBannerDismissedForMemo[memo.id] != true {
-                    reminderDetectionCount = count
-                    showReminderDetectionBanner = true
-                }
+        }
+        if let remEnvelope: AnalyzeEnvelope<RemindersData> = analysisRepo.getAnalysisResult(for: memo.id, mode: .reminders, responseType: RemindersData.self) {
+            let count = remEnvelope.data.reminders.count
+            if count > 0 && autoBannerDismissedForMemo[memo.id] != true {
+                reminderDetectionCount = count
+                showReminderDetectionBanner = true
             }
-        } else {
-            showEventDetectionBanner = false
-            showReminderDetectionBanner = false
         }
     }
     
@@ -407,13 +402,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                     }
 
                 case .events:
-                    guard FeatureFlags.useEventKitIntegration else {
-                        await MainActor.run {
-                            self.analysisError = "Calendar integration is disabled in this beta build."
-                            self.isAnalyzing = false
-                        }
-                        return
-                    }
                     // Use combined detection use case and surface events
                     let detection = try await DIContainer.shared.detectEventsAndRemindersUseCase().execute(transcript: transcript, memoId: memo.id)
                     await MainActor.run {
@@ -427,13 +415,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                     }
 
                 case .reminders:
-                    guard FeatureFlags.useEventKitIntegration else {
-                        await MainActor.run {
-                            self.analysisError = "Reminders integration is disabled in this beta build."
-                            self.isAnalyzing = false
-                        }
-                        return
-                    }
                     // Use combined detection use case and surface reminders
                     let detection = try await DIContainer.shared.detectEventsAndRemindersUseCase().execute(transcript: transcript, memoId: memo.id)
                     await MainActor.run {

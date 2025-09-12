@@ -290,12 +290,6 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
     private func handleAppBecameActive() async {
         logger.info("🚀 WhisperKitModelManager: App became active - starting intelligent prewarming")
         
-        // Only prewarm if enabled and user has used transcription recently
-        if FeatureFlags.disableWhisperPrewarmInBeta {
-            logger.debug("🚀 WhisperKitModelManager: Prewarming disabled by feature flag")
-            return
-        }
-        
         // Only prewarm if user has used transcription recently
         let shouldPrewarm = shouldPerformIntelligentPrewarming()
         
