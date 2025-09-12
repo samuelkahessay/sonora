@@ -3,13 +3,8 @@
 import Foundation
 @preconcurrency import EventKit
 
-// MARK: - Sendability for EventKit types
-// These types are used only on MainActor, but cross-task boundaries in a few bridges.
-// Mark as @unchecked Sendable to satisfy Swift 6 checks while keeping all EventKit
-// interactions on MainActor in this repository implementation.
-extension EKReminder: @unchecked Sendable {}
-extension EKEvent: @unchecked Sendable {}
-extension EKCalendar: @unchecked Sendable {}
+// NOTE: Avoid adding retroactive Sendable conformances to EventKit types.
+// All EventKit interactions in this repository are @MainActor-isolated.
 
 // MARK: - EventKit Repository with Proper Concurrency
 @MainActor

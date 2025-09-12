@@ -174,7 +174,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             guard let self else { return }
             guard let currentId = self.currentMemo?.id else { return }
             switch event {
-            case .transcriptionRouteDecided(let memoId, let route, let reason):
+            case .transcriptionRouteDecided(let memoId, let route, _):
                 if memoId == currentId && route == "cloud" {
                     Task { @MainActor in
                         // Show concise message; reason may be "insufficient_memory" or other string

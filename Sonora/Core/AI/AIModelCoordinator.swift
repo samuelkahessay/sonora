@@ -33,10 +33,10 @@ actor AIModelCoordinator {
             }, onCancel: { [weak self] in
                 Task { await self?.releaseToIdleIfNeeded() }
             })
-            await releaseToIdleIfNeeded()
+            releaseToIdleIfNeeded()
             return result
         } catch {
-            await releaseToIdleIfNeeded()
+            releaseToIdleIfNeeded()
             throw error
         }
     }
@@ -49,10 +49,10 @@ actor AIModelCoordinator {
             }, onCancel: { [weak self] in
                 Task { await self?.releaseToIdleIfNeeded() }
             })
-            await releaseToIdleIfNeeded()
+            releaseToIdleIfNeeded()
             return result
         } catch {
-            await releaseToIdleIfNeeded()
+            releaseToIdleIfNeeded()
             throw error
         }
     }

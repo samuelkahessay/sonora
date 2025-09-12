@@ -17,7 +17,7 @@ struct AnalysisResultsView: View {
                         HeaderInfoView(envelope: env)
                     } else if let env = envelope as? AnalyzeEnvelope<TodosData> {
                         HeaderInfoView(envelope: env)
-                    } else if let env = envelope as? AnalyzeEnvelope<DistillData> {
+                    } else if envelope is AnalyzeEnvelope<DistillData> {
                         // Keep header hidden for Distill; preserve envelope for performance info inside DistillResultView
                         EmptyView()
                     }

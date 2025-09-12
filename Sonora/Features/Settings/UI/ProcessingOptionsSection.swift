@@ -423,8 +423,7 @@ private struct LocalAnalysisModelCompactRow: View {
                 Label("Local Analysis", systemImage: "cpu")
                     .font(.subheadline)
                 Spacer()
-                NavigationLink(destination: ModelDownloadView(), isActive: $presentManage) { EmptyView() }
-                    .hidden()
+                // Use modern NavigationStack API for programmatic navigation
                 Button("Manage") { presentManage = true }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -450,6 +449,10 @@ private struct LocalAnalysisModelCompactRow: View {
                 ProgressView(value: Double(manager.downloadProgress(for: model)))
                     .tint(.semantic(.brandPrimary))
             }
+        }
+        // iOS 16+ replacement for deprecated NavigationLink(isActive:)
+        .navigationDestination(isPresented: $presentManage) {
+            ModelDownloadView()
         }
     }
 
