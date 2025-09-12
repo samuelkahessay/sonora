@@ -49,7 +49,8 @@ extension SemanticColor {
         case .bgTertiary:
             // Use a truly dark surface in Dark Mode, slightly elevated in Light
             return UIColor { trait in
-                trait.userInterfaceStyle == .dark ? UIColor.systemGray6 : UIColor.systemGray5
+                // Lighter surface in light mode, truly dark in dark mode
+                trait.userInterfaceStyle == .dark ? UIColor.systemGray6 : UIColor.systemGray6
             }
 
         // Text

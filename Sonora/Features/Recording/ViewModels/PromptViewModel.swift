@@ -18,7 +18,10 @@ final class PromptViewModel: ObservableObject {
 
     func loadInitial() {
         guard FeatureFlags.usePrompts else { return }
-        refresh()
+        // Preserve current prompt across tab switches; only load if empty
+        if currentPrompt == nil {
+            refresh()
+        }
     }
 
     func refresh(excludingCurrent: Bool = false) {

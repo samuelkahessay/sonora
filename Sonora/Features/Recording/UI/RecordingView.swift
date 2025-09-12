@@ -96,65 +96,70 @@ struct RecordingView: View {
                 } else {
                     VStack(spacing: SonoraDesignSystem.Spacing.xxl) {
                         if FeatureFlags.usePrompts {
-                            if let prompt = promptViewModel.currentPrompt {
-                                DynamicPromptCard(prompt: prompt) {
-                                    promptViewModel.refresh(excludingCurrent: true)
-                                }
-                            } else {
-                                FallbackPromptCard {
-                                    promptViewModel.refresh(excludingCurrent: true)
+                            Group {
+                                if let prompt = promptViewModel.currentPrompt {
+                                    DynamicPromptCard(prompt: prompt) {
+                                        promptViewModel.refresh(excludingCurrent: true)
+                                    }
+                                } else {
+                                    FallbackPromptCard {
+                                        promptViewModel.refresh(excludingCurrent: true)
+                                    }
                                 }
                             }
+                            .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
                         }
-                        
-                        // Sonic Bloom recording button with brand identity
-                        SonicBloomRecordButton(
+
+                        // Recording cluster: button, timer overlay, inspire me (tighter spacing)
+                        VStack(spacing: SonoraDesignSystem.Spacing.md) {
+                            // Sonic Bloom recording button with brand identity
+                            SonicBloomRecordButton(
                             progress: viewModel.recordingProgress,
                             isRecording: viewModel.isRecording,
                             action: {
                                 HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
                                 viewModel.toggleRecording()
                             }
-                        )
-                        .padding(.top, 25)
-                        .disabled(viewModel.state.isRecordButtonDisabled)
-                        .accessibilityLabel(getRecordButtonAccessibilityLabel())
-                        .accessibilityHint(getRecordButtonAccessibilityHint())
-                        .accessibilityFocused($focusedElement, equals: .recordButton)
-                        .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
-                        
-                        // Timer overlay area (fixed height to avoid layout shifts)
-                        ZStack(alignment: .top) {
-                            timerOverlayView
-                                .opacity(viewModel.isRecording ? 1 : 0)
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                                .accessibilityHidden(!viewModel.isRecording)
-                        }
-                        .frame(height: 80)
-                        .animation(
-                            UIAccessibility.isReduceMotionEnabled ? nil : .easeInOut(duration: 0.25),
-                            value: viewModel.isRecording
-                        )
-                        
-                        if FeatureFlags.usePrompts {
-                            Button(action: {
-                                HapticManager.shared.playSelection()
-                                promptViewModel.refresh(excludingCurrent: true)
-                            }) {
-                                VStack(spacing: 4) {
-                                    Image(systemName: "lightbulb.fill")
-                                        .font(.system(size: 30, weight: .regular))
-                                        .foregroundColor(.yellow)
-                                        .shadow(color: Color.yellow.opacity(0.7), radius: 8, x: 0, y: 0)
-                                    Text("Inspire Me")
-                                        .font(.system(.caption, design: .serif))
-                                        .foregroundColor(colorScheme == .dark ? .white : .semantic(.textPrimary))
-                                }
-                                .minTouchTarget()
+                            )
+                            .disabled(viewModel.state.isRecordButtonDisabled)
+                            .accessibilityLabel(getRecordButtonAccessibilityLabel())
+                            .accessibilityHint(getRecordButtonAccessibilityHint())
+                            .accessibilityFocused($focusedElement, equals: .recordButton)
+                            .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
+
+                            // Timer overlay area (fixed height to avoid layout shifts)
+                            ZStack(alignment: .top) {
+                                timerOverlayView
+                                    .opacity(viewModel.isRecording ? 1 : 0)
+                                    .transition(.move(edge: .top).combined(with: .opacity))
+                                    .accessibilityHidden(!viewModel.isRecording)
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Inspire Me")
-                            .accessibilityHint("Double tap to shuffle a new prompt")
+                            .frame(height: 80)
+                            .animation(
+                                UIAccessibility.isReduceMotionEnabled ? nil : .easeInOut(duration: 0.25),
+                                value: viewModel.isRecording
+                            )
+
+                            if FeatureFlags.usePrompts {
+                                Button(action: {
+                                    HapticManager.shared.playSelection()
+                                    promptViewModel.refresh(excludingCurrent: true)
+                                }) {
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "lightbulb.fill")
+                                            .font(.system(size: 30, weight: .regular))
+                                            .foregroundColor(.yellow)
+                                            .shadow(color: Color.yellow.opacity(0.7), radius: 8, x: 0, y: 0)
+                                        Text("Inspire Me")
+                                            .font(SonoraDesignSystem.Typography.insightSerif)
+                                            .foregroundColor(colorScheme == .dark ? .white : .semantic(.textPrimary))
+                                    }
+                                    .minTouchTarget()
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Inspire Me")
+                                .accessibilityHint("Double tap to shuffle a new prompt")
+                            }
                         }
                     }
                     // Rely on outer breathingRoom() for horizontal padding
