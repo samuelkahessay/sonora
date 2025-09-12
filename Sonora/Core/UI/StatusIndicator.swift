@@ -1,5 +1,24 @@
 import SwiftUI
 
+/// Standardized icon sizes for consistent UI across the app
+enum IconSize: CGFloat, CaseIterable {
+    /// Small icons for compact UI elements (16pt)
+    case small = 16
+    /// Standard icons for most UI elements (24pt) - Accessibility minimum
+    case standard = 24  
+    /// Medium icons for section headers and important elements (28pt)
+    case medium = 28
+    /// Large icons for primary actions and state displays (32pt)
+    case large = 32
+    /// Extra large icons for main UI elements and hero states (48pt)
+    case extraLarge = 48
+    
+    /// Font equivalent for SF Symbols
+    var font: Font {
+        .system(size: rawValue, weight: .medium)
+    }
+}
+
 /// Unified status indicator component for consistent status display throughout the app
 struct StatusIndicator: View {
     let status: Status
@@ -96,14 +115,14 @@ struct StatusIndicator: View {
                     .tint(status.color)
             default:
                 Image(systemName: status.icon)
-                    .iconStyle(size, color: status.color)
+                    .font(size.font)
+                    .foregroundColor(status.color)
             }
             
             if showText {
                 Text(status.text ?? status.defaultText)
                     .font(textFont)
                     .foregroundColor(status.color)
-                    .statusIndicatorStyle()
             }
         }
         .accessibilityElement(children: .combine)

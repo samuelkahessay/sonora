@@ -243,21 +243,3 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
     }
 }
 
-// MARK: - Error Types
-
-enum RecordingTimerError: LocalizedError {
-    case timerAlreadyRunning
-    case noTimeProvider
-    case invalidTimeValue
-    
-    var errorDescription: String? {
-        switch self {
-        case .timerAlreadyRunning:
-            return "Recording timer is already running"
-        case .noTimeProvider:
-            return "No time provider specified for recording timer"
-        case .invalidTimeValue:
-            return "Invalid time value received from time provider"
-        }
-    }
-}

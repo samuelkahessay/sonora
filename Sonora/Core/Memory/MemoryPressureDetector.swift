@@ -12,11 +12,6 @@ import UIKit
 /// Protocol defining memory pressure monitoring operations
 @MainActor
 protocol MemoryPressureDetectorProtocol: Sendable {
-    var isUnderMemoryPressure: Bool { get }
-    var currentMemoryMetrics: MemoryMetrics { get }
-    
-    func startMonitoring()
-    func stopMonitoring()
     func forceMemoryPressureCheck() -> Bool
 }
 

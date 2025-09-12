@@ -136,9 +136,7 @@ struct NotificationBanner: View {
                 .fill(type.backgroundColor)
                 .stroke(type.borderColor, lineWidth: compact ? 0.5 : 1)
         )
-        .if(!compact) { view in
-            view.padding(.horizontal, Spacing.md)
-        }
+        .padding(.horizontal, compact ? 0 : Spacing.md)
         .accessibilityElement(children: compact ? .combine : .contain)
         .accessibilityLabel(compact ? message : "")
     }

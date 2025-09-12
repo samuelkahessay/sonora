@@ -96,9 +96,6 @@ enum SonoraDesignSystem {
         static let insightSerif = Font.system(.body, design: .serif)
             .leading(.loose)
         
-        /// Monospaced digits for time display and metrics
-        static let monospaced = Font.system(.body, design: .monospaced)
-            .monospacedDigit()
         
         /// Recording timer display (Large title serif, monospaced)
         static let timerDisplay = Font.system(.largeTitle, design: .serif)
@@ -196,31 +193,10 @@ extension View {
             .lineSpacing(2)
     }
     
-    /// Apply monospaced styling for numbers and time
-    func monospacedStyle() -> some View {
-        self.font(SonoraDesignSystem.Typography.monospaced)
-            .monospacedDigit()
-    }
-    
-    /// Apply serif styling for special moments
-    func serifStyle() -> some View {
-        self.font(SonoraDesignSystem.Typography.insightSerif)
-            .foregroundColor(.wisdomText)
-    }
     
     // MARK: - Animation Modifiers
     
     // MARK: - Shadow Modifiers
-    
-    /// Apply gentle shadow for subtle elevation
-    func gentleShadow() -> some View {
-        self.shadow(
-            color: Color.black.opacity(0.08),
-            radius: 8,
-            x: 0,
-            y: 2
-        )
-    }
     
     /// Apply medium shadow for card elevation
     func cardShadow() -> some View {

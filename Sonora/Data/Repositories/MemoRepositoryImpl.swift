@@ -161,14 +161,6 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         }
     }
 
-    private func mapStateStringToTranscriptionState(_ status: String, text: String?) -> TranscriptionState {
-        switch status {
-        case "completed": return .completed(text ?? "")
-        case "inProgress": return .inProgress
-        case "failed": return .failed(text ?? "")
-        default: return .notStarted
-        }
-    }
 
     func loadMemos() {
         // Serve cached list immediately if fresh (perceived latency win)
@@ -434,23 +426,3 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
 
 }
 
-// MARK: - Error Types
-enum MemoRepositoryError: LocalizedError {
-    case fileNotFound(String)
-    case invalidMemoData
-    case atomicWriteFailed
-    case indexCorrupted
-    
-    var errorDescription: String? {
-        switch self {
-        case .fileNotFound(let path):
-            return "File not found at path: \(path)"
-        case .invalidMemoData:
-            return "Invalid memo data structure"
-        case .atomicWriteFailed:
-            return "Failed to write file atomically"
-        case .indexCorrupted:
-            return "Memo index file is corrupted"
-        }
-    }
-}

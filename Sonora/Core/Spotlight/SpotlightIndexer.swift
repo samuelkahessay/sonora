@@ -17,7 +17,6 @@ final class SpotlightIndexer: SpotlightIndexing {
     private let logger: any LoggerProtocol
     private let memoRepository: any MemoRepository
     private let transcriptionRepository: any TranscriptionRepository
-    private let analysisRepository: any AnalysisRepository
 
     // Core Spotlight queue isolation to prevent reentrancy issues
     private let csQueue = DispatchQueue(label: "com.samuelkahessay.Sonora.spotlight", qos: .utility)
@@ -31,13 +30,11 @@ final class SpotlightIndexer: SpotlightIndexing {
     init(
         logger: any LoggerProtocol = Logger.shared,
         memoRepository: any MemoRepository,
-        transcriptionRepository: any TranscriptionRepository,
-        analysisRepository: any AnalysisRepository
+        transcriptionRepository: any TranscriptionRepository
     ) {
         self.logger = logger
         self.memoRepository = memoRepository
         self.transcriptionRepository = transcriptionRepository
-        self.analysisRepository = analysisRepository
     }
 
     // MARK: - Core Spotlight Queue Isolation

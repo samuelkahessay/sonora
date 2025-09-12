@@ -76,13 +76,6 @@ final class TranscriptionServiceFactory {
         }
     }
     
-    /// Invalidates cached services (call when user changes preferences or models)
-    func invalidateCache() {
-        logger.info("Invalidating transcription service cache")
-        cloudService = nil
-        localService = nil
-    }
-    
     // MARK: - Private Methods
     
     fileprivate func createCloudService() -> TranscriptionAPI {

@@ -125,32 +125,3 @@ final class AudioPermissionService: AudioPermissionServiceProtocol, @unchecked S
     }
 }
 
-// MARK: - Error Types
-
-enum AudioPermissionError: LocalizedError {
-    case permissionDenied
-    case permissionNotDetermined
-    case requestFailed
-    
-    var errorDescription: String? {
-        switch self {
-        case .permissionDenied:
-            return "Microphone permission was denied"
-        case .permissionNotDetermined:
-            return "Microphone permission has not been determined"
-        case .requestFailed:
-            return "Failed to request microphone permission"
-        }
-    }
-    
-    var recoverySuggestion: String? {
-        switch self {
-        case .permissionDenied:
-            return "Please enable microphone access in Settings > Privacy & Security > Microphone"
-        case .permissionNotDetermined:
-            return "Please allow microphone access when prompted"
-        case .requestFailed:
-            return "Try restarting the app and granting permission when prompted"
-        }
-    }
-}

@@ -42,11 +42,6 @@ final class LocalModelDownloadManager: ObservableObject {
         return downloadStates[model]?.isModelReady ?? false
     }
     
-    /// Get the local file path for a model if it exists
-    func modelPath(for model: LocalModel) -> URL? {
-        return model.isDownloaded ? model.localPath : nil
-    }
-    
     /// Download a specific model
     func downloadModel(_ model: LocalModel) {
         // Prevent duplicate downloads
@@ -356,18 +351,6 @@ final class LocalModelDownloadManager: ObservableObject {
             print("🗑️ Deleted \(model.displayName)")
         } catch {
             print("❌ Failed to delete \(model.displayName): \(error)")
-        }
-    }
-    
-    /// Get download status summary for all models
-    func getModelStatus() -> [(model: LocalModel, isDownloaded: Bool, isDownloading: Bool, progress: Float)] {
-        return LocalModel.allCases.map { model in
-            (
-                model: model,
-                isDownloaded: isModelReady(model),
-                isDownloading: isDownloading(model),
-                progress: downloadProgress(for: model)
-            )
         }
     }
     

@@ -99,23 +99,6 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
                 return config.getOptimalBitRate(for: .voice, batteryLevel: level)
             }
         }
-        
-        /// High-quality settings for music or mixed content
-        struct HighQuality {
-            private static let config = AppConfiguration.shared
-            
-            static var sampleRate: Double {
-                return config.highQualitySampleRate // 44100 Hz
-            }
-            
-            static var bitRate: Int {
-                return 128000 // Standard quality for music
-            }
-            
-            static var quality: Float {
-                return config.recordingQuality
-            }
-        }
     }
     
     // MARK: - Callbacks
@@ -159,12 +142,9 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
         let quality: Float
         
         switch contentType {
-        case .voice:
+        case .voice, .music, .mixed:
             sampleRate = AudioConfiguration.VoiceOptimized.sampleRate
             quality = AudioConfiguration.VoiceOptimized.adaptiveQuality()
-        case .music, .mixed:
-            sampleRate = AudioConfiguration.HighQuality.sampleRate
-            quality = AudioConfiguration.HighQuality.quality
         }
         
         print("🎙️ AudioRecordingService: Creating \(contentType.displayName) optimized recorder - Sample Rate: \(sampleRate) Hz, Quality: \(quality)")
@@ -481,10 +461,19 @@ enum AudioRecordingError: LocalizedError {
     }
 }
 
+// MARK: - Recovery Actions
+
+/// Internal recovery actions for handling recording failures.
+/// These guide the service or higher-level coordinators on what to attempt next.
 enum RecoveryAction {
-    case none
+    /// Retry starting recording after applying an audio session fallback configuration
     case retryWithSessionFallback
+    /// Recreate the AVAudioRecorder instance before retrying
     case recreateRecorder
+    /// Switch the input route to the built-in microphone and retry
     case switchToBuiltInMic
+    /// Prompt user to select a different audio route
     case selectDifferentRoute
+    /// No recovery action available
+    case none
 }

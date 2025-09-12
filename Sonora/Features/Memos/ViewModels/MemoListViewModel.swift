@@ -996,29 +996,35 @@ struct MemoWithState: Identifiable, Equatable, Sendable {
     var fileURL: URL { memo.fileURL }
 }
 
-/// State object for individual memo rows (legacy compatibility)
-struct MemoRowState {
+/// Legacy row view state for memo list rows.
+/// Kept for compatibility with older UI components while migrating to `MemoWithState`.
+struct MemoRowState: Identifiable, Equatable {
     let memo: Memo
     let transcriptionState: TranscriptionState
     let isPlaying: Bool
     let playButtonIcon: String
-    
-    /// Create from individual components (legacy)
+
+    var id: UUID { memo.id }
+    var displayName: String { memo.displayName }
+    var filename: String { memo.filename }
+    var creationDate: Date { memo.creationDate }
+    var fileURL: URL { memo.fileURL }
+
     init(memo: Memo, transcriptionState: TranscriptionState, isPlaying: Bool, playButtonIcon: String) {
         self.memo = memo
         self.transcriptionState = transcriptionState
         self.isPlaying = isPlaying
         self.playButtonIcon = playButtonIcon
     }
-    
-    /// Create from unified MemoWithState
-    init(from memoWithState: MemoWithState) {
-        self.memo = memoWithState.memo
-        self.transcriptionState = memoWithState.transcriptionState
-        self.isPlaying = memoWithState.isPlaying
-        self.playButtonIcon = memoWithState.playButtonIcon
+
+    init(from unified: MemoWithState) {
+        self.memo = unified.memo
+        self.transcriptionState = unified.transcriptionState
+        self.isPlaying = unified.isPlaying
+        self.playButtonIcon = unified.playButtonIcon
     }
 }
+
 
 // MARK: - Debug Helpers
 

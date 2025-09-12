@@ -147,28 +147,3 @@ struct ExportOptions: OptionSet {
 protocol DataExporting {
     func export(options: ExportOptions) async throws -> URL
 }
-
-enum PrivacyControllerError: LocalizedError {
-    case deletionIncomplete
-
-    var errorDescription: String? {
-        switch self {
-        case .deletionIncomplete:
-            return "Some items could not be deleted. Please try again."
-        }
-    }
-}
-
-/// Basic export stub that writes a small file with a .zip extension
-@MainActor
-struct StubDataExportService: DataExporting {
-    func export(options: ExportOptions) async throws -> URL {
-        try await Task.sleep(nanoseconds: 1_000_000_000) // Simulate work
-        let tmp = FileManager.default.temporaryDirectory
-        let filename = "Sonora_Export_\(Int(Date().timeIntervalSince1970)).zip"
-        let url = tmp.appendingPathComponent(filename)
-        let data = Data("Sonora export placeholder (options: \(options.rawValue))".utf8)
-        try data.write(to: url, options: .atomic)
-        return url
-    }
-}

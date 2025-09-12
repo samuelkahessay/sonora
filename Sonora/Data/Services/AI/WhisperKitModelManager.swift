@@ -16,15 +16,8 @@ import Combine
 /// Protocol defining WhisperKit model lifecycle operations
 @MainActor
 protocol WhisperKitModelManagerProtocol: Sendable {
-    var isModelWarmed: Bool { get }
-    var currentModelId: String? { get }
-    var onModelReady: (() -> Void)? { get set }
-    
-    func prewarmModel() async throws
     func getWhisperKit() async throws -> WhisperKit?
     func unloadModel()
-    func configureLifecycleHandling()
-    func getModelPerformanceMetrics() -> ModelPerformanceMetrics
 }
 
 /// Performance and memory management service for WhisperKit models
@@ -35,17 +28,9 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
     
     private struct ModelManagementConfig {
         static let prewarmDelay: TimeInterval = 2.0 // Delay before prewarming
-        static let idleUnloadTimeout: TimeInterval = 30.0 // Unload after 30s idle
-        static let memoryPressureUnloadTimeout: TimeInterval = 5.0 // Fast unload under pressure
-        static let maxRetryAttempts = 3
-        static let retryDelay: TimeInterval = 1.0
     }
     
     // MARK: - Properties
-    
-    @Published var isModelWarmed = false
-    @Published var currentModelId: String?
-    var onModelReady: (() -> Void)?
     
     private let modelProvider: WhisperKitModelProvider
     private let logger = Logger.shared
@@ -58,6 +43,10 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
     // Memory pressure monitoring
     private let memoryPressureSource = DispatchSource.makeMemoryPressureSource(eventMask: .all, queue: .main)
     private var isUnderMemoryPressure = false
+    
+    // Model state tracking
+    internal var isModelWarmed = false
+    internal var currentModelId: String?
     
     // App lifecycle observations
     private var lifecycleObservers: Set<AnyCancellable> = []
@@ -108,7 +97,6 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
         try await loadModelSynchronously(modelId: selectedModel.id, modelName: selectedModel.displayName)
         let loadTime = CFAbsoluteTimeGetCurrent() - startTime
         
-        performanceMetrics.lastColdLoadTime = loadTime
         performanceMetrics.averageColdLoadTime = (performanceMetrics.averageColdLoadTime + loadTime) / 2.0
         
         return whisperKit
@@ -133,81 +121,6 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
     
     // MARK: - Private Implementation
     
-    private func performPrewarmOperation(modelId: String, modelName: String, startTime: CFAbsoluteTime) async {
-        do {
-            // Check memory conditions before prewarming
-            guard !isUnderMemoryPressure else {
-                logger.info("🚀 WhisperKitModelManager: Skipping prewarming due to memory pressure")
-                return
-            }
-            
-            // Unload any existing model
-            if whisperKit != nil {
-                unloadModelInternal()
-            }
-            
-            // Load model with retry logic
-            try await loadModelWithRetry(modelId: modelId, modelName: modelName)
-            
-            let prewarmTime = CFAbsoluteTimeGetCurrent() - startTime
-            performanceMetrics.lastPrewarmTime = prewarmTime
-            performanceMetrics.totalPrewarms += 1
-            performanceMetrics.averagePrewarmTime = (performanceMetrics.averagePrewarmTime + prewarmTime) / 2.0
-            
-            // Update state
-            currentModelId = modelId
-            isModelWarmed = true
-            
-            logger.info("🚀 WhisperKitModelManager: Prewarming completed in \(String(format: "%.2f", prewarmTime))s")
-            
-            // Notify completion
-            onModelReady?()
-            
-            // Schedule idle unload timer
-            scheduleIdleUnloadTimer()
-            
-        } catch {
-            logger.error("🚀 WhisperKitModelManager: Prewarming failed", 
-                        category: .service, 
-                        context: LogContext(additionalInfo: ["model": modelName]),
-                        error: error)
-            performanceMetrics.prewarmFailures += 1
-        }
-    }
-    
-    private func loadModelWithRetry(modelId: String, modelName: String) async throws {
-        var lastError: Error?
-        
-        for attempt in 1...ModelManagementConfig.maxRetryAttempts {
-            do {
-                try await loadModelSynchronously(modelId: modelId, modelName: modelName)
-                return
-            } catch {
-                lastError = error
-                // If model is missing, do not spam warnings repeatedly
-                if case WhisperKitModelManagerError.modelNotFound = error {
-                    throttleMissingModelWarning(modelName: modelName)
-                    break
-                } else {
-                    logger.warning("🚀 WhisperKitModelManager: Load attempt \(attempt) failed: \(error.localizedDescription)")
-                }
-                
-                if attempt < ModelManagementConfig.maxRetryAttempts {
-                    try await Task.sleep(nanoseconds: UInt64(ModelManagementConfig.retryDelay * 1_000_000_000))
-                }
-            }
-        }
-        
-        throw lastError ?? WhisperKitModelManagerError.loadFailed("All retry attempts exhausted")
-    }
-
-    // MARK: - Warning Throttling
-    private var hasWarnedMissingModel = false
-    private func throttleMissingModelWarning(modelName: String) {
-        guard !hasWarnedMissingModel else { return }
-        hasWarnedMissingModel = true
-        logger.warning("🚀 WhisperKitModelManager: Model not installed: \(modelName). Skipping prewarm.")
-    }
     
     private func loadModelSynchronously(modelId: String, modelName: String) async throws {
         // Resolve model folder
@@ -319,25 +232,6 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
         performanceMetrics.memoryPressureUnloads += 1
     }
     
-    // MARK: - Memory Pressure Monitoring
-    
-    private func setupMemoryPressureMonitoring() { /* no-op */ }
-    
-    private func handleMemoryPressureChange() {
-        let memoryPressure = memoryPressureSource.mask
-        let wasUnderPressure = isUnderMemoryPressure
-        
-        isUnderMemoryPressure = memoryPressure.contains(.warning) || memoryPressure.contains(.critical)
-        
-        if isUnderMemoryPressure && !wasUnderPressure {
-            logger.warning("🚀 WhisperKitModelManager: Memory pressure detected - aggressive unloading")
-            
-            prewarmTask?.cancel()
-            scheduleMemoryPressureUnload()
-        } else if !isUnderMemoryPressure && wasUnderPressure {
-            logger.info("🚀 WhisperKitModelManager: Memory pressure relieved")
-        }
-    }
     
     // MARK: - Timer Management
     
@@ -346,28 +240,6 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
         cancelUnloadTimer()
     }
     
-    private func scheduleIdleUnloadTimer() { /* no-op */ }
-    
-    private func scheduleMemoryPressureUnload() { /* no-op */ }
-    
-    private func handleIdleTimeout() {
-        let idleTime = Date().timeIntervalSince(lastUsedTime)
-        let threshold = isUnderMemoryPressure ? 
-            ModelManagementConfig.memoryPressureUnloadTimeout : 
-            ModelManagementConfig.idleUnloadTimeout
-        
-        if idleTime >= threshold {
-            logger.info("🚀 WhisperKitModelManager: Idle timeout - unloading model")
-            unloadModelInternal()
-            performanceMetrics.idleUnloads += 1
-        }
-    }
-    
-    private func handleMemoryPressureTimeout() {
-        logger.warning("🚀 WhisperKitModelManager: Memory pressure timeout - force unloading")
-        unloadModelInternal()
-        performanceMetrics.memoryPressureUnloads += 1
-    }
     
     private func cancelUnloadTimer() {
         unloadTimer?.invalidate()
@@ -407,15 +279,6 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
         return recent.filter { $0 > cutoff }
     }
     
-    private func recordTranscriptionUsage() {
-        let key = "RecentWhisperKitUsage"
-        var recent = UserDefaults.standard.array(forKey: key) as? [Date] ?? []
-        recent.append(Date())
-        
-        // Keep only last 10 entries
-        recent = Array(recent.suffix(10))
-        UserDefaults.standard.set(recent, forKey: key)
-    }
 }
 
 // MARK: - Performance Metrics
@@ -429,19 +292,12 @@ struct ModelPerformanceMetrics: Sendable {
     var memoryPressureUnloads: Int = 0
     var backgroundUnloads: Int = 0
     
-    var lastPrewarmTime: TimeInterval = 0
-    var lastColdLoadTime: TimeInterval = 0
     var averagePrewarmTime: TimeInterval = 0
     var averageColdLoadTime: TimeInterval = 0
     
     var warmHitRate: Double {
         let total = warmHits + coldLoads
         return total > 0 ? Double(warmHits) / Double(total) : 0.0
-    }
-    
-    var prewarmSuccessRate: Double {
-        let total = totalPrewarms + prewarmFailures
-        return total > 0 ? Double(totalPrewarms) / Double(total) : 0.0
     }
 }
 

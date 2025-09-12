@@ -43,7 +43,6 @@ final class BrandThemeManager: ObservableObject {
     // MARK: - Private Properties
     
     private var cancellables = Set<AnyCancellable>()
-    private let persistenceKey = "SonoraBrandTheme"
     
     // MARK: - Initialization
     
@@ -251,14 +250,7 @@ extension SonoraBrandTheme {
         primary: Color.insightGold,
         secondary: Color.growthGreen,
         accent: Color.sparkOrange,
-        background: Color.sonoraDep,
-        surface: Color.sonoraDep.opacity(0.8),
-        onSurface: Color.clarityWhite,
-        recordingActive: Color.insightGold,
-        recordingInactive: Color.reflectionGray,
-        insightHighlight: Color.growthGreen,
-        textPrimary: Color.clarityWhite,
-        textSecondary: Color.reflectionGray
+        background: Color.sonoraDep
     )
 }
 
@@ -296,103 +288,3 @@ extension Notification.Name {
 
 // MARK: - Preview Support
 
-#if DEBUG
-struct BrandThemeManager_Preview: View {
-    @StateObject private var themeManager = BrandThemeManager.shared
-    
-    var body: some View {
-        VStack(spacing: SonoraDesignSystem.Spacing.lg) {
-            Text("Brand Theme Manager")
-                .headingStyle(.large)
-            
-            VStack(spacing: SonoraDesignSystem.Spacing.md) {
-                themeInfoSection
-                controlsSection
-                recordingStateSection
-            }
-            .breathingRoom()
-        }
-        .brandThemed()
-        .previewDisplayName("Brand Theme Manager")
-    }
-    
-    private var themeInfoSection: some View {
-        VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.sm) {
-            Text("Current Theme")
-                .headingStyle(.small)
-            
-            HStack {
-                colorSwatch("Primary", themeManager.currentTheme.primary)
-                colorSwatch("Secondary", themeManager.currentTheme.secondary)
-                colorSwatch("Accent", themeManager.currentTheme.accent)
-                colorSwatch("Background", themeManager.currentTheme.background)
-            }
-        }
-    }
-    
-    private var controlsSection: some View {
-        VStack(spacing: SonoraDesignSystem.Spacing.sm) {
-            Text("Controls")
-                .headingStyle(.small)
-            
-            HStack {
-                Button("Light Theme") {
-                    themeManager.setColorScheme(.light)
-                }
-                .buttonStyle(.bordered)
-                
-                Button("Dark Theme") {
-                    themeManager.setColorScheme(.dark)
-                }
-                .buttonStyle(.bordered)
-                
-                Button("Toggle Focus") {
-                    themeManager.toggleFocusMode()
-                }
-                .buttonStyle(.bordered)
-            }
-        }
-    }
-    
-    private var recordingStateSection: some View {
-        VStack(spacing: SonoraDesignSystem.Spacing.sm) {
-            Text("Recording State: \(themeManager.recordingState.description)")
-                .bodyStyle(.regular)
-            
-            HStack {
-                Button("Idle") {
-                    themeManager.updateRecordingState(.idle)
-                }
-                .buttonStyle(.bordered)
-                
-                Button("Recording") {
-                    themeManager.updateRecordingState(.active)
-                }
-                .buttonStyle(.bordered)
-                
-                Button("Processing") {
-                    themeManager.updateRecordingState(.processing)
-                }
-                .buttonStyle(.bordered)
-            }
-        }
-    }
-    
-    private func colorSwatch(_ name: String, _ color: Color) -> some View {
-        VStack(spacing: 4) {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(color)
-                .frame(width: 40, height: 40)
-            
-            Text(name)
-                .bodyStyle(.caption)
-        }
-    }
-}
-
-struct BrandThemeManager_Previews: PreviewProvider {
-    static var previews: some View {
-        BrandThemeManager_Preview()
-    }
-}
-#endif

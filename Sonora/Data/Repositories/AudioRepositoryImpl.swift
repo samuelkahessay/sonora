@@ -377,6 +377,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         - Background Task Active: \(backgroundAudioService.backgroundTaskActive)
         """
     }
+
     
     // Testing helper removed as unused
 }

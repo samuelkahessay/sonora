@@ -167,21 +167,3 @@ final class BackgroundTaskService: NSObject, BackgroundTaskServiceProtocol, @unc
     }
 }
 
-// MARK: - Error Types
-
-enum BackgroundTaskError: LocalizedError {
-    case taskCreationFailed
-    case taskExpired
-    case backgroundRefreshDisabled
-    
-    var errorDescription: String? {
-        switch self {
-        case .taskCreationFailed:
-            return "Failed to create background task"
-        case .taskExpired:
-            return "Background task expired"
-        case .backgroundRefreshDisabled:
-            return "Background refresh is disabled for this app"
-        }
-    }
-}

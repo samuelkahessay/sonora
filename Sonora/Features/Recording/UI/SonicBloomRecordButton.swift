@@ -368,34 +368,3 @@ extension SonicBloomRecordButton {
     }
 }
 
-// MARK: - Preview Support
-
-#if DEBUG
-struct SonicBloomRecordButton_Previews: PreviewProvider {
-    static var previews: some View {
-        VStack(spacing: 60) {
-            // Idle state
-            SonicBloomRecordButton(isRecording: false) {
-                print("Start recording")
-            }
-            .accessibilityConfiguration()
-            
-            // Recording state
-            SonicBloomRecordButton(isRecording: true) {
-                print("Stop recording")
-            }
-            .accessibilityConfiguration()
-        }
-        .padding(60)
-        .background(
-            LinearGradient(
-                colors: [Color.whisperBlue, Color.clarityWhite],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .previewDisplayName("Sonic Bloom Record Button")
-        .previewLayout(.sizeThatFits)
-    }
-}
-#endif

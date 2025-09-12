@@ -125,7 +125,7 @@ struct AIDisclaimerView: View {
     @ViewBuilder
     private var detailedDisclaimer: some View {
         // Compact, on-brand copy with a Learn more link to the AI disclosure sheet
-        DetailedDisclosureRow(contentType: contentType, tint: style.foregroundColor, bg: style.backgroundColor)
+        DetailedDisclosureRow(tint: style.foregroundColor, bg: style.backgroundColor)
     }
     
     // MARK: - Inline Disclaimer
@@ -153,7 +153,6 @@ struct AIDisclaimerView: View {
 // MARK: - Detailed Disclosure Row (with Learn more)
 
 private struct DetailedDisclosureRow: View {
-    let contentType: AIDisclaimerView.AIContentType
     let tint: Color
     let bg: Color
     @State private var showFullDisclosure = false

@@ -640,8 +640,7 @@ final class DIContainer: ObservableObject, Resolver {
             self._spotlightIndexer = SpotlightIndexer(
                 logger: self._logger ?? Logger.shared,
                 memoRepository: memoRepo,
-                transcriptionRepository: trRepo,
-                analysisRepository: anRepo
+                transcriptionRepository: trRepo
             )
         }
     }

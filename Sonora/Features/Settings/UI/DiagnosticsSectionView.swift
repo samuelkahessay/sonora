@@ -50,7 +50,7 @@ struct DiagnosticsSectionView: View {
                 gridRow("Avg Prewarm", String(format: "%.2fs", whisperMetrics.averagePrewarmTime))
                 gridRow("Avg Cold Load", String(format: "%.2fs", whisperMetrics.averageColdLoadTime))
                 HStack(spacing: Spacing.sm) {
-                    Button("Prewarm Now") { Task { @MainActor in try? await di.whisperKitModelManager().prewarmModel(); refreshWhisper() } }
+                    Button("Prewarm Now") { Task { @MainActor in if let mgr = di.whisperKitModelManager() as? WhisperKitModelManager { try? await mgr.prewarmModel(); refreshWhisper() } } }
                         .buttonStyle(.borderedProminent)
                     Button("Unload Model", role: .destructive) { di.whisperKitModelManager().unloadModel(); refreshWhisper() }
                         .buttonStyle(.bordered)
@@ -143,9 +143,12 @@ struct DiagnosticsSectionView: View {
 
     private func refreshWhisper() {
         let mgr = di.whisperKitModelManager()
-        whisperMetrics = mgr.getModelPerformanceMetrics()
-        isModelWarmed = mgr.isModelWarmed
-        currentModelId = mgr.currentModelId
+        // Cast to concrete type to access debug properties and methods
+        if let concreteMgr = mgr as? WhisperKitModelManager {
+            whisperMetrics = concreteMgr.getModelPerformanceMetrics()
+            isModelWarmed = concreteMgr.isModelWarmed
+            currentModelId = concreteMgr.currentModelId
+        }
     }
 
     private func refreshAudio() {
@@ -158,8 +161,11 @@ struct DiagnosticsSectionView: View {
 
     private func refreshMemory() {
         let det = di.memoryPressureDetector()
-        isUnderPressure = det.isUnderMemoryPressure
-        memoryStats = det.currentMemoryMetrics
+        // Cast to concrete type to access debug properties
+        if let concreteDet = det as? MemoryPressureDetector {
+            isUnderPressure = concreteDet.isUnderMemoryPressure
+            memoryStats = concreteDet.currentMemoryMetrics
+        }
     }
 
     private func refreshOperations() {

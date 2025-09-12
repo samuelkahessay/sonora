@@ -984,10 +984,6 @@ extension AnalysisError {
     static let modelLoadFailed = AnalysisError.networkError("Failed to load local AI model")
     static let modelNotAvailable = AnalysisError.networkError("Local AI model not available")
     
-    static func deviceIncompatible(_ reason: String) -> AnalysisError {
-        return .networkError("Device incompatible: \(reason)")
-    }
-    
     static func invalidInput(_ msg: String) -> AnalysisError {
         return .decodingError(msg)
     }

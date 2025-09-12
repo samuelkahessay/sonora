@@ -55,27 +55,12 @@ extension Color {
     /// Inactive recording state - uses Reflection Gray for subtle presence
     static let recordingInactive = reflectionGray
     
-    // MARK: - Content & Insights
-    
-    /// Highlight color for key insights and important content
-    static let insightHighlight = growthGreen
-    
-    /// Text color for inspirational quotes and meaningful moments
-    static let wisdomText = depthPurple
-    
     // MARK: - Interface Elements
     
-    /// Primary interactive elements and brand presence
-    static let brandPrimary = insightGold
-    
-    /// Secondary interactive elements
-    static let brandSecondary = growthGreen
     
     /// Error states and destructive actions
     static let errorState = sparkOrange
     
-    /// Success states and positive feedback
-    static let successState = growthGreen
     
     /// Warning states and important notifications
     static let warningState = sparkOrange
@@ -97,11 +82,6 @@ extension Color {
     
     // MARK: - Backgrounds
     
-    /// Primary background - uses system adaptation with Clarity White preference
-    static let backgroundPrimary = Color(UIColor.systemBackground)
-    
-    /// Elevated content background
-    static let backgroundElevated = clarityWhite
 }
 
 // MARK: - Color Utilities
@@ -175,15 +155,7 @@ struct SonoraBrandTheme {
     let secondary: Color
     let accent: Color
     let background: Color
-    let surface: Color
-    let onSurface: Color
-    
-    // Semantic mappings
-    let recordingActive: Color
-    let recordingInactive: Color
-    let insightHighlight: Color
-    let textPrimary: Color
-    let textSecondary: Color
+    // Note: Removed unused properties per periphery scan
     
     /// Designated initializer with sensible defaults for the light theme
     init(
@@ -191,25 +163,12 @@ struct SonoraBrandTheme {
         secondary: Color = .growthGreen,
         accent: Color = .sparkOrange,
         background: Color = .clarityWhite,
-        surface: Color = .whisperBlue,
-        onSurface: Color = .sonoraDep,
-        recordingActive: Color = .recordingActive,
-        recordingInactive: Color = .recordingInactive,
-        insightHighlight: Color = .insightHighlight,
-        textPrimary: Color = .textPrimary,
-        textSecondary: Color = .textSecondary,
     ) {
         self.primary = primary
         self.secondary = secondary
         self.accent = accent
         self.background = background
-        self.surface = surface
-        self.onSurface = onSurface
-        self.recordingActive = recordingActive
-        self.recordingInactive = recordingInactive
-        self.insightHighlight = insightHighlight
-        self.textPrimary = textPrimary
-        self.textSecondary = textSecondary
+        // Note: Removed unused property assignments
     }
     
     /// Default Sonora brand theme (light)
