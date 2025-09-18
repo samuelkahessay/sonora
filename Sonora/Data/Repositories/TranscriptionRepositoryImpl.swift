@@ -201,6 +201,7 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
             memoId: memoId,
             state: state.statusText,
             text: state.text,
+            originalText: state.text,
             lastUpdated: model.lastUpdated,
             detectedLanguage: model.language
         )

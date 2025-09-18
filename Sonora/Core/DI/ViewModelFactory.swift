@@ -63,13 +63,15 @@ final class DefaultViewModelFactory: ViewModelFactory {
         let memoRepository = container.memoRepository()
         let transcriptionRepository = container.transcriptionRepository()
         let transcriptionAPI = container.createTranscriptionService()
-        
+        let fillerWordFilter = container.fillerWordFilter()
+
         let startTranscriptionUseCase = StartTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
             transcriptionAPI: transcriptionAPI,
             eventBus: container.eventBus(),
             operationCoordinator: container.operationCoordinator(),
-            moderationService: container.moderationService()
+            moderationService: container.moderationService(),
+            fillerWordFilter: fillerWordFilter
         )
         let retryTranscriptionUseCase = RetryTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
@@ -109,13 +111,15 @@ final class DefaultViewModelFactory: ViewModelFactory {
         let eventBus = container.eventBus()
         let moderationService = container.moderationService()
         let operationCoordinator = container.operationCoordinator()
-        
+        let fillerWordFilter = container.fillerWordFilter()
+
         let startTranscriptionUseCase = StartTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
             transcriptionAPI: transcriptionAPI,
             eventBus: eventBus,
             operationCoordinator: operationCoordinator,
-            moderationService: moderationService
+            moderationService: moderationService,
+            fillerWordFilter: fillerWordFilter
         )
         let retryTranscriptionUseCase = RetryTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,

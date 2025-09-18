@@ -26,6 +26,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     private let operationCoordinator: any OperationCoordinatorProtocol
     private let logger: any LoggerProtocol
     private let moderationService: any ModerationServiceProtocol
+    private let fillerWordFilter: any FillerWordFiltering
     // New dependencies for chunked flow
     private let vadService: any VADSplittingService
     private let chunkManager: AudioChunkManager
@@ -46,7 +47,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         qualityEvaluator: any LanguageQualityEvaluator = DefaultLanguageQualityEvaluator(),
         clientLanguageService: any ClientLanguageDetectionService = DefaultClientLanguageDetectionService(),
         languageFallbackConfig: LanguageFallbackConfig = LanguageFallbackConfig(),
-        moderationService: any ModerationServiceProtocol
+        moderationService: any ModerationServiceProtocol,
+        fillerWordFilter: any FillerWordFiltering
     ) {
         self.transcriptionRepository = transcriptionRepository
         self.transcriptionAPI = transcriptionAPI
@@ -59,6 +61,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         self.clientLanguageService = clientLanguageService
         self.languageFallbackConfig = languageFallbackConfig
         self.moderationService = moderationService
+        self.fillerWordFilter = fillerWordFilter
     }
     
     // MARK: - Use Case Execution
@@ -181,17 +184,26 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     }
                     let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang)
                     let eval = qualityEvaluator.evaluateQuality(resp, text: resp.text)
+                    let (processedText, originalText) = prepareTranscript(from: resp.text)
 
                     // Save and complete
                     await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
-                    let textToSave = resp.text
+                    let textToSave = processedText
                     let langToSave = resp.detectedLanguage ?? lang
                     let qualityToSave = eval.overallScore
-                    let textLen = textToSave.count
+                    let textLen = processedText.count
                     await MainActor.run {
                         // Save final text (also sets state to completed)
                         transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                        transcriptionRepository.saveTranscriptionMetadata(TranscriptionMetadata(detectedLanguage: langToSave, qualityScore: qualityToSave), for: memo.id)
+                        transcriptionRepository.saveTranscriptionMetadata(
+                            TranscriptionMetadata(
+                                text: processedText,
+                                detectedLanguage: langToSave,
+                                qualityScore: qualityToSave,
+                                originalText: originalText
+                            ),
+                            for: memo.id
+                        )
                     }
                     await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
                     // Include service used in log context (WhisperKit local vs Cloud API)
@@ -225,15 +237,24 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: lang, stageLabel: "Transcribing (\(lang.uppercased()))...")
                 let aggregator = TranscriptionAggregator()
                 let agg = aggregator.aggregate(primary)
-                let textToSave = agg.text
+                let (processedText, originalText) = prepareTranscript(from: agg.text)
+                let textToSave = processedText
                 let langToSave = lang
                 let qualityToSave = agg.confidence
-                let textLen = textToSave.count
+                let textLen = processedText.count
                 await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
                 await MainActor.run {
                     // Save final text (also sets state to completed)
                     transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                    transcriptionRepository.saveTranscriptionMetadata(TranscriptionMetadata(detectedLanguage: langToSave, qualityScore: qualityToSave), for: memo.id)
+                    transcriptionRepository.saveTranscriptionMetadata(
+                        TranscriptionMetadata(
+                            text: processedText,
+                            detectedLanguage: langToSave,
+                            qualityScore: qualityToSave,
+                            originalText: originalText
+                        ),
+                        for: memo.id
+                    )
                 }
                 await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
                 // Include service used in log context
@@ -299,15 +320,25 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
                 // Save and complete
                 await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
-                let textToSave = finalResp.text
+                let (processedText, originalText) = prepareTranscript(from: finalResp.text)
+                let textToSave = processedText
                 let langToSave = DefaultClientLanguageDetectionService.iso639_1(fromBCP47: finalResp.detectedLanguage) ?? finalResp.detectedLanguage ?? "und"
                 let qualityToSave = finalEval.overallScore
-                let textLen = textToSave.count
+                let textLen = processedText.count
                 await MainActor.run {
                     // Save final text (also sets state to completed)
                     transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                    transcriptionRepository.saveTranscriptionMetadata(TranscriptionMetadata(detectedLanguage: langToSave, qualityScore: qualityToSave), for: memo.id)
+                    transcriptionRepository.saveTranscriptionMetadata(
+                        TranscriptionMetadata(
+                            text: processedText,
+                            detectedLanguage: langToSave,
+                            qualityScore: qualityToSave,
+                            originalText: originalText
+                        ),
+                        for: memo.id
+                    )
                 }
+                await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
                 // Include service used in log context
                 let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
                 let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
@@ -376,15 +407,23 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
             // Phase 5: Save and complete
             await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
-            let textToSave = finalText
+            let (processedText, originalText) = prepareTranscript(from: finalText)
+            let textToSave = processedText
             let langToSave = finalLanguage
             let qualityToSave = finalEval.overallScore
-            let textLen = textToSave.count
-                await MainActor.run {
-                    // Save final text (also sets state to completed)
-                    transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                    transcriptionRepository.saveTranscriptionMetadata(TranscriptionMetadata(detectedLanguage: langToSave, qualityScore: qualityToSave), for: memo.id)
-                }
+            let textLen = processedText.count
+            await MainActor.run {
+                transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
+                transcriptionRepository.saveTranscriptionMetadata(
+                    TranscriptionMetadata(
+                        text: processedText,
+                        detectedLanguage: langToSave,
+                        qualityScore: qualityToSave,
+                        originalText: originalText
+                    ),
+                    for: memo.id
+                )
+            }
             await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
 
             logger.info("Transcription completed successfully (chunked)", category: .transcription, context: LogContext(
@@ -428,6 +467,18 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             currentStepIndex: index
         )
         await operationCoordinator.updateProgress(operationId: operationId, progress: progress)
+    }
+
+    private func prepareTranscript(from text: String) -> (processed: String, original: String) {
+        let original = text
+        let sanitized = fillerWordFilter.removeFillerWords(from: text)
+        // Ensure we never persist an empty transcript when the user actually spoke.
+        if sanitized.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           !original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let trimmedOriginal = original.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (trimmedOriginal, original)
+        }
+        return (sanitized, original)
     }
 
     private func transcribeChunksWithProgress(operationId: UUID, chunks: [ChunkFile], baseFraction: Double, fractionBudget: Double) async throws -> [ChunkTranscriptionResult] {

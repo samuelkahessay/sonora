@@ -45,6 +45,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _spotlightIndexer: (any SpotlightIndexing)?
     var _whisperKitModelProvider: WhisperKitModelProvider?
     var _modelContext: ModelContext? // Keep strong reference to ModelContext
+    private var _fillerWordFilter: (any FillerWordFiltering)?
 
     // MARK: - Phase 2: Core Optimization Services
     private var _audioQualityManager: AudioQualityManager?
@@ -334,7 +335,8 @@ final class DIContainer: ObservableObject, Resolver {
             transcriptionAPI: svc,
             eventBus: eventBus(),
             operationCoordinator: operationCoordinator(),
-            moderationService: moderationService()
+            moderationService: moderationService(),
+            fillerWordFilter: fillerWordFilter()
         )
         _startTranscriptionUseCase = uc
         return uc
@@ -623,7 +625,8 @@ final class DIContainer: ObservableObject, Resolver {
             transcriptionAPI: transcriptionService,
             eventBus: bus,
             operationCoordinator: _operationCoordinator,
-            moderationService: mod
+            moderationService: mod,
+            fillerWordFilter: fillerWordFilter()
         )
         // Cache for reuse by other orchestrators (e.g., MemoEventHandler)
         self._startTranscriptionUseCase = startTranscriptionUseCase

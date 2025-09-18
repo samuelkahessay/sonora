@@ -5,6 +5,7 @@ public struct TranscriptionMetadata: Codable, Sendable {
     public var memoId: UUID?
     public var state: String?
     public var text: String?
+    public var originalText: String?
     public var lastUpdated: Date?
 
     // Quality and language
@@ -27,6 +28,7 @@ public struct TranscriptionMetadata: Codable, Sendable {
         memoId: UUID? = nil,
         state: String? = nil,
         text: String? = nil,
+        originalText: String? = nil,
         lastUpdated: Date? = nil,
         detectedLanguage: String? = nil,
         qualityScore: Double? = nil,
@@ -42,6 +44,7 @@ public struct TranscriptionMetadata: Codable, Sendable {
         self.memoId = memoId
         self.state = state
         self.text = text
+        self.originalText = originalText
         self.lastUpdated = lastUpdated
         self.detectedLanguage = detectedLanguage
         self.qualityScore = qualityScore
@@ -62,6 +65,7 @@ public extension TranscriptionMetadata {
             memoId: other.memoId ?? memoId,
             state: other.state ?? state,
             text: other.text ?? text,
+            originalText: other.originalText ?? originalText,
             lastUpdated: other.lastUpdated ?? lastUpdated,
             detectedLanguage: other.detectedLanguage ?? detectedLanguage,
             qualityScore: other.qualityScore ?? qualityScore,
@@ -76,4 +80,3 @@ public extension TranscriptionMetadata {
         )
     }
 }
-

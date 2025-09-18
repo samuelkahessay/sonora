@@ -49,4 +49,16 @@ extension DIContainer {
         guard let svc = _moderationService else { fatalError("DIContainer not configured: moderationService") }
         return svc
     }
+
+    /// Shared filler word filter for transcript post-processing.
+    @MainActor
+    func fillerWordFilter() -> any FillerWordFiltering {
+        ensureConfigured()
+        if let existing = _fillerWordFilter {
+            return existing
+        }
+        let filter = DefaultFillerWordFilter()
+        _fillerWordFilter = filter
+        return filter
+    }
 }
