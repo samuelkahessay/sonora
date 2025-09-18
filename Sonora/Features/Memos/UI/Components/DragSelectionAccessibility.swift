@@ -131,11 +131,13 @@ extension View {
         }
         
         components.append("Duration: \(memo.durationString)")
-        
+
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
-        let relativeDate = formatter.localizedString(for: memo.creationDate, relativeTo: Date())
-        components.append("Created \(relativeDate)")
+        let now = Date()
+        let endDate = min(memo.recordingEndDate, now)
+        let relativeDate = formatter.localizedString(for: endDate, relativeTo: now)
+        components.append("Recorded \(relativeDate)")
         
         return components.joined(separator: ", ")
     }

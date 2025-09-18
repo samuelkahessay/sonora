@@ -6,6 +6,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
     public let filename: String
     public let fileURL: URL
     public let creationDate: Date
+    public let durationSeconds: TimeInterval?
     public let transcriptionStatus: DomainTranscriptionStatus
     public let analysisResults: [DomainAnalysisResult]
     public let customTitle: String?
@@ -16,6 +17,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
         filename: String,
         fileURL: URL,
         creationDate: Date,
+        durationSeconds: TimeInterval? = nil,
         transcriptionStatus: DomainTranscriptionStatus = .notStarted,
         analysisResults: [DomainAnalysisResult] = [],
         customTitle: String? = nil,
@@ -25,6 +27,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
         self.filename = filename
         self.fileURL = fileURL
         self.creationDate = creationDate
+        self.durationSeconds = durationSeconds
         self.transcriptionStatus = transcriptionStatus
         self.analysisResults = analysisResults
         self.customTitle = customTitle
@@ -107,6 +110,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
             filename: filename,
             fileURL: fileURL,
             creationDate: creationDate,
+            durationSeconds: durationSeconds,
             transcriptionStatus: status,
             analysisResults: analysisResults,
             customTitle: customTitle,
@@ -122,6 +126,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
             filename: filename,
             fileURL: fileURL,
             creationDate: creationDate,
+            durationSeconds: durationSeconds,
             transcriptionStatus: transcriptionStatus,
             analysisResults: analysisResults,
             customTitle: title,
@@ -139,6 +144,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
             filename: filename,
             fileURL: fileURL,
             creationDate: creationDate,
+            durationSeconds: durationSeconds,
             transcriptionStatus: transcriptionStatus,
             analysisResults: updatedResults,
             customTitle: customTitle,

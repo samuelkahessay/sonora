@@ -145,6 +145,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             filename: model.filename,
             fileURL: url,
             creationDate: model.creationDate,
+            durationSeconds: model.duration,
             transcriptionStatus: status,
             analysisResults: [],
             customTitle: model.customTitle,
@@ -193,6 +194,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                     filename: model.filename,
                     fileURL: url,
                     creationDate: model.creationDate,
+                    durationSeconds: model.duration,
                     transcriptionStatus: mapToDomainStatus(state),
                     analysisResults: [],
                     customTitle: model.customTitle,
@@ -281,6 +283,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 filename: memo.filename,
                 fileURL: audioDestination,
                 creationDate: memo.creationDate,
+                durationSeconds: duration.isFinite ? duration : nil,
                 transcriptionStatus: memo.transcriptionStatus,
                 analysisResults: memo.analysisResults,
                 customTitle: memo.customTitle,
@@ -292,7 +295,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 memos[idx] = savedMemo
             } else {
                 memos.append(savedMemo)
-                memos.sort { $0.creationDate > $1.creationDate }
+                memos.sort { $0.recordingEndDate > $1.recordingEndDate }
                 print("📝 MemoRepository: Added memo \(savedMemo.filename) to in-memory list with ID \(savedMemo.id)")
             }
             
@@ -425,4 +428,3 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
 
 }
-

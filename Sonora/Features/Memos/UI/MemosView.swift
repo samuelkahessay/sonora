@@ -40,21 +40,22 @@ struct MemosView: View {
         var sections: [TimePeriod: [Memo]] = [:]
 
         for memo in viewModel.memos {
+            let endDate = memo.recordingEndDate
             let period: TimePeriod
 
-            if calendar.isDateInToday(memo.creationDate) {
-                let hour = calendar.component(.hour, from: memo.creationDate)
+            if calendar.isDateInToday(endDate) {
+                let hour = calendar.component(.hour, from: endDate)
                 switch hour {
                 case 5..<12: period = .thisMorning
                 case 12..<17: period = .thisAfternoon
                 case 17..<22: period = .thisEvening
                 default: period = .today
                 }
-            } else if calendar.isDateInYesterday(memo.creationDate) {
+            } else if calendar.isDateInYesterday(endDate) {
                 period = .yesterday
-            } else if calendar.dateInterval(of: .weekOfYear, for: now)?.contains(memo.creationDate) == true {
+            } else if calendar.dateInterval(of: .weekOfYear, for: now)?.contains(endDate) == true {
                 period = .thisWeek
-            } else if calendar.dateInterval(of: .month, for: now)?.contains(memo.creationDate) == true {
+            } else if calendar.dateInterval(of: .month, for: now)?.contains(endDate) == true {
                 period = .thisMonth
             } else {
                 period = .older
@@ -72,7 +73,7 @@ struct MemosView: View {
             guard let memos = sections[period], !memos.isEmpty else { return nil }
             return MemoSection(
                 period: period,
-                memos: memos.sorted { $0.creationDate > $1.creationDate }
+                memos: memos.sorted { $0.recordingEndDate > $1.recordingEndDate }
             )
         }
     }

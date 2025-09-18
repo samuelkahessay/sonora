@@ -235,7 +235,9 @@ struct MemoRowView: View {
     private var formattedRelativeDate: String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated // More compact display
-        return formatter.localizedString(for: memo.creationDate, relativeTo: Date())
+        let now = Date()
+        let endDate = min(memo.recordingEndDate, now)
+        return formatter.localizedString(for: endDate, relativeTo: now)
     }
     
     /// Comprehensive accessibility description for VoiceOver users
@@ -244,7 +246,7 @@ struct MemoRowView: View {
         let components = [
             memo.displayName,
             "Duration: \(memo.durationString)",
-            "Created \(formattedRelativeDate)"
+            "Recorded \(formattedRelativeDate)"
         ]
         return components.joined(separator: ", ")
     }

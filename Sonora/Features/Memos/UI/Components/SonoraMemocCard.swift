@@ -167,7 +167,9 @@ struct SonoraMemocCard: View {
     private var relativeTime: String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: memo.creationDate, relativeTo: Date())
+        let now = Date()
+        let endDate = min(memo.recordingEndDate, now)
+        return formatter.localizedString(for: endDate, relativeTo: now)
     }
     
 
