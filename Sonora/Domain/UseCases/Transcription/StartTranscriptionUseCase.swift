@@ -222,7 +222,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 defer { Task { await chunkManager.cleanupChunks(chunks) } }
 
                 await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (\(lang.uppercased()))...")
-                let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: lang, stageLabel: "Transcribing (\(lang))")
+                let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: lang, stageLabel: "Transcribing (\(lang.uppercased()))...")
                 let aggregator = TranscriptionAggregator()
                 let agg = aggregator.aggregate(primary)
                 let textToSave = agg.text
@@ -260,7 +260,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             // Branch: Auto-detect mode
             if totalDurationSec < 60.0 {
                 // Single-shot auto with fallback if needed
-                await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (auto)...")
+                await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (cloud)...")
                 // Wire fine-grained engine progress if supported
                 if let progressSvc = transcriptionAPI as? TranscriptionProgressReporting {
                     progressSvc.setProgressHandler { [weak self] fraction in
@@ -321,7 +321,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     "serviceKey": serviceKey
                 ]
                 if let model = meta?.whisperModel { info["whisperModel"] = model }
-                logger.debug("Transcription completed (single, auto)", category: .transcription, context: LogContext(additionalInfo: info))
+                logger.debug("Transcription completed (single, cloud)", category: .transcription, context: LogContext(additionalInfo: info))
                 await MainActor.run { [eventBus, textToSave] in
                     eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
                 }
@@ -335,7 +335,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             defer { Task { await chunkManager.cleanupChunks(chunks) } }
 
             await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing with language detection...")
-            let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: nil, stageLabel: "Transcribing (auto)")
+            let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: nil, stageLabel: "Transcribing (cloud)...")
             let aggregator = TranscriptionAggregator()
             let primaryAgg = aggregator.aggregate(primary)
             let primaryText = primaryAgg.text
@@ -353,7 +353,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             if preferredLang == nil && qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
                 await updateProgress(operationId: operationId, fraction: 0.82, step: "Low confidence. Retrying with English...")
                 do {
-                    let fallback = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.82, fractionBudget: 0.12, language: "en", stageLabel: "Transcribing (en)")
+                    let fallback = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.82, fractionBudget: 0.12, language: "en", stageLabel: "Transcribing (EN)...")
                     let fallbackAgg = aggregator.aggregate(fallback)
                     let fallbackText = fallbackAgg.text
                     let fallbackSummary = summarizeResponse(from: fallback, aggregatedText: fallbackText, overrideLanguage: "en")
@@ -438,7 +438,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         for (i, chunk) in chunks.enumerated() {
             let stepFraction = Double(i) / Double(chunks.count)
             let current = baseFraction + fractionBudget * stepFraction
-            await updateProgress(operationId: operationId, fraction: current, step: "Transcribing chunk \(i+1)/\(chunks.count)...", index: i+1, total: chunks.count)
+            await updateProgress(operationId: operationId, fraction: current, step: "Transcribing chunk...", index: i+1, total: chunks.count)
 
             do {
                 let text = try await transcriptionAPI.transcribe(url: chunk.url)
@@ -471,13 +471,13 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         for (i, chunk) in chunks.enumerated() {
             let stepFraction = Double(i) / Double(chunks.count)
             let current = baseFraction + fractionBudget * stepFraction
-            await updateProgress(operationId: operationId, fraction: current, step: "\(stageLabel) \(i+1)/\(chunks.count)...", index: i+1, total: chunks.count)
+            await updateProgress(operationId: operationId, fraction: current, step: stageLabel, index: i+1, total: chunks.count)
 
             do {
                 let response = try await transcriptionAPI.transcribe(url: chunk.url, language: language)
                 results.append(ChunkTranscriptionResult(segment: chunk.segment, response: response))
             } catch {
-                logger.warning("Chunk transcription failed; continuing", category: .transcription, context: LogContext(additionalInfo: ["index": i, "lang": language ?? "auto"]), error: error)
+                logger.warning("Chunk transcription failed; continuing", category: .transcription, context: LogContext(additionalInfo: ["index": i, "lang": language ?? "auto-detect"]), error: error)
                 results.append(ChunkTranscriptionResult(segment: chunk.segment, response: TranscriptionResponse(text: "", detectedLanguage: nil, confidence: nil, avgLogProb: nil, duration: nil)))
             }
         }
