@@ -415,13 +415,24 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     /// Performs complete cleanup of all services
     private func cleanup() {
         print("🧹 BackgroundAudioService: Performing cleanup...")
-        
-        // Stop timer
-        timerService.resetTimer()
-        
+
+        // First, make sure the timer loop is halted
+        timerService.stopTimer()
+
+        // Publish the recording state transition before zeroing out the timer so the UI hides immediately
+        if isRecording {
+            isRecording = false
+        }
+
+        // Defer the reset to the next run loop tick so views have already reacted to `isRecording = false`
+        Task { [weak self] in
+            await Task.yield()
+            self?.timerService.resetTimer()
+        }
+
         // Clean up recording (handled by recording service delegate)
         // Session cleanup (deactivated when safe)
-        
+
         // End background task
         backgroundTaskService.endBackgroundTask()
         
