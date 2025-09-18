@@ -23,6 +23,7 @@ DerivedData/
 
 # SwiftPM
 .build/
+/.swift-module-cache/
 
 # Cocoapods
 Pods/

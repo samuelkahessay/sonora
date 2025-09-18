@@ -196,7 +196,7 @@ Behavior:
   to guarantee variety (min 10 candidates) with a short 3‑minute cooldown for recently
   shown prompts and a rotation token to avoid in‑session repeats. `AppEvent.promptShown`
   uses `source = "inspire"` in this mode; default dynamic selection uses `source = "dynamic"`.
-- Localization keys: `daypart.*`, `weekpart.*`, and `prompt.<category>.<slug>` in `Localizable.strings`
+- Localization keys: `daypart.*`, `weekpart.*`, and `prompt.<category>.<slug>` in `Localizable.strings`; prompt entries are generated via `./ci_scripts/generate_prompt_strings.sh` from `PromptCatalogStatic`
 - Feature flag: `FeatureFlags.usePrompts`
 
 Events & logging:

@@ -27,7 +27,7 @@ Sonora combines cutting-edge technology with intuitive design:
 - **AI-Powered Analysis**: Intelligent summaries, themes, todos, and content insights
 - **Thread-safe Operations**: Sophisticated concurrency management with progress tracking
 - **Event-Driven Architecture**: Decoupled, reactive system for scalable feature development
-- **Focused Service Architecture**: 6 specialized audio services orchestrated through composition pattern
+- **Focused Service Architecture**: 35+ specialized services across 9 categories with orchestration pattern
 
 ### 🎯 **Key Features**
 - **🎤 Smart Recording**: 60-second limit with elegant 10-second countdown
@@ -40,7 +40,10 @@ Sonora combines cutting-edge technology with intuitive design:
 - **📊 Operation Metrics**: Real-time system performance and resource monitoring
 - **📅 EventKit Integration**: Smart calendar event and reminder creation from voice transcripts
 - **⏱️ Recording Quotas**: 10-minute daily cloud transcription limit with local WhisperKit fallback
-- **🤖 WhisperKit Local Models**: On-device transcription with multiple language support
+- **🤖 WhisperKit Local Models**: On-device transcription with 15+ language support and model management UI
+- **📤 Export System**: Multiple export formats for transcripts, analysis, and data
+- **🛡️ Content Moderation**: AI-powered content safety and filtering
+- **📝 Advanced Prompts**: 48 curated prompts with intelligent interpolation and selection
 
 ### 🔧 **Advanced Features Deep Dive**
 
@@ -61,9 +64,24 @@ Sonora combines cutting-edge technology with intuitive design:
 #### **🤖 WhisperKit Local Transcription**
 - **On-Device Processing**: Privacy-first local transcription using Apple's CoreML
 - **Multi-Language Support**: 15+ languages with downloadable models
-- **Model Management**: Intelligent model downloading and storage optimization
+- **Model Management**: Intelligent model downloading with UI for selection and storage optimization
 - **Performance Optimization**: Hardware-accelerated inference on Apple Silicon
 - **Fallback Strategy**: Seamless integration as backup to cloud transcription
+- **Model Tiers**: Multiple model sizes (tiny, base, small) for quality/performance tradeoffs
+- **VAD Support**: Voice Activity Detection for improved transcription accuracy
+
+#### **📤 Export System**
+- **Transcript Export**: Multiple formats for sharing transcriptions
+- **Analysis Export**: Export AI-generated summaries and insights
+- **Data Export**: Comprehensive data export for backup and portability
+- **Share Integration**: Native iOS share sheet integration
+
+#### **📝 Advanced Prompts System**
+- **Curated Library**: 48 professionally crafted recording prompts
+- **Smart Interpolation**: Dynamic tokens - [Name], [DayPart], [WeekPart]
+- **Intelligent Selection**: 7-day no-repeat algorithm with weighted selection
+- **Contextual Relevance**: Time-aware and personalized prompt suggestions
+- **Usage Tracking**: Analytics for prompt effectiveness and engagement
 
 ## 🚀 **Release Timeline & Milestones**
 
@@ -76,7 +94,7 @@ Sonora combines cutting-edge technology with intuitive design:
 *From concept to TestFlight in just 18 days - showcasing rapid development with Clean Architecture patterns.*
 
 ## 📐 Architecture Overview
-For the complete architecture, current metrics, and next steps, see `ARCHITECTURE.md`.
+For the complete architecture, current metrics, and next steps, see `docs/architecture/ARCHITECTURE.md`.
 
 Sonora follows **Clean Architecture** principles with **MVVM** presentation patterns.
 
@@ -134,7 +152,7 @@ Sonora/
 │   └── Errors/
 │       └── *.swift                     # ⚠️ Domain-specific error types
 ├── Domain/                         # Business logic & rules
-│   ├── UseCases/                   # 🎯 29 Single-purpose business operations across 8 categories
+│   ├── UseCases/                   # 🎯 36+ Single-purpose business operations across 9 categories
 │   │   ├── Recording/ (8 use cases)
 │   │   │   ├── StartRecordingUseCase.swift, StopRecordingUseCase.swift
 │   │   │   ├── CanStartRecordingUseCase.swift, RequestMicrophonePermissionUseCase.swift
@@ -160,6 +178,9 @@ Sonora/
 │   │   │   └── EndLiveActivityUseCase.swift
 │   │   ├── System/ (1 use case)
 │   │   │   └── DeleteAllUserDataUseCase.swift
+│   │   ├── Prompts/ (2 use cases)
+│   │   │   ├── GetDynamicPromptUseCase.swift
+│   │   │   └── GetPromptCategoryUseCase.swift
 │   │   └── Base/ (3 base classes)
 │   │       ├── BaseUseCase.swift, UseCase.swift, UseCaseFactory.swift
 │   ├── Models/
@@ -177,14 +198,18 @@ Sonora/
 │       ├── MemoListViewModel.swift         # 📋 Memo list management
 │       └── OperationStatusViewModel.swift  # 📊 System-wide operation monitoring
 ├── Data/                          # External data & persistence
-│   ├── Repositories/              # 💾 Data access implementations
+│   ├── Repositories/              # 💾 Data access implementations (7 repositories)
 │   │   ├── Base/
 │   │   │   └── BaseRepository.swift       # 🏗️ Common CRUD operations & patterns
 │   │   ├── MemoRepositoryImpl.swift
 │   │   ├── AnalysisRepositoryImpl.swift
 │   │   ├── TranscriptionRepositoryImpl.swift
-│   │   └── AudioRepositoryImpl.swift
-│   └── Services/                  # 🌐 External API & system integrations (9 categories, 34+ services)
+│   │   ├── AudioRepositoryImpl.swift
+│   │   ├── EventKitRepositoryImpl.swift
+│   │   ├── RecordingUsageRepositoryImpl.swift
+│   │   └── Prompts/
+│   │       └── PromptUsageRepositoryImpl.swift
+│   └── Services/                  # 🌐 External API & system integrations (9 categories, 35+ services)
 │       ├── Audio/ (8 services)            # 🎵 Audio recording & playback
 │       │   ├── BackgroundAudioService.swift, AudioSessionService.swift
 │       │   ├── AudioRecordingService.swift, AudioPlaybackService.swift
@@ -208,13 +233,22 @@ Sonora/
 │       │   └── TranscriptExportService.swift
 │       ├── Moderation/ (2 services)      # 🛡️ Content safety
 │       │   ├── ModerationService.swift, NoopModerationService.swift
+│       ├── Prompts/ (1 service)          # 📝 Prompt management
+│       │   └── PromptCatalogStatic.swift
 │       └── System/ (2 services)          # 🔧 System integration
 │           ├── SystemNavigatorImpl.swift, LiveActivityService.swift
 ├── Views/                         # 🎨 SwiftUI view components
 │   ├── Components/
 │   │   ├── AnalysisResultsView.swift
-│   │   └── TranscriptionStatusView.swift
-│   └── MemoDetailView.swift
+│   │   ├── TranscriptionStatusView.swift
+│   │   ├── UnifiedStateView.swift
+│   │   └── NotificationBanner.swift
+│   └── ContentView.swift
+├── Presentation/                  # 🎨 Model selection UI
+│   └── Views/
+│       ├── ModelDownloadView.swift
+│       ├── ModelSelectionView.swift
+│       └── TierSectionView.swift
 └── Models/                        # 📋 Data transfer objects
     ├── AnalysisModels.swift       # Analysis API models
     └── TranscriptionState.swift   # Transcription state enum
@@ -282,6 +316,9 @@ Guidelines:
 | **Operation Management** | `Core/Concurrency/` | Thread-safe operation tracking |
 | **Event System** | `Core/Events/` | Reactive architecture components |
 | **Shared UI** | `Views/Components/` | Feature-agnostic components |
+| **Model Management** | `Data/Services/Transcription/ModelManagement/` | WhisperKit model lifecycle |
+| **Export Services** | `Data/Services/Export/` | Data export & sharing |
+| **Prompts Module** | `Domain/UseCases/Prompts/` & `Data/Services/Prompts/` | Recording prompts system |
 
 ### Adding a New Feature (Template)
 
@@ -890,9 +927,9 @@ do {
 ## 📊 **Architecture Excellence Metrics**
 
 ### 🏆 **Outstanding Implementation (97% Clean Architecture Compliance)**
-- **Domain Layer**: ✅ **OUTSTANDING (97%)** - 29 Use Cases across 8 categories, 12+ protocols, perfect layer separation
-- **Data Layer**: ✅ **OUTSTANDING (95%)** - 34+ services across 9 categories, 4 repositories implementing protocols  
-- **Presentation Layer**: ✅ **EXCELLENT (85%)** - Protocol-based dependency injection, zero architecture violations
+- **Domain Layer**: ✅ **OUTSTANDING (97%)** - 36+ Use Cases across 9 categories, 16+ protocols, perfect layer separation
+- **Data Layer**: ✅ **OUTSTANDING (95%)** - 35+ services across 9 categories, 7 repositories implementing protocols
+- **Presentation Layer**: ✅ **EXCELLENT (90%)** - Protocol-based dependency injection, zero architecture violations
 - **Dependency Injection**: ✅ **OUTSTANDING (95%)** - Pure protocol-based access, exemplary patterns
 
 ### 📈 **Migration Success Achievements**
@@ -901,6 +938,9 @@ do {
 - **Service Organization**: 100% compliance with Clean Architecture service placement
 - **Modern Concurrency**: Full async/await implementation with thread-safe operation coordination
 - **Service Layer Transformation**: Monolithic 634-line BackgroundAudioService split into 6 focused services with orchestration pattern
+- **WhisperKit Integration**: Complete on-device transcription with 15+ languages and model management UI
+- **Export System**: Comprehensive export capabilities for transcripts, analysis, and data
+- **Advanced Prompts**: 48-prompt system with intelligent interpolation and selection algorithms
 
 ### 🎯 **Architectural Excellence (January 2025)**
 - **Service Separation**: Applied Single Responsibility Principle at service level
