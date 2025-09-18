@@ -3,7 +3,9 @@ import Foundation
 
 /// Use case for creating calendar events with validation and error handling
 protocol CreateCalendarEventUseCaseProtocol: Sendable {
+    @MainActor
     func execute(event: EventsData.DetectedEvent, calendar: EKCalendar) async throws -> String
+    @MainActor
     func execute(events: [EventsData.DetectedEvent], calendarMapping: [String: EKCalendar]) async throws -> [String: Result<String, Error>]
 }
 

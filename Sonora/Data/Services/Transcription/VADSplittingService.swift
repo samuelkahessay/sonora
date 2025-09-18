@@ -102,7 +102,7 @@ final class DefaultVADSplittingService: VADSplittingService, @unchecked Sendable
         let srcBuffer = AVAudioPCMBuffer(pcmFormat: srcFormat, frameCapacity: srcReadCapacity)!
 
         let windowFrames = AVAudioFrameCount(config.windowSize)
-        var finished = false
+        let finished = ManagedCriticalState(false)
         var positionFrames: AVAudioFramePosition = 0
         let sampleRate = dstFormat.sampleRate
 
@@ -114,14 +114,14 @@ final class DefaultVADSplittingService: VADSplittingService, @unchecked Sendable
         var segmentWindows: Int = 0
         var silenceAccum: Double = 0
 
-        while !finished {
+        while finished.withLock({ !$0 }) {
             guard let outBuffer = AVAudioPCMBuffer(pcmFormat: dstFormat, frameCapacity: windowFrames) else {
                 throw VADError.conversionFailed("Cannot allocate output buffer")
             }
 
             var convError: NSError?
             let status = converter.convert(to: outBuffer, error: &convError, withInputFrom: { requestedPackets, outStatus in
-                if finished {
+                if finished.withLock({ $0 }) {
                     outStatus.pointee = .noDataNow
                     return nil
                 }
@@ -129,12 +129,12 @@ final class DefaultVADSplittingService: VADSplittingService, @unchecked Sendable
                 do {
                     try file.read(into: srcBuffer, frameCount: framesToRead)
                 } catch {
-                    finished = true
+                    finished.withLock { $0 = true }
                     outStatus.pointee = .endOfStream
                     return nil
                 }
                 if srcBuffer.frameLength == 0 {
-                    finished = true
+                    finished.withLock { $0 = true }
                     outStatus.pointee = .endOfStream
                     return nil
                 }
@@ -144,6 +144,10 @@ final class DefaultVADSplittingService: VADSplittingService, @unchecked Sendable
 
             if status == .error {
                 throw VADError.conversionFailed(convError?.localizedDescription ?? "unknown")
+            }
+
+            if status == .endOfStream {
+                finished.withLock { $0 = true }
             }
 
             let frames = outBuffer.frameLength

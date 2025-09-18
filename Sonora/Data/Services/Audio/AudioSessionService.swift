@@ -65,7 +65,7 @@ final class AudioSessionService: NSObject, AudioSessionServiceProtocol, @uncheck
             try audioSession.setCategory(
                 .playAndRecord,
                 mode: .default,
-                options: [.defaultToSpeaker, .allowBluetooth]
+                options: [.defaultToSpeaker, .allowBluetoothHFP]
             )
             
             // Set preferred sample rate and I/O buffer duration for optimal performance
@@ -78,7 +78,7 @@ final class AudioSessionService: NSObject, AudioSessionServiceProtocol, @uncheck
             
             print("🎵 AudioSessionService: Recording session configured successfully")
             print("   - Category: .playAndRecord")
-            print("   - Options: .defaultToSpeaker, .allowBluetooth")
+            print("   - Options: .defaultToSpeaker, .allowBluetoothHFP")
             print("   - Sample Rate: \(sampleRate) Hz")
             print("   - Channels: \(channels)")
             logCurrentRoute("post-config")
@@ -114,7 +114,7 @@ final class AudioSessionService: NSObject, AudioSessionServiceProtocol, @uncheck
         do {
             // First fallback: voiceChat mode
             try audioSession.setActive(false)
-            try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .defaultToSpeaker])
+            try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothHFP, .defaultToSpeaker])
             try audioSession.setActive(true)
             
             // Prefer built-in mic if available

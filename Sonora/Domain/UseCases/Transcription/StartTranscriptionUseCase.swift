@@ -198,9 +198,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                         transcriptionRepository.saveTranscriptionMetadata(
                             TranscriptionMetadata(
                                 text: processedText,
-                                detectedLanguage: langToSave,
-                                qualityScore: qualityToSave,
-                                originalText: originalText
+                                originalText: originalText, detectedLanguage: langToSave,
                             ),
                             for: memo.id
                         )
@@ -249,9 +247,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     transcriptionRepository.saveTranscriptionMetadata(
                         TranscriptionMetadata(
                             text: processedText,
-                            detectedLanguage: langToSave,
-                            qualityScore: qualityToSave,
-                            originalText: originalText
+                            originalText: originalText, detectedLanguage: langToSave,
+                            qualityScore: qualityToSave
                         ),
                         for: memo.id
                     )
@@ -331,9 +328,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     transcriptionRepository.saveTranscriptionMetadata(
                         TranscriptionMetadata(
                             text: processedText,
-                            detectedLanguage: langToSave,
-                            qualityScore: qualityToSave,
-                            originalText: originalText
+                            originalText: originalText, detectedLanguage: langToSave,
+                            qualityScore: qualityToSave
                         ),
                         for: memo.id
                     )
@@ -417,9 +413,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 transcriptionRepository.saveTranscriptionMetadata(
                     TranscriptionMetadata(
                         text: processedText,
-                        detectedLanguage: langToSave,
-                        qualityScore: qualityToSave,
-                        originalText: originalText
+                        originalText: originalText, detectedLanguage: langToSave,
+                        qualityScore: qualityToSave
                     ),
                     for: memo.id
                 )

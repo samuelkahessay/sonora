@@ -55,15 +55,9 @@ final class AudioPermissionService: AudioPermissionServiceProtocol, @unchecked S
     
     /// Requests microphone permission from the user
     func requestPermission() async -> Bool {
-        return await withCheckedContinuation { continuation in
-            requestMicrophonePermission { [weak self] granted in
-                Task { @MainActor in
-                    let status: MicrophonePermissionStatus = granted ? .granted : .denied
-                    self?.updatePermissionState(status)
-                    continuation.resume(returning: granted)
-                }
-            }
-        }
+        let status = await requestMicrophonePermission()
+        updatePermissionState(status)
+        return status.allowsRecording
     }
     
     /// Gets the current permission status without updating state
@@ -107,21 +101,4 @@ final class AudioPermissionService: AudioPermissionServiceProtocol, @unchecked S
         print("🔑 AudioPermissionService: State updated - hasPermission: \(hasPermissionValue), status: \(status)")
     }
     
-    /// Requests microphone permission with iOS version compatibility
-    private func requestMicrophonePermission(_ completion: @escaping (Bool) -> Void) {
-        print("🔑 AudioPermissionService: Requesting microphone permission...")
-        
-        if #available(iOS 17.0, *) {
-            AVAudioApplication.requestRecordPermission { allowed in
-                print("🔑 AudioPermissionService: Permission request result (iOS 17+): \(allowed)")
-                completion(allowed)
-            }
-        } else {
-            AVAudioSession.sharedInstance().requestRecordPermission { allowed in
-                print("🔑 AudioPermissionService: Permission request result (iOS <17): \(allowed)")
-                completion(allowed)
-            }
-        }
-    }
 }
-

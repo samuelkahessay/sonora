@@ -3,7 +3,9 @@ import Foundation
 
 /// Use case for creating reminders with validation and error handling
 protocol CreateReminderUseCaseProtocol: Sendable {
+    @MainActor
     func execute(reminder: RemindersData.DetectedReminder, list: EKCalendar) async throws -> String
+    @MainActor
     func execute(reminders: [RemindersData.DetectedReminder], listMapping: [String: EKCalendar]) async throws -> [String: Result<String, Error>]
 }
 

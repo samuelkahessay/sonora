@@ -45,7 +45,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _spotlightIndexer: (any SpotlightIndexing)?
     var _whisperKitModelProvider: WhisperKitModelProvider?
     var _modelContext: ModelContext? // Keep strong reference to ModelContext
-    private var _fillerWordFilter: (any FillerWordFiltering)?
+    var _fillerWordFilter: (any FillerWordFiltering)?
 
     // MARK: - Phase 2: Core Optimization Services
     private var _audioQualityManager: AudioQualityManager?

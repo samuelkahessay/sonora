@@ -1,9 +1,15 @@
 import Foundation
-import AVFoundation
+@preconcurrency import AVFoundation
+@preconcurrency import AVFAudio
 import UIKit
 #if canImport(WhisperKit)
 @preconcurrency import WhisperKit
 #endif
+
+private final class NonSendableBox<Value>: @unchecked Sendable {
+    let value: Value
+    init(_ value: Value) { self.value = value }
+}
 
 /// WhisperKit-based local transcription service
 @MainActor
@@ -185,7 +191,7 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
     
     // MARK: - Audio Processing
     
-    private func loadAudioData(from url: URL) async throws -> [Float] {
+private func loadAudioData(from url: URL) async throws -> [Float] {
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
@@ -207,33 +213,34 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
                     }
 
                     let srcCapacity: AVAudioFrameCount = 4096
-                    let srcBuffer = AVAudioPCMBuffer(pcmFormat: srcFormat, frameCapacity: srcCapacity)!
+                    let srcBufferBox = NonSendableBox(AVAudioPCMBuffer(pcmFormat: srcFormat, frameCapacity: srcCapacity)!)
                     let outChunk: AVAudioFrameCount = 1024
-                    var finished = false
+                    let finished = ManagedCriticalState(false)
                     var output: [Float] = []
                     output.reserveCapacity(Int(file.length))
 
-                    while !finished {
+                    while finished.withLock({ !$0 }) {
                         guard let outBuffer = AVAudioPCMBuffer(pcmFormat: dstFormat, frameCapacity: outChunk) else {
                             continuation.resume(throwing: WhisperKitTranscriptionError.audioProcessingFailed("Failed to allocate output buffer"))
                             return
                         }
                         var convError: NSError?
                         let status = converter.convert(to: outBuffer, error: &convError, withInputFrom: { requestedPackets, outStatus in
-                            if finished {
+                            if finished.withLock({ $0 }) {
                                 outStatus.pointee = .noDataNow
                                 return nil
                             }
                             let framesToRead = min(srcCapacity, requestedPackets)
+                            let srcBuffer = srcBufferBox.value
                             do {
                                 try file.read(into: srcBuffer, frameCount: framesToRead)
                             } catch {
-                                finished = true
+                                finished.withLock { $0 = true }
                                 outStatus.pointee = .endOfStream
                                 return nil
                             }
                             if srcBuffer.frameLength == 0 {
-                                finished = true
+                                finished.withLock { $0 = true }
                                 outStatus.pointee = .endOfStream
                                 return nil
                             }
@@ -244,10 +251,13 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
                             continuation.resume(throwing: WhisperKitTranscriptionError.audioProcessingFailed(convError?.localizedDescription ?? "Conversion error"))
                             return
                         }
+                        if status == .endOfStream {
+                            finished.withLock { $0 = true }
+                        }
                         let frames = Int(outBuffer.frameLength)
                         if frames > 0, let ch = outBuffer.floatChannelData {
                             output.append(contentsOf: UnsafeBufferPointer(start: ch[0], count: frames))
-                        } else if status == .endOfStream || finished {
+                        } else if status == .endOfStream || finished.withLock({ $0 }) {
                             break
                         }
                     }

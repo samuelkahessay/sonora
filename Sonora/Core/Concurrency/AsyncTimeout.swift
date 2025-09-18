@@ -14,7 +14,7 @@ public struct AsyncTimeoutError: LocalizedError {
 /// Execute an asynchronous operation with a timeout. If the timeout elapses before the
 /// operation completes, `AsyncTimeoutError` is thrown and the task is cancelled.
 @discardableResult
-public func withTimeout<T>(seconds: TimeInterval,
+public func withTimeout<T: Sendable>(seconds: TimeInterval,
                            operationDescription: String,
                            operation: @escaping @Sendable () async throws -> T) async throws -> T {
     let deadline = UInt64(max(0, seconds) * 1_000_000_000)

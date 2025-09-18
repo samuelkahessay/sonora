@@ -40,7 +40,7 @@ final class DefaultFillerWordFilter: FillerWordFiltering {
         let replaced = regex.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "")
 
         var normalized = replaced.replacingOccurrences(of: " {2,}", with: " ", options: .regularExpression)
-        normalized = normalized.replacingOccurrences(of: " ([,\.!?;:])", with: "$1", options: .regularExpression)
+        normalized = normalized.replacingOccurrences(of: " ([,.!?;:])", with: "$1", options: .regularExpression)
         normalized = normalized.replacingOccurrences(of: " \n", with: "\n", options: .regularExpression)
         normalized = normalized.replacingOccurrences(of: "\n ", with: "\n", options: .regularExpression)
         normalized = normalized.trimmingCharacters(in: .whitespaces)

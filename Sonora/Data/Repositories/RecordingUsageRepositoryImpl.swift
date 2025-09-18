@@ -37,25 +37,34 @@ final class RecordingUsageRepositoryImpl: RecordingUsageRepository, @unchecked S
     func addUsage(_ seconds: TimeInterval, for day: Date) async {
         let add = max(0, seconds)
         let dayKey = Self.makeDayKey(calendar.startOfDay(for: day), formatter: dateFormatter)
-        queue.sync {
+        let publishValue: TimeInterval? = queue.sync {
             let storageKey = Self.storageKey(for: dayKey)
             let current = userDefaults.double(forKey: storageKey)
             let updated = current + add
             userDefaults.set(updated, forKey: storageKey)
-            if dayKey == currentDayKey {
-                subject.send(updated)
+            return dayKey == currentDayKey ? updated : nil
+        }
+
+        if let value = publishValue {
+            await MainActor.run {
+                subject.send(value)
             }
         }
     }
 
     func resetIfDayChanged(now: Date) async {
         let dayKey = Self.makeDayKey(calendar.startOfDay(for: now), formatter: dateFormatter)
-        queue.sync {
-            guard dayKey != currentDayKey else { return }
+        let publishValue: TimeInterval? = queue.sync {
+            guard dayKey != currentDayKey else { return nil }
             currentDayKey = dayKey
             let storageKey = Self.storageKey(for: dayKey)
-            let value = userDefaults.double(forKey: storageKey)
-            subject.send(value)
+            return userDefaults.double(forKey: storageKey)
+        }
+
+        if let value = publishValue {
+            await MainActor.run {
+                subject.send(value)
+            }
         }
     }
 

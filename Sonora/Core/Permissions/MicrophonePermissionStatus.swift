@@ -108,22 +108,17 @@ public enum MicrophonePermissionStatus: String, CaseIterable, Equatable, Sendabl
 /// Requests microphone permission using platform APIs and returns final status.
 @MainActor
 public func requestMicrophonePermission() async -> MicrophonePermissionStatus {
-    return await withCheckedContinuation { continuation in
-        let performRequest: (@escaping (Bool) -> Void) -> Void
-        
+    _ = await withCheckedContinuation { continuation in
         if #available(iOS 17.0, *) {
-            performRequest = { completion in
-                AVAudioApplication.requestRecordPermission(completionHandler: completion)
+            AVAudioApplication.requestRecordPermission { allowed in
+                continuation.resume(returning: allowed)
             }
         } else {
-            performRequest = { completion in
-                AVAudioSession.sharedInstance().requestRecordPermission(completion)
+            AVAudioSession.sharedInstance().requestRecordPermission { allowed in
+                continuation.resume(returning: allowed)
             }
         }
-        
-        performRequest { @Sendable _ in
-            let status = MicrophonePermissionStatus.current()
-            continuation.resume(returning: status)
-        }
     }
+
+    return MicrophonePermissionStatus.current()
 }

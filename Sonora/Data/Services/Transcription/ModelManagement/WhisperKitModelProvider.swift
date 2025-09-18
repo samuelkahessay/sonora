@@ -225,7 +225,7 @@ final class WhisperKitModelProvider {
             }
 
             var eval = evaluateModelAtPath(downloadedFolder)
-            if !eval.hasTokenizerAssets && eval.hasCompiled {
+            if !eval.hasTokenizerAssets && eval.hasCompiledModels {
                 // Attempt to fetch tokenizers from canonical sources
                 let fetcher = TokenizerFetcher()
                 let ok = await fetcher.fetch(for: id, into: downloadedFolder)
@@ -233,7 +233,7 @@ final class WhisperKitModelProvider {
                     eval = evaluateModelAtPath(downloadedFolder)
                 }
             }
-            guard eval.hasCompiled && eval.hasTokenizerAssets else {
+            guard eval.hasCompiledModels && eval.hasTokenizerAssets else {
                 throw ModelDownloadError.storageError("Model validation failed at \(downloadedFolder.path)")
             }
             // Persist the exact folder path for future resolution
@@ -269,7 +269,8 @@ final class WhisperKitModelProvider {
             logger.warning("WhisperKitModelProvider: No tokenizer assets detected under \(path.lastPathComponent)")
         }
         if eval.totalBytes < Self.minimumModelBytes {
-            logger.warning("WhisperKitModelProvider: Model folder too small (\(ByteCountFormatter.string(fromByteCount: eval.totalBytes))) at \(path.lastPathComponent)")
+            let sizeString = ByteCountFormatter.string(fromByteCount: eval.totalBytes, countStyle: .file)
+            logger.warning("WhisperKitModelProvider: Model folder too small (\(sizeString)) at \(path.lastPathComponent)")
         }
         return eval.hasCompiledModels && eval.hasTokenizerAssets && eval.totalBytes >= Self.minimumModelBytes && eval.compiledModelCount >= 1
     }
