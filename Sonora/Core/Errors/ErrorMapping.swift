@@ -470,6 +470,8 @@ public final class ErrorMapping {
             return .transcriptionFailed(message)
         case .audioProcessingFailed(let message):
             return .audioFileProcessingFailed(message)
+        case .timeout:
+            return .transcriptionTimeout
         }
     }
 

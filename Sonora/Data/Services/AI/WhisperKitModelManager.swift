@@ -23,6 +23,10 @@ protocol WhisperKitModelManagerProtocol: Sendable {
 /// Performance and memory management service for WhisperKit models
 @MainActor
 final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked Sendable {
+    private enum Constants {
+        static let modelPrewarmTimeout: TimeInterval = 30
+        static let modelLoadTimeout: TimeInterval = 30
+    }
     
     // MARK: - Configuration
     
@@ -130,9 +134,11 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
         
         // Validate model
         guard modelProvider.isModelValid(id: modelId) else {
+            logger.error("🚀 WhisperKitModelManager: Model validation failed for id=\(modelId); purging cached assets")
+            modelProvider.purgeInvalidModel(id: modelId)
             throw WhisperKitModelManagerError.modelInvalid("Model validation failed: \(modelName)")
         }
-        
+
         #if canImport(WhisperKit)
         // Initialize WhisperKit
         let whisperKit = try await WhisperKit(
@@ -143,10 +149,33 @@ final class WhisperKitModelManager: WhisperKitModelManagerProtocol, @unchecked S
         
         whisperKit.modelFolder = modelFolder
         
-        // Prewarm and load models
-        try await whisperKit.prewarmModels()
-        try await whisperKit.loadModels()
-        
+        // Prewarm and load models with explicit timeouts so we don't hang forever on corrupt deployments
+        do {
+            try await withTimeout(seconds: Constants.modelPrewarmTimeout, operationDescription: "WhisperKit prewarm") {
+                try await whisperKit.prewarmModels()
+                return ()
+            }
+        } catch let timeout as AsyncTimeoutError {
+            await whisperKit.unloadModels()
+            throw WhisperKitModelManagerError.loadTimeout(timeout.message)
+        } catch {
+            await whisperKit.unloadModels()
+            throw WhisperKitModelManagerError.prewarmFailed(error.localizedDescription)
+        }
+
+        do {
+            try await withTimeout(seconds: Constants.modelLoadTimeout, operationDescription: "WhisperKit load") {
+                try await whisperKit.loadModels()
+                return ()
+            }
+        } catch let timeout as AsyncTimeoutError {
+            await whisperKit.unloadModels()
+            throw WhisperKitModelManagerError.loadTimeout(timeout.message)
+        } catch {
+            await whisperKit.unloadModels()
+            throw WhisperKitModelManagerError.loadFailed(error.localizedDescription)
+        }
+
         self.whisperKit = whisperKit
         logger.debug("🚀 WhisperKitModelManager: Model loaded successfully: \(modelName)")
         #else
@@ -309,6 +338,7 @@ enum WhisperKitModelManagerError: LocalizedError {
     case modelInvalid(String)
     case loadFailed(String)
     case prewarmFailed(String)
+    case loadTimeout(String)
     
     var errorDescription: String? {
         switch self {
@@ -322,6 +352,8 @@ enum WhisperKitModelManagerError: LocalizedError {
             return "Model load failed: \(message)"
         case .prewarmFailed(let message):
             return "Model prewarming failed: \(message)"
+        case .loadTimeout(let message):
+            return "Model load timed out: \(message)"
         }
     }
 }

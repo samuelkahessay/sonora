@@ -11,6 +11,10 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
     
     // MARK: - Properties
     
+    private enum Constants {
+        static let transcriptionTimeout: TimeInterval = 60
+    }
+
     private let downloadManager: ModelDownloadManager
     private let modelProvider: WhisperKitModelProvider
     private let modelManager: WhisperKitModelManagerProtocol
@@ -59,9 +63,16 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
             let initTimer = PerformanceTimer(operation: "WhisperKit model retrieval", category: .transcription)
             let previousModel = UserDefaults.standard.selectedWhisperModel
             UserDefaults.standard.selectedWhisperModel = routingDecision.selectedModel.id
-            guard let whisperKit = try await self.modelManager.getWhisperKit() else {
+            let whisperKit: WhisperKit
+            do {
+                guard let loadedKit = try await self.modelManager.getWhisperKit() else {
+                    UserDefaults.standard.selectedWhisperModel = previousModel
+                    throw WhisperKitTranscriptionError.initializationFailed("WhisperKit not available from model manager")
+                }
+                whisperKit = loadedKit
+            } catch let managerError as WhisperKitModelManagerError {
                 UserDefaults.standard.selectedWhisperModel = previousModel
-                throw WhisperKitTranscriptionError.initializationFailed("WhisperKit not available from model manager")
+                throw self.mapModelManagerError(managerError)
             }
             _ = initTimer.finish()
 
@@ -76,23 +87,33 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
                 #if canImport(WhisperKit)
                 let options = self.buildDecodingOptions(language: language)
                 let results: [TranscriptionResult]
-                #if compiler(>=6)
-                results = try await whisperKit.transcribe(audioArray: audioData, decodeOptions: options) { @Sendable [weak self] _ in
-                    guard let self = self else { return nil }
-                    Task { @MainActor in
-                        let fraction = whisperKit.progress.fractionCompleted
-                        self.onProgress?(fraction)
+                do {
+                    #if compiler(>=6)
+                    results = try await withTimeout(seconds: Constants.transcriptionTimeout, operationDescription: "WhisperKit transcription") {
+                        try await whisperKit.transcribe(audioArray: audioData, decodeOptions: options) { @Sendable [weak self] _ in
+                            guard let self = self else { return nil }
+                            Task { @MainActor in
+                                let fraction = whisperKit.progress.fractionCompleted
+                                self.onProgress?(fraction)
+                            }
+                            return Task.isCancelled ? false : nil
+                        }
                     }
-                    return Task.isCancelled ? false : nil
+                    #else
+                    results = try await withTimeout(seconds: Constants.transcriptionTimeout, operationDescription: "WhisperKit transcription") {
+                        try await whisperKit.transcribe(
+                            audioArray: audioData,
+                            decodeOptions: options
+                        )
+                    }
+                    #endif
+                } catch let timeout as AsyncTimeoutError {
+                    throw WhisperKitTranscriptionError.timeout(timeout.message)
                 }
                 #else
-                results = try await whisperKit.transcribe(
-                    audioArray: audioData,
-                    decodeOptions: options
-                )
-                #endif
-                #else
-                let results = try await whisperKit.transcribe(audioArray: audioData)
+                let results = try await withTimeout(seconds: Constants.transcriptionTimeout, operationDescription: "WhisperKit transcription") {
+                    try await whisperKit.transcribe(audioArray: audioData)
+                }
                 #endif
                 _ = transcribeTimer.finish()
 
@@ -152,6 +173,9 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
                             error: error)
                 UserDefaults.standard.selectedWhisperModel = previousModel
                 self.modelManager.unloadModel()
+                if let whisperError = error as? WhisperKitTranscriptionError {
+                    throw whisperError
+                }
                 throw WhisperKitTranscriptionError.transcriptionFailed(error.localizedDescription)
             }
         }
@@ -337,6 +361,19 @@ final class WhisperKitTranscriptionService: TranscriptionAPI {
         default: return 0
         }
     }
+
+    private func mapModelManagerError(_ error: WhisperKitModelManagerError) -> WhisperKitTranscriptionError {
+        switch error {
+        case .whisperKitUnavailable(let message):
+            return .initializationFailed(message)
+        case .modelNotFound(let message), .modelInvalid(let message):
+            return .modelNotAvailable(message)
+        case .loadFailed(let message), .prewarmFailed(let message):
+            return .initializationFailed(message)
+        case .loadTimeout(let message):
+            return .timeout(message)
+        }
+    }
 }
 
 // MARK: - TranscriptionProgressReporting
@@ -357,7 +394,8 @@ enum WhisperKitTranscriptionError: LocalizedError {
     case modelNotAvailable(String)
     case transcriptionFailed(String)
     case audioProcessingFailed(String)
-    
+    case timeout(String)
+
     var errorDescription: String? {
         switch self {
         case .notInitialized(let message):
@@ -370,6 +408,8 @@ enum WhisperKitTranscriptionError: LocalizedError {
             return "Transcription failed: \(message)"
         case .audioProcessingFailed(let message):
             return "Audio processing failed: \(message)"
+        case .timeout(let message):
+            return "Transcription timed out: \(message)"
         }
     }
 }

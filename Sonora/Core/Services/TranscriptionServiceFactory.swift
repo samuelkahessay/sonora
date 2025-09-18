@@ -220,12 +220,12 @@ final class RoutedTranscriptionService: TranscriptionAPI {
         // Define conditions under which we should fallback to cloud
         if let whisperError = error as? WhisperKitTranscriptionError {
             switch whisperError {
-            case .notInitialized, .initializationFailed, .modelNotAvailable:
-                // These are initialization issues - fallback makes sense
-                return true
-            case .transcriptionFailed, .audioProcessingFailed:
-                // These might be model-specific issues - could try fallback
-                return true
+        case .notInitialized, .initializationFailed, .modelNotAvailable, .timeout:
+            // These are initialization issues - fallback makes sense
+            return true
+        case .transcriptionFailed, .audioProcessingFailed:
+            // These might be model-specific issues - could try fallback
+            return true
             }
         }
         

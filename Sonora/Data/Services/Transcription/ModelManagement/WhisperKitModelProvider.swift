@@ -7,6 +7,7 @@ import Foundation
 final class WhisperKitModelProvider {
     private let fm = FileManager.default
     private let logger = Logger.shared
+    private static let minimumModelBytes: Int64 = 5 * 1_024 * 1_024 // 5 MB guardrail for corrupted downloads
     private lazy var cacheURL: URL = {
         // Bump cache filename to force refresh when curated set changes
         let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
@@ -258,33 +259,67 @@ final class WhisperKitModelProvider {
     // Validate the actual download path returned by WhisperKit
     private func validateModelAtPath(_ path: URL) -> Bool {
         let eval = evaluateModelAtPath(path)
-        if !eval.hasCompiled {
+        if !eval.hasCompiledModels {
             logger.warning("WhisperKitModelProvider: No compiled .mlmodelc found under \(path.path)")
+        }
+        if eval.compiledModelCount < 2 {
+            logger.warning("WhisperKitModelProvider: Unexpected compiled model count (\(eval.compiledModelCount)) under \(path.lastPathComponent)")
         }
         if !eval.hasTokenizerAssets {
             logger.warning("WhisperKitModelProvider: No tokenizer assets detected under \(path.lastPathComponent)")
         }
-        return eval.hasCompiled && eval.hasTokenizerAssets
+        if eval.totalBytes < Self.minimumModelBytes {
+            logger.warning("WhisperKitModelProvider: Model folder too small (\(ByteCountFormatter.string(fromByteCount: eval.totalBytes))) at \(path.lastPathComponent)")
+        }
+        return eval.hasCompiledModels && eval.hasTokenizerAssets && eval.totalBytes >= Self.minimumModelBytes && eval.compiledModelCount >= 1
     }
 
-    private func evaluateModelAtPath(_ path: URL) -> (hasCompiled: Bool, hasTokenizerAssets: Bool) {
+    private struct ModelEvaluation {
+        var hasCompiledModels: Bool
+        var compiledModelCount: Int
+        var hasTokenizerAssets: Bool
+        var totalBytes: Int64
+    }
+
+    private func evaluateModelAtPath(_ path: URL) -> ModelEvaluation {
         var isDir: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: path.path, isDirectory: &isDir), isDir.boolValue else { return (false, false) }
+        guard FileManager.default.fileExists(atPath: path.path, isDirectory: &isDir), isDir.boolValue else {
+            return ModelEvaluation(hasCompiledModels: false, compiledModelCount: 0, hasTokenizerAssets: false, totalBytes: 0)
+        }
         // Scan recursively (shallow) for compiled models and tokenizer assets
         var hasCompiled = false
+        var compiledCount = 0
         var hasTokenizerAssets = false
+        var totalBytes: Int64 = 0
         let fm = FileManager.default
-        let enumerator = fm.enumerator(at: path, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])
+        let enumerator = fm.enumerator(at: path, includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey], options: [.skipsHiddenFiles])
         while let item = enumerator?.nextObject() as? URL {
             let name = item.lastPathComponent.lowercased()
-            if item.pathExtension == "mlmodelc" { hasCompiled = true }
+            if item.pathExtension == "mlmodelc" {
+                hasCompiled = true
+                compiledCount += 1
+            }
             if name == "tokenizer.json" || name == "tokenizer.model" || name == "vocabulary.json" { hasTokenizerAssets = true }
             if name.contains("merges") { hasTokenizerAssets = true }
             if name.contains("vocab") { hasTokenizerAssets = true }
             if name.contains("tokenizer") { hasTokenizerAssets = true }
-            if hasCompiled && hasTokenizerAssets { break }
+            if let values = try? item.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey]), values.isDirectory != true {
+                totalBytes += Int64(values.fileSize ?? 0)
+            }
         }
-        return (hasCompiled, hasTokenizerAssets)
+        return ModelEvaluation(hasCompiledModels: hasCompiled, compiledModelCount: compiledCount, hasTokenizerAssets: hasTokenizerAssets, totalBytes: totalBytes)
+    }
+
+    /// Attempt to purge an installed model directory that appears invalid.
+    func purgeInvalidModel(id: String) {
+        guard let folder = installedModelFolder(id: id) else { return }
+        do {
+            try fm.removeItem(at: folder)
+            logger.warning("WhisperKitModelProvider: Removed invalid model folder for id=\(id)")
+        } catch {
+            logger.error("WhisperKitModelProvider: Failed to purge invalid model folder for id=\(id): \(error.localizedDescription)")
+        }
+        clearPersistedFolder(for: id)
     }
 
     /// Clear persisted folder mapping for a model id (used when folder becomes invalid/stale)
