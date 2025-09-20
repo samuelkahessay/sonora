@@ -36,7 +36,6 @@ final class ReportingTranscriptionService: TranscriptionAPI {
         
         var meta = repo.getTranscriptionMetadata(for: memoId) ?? TranscriptionMetadata()
         meta.transcriptionService = source
-        meta.whisperModel = UserDefaults.standard.selectedWhisperModel
         meta.timestamp = Date()
         repo.saveTranscriptionMetadata(meta, for: memoId)
     }

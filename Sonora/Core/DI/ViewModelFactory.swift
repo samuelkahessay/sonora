@@ -47,8 +47,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
             canStartRecordingUseCase: container.canStartRecordingUseCase(),
             consumeRecordingUsageUseCase: container.consumeRecordingUsageUseCase(),
             resetDailyUsageIfNeededUseCase: container.resetDailyUsageIfNeededUseCase(),
-            getRemainingDailyQuotaUseCase: container.getRemainingDailyQuotaUseCase(),
-            modelDownloadManager: container.modelDownloadManager()
+            getRemainingDailyQuotaUseCase: container.getRemainingDailyQuotaUseCase()
         )
     }
 

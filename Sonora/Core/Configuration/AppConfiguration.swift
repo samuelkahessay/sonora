@@ -42,31 +42,6 @@ public final class AppConfiguration: ObservableObject {
     /// Can be overridden with SONORA_HEALTH_TIMEOUT environment variable
     public private(set) var healthCheckTimeoutInterval: TimeInterval = 5.0
     
-    // MARK: - Local Analysis Configuration
-    
-    /// Whether to use local LLM analysis instead of remote API
-    /// Stored in UserDefaults, can be toggled by user in settings
-    @Published public var useLocalAnalysis: Bool = UserDefaults.standard.bool(forKey: "useLocalAnalysis") {
-        didSet { UserDefaults.standard.set(useLocalAnalysis, forKey: "useLocalAnalysis") }
-    }
-    
-    /// Selected local model for analysis
-    /// Stored in UserDefaults, with smart defaults based on device capability
-    @Published public var selectedLocalModel: String = {
-        let saved = UserDefaults.standard.string(forKey: "selectedLocalModel")
-        let hasUserExplicitlySelected = UserDefaults.standard.object(forKey: "hasUserSelectedModel") != nil
-        // Only allow Phi‑4 Mini for now; clamp any legacy value
-        if let s = saved, hasUserExplicitlySelected, let model = LocalModel(rawValue: s), model == .phi4_mini {
-            return s
-        }
-        return LocalModel.defaultModel.rawValue
-    }() {
-        didSet {
-            UserDefaults.standard.set(selectedLocalModel, forKey: "selectedLocalModel")
-            UserDefaults.standard.set(true, forKey: "hasUserSelectedModel")
-        }
-    }
-    
     // MARK: - Recording Configuration
     
     /// Maximum recording duration in seconds (legacy parameter)
@@ -193,42 +168,6 @@ public final class AppConfiguration: ObservableObject {
     /// Can be overridden with SONORA_PROMPT_MIN_VARIETY environment variable
     public private(set) var promptMinVarietyTarget: Int = 10
 
-    // MARK: - WhisperKit / Routing
-    /// When true, disables fallback from Local WhisperKit to Cloud during routing.
-    /// Can be toggled via UserDefaults key "strictLocalWhisper" or env SONORA_STRICT_LOCAL_WHISPER
-    public var strictLocalWhisper: Bool {
-        get { UserDefaults.standard.object(forKey: "strictLocalWhisper") as? Bool ?? false }
-        set { UserDefaults.standard.set(newValue, forKey: "strictLocalWhisper") }
-    }
-
-    /// Prefer background URLSession for Whisper model downloads when supported
-    /// Toggle via UserDefaults key "whisperBackgroundDownloads" or env SONORA_WHISPER_BG_DOWNLOADS
-    public var whisperBackgroundDownloads: Bool {
-        get { UserDefaults.standard.object(forKey: "whisperBackgroundDownloads") as? Bool ?? false }
-        set { UserDefaults.standard.set(newValue, forKey: "whisperBackgroundDownloads") }
-    }
-
-    /// Unload WhisperKit models after each transcription to reduce memory pressure
-    /// Toggle via UserDefaults key "releaseLocalModelAfterTranscription" or env SONORA_WHISPER_RELEASE_AFTER
-    public var releaseLocalModelAfterTranscription: Bool {
-        get { UserDefaults.standard.object(forKey: "releaseLocalModelAfterTranscription") as? Bool ?? false }
-        set { UserDefaults.standard.set(newValue, forKey: "releaseLocalModelAfterTranscription") }
-    }
-
-    /// Whether to request word-level timestamps when decoding locally
-    /// Toggle via UserDefaults key "whisperWordTimestamps" or env SONORA_WHISPER_WORD_TIMESTAMPS
-    public var whisperWordTimestamps: Bool {
-        get { UserDefaults.standard.object(forKey: "whisperWordTimestamps") as? Bool ?? false }
-        set { UserDefaults.standard.set(newValue, forKey: "whisperWordTimestamps") }
-    }
-
-    /// Chunking strategy for local decoding: "vad" (default) or "none"
-    /// Toggle via UserDefaults key "whisperChunkingStrategy" or env SONORA_WHISPER_CHUNKING
-    public var whisperChunkingStrategy: String {
-        get { (UserDefaults.standard.string(forKey: "whisperChunkingStrategy") ?? "vad").lowercased() }
-        set { UserDefaults.standard.set(newValue.lowercased(), forKey: "whisperChunkingStrategy") }
-    }
-
     // MARK: - AI Routing (Phase 3)
     /// Enable progressive analysis routing (tiny -> small -> base) with early termination.
     /// Controlled via UserDefaults key "enableProgressiveAnalysisRouting" or env SONORA_ENABLE_PROGRESSIVE_ANALYSIS
@@ -241,13 +180,7 @@ public final class AppConfiguration: ObservableObject {
     /// Returns the effective recording cap in seconds based on the user's selected transcription service.
     /// Daily quota is enforced elsewhere; there is no global per-session cap.
     public var effectiveRecordingCapSeconds: TimeInterval? {
-        let selected = UserDefaults.standard.selectedTranscriptionService
-        switch selected {
-        case .cloudAPI:
-            return nil // no fixed per-session limit; use remaining daily quota if needed
-        case .localWhisperKit:
-            return nil // unlimited recording when using local transcription
-        }
+        return nil // no fixed per-session limit; use remaining daily quota if needed
     }
 
     // MARK: - Voice Optimization Methods
@@ -517,32 +450,6 @@ public final class AppConfiguration: ObservableObject {
             enableAdaptiveAudioQuality = adaptive
             print("🔧 AppConfiguration: Adaptive quality overridden to \(enableAdaptiveAudioQuality)")
         }
-        if let strict = ProcessInfo.processInfo.environment["SONORA_STRICT_LOCAL_WHISPER"],
-           let val = Bool(strict) {
-            strictLocalWhisper = val
-            print("🔧 AppConfiguration: Strict local whisper overridden to \(val)")
-        }
-
-        if let bg = ProcessInfo.processInfo.environment["SONORA_WHISPER_BG_DOWNLOADS"],
-           let val = Bool(bg) {
-            whisperBackgroundDownloads = val
-            print("🔧 AppConfiguration: Whisper background downloads overridden to \(val)")
-        }
-        if let rel = ProcessInfo.processInfo.environment["SONORA_WHISPER_RELEASE_AFTER"],
-           let val = Bool(rel) {
-            releaseLocalModelAfterTranscription = val
-            print("🔧 AppConfiguration: Release model after transcription overridden to \(val)")
-        }
-        if let wt = ProcessInfo.processInfo.environment["SONORA_WHISPER_WORD_TIMESTAMPS"],
-           let val = Bool(wt) {
-            whisperWordTimestamps = val
-            print("🔧 AppConfiguration: Word timestamps overridden to \(val)")
-        }
-        if let ch = ProcessInfo.processInfo.environment["SONORA_WHISPER_CHUNKING"], !ch.isEmpty {
-            whisperChunkingStrategy = ch
-            print("🔧 AppConfiguration: Chunking strategy overridden to \(ch)")
-        }
-        
         // Network Configuration
         if let retriesString = ProcessInfo.processInfo.environment["SONORA_MAX_RETRIES"],
            let retries = Int(retriesString) {
@@ -659,11 +566,6 @@ public final class AppConfiguration: ObservableObject {
            let count = Int(varietyStr) {
             promptMinVarietyTarget = max(1, count)
             print("🔧 AppConfiguration: Prompt min variety target overridden to \(promptMinVarietyTarget)")
-        }
-
-        // Phase 2: default to unloading WhisperKit after transcription to reduce memory
-        if UserDefaults.standard.object(forKey: "releaseLocalModelAfterTranscription") == nil {
-            UserDefaults.standard.set(true, forKey: "releaseLocalModelAfterTranscription")
         }
     }
     

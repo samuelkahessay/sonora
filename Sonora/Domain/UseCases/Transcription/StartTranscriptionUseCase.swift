@@ -168,20 +168,6 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 if totalDurationSec < 90.0 {
                     // Single-shot for short recordings
                     await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (\(lang.uppercased()))...")
-                    // Wire fine-grained engine progress if supported
-                    if let progressSvc = transcriptionAPI as? TranscriptionProgressReporting {
-                        progressSvc.setProgressHandler { [weak self] fraction in
-                            guard let self = self else { return }
-                            // Map engine fraction into overall (0.2 -> 0.95)
-                            let mapped = 0.2 + 0.75 * max(0.0, min(1.0, fraction))
-                            Task { await self.updateProgress(operationId: operationId, fraction: mapped, step: "Transcribing...") }
-                        }
-                    }
-                    defer {
-                        Task { @MainActor in
-                            (transcriptionAPI as? TranscriptionProgressReporting)?.clearProgressHandler()
-                        }
-                    }
                     let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang)
                     let eval = qualityEvaluator.evaluateQuality(resp, text: resp.text)
                     let (processedText, originalText) = prepareTranscript(from: resp.text)
@@ -204,10 +190,10 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                         )
                     }
                     await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
-                    // Include service used in log context (WhisperKit local vs Cloud API)
+                    // Include service used in log context
                     let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
                     let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
-                    let serviceLabel: String = (serviceKey == "local_whisperkit") ? "WhisperKit (local)" : (serviceKey == "cloud_api" ? "Cloud API" : "unknown")
+                    let serviceLabel: String = serviceKey == "cloud_api" ? "Cloud API" : "unknown"
                     var info: [String: Any] = [
                         "memoId": memo.id.uuidString,
                         "textLength": textLen,
@@ -216,7 +202,6 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                         "service": serviceLabel,
                         "serviceKey": serviceKey
                     ]
-                    if let model = meta?.whisperModel { info["whisperModel"] = model }
                     // Lower to debug; MemoEventHandler will emit the single info-level summary
                     logger.debug("Transcription completed (single, preferred language)", category: .transcription, context: LogContext(additionalInfo: info))
                     await MainActor.run { [textToSave] in
@@ -257,7 +242,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 // Include service used in log context
                 let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
                 let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
-                let serviceLabel: String = (serviceKey == "local_whisperkit") ? "WhisperKit (local)" : (serviceKey == "cloud_api" ? "Cloud API" : "unknown")
+                let serviceLabel: String = serviceKey == "cloud_api" ? "Cloud API" : "unknown"
                 var info: [String: Any] = [
                     "memoId": memo.id.uuidString,
                     "textLength": textLen,
@@ -266,7 +251,6 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     "service": serviceLabel,
                     "serviceKey": serviceKey
                 ]
-                if let model = meta?.whisperModel { info["whisperModel"] = model }
                 logger.debug("Transcription completed (chunked, preferred language)", category: .transcription, context: LogContext(additionalInfo: info))
                 await MainActor.run { [eventBus, textToSave] in
                     eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
@@ -279,19 +263,6 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             if totalDurationSec < 60.0 {
                 // Single-shot auto with fallback if needed
                 await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (cloud)...")
-                // Wire fine-grained engine progress if supported
-                if let progressSvc = transcriptionAPI as? TranscriptionProgressReporting {
-                    progressSvc.setProgressHandler { [weak self] fraction in
-                        guard let self = self else { return }
-                        let mapped = 0.2 + 0.75 * max(0.0, min(1.0, fraction))
-                        Task { await self.updateProgress(operationId: operationId, fraction: mapped, step: "Transcribing...") }
-                    }
-                }
-                defer {
-                    Task { @MainActor in
-                        (transcriptionAPI as? TranscriptionProgressReporting)?.clearProgressHandler()
-                    }
-                }
                 let primaryResp = try await transcriptionAPI.transcribe(url: audioURL, language: nil)
                 let primaryEval = qualityEvaluator.evaluateQuality(primaryResp, text: primaryResp.text)
 
@@ -338,7 +309,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 // Include service used in log context
                 let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
                 let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
-                let serviceLabel: String = (serviceKey == "local_whisperkit") ? "WhisperKit (local)" : (serviceKey == "cloud_api" ? "Cloud API" : "unknown")
+                let serviceLabel: String = serviceKey == "cloud_api" ? "Cloud API" : "unknown"
                 var info: [String: Any] = [
                     "memoId": memo.id.uuidString,
                     "textLength": textLen,
@@ -347,7 +318,6 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     "service": serviceLabel,
                     "serviceKey": serviceKey
                 ]
-                if let model = meta?.whisperModel { info["whisperModel"] = model }
                 logger.debug("Transcription completed (single, cloud)", category: .transcription, context: LogContext(additionalInfo: info))
                 await MainActor.run { [eventBus, textToSave] in
                     eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))

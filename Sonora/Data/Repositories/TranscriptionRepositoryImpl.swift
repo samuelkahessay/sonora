@@ -175,12 +175,6 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
         logger.info("Deleted transcription data for memo (SwiftData)", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
     }
 
-    func hasTranscriptionData(for memoId: UUID) -> Bool {
-        let key = memoIdKey(for: memoId)
-        if transcriptionStates[key] != nil { return true }
-        return fetchTranscriptionModel(for: memoId) != nil
-    }
-
     func getTranscriptionText(for memoId: UUID) -> String? {
         let state = getTranscriptionState(for: memoId)
         return state.text
@@ -235,20 +229,6 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
     func clearTranscriptionCache() {
         transcriptionStates.removeAll()
         logger.debug("Cleared transcription cache", category: .repository, context: LogContext())
-    }
-
-    func getAllTranscriptionStates() -> [UUID: TranscriptionState] {
-        var states: [UUID: TranscriptionState] = [:]
-        // Include cached
-        for (key, state) in transcriptionStates { if let uuid = UUID(uuidString: key) { states[uuid] = state } }
-        // Fetch from store
-        if let models = try? context.fetch(FetchDescriptor<TranscriptionModel>()) {
-            for model in models {
-                let id = model.memo?.id ?? model.id
-                states[id] = mapModelToState(model)
-            }
-        }
-        return states
     }
 
     func getTranscriptionStates(for memoIds: [UUID]) -> [UUID: TranscriptionState] {

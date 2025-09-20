@@ -39,8 +39,7 @@ Sonora combines cutting-edge technology with intuitive design:
 - **🏗️ Clean Architecture**: 97% compliance with protocol-based dependency injection
 - **📊 Operation Metrics**: Real-time system performance and resource monitoring
 - **📅 EventKit Integration**: Smart calendar event and reminder creation from voice transcripts
-- **⏱️ Recording Quotas**: 10-minute daily cloud transcription limit with local WhisperKit fallback
-- **🤖 WhisperKit Local Models**: On-device transcription with 15+ language support and model management UI
+- **⏱️ Recording Quotas**: 10-minute daily cloud transcription limit with usage tracking
 - **📤 Export System**: Multiple export formats for transcripts, analysis, and data
 - **🛡️ Content Moderation**: AI-powered content safety and filtering
 - **📝 Advanced Prompts**: 48 curated prompts with intelligent interpolation and selection
@@ -57,18 +56,8 @@ Sonora combines cutting-edge technology with intuitive design:
 #### **⏱️ Recording Quota Management**
 - **Daily Limits**: 10-minute daily cloud transcription quota with usage tracking
 - **Session Limits**: 3-minute maximum per recording session
-- **Smart Fallback**: Automatic switch to local WhisperKit when quota exceeded
 - **Usage Monitoring**: Real-time quota display in settings and recording interface
 - **Reset Logic**: Automatic daily quota reset with timezone awareness
-
-#### **🤖 WhisperKit Local Transcription**
-- **On-Device Processing**: Privacy-first local transcription using Apple's CoreML
-- **Multi-Language Support**: 15+ languages with downloadable models
-- **Model Management**: Intelligent model downloading with UI for selection and storage optimization
-- **Performance Optimization**: Hardware-accelerated inference on Apple Silicon
-- **Fallback Strategy**: Seamless integration as backup to cloud transcription
-- **Model Tiers**: Multiple model sizes (tiny, base, small) for quality/performance tradeoffs
-- **VAD Support**: Voice Activity Detection for improved transcription accuracy
 
 #### **📤 Export System**
 - **Transcript Export**: Multiple formats for sharing transcriptions
@@ -209,23 +198,18 @@ Sonora/
 │   │   ├── RecordingUsageRepositoryImpl.swift
 │   │   └── Prompts/
 │   │       └── PromptUsageRepositoryImpl.swift
-│   └── Services/                  # 🌐 External API & system integrations (9 categories, 35+ services)
+│   └── Services/                  # 🌐 External API & system integrations (8 categories, ~30 services)
 │       ├── Audio/ (8 services)            # 🎵 Audio recording & playback
 │       │   ├── BackgroundAudioService.swift, AudioSessionService.swift
 │       │   ├── AudioRecordingService.swift, AudioPlaybackService.swift
 │       │   ├── AudioPermissionService.swift, RecordingTimerService.swift
 │       │   ├── BackgroundTaskService.swift, AudioQualityManager.swift
-│       ├── Transcription/ (7 services)   # 🗣️ Speech-to-text processing
-│       │   ├── TranscriptionService.swift, WhisperKitTranscriptionService.swift
+│       ├── Transcription/ (3 services)   # 🗣️ Speech-to-text processing
+│       │   ├── TranscriptionService.swift
 │       │   ├── VADSplittingService.swift, AudioChunkManager.swift
-│       │   ├── ClientLanguageDetectionService.swift, WhisperKitHealthChecker.swift
-│       │   └── ModelManagement/ (4 services) # WhisperKit model lifecycle
-│       ├── Analysis/ (6 services)        # 🧠 AI content analysis
-│       │   ├── AnalysisService.swift, LocalAnalysisService.swift
-│       │   ├── LocalModelDownloadManager.swift, Guardrails.swift
-│       │   ├── LocalModel.swift, ModelTier.swift
-│       ├── AI/ (1 service)               # 🤖 AI model management
-│       │   └── WhisperKitModelManager.swift
+│       │   └── ClientLanguageDetectionService.swift
+│       ├── Analysis/ (1 service)        # 🧠 AI content analysis
+│       │   └── AnalysisService.swift
 │       ├── EventKit/ (1 service)         # 📅 Calendar integration
 │       │   └── EventKitPermissionService.swift
 │       ├── Export/ (3 services)          # 📤 Data export & sharing
@@ -244,11 +228,6 @@ Sonora/
 │   │   ├── UnifiedStateView.swift
 │   │   └── NotificationBanner.swift
 │   └── ContentView.swift
-├── Presentation/                  # 🎨 Model selection UI
-│   └── Views/
-│       ├── ModelDownloadView.swift
-│       ├── ModelSelectionView.swift
-│       └── TierSectionView.swift
 └── Models/                        # 📋 Data transfer objects
     ├── AnalysisModels.swift       # Analysis API models
     └── TranscriptionState.swift   # Transcription state enum
@@ -273,10 +252,9 @@ Sonora/Features/
     UI/Components/             # SonoraInsightCard, EventsResultView, RemindersResultView
     ViewModels/                # AnalysisViewModel
   Settings/                    # ⚙️ Application configuration
-    UI/                        # SettingsView, WhisperKitSectionView, PrivacySectionView
-    UI/Components/             # ModelDownloadButton, TranscriptionServiceToggle
+    UI/                        # SettingsView, ProcessingOptionsSection, PrivacySectionView
     ViewModels/                # PrivacyController
-    Models/                    # WhisperModelInfo, LicenseInfo
+    Models/                    # LicenseInfo
   Onboarding/                  # 👋 First-run user experience
     UI/                        # OnboardingView
     UI/Components/             # OnboardingPageView
@@ -316,7 +294,6 @@ Guidelines:
 | **Operation Management** | `Core/Concurrency/` | Thread-safe operation tracking |
 | **Event System** | `Core/Events/` | Reactive architecture components |
 | **Shared UI** | `Views/Components/` | Feature-agnostic components |
-| **Model Management** | `Data/Services/Transcription/ModelManagement/` | WhisperKit model lifecycle |
 | **Export Services** | `Data/Services/Export/` | Data export & sharing |
 | **Prompts Module** | `Domain/UseCases/Prompts/` & `Data/Services/Prompts/` | Recording prompts system |
 
@@ -938,7 +915,7 @@ do {
 - **Service Organization**: 100% compliance with Clean Architecture service placement
 - **Modern Concurrency**: Full async/await implementation with thread-safe operation coordination
 - **Service Layer Transformation**: Monolithic 634-line BackgroundAudioService split into 6 focused services with orchestration pattern
-- **WhisperKit Integration**: Complete on-device transcription with 15+ languages and model management UI
+- **Cloud Transcription Pipeline**: OpenAI Whisper API with VAD chunking, language detection, and moderation safeguards
 - **Export System**: Comprehensive export capabilities for transcripts, analysis, and data
 - **Advanced Prompts**: 48-prompt system with intelligent interpolation and selection algorithms
 

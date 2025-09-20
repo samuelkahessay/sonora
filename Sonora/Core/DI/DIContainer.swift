@@ -20,9 +20,7 @@ final class DIContainer: ObservableObject, Resolver {
     // - Concrete class types: weak references where beneficial
     // - Protocol types: keep as optional strong references with lifecycle tracking
     var _transcriptionServiceFactory: TranscriptionServiceFactory?
-    var _modelDownloadManager: ModelDownloadManager?
     var _analysisService: AnalysisService?
-    var _localAnalysisService: LocalAnalysisService?
     var _memoRepository: MemoRepositoryImpl?
     var _transcriptionRepository: (any TranscriptionRepository)?
     var _analysisRepository: (any AnalysisRepository)?
@@ -43,13 +41,11 @@ final class DIContainer: ObservableObject, Resolver {
     private var _eventHandlerRegistry: (any EventHandlerRegistryProtocol)?
     var _moderationService: (any ModerationServiceProtocol)?
     private var _spotlightIndexer: (any SpotlightIndexing)?
-    var _whisperKitModelProvider: WhisperKitModelProvider?
     var _modelContext: ModelContext? // Keep strong reference to ModelContext
     var _fillerWordFilter: (any FillerWordFiltering)?
 
     // MARK: - Phase 2: Core Optimization Services
     private var _audioQualityManager: AudioQualityManager?
-    private var _whisperKitModelManager: WhisperKitModelManager?
     private var _memoryPressureDetector: MemoryPressureDetector?
     
     // MARK: - EventKit Services (Protocol References)
@@ -244,21 +240,8 @@ final class DIContainer: ObservableObject, Resolver {
             self._audioQualityManager = AudioQualityManager()
         }
 
-        // Initialize model management primitives first
-        if self._whisperKitModelProvider == nil {
-            self._whisperKitModelProvider = WhisperKitModelProvider()
-        }
-        if self._modelDownloadManager == nil, let provider = self._whisperKitModelProvider {
-            self._modelDownloadManager = ModelDownloadManager(provider: provider)
-        }
-        if self._transcriptionServiceFactory == nil, let dm = self._modelDownloadManager, let provider = self._whisperKitModelProvider {
-            self._transcriptionServiceFactory = TranscriptionServiceFactory(downloadManager: dm, modelProvider: provider)
-        }
-
-        // Now create the WhisperKit model manager
-        if self._whisperKitModelManager == nil, let provider = self._whisperKitModelProvider {
-            self._whisperKitModelManager = WhisperKitModelManager(modelProvider: provider)
-            // Lifecycle hooks are configured in the manager initializer
+        if self._transcriptionServiceFactory == nil {
+            self._transcriptionServiceFactory = TranscriptionServiceFactory()
         }
         if self._memoryPressureDetector == nil {
             let detector = MemoryPressureDetector()
@@ -306,22 +289,6 @@ final class DIContainer: ObservableObject, Resolver {
         return factory
     }
     
-    /// Get model download manager
-    @MainActor
-    func modelDownloadManager() -> ModelDownloadManager {
-        ensureConfigured()
-        guard let manager = _modelDownloadManager else { fatalError("DIContainer not configured: modelDownloadManager") }
-        return manager
-    }
-
-    /// WhisperKit model provider
-    @MainActor
-    func whisperKitModelProvider() -> WhisperKitModelProvider {
-        ensureConfigured()
-        guard let provider = _whisperKitModelProvider else { fatalError("DIContainer not configured: whisperKitModelProvider") }
-        return provider
-    }
-    
     /// Get start transcription use case (cached)
     @MainActor
     func startTranscriptionUseCase() -> any StartTranscriptionUseCaseProtocol {
@@ -365,14 +332,6 @@ final class DIContainer: ObservableObject, Resolver {
     func audioQualityManager() -> AudioQualityManager {
         ensureConfigured()
         guard let mgr = _audioQualityManager else { fatalError("DIContainer not configured: audioQualityManager") }
-        return mgr
-    }
-
-    /// WhisperKit model lifecycle manager (prewarming, idle unload)
-    @MainActor
-    func whisperKitModelManager() -> WhisperKitModelManager {
-        ensureConfigured()
-        guard let mgr = _whisperKitModelManager else { fatalError("DIContainer not configured: whisperKitModelManager") }
         return mgr
     }
 
@@ -502,12 +461,10 @@ final class DIContainer: ObservableObject, Resolver {
         if _detectEventsAndRemindersUseCase == nil {
             _detectEventsAndRemindersUseCase = DetectEventsAndRemindersUseCase(
                 analysisService: analysisService(),
-                localAnalysisService: localAnalysisService(),
                 analysisRepository: analysisRepository(),
                 logger: logger(),
                 eventBus: eventBus(),
-                operationCoordinator: operationCoordinator(),
-                useLocalAnalysis: false // Default to cloud analysis
+                operationCoordinator: operationCoordinator()
             )
         }
         return _detectEventsAndRemindersUseCase!

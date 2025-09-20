@@ -75,10 +75,6 @@ struct RecordingQuotaUseCasesTests {
         let consume = ConsumeRecordingUsageUseCase(usageRepository: repo)
         let remaining = GetRemainingDailyQuotaUseCase(usageRepository: repo)
 
-        // Local service: unlimited (nil)
-        let remLocal = await remaining.execute(service: .localWhisperKit)
-        #expect(remLocal == nil)
-
         // Start with 0 used for cloud
         var remCloud = await remaining.execute(service: .cloudAPI)
         #expect(remCloud == 600)

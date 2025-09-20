@@ -21,7 +21,6 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     private let consumeRecordingUsageUseCase: any ConsumeRecordingUsageUseCaseProtocol
     private let resetDailyUsageIfNeededUseCase: any ResetDailyUsageIfNeededUseCaseProtocol
     private let getRemainingDailyQuotaUseCase: any GetRemainingDailyQuotaUseCaseProtocol
-    private let modelDownloadManager: ModelDownloadManager
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Debounce Management
@@ -103,8 +102,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         canStartRecordingUseCase: any CanStartRecordingUseCaseProtocol,
         consumeRecordingUsageUseCase: any ConsumeRecordingUsageUseCaseProtocol,
         resetDailyUsageIfNeededUseCase: any ResetDailyUsageIfNeededUseCaseProtocol,
-        getRemainingDailyQuotaUseCase: any GetRemainingDailyQuotaUseCaseProtocol,
-        modelDownloadManager: ModelDownloadManager
+        getRemainingDailyQuotaUseCase: any GetRemainingDailyQuotaUseCaseProtocol
     ) {
         self.startRecordingUseCase = startRecordingUseCase
         self.stopRecordingUseCase = stopRecordingUseCase
@@ -117,7 +115,6 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         self.consumeRecordingUsageUseCase = consumeRecordingUsageUseCase
         self.resetDailyUsageIfNeededUseCase = resetDailyUsageIfNeededUseCase
         self.getRemainingDailyQuotaUseCase = getRemainingDailyQuotaUseCase
-        self.modelDownloadManager = modelDownloadManager
 
         setupBindings()
         setupRecordingCallback()
@@ -200,15 +197,9 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
 
     /// Refresh the quota state (service + remaining seconds)
     private func refreshQuota() async {
-        // Determine effective service
-        let effective = UserDefaults.standard.getEffectiveTranscriptionService(downloadManager: modelDownloadManager)
-        state.quota.service = effective
-        if effective == .cloudAPI {
-            let rem = await getRemainingDailyQuotaUseCase.execute(service: .cloudAPI)
-            state.quota.remainingDailySeconds = rem ?? 0
-        } else {
-            state.quota.remainingDailySeconds = nil // unlimited
-        }
+        state.quota.service = .cloudAPI
+        let rem = await getRemainingDailyQuotaUseCase.execute(service: .cloudAPI)
+        state.quota.remainingDailySeconds = rem ?? 0
         objectWillChange.send()
     }
     
@@ -261,24 +252,19 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
                 // Ensure daily rollover
                 await resetDailyUsageIfNeededUseCase.execute(now: Date())
 
-                // Determine effective service
-                let selectedService = UserDefaults.standard.getEffectiveTranscriptionService(downloadManager: modelDownloadManager)
-                self.currentSessionService = selectedService
+                self.currentSessionService = .cloudAPI
 
                 var capToApply: TimeInterval? = nil
-                if selectedService == .cloudAPI {
-                    // Enforce quota and per-session cap
-                    do {
-                        if let allowed = try await canStartRecordingUseCase.execute(service: .cloudAPI) {
-                            capToApply = allowed
-                        }
-                    } catch {
-                        // Surface quota errors
-                        self.error = ErrorMapping.mapError(error)
-                        // Also refresh quota for UI
-                        await refreshQuota()
-                        return
+                do {
+                    if let allowed = try await canStartRecordingUseCase.execute(service: .cloudAPI) {
+                        capToApply = allowed
                     }
+                } catch {
+                    // Surface quota errors
+                    self.error = ErrorMapping.mapError(error)
+                    // Also refresh quota for UI
+                    await refreshQuota()
+                    return
                 }
 
                 let memoId = try await startRecordingUseCase.execute(capSeconds: capToApply)

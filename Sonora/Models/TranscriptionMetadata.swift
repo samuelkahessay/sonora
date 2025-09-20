@@ -14,7 +14,6 @@ public struct TranscriptionMetadata: Codable, Sendable {
 
     // Source and model
     public var transcriptionService: TranscriptionServiceType?
-    public var whisperModel: String?
     public var timestamp: Date?
 
     // Moderation/flags
@@ -33,7 +32,6 @@ public struct TranscriptionMetadata: Codable, Sendable {
         detectedLanguage: String? = nil,
         qualityScore: Double? = nil,
         transcriptionService: TranscriptionServiceType? = nil,
-        whisperModel: String? = nil,
         timestamp: Date? = nil,
         aiGenerated: Bool? = nil,
         moderationFlagged: Bool? = nil,
@@ -49,7 +47,6 @@ public struct TranscriptionMetadata: Codable, Sendable {
         self.detectedLanguage = detectedLanguage
         self.qualityScore = qualityScore
         self.transcriptionService = transcriptionService
-        self.whisperModel = whisperModel
         self.timestamp = timestamp
         self.aiGenerated = aiGenerated
         self.moderationFlagged = moderationFlagged
@@ -70,7 +67,6 @@ public extension TranscriptionMetadata {
             detectedLanguage: other.detectedLanguage ?? detectedLanguage,
             qualityScore: other.qualityScore ?? qualityScore,
             transcriptionService: other.transcriptionService ?? transcriptionService,
-            whisperModel: other.whisperModel ?? whisperModel,
             timestamp: other.timestamp ?? timestamp,
             aiGenerated: other.aiGenerated ?? aiGenerated,
             moderationFlagged: other.moderationFlagged ?? moderationFlagged,

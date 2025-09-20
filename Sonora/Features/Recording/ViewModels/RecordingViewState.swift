@@ -114,7 +114,7 @@ struct RecordingViewState: Equatable {
     /// Quota state (daily remaining and service type)
     struct QuotaState: Equatable {
         var service: TranscriptionServiceType = .cloudAPI
-        /// Remaining daily seconds for Cloud service; nil for Local (unlimited)
+        /// Remaining daily seconds for Cloud service (nil when quota not enforced)
         var remainingDailySeconds: TimeInterval? = nil
 
         var isLimited: Bool { remainingDailySeconds != nil }
@@ -127,15 +127,10 @@ struct RecordingViewState: Equatable {
 
         /// User-facing summary
         var statusText: String {
-            switch service {
-            case .cloudAPI:
-                let rem = Int(max(0, (remainingDailySeconds ?? 0).rounded()))
-                let mm = rem / 60
-                let ss = rem % 60
-                return String(format: "Remaining Today: %d:%02d (Cloud)", mm, ss)
-            case .localWhisperKit:
-                return "Unlimited (Local)"
-            }
+            let rem = Int(max(0, (remainingDailySeconds ?? 0).rounded()))
+            let mm = rem / 60
+            let ss = rem % 60
+            return String(format: "Remaining Today: %d:%02d (Cloud)", mm, ss)
         }
     }
 

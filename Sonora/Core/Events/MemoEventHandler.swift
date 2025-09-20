@@ -96,8 +96,6 @@ public final class MemoEventHandler {
             break
         case .navigateOpenMemoByID(memoId: _):
             break
-        case .whisperModelNormalized(previous: _, normalized: _):
-            break
         case .microphonePermissionStatusChanged(status: _):
             break
         case .calendarEventCreated(_, _),
@@ -204,18 +202,12 @@ public final class MemoEventHandler {
             wordsPerMinute = 0
         }
         
-        // Fetch transcription metadata to report the service used (local WhisperKit vs Cloud API)
-        let serviceMeta: (serviceKey: String, serviceLabel: String, whisperModel: String?) = {
+        // Fetch transcription metadata to report the service used
+        let serviceMeta: (serviceKey: String, serviceLabel: String) = {
             let meta = transcriptionRepository.getTranscriptionMetadata(for: memoId)
             let key = meta?.transcriptionService?.rawValue ?? "unknown"
-            let label: String
-            switch meta?.transcriptionService {
-            case .some(.localWhisperKit): label = "WhisperKit (local)"
-            case .some(.cloudAPI): label = "Cloud API"
-            default: label = "unknown"
-            }
-            let model = meta?.whisperModel
-            return (key, label, model)
+            let label = (meta?.transcriptionService == .cloudAPI) ? "Cloud API" : "unknown"
+            return (key, label)
         }()
 
         var info: [String: Any] = [
@@ -226,7 +218,6 @@ public final class MemoEventHandler {
             "service": serviceMeta.serviceLabel,
             "serviceKey": serviceMeta.serviceKey
         ]
-        if let model = serviceMeta.whisperModel { info["whisperModel"] = model }
 
         let context = LogContext(
             correlationId: correlationId,

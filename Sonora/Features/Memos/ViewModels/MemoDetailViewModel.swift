@@ -26,7 +26,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     private let memoRepository: any MemoRepository // Still needed for state updates
     private let operationCoordinator: any OperationCoordinatorProtocol
     private var cancellables = Set<AnyCancellable>()
-    private var eventSubscriptionId: UUID?
     
     // MARK: - Current Memo
     private var currentMemo: Memo?
@@ -35,7 +34,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     
     /// Single source of truth for all UI state
     @Published var state = MemoDetailViewState()
-    @Published var memoryFallbackMessage: String?
     
     // MARK: - Non-UI State
     
@@ -168,23 +166,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             }
             .store(in: &cancellables)
 
-        // Listen for route fallback events to show user-facing memory message
-        let bus = DIContainer.shared.eventBus()
-        eventSubscriptionId = bus.subscribe(to: AppEvent.self, subscriber: nil) { [weak self] event in
-            guard let self else { return }
-            guard let currentId = self.currentMemo?.id else { return }
-            switch event {
-            case .transcriptionRouteDecided(let memoId, let route, _):
-                if memoId == currentId && route == "cloud" {
-                    Task { @MainActor in
-                        // Show concise message; reason may be "insufficient_memory" or other string
-                        self.memoryFallbackMessage = "Using cloud transcription due to limited device memory."
-                    }
-                }
-            default:
-                break
-            }
-        }
     }
     
     private func setupOperationMonitoring() {
@@ -224,7 +205,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     
     private func updateFromRepository() {
         guard let memo = currentMemo else { return }
-        
+
         // Update transcription state
         let newTranscriptionState = getTranscriptionStateUseCase.execute(memo: memo)
         if !transcriptionState.isEqual(to: newTranscriptionState) {
@@ -244,6 +225,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             }
             if let flagged = meta.moderationFlagged { transcriptionModerationFlagged = flagged }
             if let cats = meta.moderationCategories { transcriptionModerationCategories = cats }
+            if let service = meta.transcriptionService {
+                state.transcription.service = service
+            }
         }
 
         // Auto-detected Events/Reminders banner trigger
@@ -271,7 +255,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         print("📝 MemoDetailViewModel: Configuring with memo: \(memo.filename)")
         self.currentMemo = memo
         self.currentMemoTitle = memo.displayName
+        state.transcription.service = nil
         
+
         // Initial state update
         updateTranscriptionState(for: memo)
         setupPlayingState(for: memo)
@@ -1029,6 +1015,14 @@ extension MemoDetailViewModel {
     var transcriptionModerationCategories: [String: Bool] {
         get { state.transcription.moderationCategories }
         set { state.transcription.moderationCategories = newValue }
+    }
+
+    var transcriptionServiceBadge: String? {
+        state.transcription.serviceDisplayName
+    }
+
+    var transcriptionServiceIcon: String? {
+        state.transcription.serviceIconName
     }
     
     // MARK: - Audio Properties  

@@ -86,9 +86,6 @@ public enum AppEvent: Equatable {
 
     // MARK: - Configuration/Settings Events
 
-    /// Whisper model selection normalized to an installed model
-    case whisperModelNormalized(previous: String, normalized: String)
-
     // MARK: - Permission Events
 
     /// Microphone permission status changed (result of a permission request)
@@ -112,8 +109,6 @@ public enum AppEvent: Equatable {
             return nil
         case .navigateOpenMemoByID(let memoId):
             return memoId
-        case .whisperModelNormalized(_, _):
-            return nil
         case .microphonePermissionStatusChanged(_):
             return nil
         case .calendarEventCreated(let memoId, _):
@@ -157,8 +152,6 @@ public enum AppEvent: Equatable {
             return "Navigate: Pop to root memos"
         case .navigateOpenMemoByID(let memoId):
             return "Navigate: Open memo: \(memoId.uuidString)"
-        case .whisperModelNormalized(let previous, let normalized):
-            return "Whisper model normalized: \(previous) → \(normalized)"
         case .microphonePermissionStatusChanged(let status):
             return "Microphone permission status changed: \(status.displayName)"
         case .calendarEventCreated(_, let eventId):
@@ -197,8 +190,6 @@ public enum AppEvent: Equatable {
             return .analysis
         case .navigatePopToRootMemos, .navigateOpenMemoByID:
             return .memo
-        case .whisperModelNormalized:
-            return .analysis
         case .microphonePermissionStatusChanged:
             return .recording
         case .calendarEventCreated, .eventCreationFailed, .batchEventCreationCompleted, .eventConflictDetected,

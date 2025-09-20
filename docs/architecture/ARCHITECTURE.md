@@ -113,8 +113,7 @@ Data
     - `RecordingTimerService` → Duration tracking, countdown logic, auto-stop functionality
     - `AudioPlaybackService` → Playback controls, progress tracking, session management
     - `BackgroundAudioService` → **Orchestrating coordinator** using composition and reactive bindings
-  - `Data/Services/Transcription/*` — Cloud and local WhisperKit transcription, VAD splitting, chunking, client language detection
-  - `Data/Services/Transcription/ModelManagement/*` — WhisperKit model provider, installer, download manager
+  - `Data/Services/Transcription/*` — Cloud transcription (OpenAI Whisper API), VAD splitting, chunking, client language detection
   - `Data/Services/Analysis/*` — Analysis runtime
   - `Data/Services/Export/*` — Exporters for transcripts and analyses
   - `Data/Services/Moderation/*` — Moderation services (and no-op variant)

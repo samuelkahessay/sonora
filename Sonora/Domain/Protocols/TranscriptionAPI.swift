@@ -16,15 +16,6 @@ protocol TranscriptionAPI {
     ///   - language: Optional ISO 639-1 language code (e.g., "en", "es", "fr")
     /// - Returns: Detailed transcription response including optional metadata
     func transcribe(url: URL, language: String?) async throws -> TranscriptionResponse
-
-    // Consolidated surface: callers handle chunking and call transcribe(url:language:) per chunk.
-}
-
-/// Optional progress reporting for long-running transcriptions.
-/// Implemented by local engines to surface fine-grained progress.
-protocol TranscriptionProgressReporting {
-    @MainActor func setProgressHandler(_ handler: @escaping (Double) -> Void)
-    @MainActor func clearProgressHandler()
 }
 
 /// Detailed transcription response, optionally including detected language and confidences

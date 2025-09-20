@@ -16,7 +16,7 @@ struct DetectionMetadata: Sendable {
     let averageConfidence: Float
     let highConfidenceCount: Int
     let processingTime: TimeInterval
-    let analysisMode: String // "cloud" or "local"
+    let analysisMode: String // "cloud" or "cached"
     
     var detectionQuality: DetectionQuality {
         switch averageConfidence {
@@ -48,7 +48,6 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
     
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
-    private let localAnalysisService: any AnalysisServiceProtocol
     private let analysisRepository: any AnalysisRepository
     private let logger: LoggerProtocol
     private let eventBus: EventBusProtocol
@@ -56,7 +55,6 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
     private let thresholdPolicy: any AdaptiveThresholdPolicy
     
     // MARK: - Configuration
-    private let useLocalAnalysis: Bool
     // Legacy static thresholds remain as a safety floor; adaptive policy refines per-context
     private var legacyEventThreshold: Float { Float(UserDefaults.standard.object(forKey: "eventConfidenceThreshold") as? Double ?? 0.7) }
     private var legacyReminderThreshold: Float { Float(UserDefaults.standard.object(forKey: "reminderConfidenceThreshold") as? Double ?? 0.7) }
@@ -64,21 +62,17 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
     // MARK: - Initialization
     init(
         analysisService: any AnalysisServiceProtocol,
-        localAnalysisService: any AnalysisServiceProtocol,
         analysisRepository: any AnalysisRepository,
         logger: LoggerProtocol = Logger.shared,
         eventBus: EventBusProtocol = EventBus.shared,
         operationCoordinator: OperationCoordinatorProtocol,
-        useLocalAnalysis: Bool = false,
         thresholdPolicy: any AdaptiveThresholdPolicy = DefaultAdaptiveThresholdPolicy()
     ) {
         self.analysisService = analysisService
-        self.localAnalysisService = localAnalysisService
         self.analysisRepository = analysisRepository
         self.logger = logger
         self.eventBus = eventBus
         self.operationCoordinator = operationCoordinator
-        self.useLocalAnalysis = useLocalAnalysis
         self.thresholdPolicy = thresholdPolicy
     }
     
@@ -90,8 +84,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: [
             "memoId": memoId.uuidString,
-            "transcriptLength": transcript.count,
-            "useLocal": useLocalAnalysis
+            "transcriptLength": transcript.count
         ])
         
         logger.info("Starting event and reminder detection",
@@ -207,67 +200,13 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         eventThreshold: Float,
         reminderThreshold: Float
     ) async throws -> DetectionResult {
-        
-        if useLocalAnalysis {
-            return try await performLocalDetection(
-                transcript: transcript,
-                memoId: memoId,
-                context: context,
-                startTime: startTime,
-                eventThreshold: eventThreshold,
-                reminderThreshold: reminderThreshold
-            )
-        } else {
-            return try await performCloudDetection(
-                transcript: transcript,
-                memoId: memoId,
-                context: context,
-                startTime: startTime,
-                eventThreshold: eventThreshold,
-                reminderThreshold: reminderThreshold
-            )
-        }
-    }
-    
-    private func performLocalDetection(
-        transcript: String,
-        memoId: UUID,
-        context: LogContext,
-        startTime: Date,
-        eventThreshold: Float,
-        reminderThreshold: Float
-    ) async throws -> DetectionResult {
-        logger.debug("Performing local event/reminder detection",
-                    category: .analysis,
-                    context: context)
-        
-        // Run event and reminder detection in parallel using async-let
-        async let eventsEnvelopeTask: AnalyzeEnvelope<EventsData> = localAnalysisService.analyze(
-            mode: .events,
+        return try await performCloudDetection(
             transcript: transcript,
-            responseType: EventsData.self
-        )
-        async let remindersEnvelopeTask: AnalyzeEnvelope<RemindersData> = localAnalysisService.analyze(
-            mode: .reminders,
-            transcript: transcript,
-            responseType: RemindersData.self
-        )
-        let eventsEnvelope = try await eventsEnvelopeTask
-        let remindersEnvelope = try await remindersEnvelopeTask
-        
-        // Process results and filter by confidence
-        let filteredEvents = filterEventsByConfidence(eventsEnvelope.data, threshold: eventThreshold)
-        let filteredReminders = filterRemindersByConfidence(remindersEnvelope.data, threshold: reminderThreshold)
-        
-        return DetectionResult(
-            events: filteredEvents,
-            reminders: filteredReminders,
-            detectionMetadata: createMetadata(
-                events: filteredEvents,
-                reminders: filteredReminders,
-                processingTime: Date().timeIntervalSince(startTime),
-                analysisMode: "local"
-            )
+            memoId: memoId,
+            context: context,
+            startTime: startTime,
+            eventThreshold: eventThreshold,
+            reminderThreshold: reminderThreshold
         )
     }
     
@@ -403,7 +342,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
             let envelope = AnalyzeEnvelope(
                 mode: mode,
                 data: data,
-                model: useLocalAnalysis ? "phi-4-mini" : "gpt-5-nano",
+                model: "gpt-5-nano",
                 tokens: TokenUsage(input: 0, output: 0), // Simplified for now
                 latency_ms: 0, // Simplified for now
                 moderation: nil

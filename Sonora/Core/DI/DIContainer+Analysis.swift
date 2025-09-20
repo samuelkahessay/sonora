@@ -16,30 +16,13 @@ extension DIContainer {
         ensureConfigured()
         trackServiceAccess("AnalysisService")
 
-        if AppConfiguration.shared.useLocalAnalysis {
-            if _localAnalysisService == nil {
-                _localAnalysisService = LocalAnalysisService()
-                print("🤖 DIContainer: Created LocalAnalysisService instance")
-            }
-            return _localAnalysisService!
-        }
-
         if let existing = _analysisService {
             return existing
         }
 
-        _analysisService = AnalysisService()
-        return _analysisService!
-    }
-
-    /// Explicit local analysis service (on-device)
-    @MainActor
-    func localAnalysisService() -> any AnalysisServiceProtocol {
-        ensureConfigured()
-        if _localAnalysisService == nil {
-            _localAnalysisService = LocalAnalysisService()
-        }
-        return _localAnalysisService!
+        let service = AnalysisService()
+        _analysisService = service
+        return service
     }
 
     /// Get moderation service

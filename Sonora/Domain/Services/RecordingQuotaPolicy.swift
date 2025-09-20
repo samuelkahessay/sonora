@@ -8,7 +8,6 @@ public struct RecordingQuotaPolicy: Sendable {
     public func dailyLimit(for service: TranscriptionServiceType) -> TimeInterval? {
         switch service {
         case .cloudAPI: return 600 // 10 minutes total per day
-        case .localWhisperKit: return nil // unlimited
         }
     }
 

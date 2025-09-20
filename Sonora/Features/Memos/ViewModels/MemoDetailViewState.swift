@@ -31,17 +31,26 @@ struct MemoDetailViewState: Equatable {
         var progressStep: String? = nil
         var moderationFlagged: Bool = false
         var moderationCategories: [String: Bool] = [:]
-        
+        var service: TranscriptionServiceType? = nil
+
         var isCompleted: Bool {
             state.isCompleted
         }
-        
+
         var isInProgress: Bool {
             state.isInProgress
         }
         
         var isFailed: Bool {
             state.isFailed
+        }
+
+        var serviceDisplayName: String? {
+            service.map { _ in "Cloud" }
+        }
+
+        var serviceIconName: String? {
+            service.map { _ in "cloud" }
         }
     }
     

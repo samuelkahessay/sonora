@@ -10,6 +10,19 @@ Use Xcode 16+ or these CLI shortcuts:
 - `xcodebuild test -scheme SonoraUITests -destination 'platform=iOS Simulator,name=iPhone 16'` – execute UI tests (ensure the simulator is booted).
 When adding Swift packages, run `xcodebuild -resolvePackageDependencies` to refresh the cache.
 
+Within Codex CLI, prefer using the XcodeBuildMCP tools to build the app instead of raw `xcodebuild`.
+
+- Use installed simulators only: `iPhone 16 Pro (iOS 18.6)` and `iPhone 17 Pro (iOS 26)`.
+- Prefer targeting a specific existing simulator by UUID to avoid downloads/creation: first call `list_sims()`, then pass `simulatorId` to MCP commands.
+- If you use `simulatorName`, specify the exact name and set `useLatestOS: false` to prevent triggering an OS download.
+
+Examples (Codex MCP pseudo-calls):
+- `build_run_sim({ projectPath: 'Sonora.xcodeproj', scheme: 'Sonora', simulatorId: '<UUID from list_sims>' })`
+- `build_run_sim({ projectPath: 'Sonora.xcodeproj', scheme: 'Sonora', simulatorName: 'iPhone 16 Pro', useLatestOS: false })`
+- `build_sim({ projectPath: 'Sonora.xcodeproj', scheme: 'Sonora', simulatorName: 'iPhone 17 Pro', useLatestOS: false })`
+
+Avoid passing generic or unavailable models (e.g., `iPhone 16`) that could cause MCP to create/download a new device. Always target the existing `iPhone 16 Pro` or `iPhone 17 Pro` or use their UUIDs.
+
 ## Coding Style & Naming Conventions
 Write Swift using the standard four-space indentation, trailing commas where Xcode applies them, and `camelCase` identifiers. Follow the existing Clean Architecture guidelines: inject protocols via initialisers, keep domain types pure Swift (no UIKit/AVFoundation), and suffix transport structs with `DTO` or `Record`. Prefer `struct` over `class` unless reference semantics are required, and use `@MainActor` on ViewModels and UI-bound use cases.
 

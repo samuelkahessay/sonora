@@ -75,28 +75,7 @@ struct SonoraApp: App {
         UITabBar.appearance().standardAppearance = tabAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabAppearance
 
-        // Hint Hugging Face to disable telemetry writes that create analytics files
-        setenv("HF_HUB_DISABLE_TELEMETRY", "1", 1)
-        setenv("HUGGINGFACE_HUB_DISABLE_TELEMETRY", "1", 1)
-
-        // Pre-create common HuggingFace directories used by WhisperKit downloads on iOS
-        let fm = FileManager.default
-        let docs = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        let hfBaseDocs = docs.appendingPathComponent("huggingface", isDirectory: true)
-        let hfAnalyticsDocs = hfBaseDocs.appendingPathComponent("analytics", isDirectory: true)
-        let hfModelsDocs = hfBaseDocs.appendingPathComponent("models/argmaxinc/whisperkit-coreml", isDirectory: true)
-        let hfBaseCaches = caches.appendingPathComponent("huggingface", isDirectory: true)
-        let hfAnalyticsCaches = hfBaseCaches.appendingPathComponent("analytics", isDirectory: true)
-        try? fm.createDirectory(at: hfBaseDocs, withIntermediateDirectories: true)
-        try? fm.createDirectory(at: hfAnalyticsDocs, withIntermediateDirectories: true)
-        try? fm.createDirectory(at: hfModelsDocs, withIntermediateDirectories: true)
-        try? fm.createDirectory(at: hfBaseCaches, withIntermediateDirectories: true)
-        try? fm.createDirectory(at: hfAnalyticsCaches, withIntermediateDirectories: true)
-
-        // Point HF_HOME to a deterministic app-local path like Whisperboard
-        setenv("HF_HOME", hfBaseDocs.path, 1)
-        setenv("TRANSFORMERS_CACHE", hfBaseDocs.path, 1)
+        // Cloud transcription is now the only mode, so no additional model setup is required.
     }
     var body: some Scene {
         WindowGroup {

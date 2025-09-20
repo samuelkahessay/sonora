@@ -504,6 +504,17 @@ struct MemoDetailView: View {
             .accessibilityFocused($focusedElement, equals: .transcriptionText)
             HStack {
                 AIDisclaimerView.transcription()
+                if let badge = viewModel.transcriptionServiceBadge {
+                    let icon = viewModel.transcriptionServiceIcon ?? "waveform"
+                    Label(badge, systemImage: icon)
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.semantic(.fillSecondary))
+                    .foregroundColor(.semantic(.textSecondary))
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .accessibilityLabel("Transcription source: \(badge)")
+                }
                 Spacer()
                 Button(action: {
                     HapticManager.shared.playLightImpact()

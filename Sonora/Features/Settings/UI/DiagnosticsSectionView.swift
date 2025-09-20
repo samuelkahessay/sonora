@@ -3,10 +3,6 @@ import SwiftUI
 /// Diagnostics panel for Phase 2 optimizations
 /// Shows live metrics and provides quick actions for core managers
 struct DiagnosticsSectionView: View {
-    @State private var whisperMetrics: ModelPerformanceMetrics = .init()
-    @State private var isModelWarmed: Bool = false
-    @State private var currentModelId: String? = nil
-
     @State private var qualityMetrics: AudioQualityMetrics = .init()
     @State private var currentVoiceSettings: AudioRecordingSettings = AudioRecordingSettings(sampleRate: 22050, bitRate: 64000, quality: 0.7, channels: 1, format: .mpeg4AAC)
     @State private var currentProfileName: String = ""
@@ -18,47 +14,17 @@ struct DiagnosticsSectionView: View {
     @State private var systemOpsText: String = ""
     @State private var eventBusStats: String = ""
 
-    @State private var showWhisperDiagnostics = false
-
     private let di = DIContainer.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            whisperKitCard
             audioQualityCard
             memoryCard
             operationsCard
             eventBusCard
         }
         .onAppear { refreshAll() }
-        .sheet(isPresented: $showWhisperDiagnostics) { WhisperKitDiagnosticsView() }
     }
-
-    // MARK: - Sections
-    @ViewBuilder private var whisperKitCard: some View {
-        SettingsCard {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                HStack(spacing: Spacing.md) {
-                    Image(systemName: "brain.head.profile").foregroundColor(.semantic(.brandPrimary))
-                    Text("Local Engine (WhisperKit)").font(SonoraDesignSystem.Typography.headingSmall)
-                    Spacer()
-                    Button("Open Diagnostics") { showWhisperDiagnostics = true }.buttonStyle(.bordered)
-                }
-                gridRow("Warmed", isModelWarmed ? "Yes" : "No")
-                gridRow("Current Model", currentModelId ?? "—")
-                gridRow("Warm Hit Rate", String(format: "%.0f%%", whisperMetrics.warmHitRate * 100))
-                gridRow("Avg Prewarm", String(format: "%.2fs", whisperMetrics.averagePrewarmTime))
-                gridRow("Avg Cold Load", String(format: "%.2fs", whisperMetrics.averageColdLoadTime))
-                HStack(spacing: Spacing.sm) {
-                    Button("Prewarm Now") { Task { @MainActor in let mgr = di.whisperKitModelManager(); try? await mgr.prewarmModel(); refreshWhisper() } }
-                        .buttonStyle(.borderedProminent)
-                    Button("Unload Model", role: .destructive) { di.whisperKitModelManager().unloadModel(); refreshWhisper() }
-                        .buttonStyle(.bordered)
-                }
-            }
-        }
-    }
-
     @ViewBuilder private var audioQualityCard: some View {
         SettingsCard {
             VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -138,14 +104,7 @@ struct DiagnosticsSectionView: View {
     }
 
     private func refreshAll() {
-        refreshWhisper(); refreshAudio(); refreshMemory(); refreshOperations(); refreshEventBus()
-    }
-
-    private func refreshWhisper() {
-        let concreteMgr = di.whisperKitModelManager()
-        whisperMetrics = concreteMgr.getModelPerformanceMetrics()
-        isModelWarmed = concreteMgr.isModelWarmed
-        currentModelId = concreteMgr.currentModelId
+        refreshAudio(); refreshMemory(); refreshOperations(); refreshEventBus()
     }
 
     private func refreshAudio() {

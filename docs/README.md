@@ -22,8 +22,6 @@ This folder consolidates project documentation that was previously scattered acr
   - [OperationCoordinator](architecture/OperationCoordinator.md)
 - Migrations
   - [MIGRATION_NOTES.md](migrations/MIGRATION_NOTES.md)
-- Integration
-  - [LLM_INTEGRATION_SETUP.md](integration/LLM_INTEGRATION_SETUP.md)
 
 ### Design & Development
 - Brand
