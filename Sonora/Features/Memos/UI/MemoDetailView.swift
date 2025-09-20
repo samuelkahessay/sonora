@@ -113,7 +113,7 @@ struct MemoDetailView: View {
             Color.clear.frame(height: 8)
         }
         .navigationTitle(dynamicNavigationTitle)
-        .navigationBarTitleDisplayMode(.inline)
+        .liquidGlassNavigation(titleDisplayMode: .inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 16) {

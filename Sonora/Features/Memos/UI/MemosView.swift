@@ -85,7 +85,7 @@ struct MemosView: View {
                 mainContent
             }
             .navigationTitle("Memos")
-            .navigationBarTitleDisplayMode(.large)
+            .liquidGlassNavigation(titleDisplayMode: .large)
             .brandThemed()
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {

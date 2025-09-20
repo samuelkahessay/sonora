@@ -209,7 +209,7 @@ struct MemoRowView: View {
                 }
                 .padding()
                 .navigationTitle("Rename Memo")
-                .navigationBarTitleDisplayMode(.inline)
+                .liquidGlassNavigation(titleDisplayMode: .inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { viewModel.stopEditing() }

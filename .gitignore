@@ -52,3 +52,7 @@ Secrets.plist
 # Server build artifacts
 server/dist/
 server/index.js.backup
+
+# Xcode build artifacts
+.modulecache/
+.tmp/

@@ -33,7 +33,7 @@ struct ContentView: View {
                     Label("Record", systemImage: selectedTab == 0 ? "mic.circle.fill" : "mic.circle")
                 }
                 .tag(0)
-            
+
             MemosView(popToRoot: popToRoot)
                 .tabItem {
                     Label("Memos", systemImage: selectedTab == 1 ? "list.bullet.circle.fill" : "list.bullet.circle")
@@ -52,6 +52,7 @@ struct ContentView: View {
                 }
                 .tag(3)
         }
+        .liquidGlassTabView()
         .animation(nil, value: selectedTab)
         .onChange(of: selectedTab) { oldValue, newValue in
             if oldValue == 1 && newValue == 1 {

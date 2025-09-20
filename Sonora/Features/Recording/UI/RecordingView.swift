@@ -181,7 +181,7 @@ struct RecordingView: View {
                 Color.clear.frame(height: 0)
             }
             .navigationTitle("Sonora")
-            .navigationBarTitleDisplayMode(.large)
+            .liquidGlassNavigation(titleDisplayMode: .large)
             .brandThemed()
             .onAppear {
                 viewModel.onViewAppear()

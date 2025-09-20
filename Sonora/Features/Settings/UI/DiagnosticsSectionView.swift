@@ -33,7 +33,7 @@ struct DiagnosticsSectionView: View {
         }
         .background(Color.semantic(.bgPrimary).ignoresSafeArea())
         .navigationTitle("Diagnostics")
-        .navigationBarTitleDisplayMode(.inline)
+        .liquidGlassNavigation(titleDisplayMode: .inline)
         .onAppear { refreshAll() }
     }
     @ViewBuilder private var audioQualityCard: some View {
