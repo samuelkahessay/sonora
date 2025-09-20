@@ -252,7 +252,7 @@ Sonora/Features/
     UI/Components/             # SonoraInsightCard, EventsResultView, RemindersResultView
     ViewModels/                # AnalysisViewModel
   Settings/                    # ⚙️ Application configuration
-    UI/                        # SettingsView, ProcessingOptionsSection, PrivacySectionView
+    UI/                        # SettingsView, PrivacySectionView
     ViewModels/                # PrivacyController
     Models/                    # LicenseInfo
   Onboarding/                  # 👋 First-run user experience
