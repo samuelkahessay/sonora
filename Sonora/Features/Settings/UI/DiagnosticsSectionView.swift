@@ -17,12 +17,23 @@ struct DiagnosticsSectionView: View {
     private let di = DIContainer.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.lg) {
-            audioQualityCard
-            memoryCard
-            operationsCard
-            eventBusCard
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                audioQualityCard
+                memoryCard
+                operationsCard
+                eventBusCard
+                #if DEBUG
+                DebugSectionView()
+                #endif
+            }
+            .padding(.horizontal)
+            .padding(.top, Spacing.lg)
+            .padding(.bottom, Spacing.xl)
         }
+        .background(Color.semantic(.bgPrimary).ignoresSafeArea())
+        .navigationTitle("Diagnostics")
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear { refreshAll() }
     }
     @ViewBuilder private var audioQualityCard: some View {

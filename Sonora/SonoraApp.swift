@@ -59,8 +59,15 @@ struct SonoraApp: App {
         // Apply system serif fonts (no bundled fonts) to navigation titles
         let largeTitleFont = Self.serifUIFont(for: .largeTitle)
         let titleFont = Self.serifUIFont(for: .headline)
-        navAppearance.largeTitleTextAttributes = [ .font: largeTitleFont ]
-        navAppearance.titleTextAttributes = [ .font: titleFont ]
+
+        navAppearance.largeTitleTextAttributes = [
+            .font: largeTitleFont,
+            .foregroundColor: UIColor.label
+        ]
+        navAppearance.titleTextAttributes = [
+            .font: titleFont,
+            .foregroundColor: UIColor.label
+        ]
         
         UINavigationBar.appearance().standardAppearance = navAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navAppearance

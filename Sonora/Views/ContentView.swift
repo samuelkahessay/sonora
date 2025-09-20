@@ -40,11 +40,17 @@ struct ContentView: View {
                 }
                 .tag(1)
 
-            SettingsView()
+            TestView()
                 .tabItem {
-                    Label("Settings", systemImage: selectedTab == 2 ? "gearshape.fill" : "gearshape")
+                    Label("Test", systemImage: selectedTab == 2 ? "checkmark.circle.fill" : "checkmark.circle")
                 }
                 .tag(2)
+
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: selectedTab == 3 ? "gearshape.fill" : "gearshape")
+                }
+                .tag(3)
         }
         .animation(nil, value: selectedTab)
         .onChange(of: selectedTab) { oldValue, newValue in
