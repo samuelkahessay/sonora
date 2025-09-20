@@ -10,45 +10,28 @@ struct DataManagementSectionView: View {
                     .font(SonoraDesignSystem.Typography.headingSmall)
                     .accessibilityAddTraits(.isHeader)
 
-                // Export options group
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("Export Options")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.semantic(.textPrimary))
-
-                    ExportOptionButton(
-                        icon: "doc.text",
-                        title: "Export Transcripts",
-                        subtitle: "Text files of all recordings"
-                    ) {
-                        controller.exportMemos = false
-                        controller.exportTranscripts = true
-                        controller.exportAnalysis = false
-                        Task { await controller.exportData() }
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Button {
+                        controller.presentExportSheet()
+                    } label: {
+                        HStack(spacing: Spacing.sm) {
+                            Label("Export Data", systemImage: "square.and.arrow.up.on.square")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.semantic(.textPrimary))
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundColor(.semantic(.textTertiary))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Choose which data to include and share the export bundle")
 
-                    ExportOptionButton(
-                        icon: "sparkles",
-                        title: "Export Analysis",
-                        subtitle: "AI summaries and insights"
-                    ) {
-                        controller.exportMemos = false
-                        controller.exportTranscripts = false
-                        controller.exportAnalysis = true
-                        Task { await controller.exportData() }
-                    }
-
-                    ExportOptionButton(
-                        icon: "archivebox",
-                        title: "Export Everything",
-                        subtitle: "Complete backup with audio"
-                    ) {
-                        controller.exportMemos = true
-                        controller.exportTranscripts = true
-                        controller.exportAnalysis = true
-                        Task { await controller.exportData() }
-                    }
+                    Text("Create a shareable backup with transcripts, analysis, or audio recordings.")
+                        .font(.caption)
+                        .foregroundColor(.semantic(.textSecondary))
                 }
 
                 Divider().background(Color.semantic(.separator))
@@ -78,6 +61,13 @@ struct DataManagementSectionView: View {
         } message: {
             Text("This action permanently deletes all memos, transcripts, and analysis. This cannot be undone.")
         }
+        .sheet(isPresented: $controller.isPresentingExportSheet, onDismiss: {
+            controller.isPresentingExportSheet = false
+        }) {
+            ExportDataSheet(controller: controller)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $controller.isPresentingShareSheet, onDismiss: {
             controller.exportURL = nil
         }) {
@@ -91,39 +81,123 @@ struct DataManagementSectionView: View {
     }
 }
 
-private struct ExportOptionButton: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let action: () -> Void
+private struct ExportDataSheet: View {
+    @ObservedObject var controller: PrivacyController
+    @SwiftUI.Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.sm) {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    Text("Mix and match the data you'd like to take with you.")
+                        .font(.body)
+                        .foregroundColor(.semantic(.textPrimary))
+
+                    VStack(spacing: Spacing.sm) {
+                        exportToggle(
+                            isOn: $controller.exportMemos,
+                            available: controller.memosAvailable,
+                            title: "Audio & Memos",
+                            subtitle: "Original recordings and metadata",
+                            icon: "waveform"
+                        )
+
+                        exportToggle(
+                            isOn: $controller.exportTranscripts,
+                            available: controller.transcriptsAvailable,
+                            title: "Transcripts",
+                            subtitle: "Text copies of every memo",
+                            icon: "text.alignleft"
+                        )
+
+                        exportToggle(
+                            isOn: $controller.exportAnalysis,
+                            available: controller.analysisAvailable,
+                            title: "Analysis",
+                            subtitle: "AI summaries, themes, and action items",
+                            icon: "sparkles"
+                        )
+                    }
+
+                    if !controller.hasDataToExport {
+                        Text("No memos, transcripts, or analysis found yet.")
+                            .font(.caption)
+                            .foregroundColor(.semantic(.textSecondary))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, Spacing.sm)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    if controller.isExporting {
+                        HStack(spacing: Spacing.sm) {
+                            ProgressView()
+                            Text("Preparing your export…")
+                                .font(.subheadline)
+                                .foregroundColor(.semantic(.textSecondary))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    }
+
+                    Button {
+                        Task { await controller.exportData() }
+                    } label: {
+                        Text(controller.isExporting ? "Preparing…" : "Create Export")
+                            .font(.body.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(controller.isExporting || !controller.canExport)
+
+                    Text("Exports save to a single ZIP file you can share anywhere.")
+                        .font(.caption)
+                        .foregroundColor(.semantic(.textTertiary))
+                }
+            }
+            .padding(Spacing.lg)
+            .background(Color.semantic(.bgSecondary))
+            .navigationTitle("Export Data")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        controller.isPresentingExportSheet = false
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private func exportToggle(
+        isOn: Binding<Bool>,
+        available: Bool,
+        title: String,
+        subtitle: String,
+        icon: String
+    ) -> some View {
+        Toggle(isOn: isOn) {
+            HStack(alignment: .top, spacing: Spacing.sm) {
                 Image(systemName: icon)
                     .font(.body)
                     .foregroundColor(.semantic(.brandPrimary))
-                    .frame(width: 28)
+                    .frame(width: 24)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.subheadline)
+                        .font(.subheadline.weight(.semibold))
                         .foregroundColor(.semantic(.textPrimary))
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(.semantic(.textSecondary))
                 }
-
-                Spacer()
-
-                Image(systemName: "square.and.arrow.up")
-                    .font(.subheadline)
-                    .foregroundColor(.semantic(.textTertiary))
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .padding(.vertical, 6)
+        .toggleStyle(SwitchToggleStyle(tint: .semantic(.brandPrimary)))
+        .disabled(!available)
+        .opacity(available ? 1 : 0.4)
+        .accessibilityHint(available ? "Include in export" : "No data available")
     }
 }
-

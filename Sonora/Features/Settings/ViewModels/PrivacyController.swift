@@ -6,18 +6,21 @@ final class PrivacyController: ObservableObject {
     // Dependencies
     private let resolver: Resolver
     private let memoRepository: any MemoRepository
-    private let exportService: any DataExporting
+    private let buildExportBundleUseCase: any BuildExportBundleUseCaseProtocol
     private let logger: any LoggerProtocol
 
     // Export state
     @Published var isExporting: Bool = false
     @Published var exportURL: URL?
     @Published var isPresentingShareSheet: Bool = false
+    @Published var isPresentingExportSheet: Bool = false
 
     // Export options
     @Published var exportMemos: Bool = true
     @Published var exportTranscripts: Bool = true
     @Published var exportAnalysis: Bool = true
+
+    private var hasInitializedExportSelection = false
 
     // Delete state
     @Published var isDeleting: Bool = false
@@ -34,33 +37,36 @@ final class PrivacyController: ObservableObject {
     // No timers required after confirmation-only delete
 
     init(resolver: Resolver? = nil,
-         exportService: (any DataExporting)? = nil) {
+         buildExportBundleUseCase: (any BuildExportBundleUseCaseProtocol)? = nil) {
         let resolved = resolver ?? DIContainer.shared
         self.resolver = resolved
         let container = (resolved as? DIContainer) ?? DIContainer.shared
         self.memoRepository = resolved.resolve((any MemoRepository).self) ?? container.memoRepository()
         self.logger = resolved.resolve((any LoggerProtocol).self) ?? container.logger()
-        #if canImport(ZIPFoundation)
-        self.exportService = exportService ?? ZipDataExportService()
-        #else
-        self.exportService = exportService ?? StubDataExportService()
-        #endif
+        self.buildExportBundleUseCase = buildExportBundleUseCase ?? container.buildExportBundleUseCase()
     }
 
     var hasDataToExport: Bool {
-        return !memoRepository.memos.isEmpty
+        hasMemosContent || hasTranscriptContent || hasAnalysisContent
     }
 
     var canExport: Bool {
-        // At least one category selected and at least one selected category has content
-        let anySelected = exportMemos || exportTranscripts || exportAnalysis
-        guard anySelected else { return false }
+        let selectedComponents = selectedComponents()
+        guard !selectedComponents.isEmpty else { return false }
 
-        if exportMemos, !memoRepository.memos.isEmpty { return true }
-        if exportTranscripts, directoryHasFiles(named: "transcriptions") { return true }
-        if exportAnalysis, directoryHasFiles(named: "analysis") { return true }
+        if selectedComponents.contains(.memos), hasMemosContent { return true }
+        if selectedComponents.contains(.transcripts), hasTranscriptContent { return true }
+        if selectedComponents.contains(.analysis), hasAnalysisContent { return true }
         return false
     }
+
+    private var hasMemosContent: Bool { !memoRepository.memos.isEmpty }
+    private var hasTranscriptContent: Bool { directoryHasFiles(named: "transcriptions") }
+    private var hasAnalysisContent: Bool { directoryHasFiles(named: "analysis") }
+
+    var memosAvailable: Bool { hasMemosContent }
+    var transcriptsAvailable: Bool { hasTranscriptContent }
+    var analysisAvailable: Bool { hasAnalysisContent }
 
     private func directoryHasFiles(named name: String) -> Bool {
         let fm = FileManager.default
@@ -71,12 +77,17 @@ final class PrivacyController: ObservableObject {
         return e?.nextObject() != nil
     }
 
+    func presentExportSheet() {
+        syncSelectionsWithAvailability()
+        isPresentingExportSheet = true
+    }
+
     func exportData() async {
         guard !isExporting else { return }
         // Availability validated below using selection-aware checks
 
         // Validate selection & availability
-        guard exportMemos || exportTranscripts || exportAnalysis else {
+        guard !selectedComponents().isEmpty else {
             alertItem = AlertItem(title: "Nothing Selected", message: "Select at least one category to export.")
             return
         }
@@ -87,12 +98,10 @@ final class PrivacyController: ObservableObject {
 
         isExporting = true
         do {
-            var opts: ExportOptions = []
-            if exportMemos { opts.insert(.memos) }
-            if exportTranscripts { opts.insert(.transcripts) }
-            if exportAnalysis { opts.insert(.analysis) }
-            let url = try await exportService.export(options: opts)
+            let request = ExportRequest(components: selectedComponents(), scope: .all)
+            let url = try await buildExportBundleUseCase.execute(request: request)
             self.exportURL = url
+            self.isPresentingExportSheet = false
             // Present share sheet on success
             self.isPresentingShareSheet = true
         } catch {
@@ -128,22 +137,37 @@ final class PrivacyController: ObservableObject {
             )
             try await deleteAll.execute()
             alertItem = AlertItem(title: "Data Deleted", message: "All memos, transcripts, and analysis were permanently deleted.")
+            hasInitializedExportSelection = false
+            syncSelectionsWithAvailability()
         } catch {
             alertItem = AlertItem(title: "Delete Failed", message: error.localizedDescription)
         }
     }
-}
 
-// MARK: - Protocols & Stubs
+    private func selectedComponents() -> Set<ExportComponent> {
+        var components = Set<ExportComponent>()
+        if exportMemos { components.insert(.memos) }
+        if exportTranscripts { components.insert(.transcripts) }
+        if exportAnalysis { components.insert(.analysis) }
+        return components
+    }
 
-struct ExportOptions: OptionSet {
-    let rawValue: Int
-    static let memos        = ExportOptions(rawValue: 1 << 0)
-    static let transcripts  = ExportOptions(rawValue: 1 << 1)
-    static let analysis     = ExportOptions(rawValue: 1 << 2)
-}
+    private func syncSelectionsWithAvailability() {
+        if !hasMemosContent { exportMemos = false }
+        if !hasTranscriptContent { exportTranscripts = false }
+        if !hasAnalysisContent { exportAnalysis = false }
 
-@MainActor
-protocol DataExporting {
-    func export(options: ExportOptions) async throws -> URL
+        if !hasInitializedExportSelection {
+            if hasMemosContent { exportMemos = true }
+            if hasTranscriptContent { exportTranscripts = true }
+            if hasAnalysisContent { exportAnalysis = true }
+            hasInitializedExportSelection = true
+        }
+
+        if selectedComponents().isEmpty {
+            if hasMemosContent { exportMemos = true }
+            else if hasTranscriptContent { exportTranscripts = true }
+            else if hasAnalysisContent { exportAnalysis = true }
+        }
+    }
 }

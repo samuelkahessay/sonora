@@ -126,3 +126,12 @@ final class ZipDataExportService: DataExporting {
     }
 }
 #endif
+
+#if !canImport(ZIPFoundation)
+@MainActor
+final class ZipDataExportService: DataExporting {
+    func export(options: ExportOptions) async throws -> URL {
+        throw SonoraError.uiFeatureUnavailable("Data export is unavailable on this build.")
+    }
+}
+#endif

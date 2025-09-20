@@ -34,6 +34,7 @@ final class DIContainer: ObservableObject, Resolver {
     var _audioRepository: (any AudioRepository)?
     private var _transcriptExporter: (any TranscriptExporting)?
     private var _analysisExporter: (any AnalysisExporting)?
+    private var _dataExporter: (any DataExporting)?
     private var _startTranscriptionUseCase: (any StartTranscriptionUseCaseProtocol)?
     private var _systemNavigator: (any SystemNavigator)?
     private var _liveActivityService: (any LiveActivityServiceProtocol)?
@@ -54,6 +55,7 @@ final class DIContainer: ObservableObject, Resolver {
     private var _createCalendarEventUseCase: (any CreateCalendarEventUseCaseProtocol)?
     private var _createReminderUseCase: (any CreateReminderUseCaseProtocol)?
     private var _detectEventsAndRemindersUseCase: (any DetectEventsAndRemindersUseCaseProtocol)?
+    private var _buildExportBundleUseCase: (any BuildExportBundleUseCaseProtocol)?
     
     // MARK: - Core Services (Strong References)
     // These services need to stay alive for the app lifetime
@@ -361,6 +363,26 @@ final class DIContainer: ObservableObject, Resolver {
             _analysisExporter = AnalysisExportService()
         }
         return _analysisExporter!
+    }
+
+    @MainActor
+    func dataExporter() -> any DataExporting {
+        ensureConfigured()
+        if _dataExporter == nil {
+            _dataExporter = ZipDataExportService()
+        }
+        return _dataExporter!
+    }
+
+    @MainActor
+    func buildExportBundleUseCase() -> any BuildExportBundleUseCaseProtocol {
+        ensureConfigured()
+        if _buildExportBundleUseCase == nil {
+            let exporter = dataExporter()
+            let logger = logger()
+            _buildExportBundleUseCase = BuildExportBundleUseCase(exporter: exporter, logger: logger)
+        }
+        return _buildExportBundleUseCase!
     }
     
     /// Get operation coordinator service
