@@ -24,15 +24,10 @@ struct CurrentUsageSectionView: View {
                 .accessibilityAddTraits(.isHeader)
 
                 let remaining = max(0, Int(round(totalDailyLimit - usedSeconds)))
-                let used = max(0, Int(round(usedSeconds)))
 
-                Text("Remaining Today: \(format(seconds: remaining)) (Cloud)")
+                Text("\(formatReadable(seconds: remaining)) left today")
                     .font(.body)
                     .foregroundColor(.semantic(.textPrimary))
-                Text("Used: \(format(seconds: used)) of \(format(seconds: Int(totalDailyLimit)))")
-                    .font(.caption)
-                    .foregroundColor(.semantic(.textSecondary))
-                    .padding(.top, 2)
 
                 ProgressView(value: min(1.0, max(0.0, usedSeconds / totalDailyLimit)))
                     .tint(.semantic(.brandPrimary))
@@ -94,6 +89,41 @@ struct CurrentUsageSectionView: View {
         let m = seconds / 60
         let s = seconds % 60
         return String(format: "%d:%02d", m, s)
+    }
+
+    private func formatReadable(seconds: Int) -> String {
+        if seconds <= 0 {
+            return "No time"
+        }
+
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
+        let remainingSeconds = seconds % 60
+
+        var components: [String] = []
+
+        if hours > 0 {
+            components.append("\(hours) \(hours == 1 ? "hour" : "hours")")
+        }
+
+        if minutes > 0 {
+            components.append("\(minutes) \(minutes == 1 ? "minute" : "minutes")")
+        }
+
+        if remainingSeconds > 0 && hours == 0 {
+            components.append("\(remainingSeconds) \(remainingSeconds == 1 ? "second" : "seconds")")
+        }
+
+        if components.isEmpty, remainingSeconds > 0 {
+            components.append("\(remainingSeconds) \(remainingSeconds == 1 ? "second" : "seconds")")
+        }
+
+        if components.count > 1 {
+            let last = components.removeLast()
+            return components.joined(separator: ", ") + " and " + last
+        }
+
+        return components.first ?? "0 seconds"
     }
 }
 
