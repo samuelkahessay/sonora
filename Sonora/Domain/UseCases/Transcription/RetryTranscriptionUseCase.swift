@@ -60,9 +60,11 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol, @unche
         }
         
         do {
-            // Perform transcription retry
-            let transcriptionText = try await transcriptionAPI.transcribe(url: memo.fileURL)
-            print("✅ RetryTranscriptionUseCase: Transcription retry completed for \(memo.filename)")
+            // Perform transcription retry with the configured language hint
+            let preferredLanguage = AppConfiguration.shared.preferredTranscriptionLanguage
+            let response = try await transcriptionAPI.transcribe(url: memo.fileURL, language: preferredLanguage)
+            let transcriptionText = response.text
+            print("✅ RetryTranscriptionUseCase: Transcription retry completed for \(memo.filename) [lang=\(preferredLanguage ?? "auto")]")
             print("💾 RetryTranscriptionUseCase: Text: \(transcriptionText.prefix(100))...")
             
             // Save completed transcription to repository

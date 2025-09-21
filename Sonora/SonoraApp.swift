@@ -19,8 +19,19 @@ struct SonoraApp: App {
     private static func serifUIFont(for textStyle: UIFont.TextStyle) -> UIFont {
         let base = UIFont.preferredFont(forTextStyle: textStyle)
         if let serif = base.fontDescriptor.withDesign(.serif) {
-            return UIFont(descriptor: serif, size: base.pointSize)
+            let font = UIFont(descriptor: serif, size: base.pointSize)
+            Logger.shared.info("Serif font resolved", category: .system, context: LogContext(additionalInfo: [
+                "textStyle": textStyle.rawValue,
+                "font": font.fontName,
+                "family": font.familyName
+            ]))
+            return font
         }
+        Logger.shared.warning("Serif font fallback", category: .system, context: LogContext(additionalInfo: [
+            "textStyle": textStyle.rawValue,
+            "font": base.fontName,
+            "family": base.familyName
+        ]))
         return base
     }
     init() {
@@ -59,6 +70,8 @@ struct SonoraApp: App {
         // Apply system serif fonts (no bundled fonts) to navigation titles
         let largeTitleFont = Self.serifUIFont(for: .largeTitle)
         let titleFont = Self.serifUIFont(for: .headline)
+        print("🎨 SonoraApp serif fonts -> largeTitle: \(largeTitleFont.fontName) [family: \(largeTitleFont.familyName)]")
+        print("🎨 SonoraApp serif fonts -> title: \(titleFont.fontName) [family: \(titleFont.familyName)]")
 
         navAppearance.largeTitleTextAttributes = [
             .font: largeTitleFont,

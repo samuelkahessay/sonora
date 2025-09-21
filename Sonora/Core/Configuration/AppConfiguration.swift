@@ -260,6 +260,10 @@ public final class AppConfiguration: ObservableObject {
         if let saved = UserDefaults.standard.string(forKey: "preferredTranscriptionLanguage"), !saved.isEmpty {
             preferredTranscriptionLanguage = saved
             print("🔧 AppConfiguration: Loaded preferred transcription language: \(saved)")
+        } else if preferredTranscriptionLanguage == nil {
+            preferredTranscriptionLanguage = "en"
+            UserDefaults.standard.set("en", forKey: "preferredTranscriptionLanguage")
+            print("🔧 AppConfiguration: Defaulting preferred transcription language to English")
         }
     }
     
@@ -660,7 +664,15 @@ public final class AppConfiguration: ObservableObject {
     /// Pass nil or "auto" to reset to auto-detect
     public func setPreferredTranscriptionLanguage(_ code: String?) {
         let normalized: String?
-        if let c = code?.lowercased(), c != "auto", !c.isEmpty { normalized = c } else { normalized = nil }
+        if let c = code?.lowercased(), c != "auto", !c.isEmpty {
+            guard WhisperLanguages.supportedCodes.contains(c) else {
+                print("⚠️ AppConfiguration: Ignoring unsupported transcription language code: \(c)")
+                return
+            }
+            normalized = c
+        } else {
+            normalized = nil
+        }
         preferredTranscriptionLanguage = normalized
         if let normalized { UserDefaults.standard.set(normalized, forKey: "preferredTranscriptionLanguage") }
         else { UserDefaults.standard.removeObject(forKey: "preferredTranscriptionLanguage") }

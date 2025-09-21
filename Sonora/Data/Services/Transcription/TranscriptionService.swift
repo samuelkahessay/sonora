@@ -13,7 +13,7 @@ final class TranscriptionService: TranscriptionAPI {
 
     // MARK: - Single-file Transcription
     func transcribe(url: URL) async throws -> String {
-        let response = try await transcribe(url: url, language: nil)
+        let response = try await transcribe(url: url, language: config.preferredTranscriptionLanguage)
         return response.text
     }
 

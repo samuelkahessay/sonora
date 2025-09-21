@@ -75,7 +75,7 @@ struct ReminderConfirmationView: View {
                 .padding(.horizontal)
             }
             .navigationTitle("Add to Reminders")
-            .liquidGlassNavigation(titleDisplayMode: .inline)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
@@ -171,7 +171,7 @@ struct ReminderEditView: View {
                 }
             }
             .navigationTitle("Edit Reminder")
-            .liquidGlassNavigation(titleDisplayMode: .inline)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }

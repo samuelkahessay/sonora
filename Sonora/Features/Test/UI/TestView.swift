@@ -2,9 +2,11 @@ import SwiftUI
 
 struct TestView: View {
     var body: some View {
-        LargeTitleNavigationContainer(title: "Test") {
+        NavigationView {
             Text("Test tab content")
                 .padding()
+                .navigationTitle("Test")
+                .navigationBarTitleDisplayMode(.large)
         }
     }
 }

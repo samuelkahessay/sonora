@@ -159,7 +159,7 @@ private struct ExportDataSheet: View {
             .padding(Spacing.lg)
             .background(Color.semantic(.bgSecondary))
             .navigationTitle("Export Data")
-            .liquidGlassNavigation(titleDisplayMode: .inline)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {

@@ -84,7 +84,7 @@ struct EventConfirmationView: View {
                 .padding(.horizontal)
             }
             .navigationTitle("Add to Calendar")
-            .liquidGlassNavigation(titleDisplayMode: .inline)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -257,7 +257,7 @@ struct EventEditView: View {
                 }
             }
             .navigationTitle("Edit Event")
-            .liquidGlassNavigation(titleDisplayMode: .inline)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
