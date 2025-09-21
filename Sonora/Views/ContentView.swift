@@ -43,9 +43,9 @@ struct ContentView: View {
             // Memos tab navigation with shared path
             NavigationStack(path: $memosPath) {
                 MemosView(popToRoot: popToRoot, navigationPath: $memosPath)
-            }
-            .navigationDestination(for: Memo.self) { memo in
-                MemoDetailView(memo: memo)
+                    .navigationDestination(for: Memo.self) { memo in
+                        MemoDetailView(memo: memo)
+                    }
             }
             .tabItem {
                 Label("Memos", systemImage: selectedTab == 1 ? "list.bullet.circle.fill" : "list.bullet.circle")

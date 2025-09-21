@@ -153,6 +153,10 @@ struct MemoDetailView: View {
             viewModel.configure(with: memo)
             viewModel.onViewAppear()
         }
+        // Ensure configuration runs reliably on push and when reusing the view
+        .task(id: memo.id) {
+            viewModel.configure(with: memo)
+        }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AnalysisCopyTriggered"))) { _ in
             isTranscriptExpanded = true
         }

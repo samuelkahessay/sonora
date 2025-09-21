@@ -174,7 +174,11 @@ struct MemosView: View {
                             } else {
                                 rowContent
                                     .contentShape(Rectangle())
-                                    .onTapGesture { navigationPath.append(memo) }
+                                    .onTapGesture {
+                                        // Defensive: ensure we pass an up-to-date value
+                                        let latest = DIContainer.shared.memoRepository().getMemo(by: memo.id) ?? memo
+                                        navigationPath.append(latest)
+                                    }
                                     .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
                                     .listRowBackground(
                                         SelectedRowBackground(
