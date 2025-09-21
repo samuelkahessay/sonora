@@ -29,33 +29,35 @@ struct RecordingView: View {
     // Extracted background to help the compiler type-check faster
     private var backgroundView: some View {
         ZStack {
-            // Background: base fill + subtle gradients for Liquid Glass contrast
+            // Base surface that adapts to light/dark via semantic token
             Color.semantic(.bgPrimary)
                 .ignoresSafeArea()
 
-            // Sonora brand background with purposeful minimalism
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.whisperBlue.opacity(0.3),
-                    Color.clarityWhite
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // In light mode, keep the brand gradient + gentle highlight.
+            // In dark mode, avoid bright tints that create a gray wash and banding.
+            if colorScheme == .light {
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.whisperBlue.opacity(0.3),
+                        Color.clarityWhite
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-            // Subtle radial highlight for depth
-            RadialGradient(
-                gradient: Gradient(colors: [
-                    Color.insightGold.opacity(0.08),
-                    .clear
-                ]),
-                center: .center,
-                startRadius: 60,
-                endRadius: 300
-            )
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+                RadialGradient(
+                    gradient: Gradient(colors: [
+                        Color.insightGold.opacity(0.08),
+                        .clear
+                    ]),
+                    center: .center,
+                    startRadius: 60,
+                    endRadius: 300
+                )
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+            }
         }
     }
     
