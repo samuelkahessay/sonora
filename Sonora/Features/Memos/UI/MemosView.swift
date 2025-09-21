@@ -18,14 +18,7 @@ struct MemosView: View {
         self._navigationPath = navigationPath
     }
 
-    // MARK: - DEBUG toggles for title diagnostics (iOS 26)
-    #if DEBUG
-    @AppStorage("debug.memos.forceInlineTitle") private var debugMemosForceInlineTitle: Bool = false
-    @AppStorage("debug.memos.hideTrailingToolbar") private var debugMemosHideTrailingToolbar: Bool = false
-    @AppStorage("debug.memos.disableScrollContentBackground") private var debugMemosDisableScrollContentBackground: Bool = false
-    @AppStorage("debug.memos.disableTopHeader") private var debugMemosDisableTopHeader: Bool = false
-    @AppStorage("debug.memos.usePlainListStyleFull") private var debugMemosUsePlainListStyleFull: Bool = false
-    #endif
+    // Debug toggles removed
 
     @State private var eventSubscriptionId: UUID? = nil
     
@@ -92,34 +85,14 @@ struct MemosView: View {
     var body: some View {
         mainContent
         .navigationTitle("Memos")
-        .navigationBarTitleDisplayMode(
-            {
-                #if DEBUG
-                return debugMemosForceInlineTitle ? .inline : .large
-                #else
-                return .large
-                #endif
-            }()
-        )
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Group {
-                    #if DEBUG
-                    if !debugMemosHideTrailingToolbar {
-                        MemoListTopBarView(
-                            isEmpty: viewModel.isEmpty,
-                            isEditMode: viewModel.isEditMode,
-                            onToggleEdit: { viewModel.toggleEditMode() }
-                        )
-                    }
-                    #else
                     MemoListTopBarView(
                         isEmpty: viewModel.isEmpty,
                         isEditMode: viewModel.isEditMode,
                         onToggleEdit: { viewModel.toggleEditMode() }
                     )
-                    #endif
-                }
             }
         }
         .errorAlert($viewModel.error) { viewModel.retryLastOperation() }
@@ -138,9 +111,6 @@ struct MemosView: View {
             }
             cachedGroupedMemos = computeGroupedMemos()
             Signpost.event("MemoListVisible")
-            #if DEBUG
-            print("[DEBUG] MemosView appear: inline=\(debugMemosForceInlineTitle), hideToolbar=\(debugMemosHideTrailingToolbar), disableScrollBg=\(debugMemosDisableScrollContentBackground), disableTopHeader=\(debugMemosDisableTopHeader), plainList=\(debugMemosUsePlainListStyleFull))")
-            #endif
         }
         .onDisappear {
             if let id = eventSubscriptionId { EventBus.shared.unsubscribe(id) }
@@ -172,17 +142,9 @@ struct MemosView: View {
     private var memoListView: some View {
         ScrollViewReader { proxy in
             List {
-                #if DEBUG
-                if !debugMemosDisableTopHeader {
-                    Section { EmptyView() } header: {
-                        AlternativeSelectionControls(viewModel: viewModel)
-                    }
-                }
-                #else
                 Section { EmptyView() } header: {
                     AlternativeSelectionControls(viewModel: viewModel)
                 }
-                #endif
                 // Group memos by time periods for contextual headers
                 ForEach(cachedGroupedMemos, id: \.period.rawValue) { section in
                     Section {
@@ -244,13 +206,8 @@ struct MemosView: View {
                 }
             }
             .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
-            #if DEBUG
-            .modifier(ConditionalListStyleFull(usePlain: debugMemosUsePlainListStyleFull))
-            .modifier(ConditionalScrollBg(disableHidden: debugMemosDisableScrollContentBackground))
-            #else
             .modifier(ConditionalListStyle())
             .scrollContentBackground(.hidden)
-            #endif
             // Always allow scrolling (drag selection removed)
             .background({
                 if #available(iOS 26, *) {
@@ -291,31 +248,6 @@ private struct ConditionalListStyle: ViewModifier {
             content.listStyle(.plain)
         } else {
             content.listStyle(MemoListConstants.listStyle)
-        }
-    }
-}
-
-// DEBUG helper: allow forcing plain style and toggling scroll bg behavior
-private struct ConditionalListStyleFull: ViewModifier {
-    let usePlain: Bool
-    func body(content: Content) -> some View {
-        if usePlain {
-            content.listStyle(.plain)
-        } else if #available(iOS 26, *) {
-            content.listStyle(.plain)
-        } else {
-            content.listStyle(MemoListConstants.listStyle)
-        }
-    }
-}
-
-private struct ConditionalScrollBg: ViewModifier {
-    let disableHidden: Bool
-    func body(content: Content) -> some View {
-        if disableHidden {
-            content
-        } else {
-            content.scrollContentBackground(.hidden)
         }
     }
 }
