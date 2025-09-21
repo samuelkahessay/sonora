@@ -182,7 +182,7 @@ struct RecordingView: View {
             }
             .navigationTitle("Sonora")
             .navigationBarTitleDisplayMode(.large)
-            .brandThemed()
+            
             .onAppear {
                 viewModel.onViewAppear()
                 promptViewModel.loadInitial()

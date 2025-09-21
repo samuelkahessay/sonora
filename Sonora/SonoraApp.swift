@@ -63,29 +63,38 @@ struct SonoraApp: App {
         print("📋 SonoraApp: OnboardingConfiguration initialized (App init)")
 
         // Global Navigation Bar appearance: keep thin bottom divider (hairline)
-        let navAppearance = UINavigationBarAppearance()
-        navAppearance.configureWithDefaultBackground()
-        navAppearance.backgroundColor = UIColor.systemBackground
-        navAppearance.shadowColor = UIColor.separator // keep hairline
+        // Use a solid standard appearance and a transparent scroll-edge appearance to support large titles reliably.
+        let standardAppearance = UINavigationBarAppearance()
+        standardAppearance.configureWithDefaultBackground()
+        standardAppearance.backgroundColor = UIColor.systemBackground
+        standardAppearance.shadowColor = UIColor.separator // keep hairline
+
+        let scrollEdgeAppearance = UINavigationBarAppearance()
+        scrollEdgeAppearance.configureWithTransparentBackground()
+        scrollEdgeAppearance.shadowColor = UIColor.clear
+
         // Apply system serif fonts (no bundled fonts) to navigation titles
         let largeTitleFont = Self.serifUIFont(for: .largeTitle)
         let titleFont = Self.serifUIFont(for: .headline)
         print("🎨 SonoraApp serif fonts -> largeTitle: \(largeTitleFont.fontName) [family: \(largeTitleFont.familyName)]")
         print("🎨 SonoraApp serif fonts -> title: \(titleFont.fontName) [family: \(titleFont.familyName)]")
 
-        navAppearance.largeTitleTextAttributes = [
-            .font: largeTitleFont,
-            .foregroundColor: UIColor.label
-        ]
-        navAppearance.titleTextAttributes = [
-            .font: titleFont,
-            .foregroundColor: UIColor.label
-        ]
+        for appearance in [standardAppearance, scrollEdgeAppearance] {
+            appearance.largeTitleTextAttributes = [
+                .font: largeTitleFont,
+                .foregroundColor: UIColor.label
+            ]
+            appearance.titleTextAttributes = [
+                .font: titleFont,
+                .foregroundColor: UIColor.label
+            ]
+        }
         
-        UINavigationBar.appearance().standardAppearance = navAppearance
-        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
-        UINavigationBar.appearance().compactAppearance = navAppearance
-        UINavigationBar.appearance().compactScrollEdgeAppearance = navAppearance
+        let navBar = UINavigationBar.appearance()
+        navBar.standardAppearance = standardAppearance
+        navBar.scrollEdgeAppearance = scrollEdgeAppearance
+        navBar.compactAppearance = standardAppearance
+        navBar.compactScrollEdgeAppearance = scrollEdgeAppearance
 
         // Global Tab Bar appearance: add a hairline divider at top of tab bar
         let tabAppearance = UITabBarAppearance()

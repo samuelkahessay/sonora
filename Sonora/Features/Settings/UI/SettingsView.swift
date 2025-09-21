@@ -3,7 +3,7 @@ import SwiftUI
 struct SettingsView: View {
 
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: Spacing.xl) {
                     // Current Usage at the very top
@@ -23,9 +23,9 @@ struct SettingsView: View {
                 .padding(.bottom, Spacing.xl)
             }
             .background(Color.semantic(.bgPrimary).ignoresSafeArea())
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.large)
         }
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.large)
     }
 }
 

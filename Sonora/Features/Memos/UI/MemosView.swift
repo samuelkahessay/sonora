@@ -11,10 +11,21 @@ struct MemosView: View {
     @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createMemoListViewModel()
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     let popToRoot: (() -> Void)?
+    @Binding var navigationPath: NavigationPath
     
-    init(popToRoot: (() -> Void)? = nil) {
+    init(popToRoot: (() -> Void)? = nil, navigationPath: Binding<NavigationPath>) {
         self.popToRoot = popToRoot
+        self._navigationPath = navigationPath
     }
+
+    // MARK: - DEBUG toggles for title diagnostics (iOS 26)
+    #if DEBUG
+    @AppStorage("debug.memos.forceInlineTitle") private var debugMemosForceInlineTitle: Bool = false
+    @AppStorage("debug.memos.hideTrailingToolbar") private var debugMemosHideTrailingToolbar: Bool = false
+    @AppStorage("debug.memos.disableScrollContentBackground") private var debugMemosDisableScrollContentBackground: Bool = false
+    @AppStorage("debug.memos.disableTopHeader") private var debugMemosDisableTopHeader: Bool = false
+    @AppStorage("debug.memos.usePlainListStyleFull") private var debugMemosUsePlainListStyleFull: Bool = false
+    #endif
 
     @State private var eventSubscriptionId: UUID? = nil
     
@@ -79,49 +90,61 @@ struct MemosView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $viewModel.navigationPath) {
-            VStack(spacing: 0) {
-                AlternativeSelectionControls(viewModel: viewModel)
-                mainContent
-            }
-            .navigationTitle("Memos")
-            .navigationBarTitleDisplayMode(.large)
-            .brandThemed()
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+        mainContent
+        .navigationTitle("Memos")
+        .navigationBarTitleDisplayMode(
+            {
+                #if DEBUG
+                return debugMemosForceInlineTitle ? .inline : .large
+                #else
+                return .large
+                #endif
+            }()
+        )
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Group {
+                    #if DEBUG
+                    if !debugMemosHideTrailingToolbar {
                         MemoListTopBarView(
                             isEmpty: viewModel.isEmpty,
                             isEditMode: viewModel.isEditMode,
                             onToggleEdit: { viewModel.toggleEditMode() }
                         )
                     }
+                    #else
+                    MemoListTopBarView(
+                        isEmpty: viewModel.isEmpty,
+                        isEditMode: viewModel.isEditMode,
+                        onToggleEdit: { viewModel.toggleEditMode() }
+                    )
+                    #endif
                 }
-                .navigationDestination(for: Memo.self) { memo in
-                    MemoDetailView(memo: memo)
-                }
-                .errorAlert($viewModel.error) { viewModel.retryLastOperation() }
-                .loadingState(isLoading: viewModel.isLoading, message: "Loading memos...")
-                .onAppear {
-                    // Subscribe to deep link navigation events
-                    eventSubscriptionId = EventBus.shared.subscribe(to: AppEvent.self) { [weak viewModel] event in
-                        switch event {
-                        case .navigateOpenMemoByID(let id):
-                            if let memo = DIContainer.shared.memoRepository().getMemo(by: id) {
-                                viewModel?.navigationPath.append(memo)
-                            }
-                        default:
-                            break
-                        }
-                    }
-                }
-                .onDisappear {
-                    if let id = eventSubscriptionId { EventBus.shared.unsubscribe(id) }
-                    eventSubscriptionId = nil
-                }
+            }
         }
+        .errorAlert($viewModel.error) { viewModel.retryLastOperation() }
+        .loadingState(isLoading: viewModel.isLoading, message: "Loading memos...")
         .onAppear {
+            // Subscribe to deep link navigation events
+            eventSubscriptionId = EventBus.shared.subscribe(to: AppEvent.self) { event in
+                switch event {
+                case .navigateOpenMemoByID(let id):
+                    if let memo = DIContainer.shared.memoRepository().getMemo(by: id) {
+                        navigationPath.append(memo)
+                    }
+                default:
+                    break
+                }
+            }
             cachedGroupedMemos = computeGroupedMemos()
             Signpost.event("MemoListVisible")
+            #if DEBUG
+            print("[DEBUG] MemosView appear: inline=\(debugMemosForceInlineTitle), hideToolbar=\(debugMemosHideTrailingToolbar), disableScrollBg=\(debugMemosDisableScrollContentBackground), disableTopHeader=\(debugMemosDisableTopHeader), plainList=\(debugMemosUsePlainListStyleFull))")
+            #endif
+        }
+        .onDisappear {
+            if let id = eventSubscriptionId { EventBus.shared.unsubscribe(id) }
+            eventSubscriptionId = nil
         }
         .onChange(of: viewModel.memos) { _, _ in cachedGroupedMemos = computeGroupedMemos() }
         .overlay(alignment: .bottom) {
@@ -149,6 +172,17 @@ struct MemosView: View {
     private var memoListView: some View {
         ScrollViewReader { proxy in
             List {
+                #if DEBUG
+                if !debugMemosDisableTopHeader {
+                    Section { EmptyView() } header: {
+                        AlternativeSelectionControls(viewModel: viewModel)
+                    }
+                }
+                #else
+                Section { EmptyView() } header: {
+                    AlternativeSelectionControls(viewModel: viewModel)
+                }
+                #endif
                 // Group memos by time periods for contextual headers
                 ForEach(cachedGroupedMemos, id: \.period.rawValue) { section in
                     Section {
@@ -178,7 +212,7 @@ struct MemosView: View {
                             } else {
                                 rowContent
                                     .contentShape(Rectangle())
-                                    .onTapGesture { viewModel.navigationPath.append(memo) }
+                                    .onTapGesture { navigationPath.append(memo) }
                                     .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
                                     .listRowBackground(
                                         SelectedRowBackground(
@@ -210,12 +244,23 @@ struct MemosView: View {
                 }
             }
             .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
-            .listStyle(MemoListConstants.listStyle)
+            #if DEBUG
+            .modifier(ConditionalListStyleFull(usePlain: debugMemosUsePlainListStyleFull))
+            .modifier(ConditionalScrollBg(disableHidden: debugMemosDisableScrollContentBackground))
+            #else
+            .modifier(ConditionalListStyle())
             .scrollContentBackground(.hidden)
+            #endif
             // Always allow scrolling (drag selection removed)
-            .background(MemoListColors.containerBackground(for: colorScheme))
+            .background({
+                if #available(iOS 26, *) {
+                    Color.clear
+                } else {
+                    MemoListColors.containerBackground(for: colorScheme)
+                }
+            }())
             .coordinateSpace(name: "memoList")
-            .safeAreaInset(edge: .top) { Color.clear.frame(height: 8) }
+            // No safeAreaInset at top to ensure large titles are eligible
             .conditionalRefreshable(!viewModel.isEditMode) {
                 await MainActor.run { viewModel.refreshMemos() }
             }
@@ -238,6 +283,42 @@ struct MemosView: View {
 
 
 // MARK: - Swipe Action Components
+
+// Apply plain list style on iOS 26; insetGrouped elsewhere
+private struct ConditionalListStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.listStyle(.plain)
+        } else {
+            content.listStyle(MemoListConstants.listStyle)
+        }
+    }
+}
+
+// DEBUG helper: allow forcing plain style and toggling scroll bg behavior
+private struct ConditionalListStyleFull: ViewModifier {
+    let usePlain: Bool
+    func body(content: Content) -> some View {
+        if usePlain {
+            content.listStyle(.plain)
+        } else if #available(iOS 26, *) {
+            content.listStyle(.plain)
+        } else {
+            content.listStyle(MemoListConstants.listStyle)
+        }
+    }
+}
+
+private struct ConditionalScrollBg: ViewModifier {
+    let disableHidden: Bool
+    func body(content: Content) -> some View {
+        if disableHidden {
+            content
+        } else {
+            content.scrollContentBackground(.hidden)
+        }
+    }
+}
 
 /// **Swipe Actions Configuration**
 extension MemosView {
@@ -358,4 +439,4 @@ struct ContextualSectionHeader: View {
     }
 }
 
-#Preview { MemosView(popToRoot: nil) }
+#Preview { MemosView(popToRoot: nil, navigationPath: .constant(NavigationPath())) }
