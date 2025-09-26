@@ -58,22 +58,17 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         state.transcription.state.text
     }
 
-    /// Count of available analysis categories (Distill, Analysis, Themes, Todos), consolidated across sub-modes
+    /// Count of available analysis categories. With the simplified model,
+    /// only Distill is considered.
     var analysisAvailableCount: Int {
         guard let memo = currentMemo else { return 0 }
         let repo = DIContainer.shared.analysisRepository()
-        var count = 0
-        // Distill present if full or any component exists
         let hasDistill = repo.hasAnalysisResult(for: memo.id, mode: .distill)
             || repo.hasAnalysisResult(for: memo.id, mode: .distillSummary)
             || repo.hasAnalysisResult(for: memo.id, mode: .distillThemes)
             || repo.hasAnalysisResult(for: memo.id, mode: .distillActions)
             || repo.hasAnalysisResult(for: memo.id, mode: .distillReflection)
-        if hasDistill { count += 1 }
-        if repo.hasAnalysisResult(for: memo.id, mode: .analysis) { count += 1 }
-        if repo.hasAnalysisResult(for: memo.id, mode: .themes) { count += 1 }
-        if repo.hasAnalysisResult(for: memo.id, mode: .todos) { count += 1 }
-        return count
+        return hasDistill ? 1 : 0
     }
 
     /// Whether repository has any completed analysis for current memo
@@ -849,8 +844,8 @@ extension MemoDetailViewModel {
         // Add AI analysis as a consolidated .txt file if enabled and available
         if shareAnalysisEnabled {
             do {
-                let types: Set<DomainAnalysisType>? = shareAnalysisSelectedTypes.isEmpty ? nil : shareAnalysisSelectedTypes
-                let url = try await createAnalysisShareFileUseCase.execute(memo: memo, includeTypes: types)
+                // With Distill-only analysis, restrict export to Distill content
+                let url = try await createAnalysisShareFileUseCase.execute(memo: memo, includeTypes: [.distill])
                 lastShareTempURLs.append(url)
                 if #available(iOS 14.0, *) {
                     let provider = NSItemProvider(item: url as NSSecureCoding, typeIdentifier: UTType.plainText.identifier)

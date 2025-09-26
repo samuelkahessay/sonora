@@ -111,15 +111,13 @@ struct ShareMemoSheet: View {
     
     private var analysisSubtitle: String {
         if hasAnalysisResults {
-            let count = viewModel.analysisAvailableCount
-            var subtitle = "\(count) analysis type\(count == 1 ? "" : "s")"
             if let updated = viewModel.latestAnalysisUpdatedAt {
                 let df = DateFormatter()
                 df.dateStyle = .medium
                 df.timeStyle = .short
-                subtitle += " • Updated: \(df.string(from: updated))"
+                return "Updated: \(df.string(from: updated))"
             }
-            return subtitle
+            return "Available"
         }
         return "Not available"
     }
