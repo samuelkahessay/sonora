@@ -104,21 +104,8 @@ struct RecordingView: View {
                     VStack(spacing: SonoraDesignSystem.Spacing.xxl) {
                         Group {
                             if let prompt = promptViewModel.currentPrompt {
-                                ZStack(alignment: .topTrailing) {
-                                    DynamicPromptCard(prompt: prompt) {
-                                        promptViewModel.refresh(excludingCurrent: true)
-                                    }
-                                    if promptViewModel.isLoading {
-                                        // Lightweight progress glyph overlay while fetching the next prompt
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .fill(Color.semantic(.bgPrimary).opacity(0.6))
-                                            .frame(width: 28, height: 28)
-                                            .overlay(
-                                                LoadingIndicator(size: .small)
-                                            )
-                                            .padding(8)
-                                            .allowsHitTesting(false)
-                                    }
+                                DynamicPromptCard(prompt: prompt) {
+                                    promptViewModel.refresh(excludingCurrent: true)
                                 }
                             } else if promptViewModel.isLoading {
                                 // Initial load only: show placeholder to reduce perceived latency
