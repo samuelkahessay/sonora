@@ -28,6 +28,12 @@ struct SonoraMemocCard: View {
     
     let memo: Memo
     @ObservedObject var viewModel: MemoListViewModel
+    /// Whether to draw a subtle top hairline inside the card to
+    /// separate stacked cards within a section.
+    var showTopHairline: Bool = false
+    /// Stacked group corner treatment
+    var isFirstInSection: Bool = false
+    var isLastInSection: Bool = false
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var insightHintOpacity: Double = 0
     
@@ -61,13 +67,18 @@ struct SonoraMemocCard: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .background(cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: SonoraDesignSystem.Spacing.cardRadius))
-        .shadow(
-            color: colorScheme == .dark
-                ? Color.white.opacity(0.05) // subtle highlight in dark mode
-                : Color.sonoraDep.opacity(0.08),
-            radius: 8, x: 0, y: 4
-        )
+        .clipShape(groupClipShape)
+        // Subtle inside top hairline (does not affect layout)
+        .overlay(alignment: .top) {
+            if showTopHairline {
+                Rectangle()
+                    .fill(hairlineColor)
+                    .frame(height: hairlineThickness)
+                    .padding(.horizontal, 16)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         // Inline chevron inside card bounds (instead of List accessory)
         .overlay(alignment: .trailing) {
             Image(systemName: "chevron.right")
@@ -149,12 +160,14 @@ struct SonoraMemocCard: View {
     /// Card background with whisper blue tint
     @ViewBuilder
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: SonoraDesignSystem.Spacing.cardRadius)
+        // Use a rectangular base and rely on the outer clipShape
+        // to control rounding so middle cards remain square.
+        Rectangle()
             .fill(colorScheme == .dark
                   ? Color.semantic(.bgSecondary)
                   : Color.clarityWhite)
             .overlay(
-                RoundedRectangle(cornerRadius: SonoraDesignSystem.Spacing.cardRadius)
+                Rectangle()
                     .fill(colorScheme == .dark
                           ? Color.clear
                           : Color.whisperBlue.opacity(0.3))
@@ -170,6 +183,35 @@ struct SonoraMemocCard: View {
         let now = Date()
         let endDate = min(memo.recordingEndDate, now)
         return formatter.localizedString(for: endDate, relativeTo: now)
+    }
+    
+    /// Clip shape that rounds only the exposed corners within a stacked group
+    private var groupClipShape: some InsettableShape {
+        let r = SonoraDesignSystem.Spacing.cardRadius
+        // Single item: round all
+        if isFirstInSection && isLastInSection {
+            return UnevenRoundedRectangle(topLeadingRadius: r, bottomLeadingRadius: r, bottomTrailingRadius: r, topTrailingRadius: r)
+        }
+        // First only: round top corners
+        if isFirstInSection {
+            return UnevenRoundedRectangle(topLeadingRadius: r, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: r)
+        }
+        // Last only: round bottom corners
+        if isLastInSection {
+            return UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: r, bottomTrailingRadius: r, topTrailingRadius: 0)
+        }
+        // Middle: square corners
+        return UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 0)
+    }
+    
+    /// Single-pixel hairline thickness based on device scale
+    private var hairlineThickness: CGFloat { 1.5 }
+    
+    /// Low-contrast separator color that adapts to color scheme
+    private var hairlineColor: Color {
+        (colorScheme == .dark
+         ? Color.semantic(.separator).opacity(0.22)
+         : Color.semantic(.separator).opacity(0.14))
     }
     
 

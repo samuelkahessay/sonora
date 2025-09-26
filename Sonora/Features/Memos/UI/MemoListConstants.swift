@@ -60,6 +60,13 @@ enum MemoListConstants {
         trailing: 16    // Standard iOS trailing inset
     )
     
+    /// Vertical spacing between rows (cards) inside sections
+    /// For stacked groups, keep this at 0.
+    static let rowSpacing: CGFloat = 0
+    
+    /// Extra space after the last row of each section
+    static let sectionBottomSpacing: CGFloat = 10
+    
     /// Current list style setting
     /// List style - keep insetGrouped but ensure proper setup
     static var listStyle: some ListStyle { InsetGroupedListStyle() }

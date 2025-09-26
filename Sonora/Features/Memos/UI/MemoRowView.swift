@@ -25,6 +25,12 @@ struct MemoRowView: View {
     
     let memo: Memo
     @ObservedObject var viewModel: MemoListViewModel
+    /// Show a subtle internal top hairline to separate stacked cards.
+    /// Provided by the list container depending on item position.
+    var showTopHairline: Bool = false
+    /// For stacked group corner treatment
+    var isFirstInSection: Bool = false
+    var isLastInSection: Bool = false
     @State private var editedTitle: String = ""
     @FocusState private var isEditingFocused: Bool
 
@@ -161,7 +167,13 @@ struct MemoRowView: View {
             .animation(.spring(response: 0.25), value: viewModel.isEditMode)
 
             // Main card content
-            SonoraMemocCard(memo: memo, viewModel: viewModel)
+            SonoraMemocCard(
+                memo: memo,
+                viewModel: viewModel,
+                showTopHairline: showTopHairline,
+                isFirstInSection: isFirstInSection,
+                isLastInSection: isLastInSection
+            )
                 .contentShape(Rectangle())
         }
         .contentShape(Rectangle())

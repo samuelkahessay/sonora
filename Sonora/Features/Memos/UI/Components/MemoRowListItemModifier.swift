@@ -6,7 +6,9 @@ struct MemoRowListItemModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .listRowSeparator(separator.visibility, edges: separator.edges)
+            // Option A: Hide all separators at the row level to prevent
+            // any default/bottom lines and overextending separators.
+            .listRowSeparator(.hidden, edges: .all)
             .listRowInsets(MemoListConstants.rowInsets)
             .memoRowBackground(colorScheme)
     }
@@ -18,4 +20,3 @@ extension View {
         modifier(MemoRowListItemModifier(colorScheme: colorScheme, separator: separator))
     }
 }
-

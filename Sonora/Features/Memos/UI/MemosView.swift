@@ -177,7 +177,16 @@ struct MemosView: View {
                     Section {
                         ForEach(section.memos, id: \.id) { memo in
                             let separatorConfig = separatorConfiguration(for: memo, in: section.memos)
-                            let rowContent = MemoRowView(memo: memo, viewModel: viewModel)
+                            let isFirst = (section.memos.first?.id == memo.id)
+                            let isLast = (section.memos.last?.id == memo.id)
+                            let showTopHairline = !isFirst
+                            let rowContent = MemoRowView(
+                                memo: memo,
+                                viewModel: viewModel,
+                                showTopHairline: showTopHairline,
+                                isFirstInSection: isFirst,
+                                isLastInSection: isLast
+                            )
                                 .dragSelectionAccessibility(
                                     memo: memo,
                                     viewModel: viewModel,
@@ -233,11 +242,22 @@ struct MemosView: View {
                             period: section.period,
                             memoCount: section.memos.count
                         )
+                    } footer: {
+                        // Ensure generous visual separation between sections
+                        Color.clear
+                            .frame(height: MemoListConstants.sectionBottomSpacing)
+                            .accessibilityHidden(true)
                     }
                 }
             }
             .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)
             .modifier(ConditionalListStyle())
+            // Hide all default separators (rows and sections). Sections use spacing only.
+            .listRowSeparator(.hidden)
+            .listSectionSeparator(.hidden)
+            .listSectionSeparatorTint(.clear)
+            // Provide consistent spacing between memo cards
+            .listRowSpacing(MemoListConstants.rowSpacing)
             .scrollContentBackground(.hidden)
             // Always allow scrolling (drag selection removed)
             .background({
