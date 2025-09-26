@@ -5,22 +5,25 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: Spacing.xl) {
-                    // Current Usage at the very top
-                    CurrentUsageSectionView()
+                VStack(spacing: Spacing.lg) {
+                    // Consolidated Recording & Usage (quota + language)
+                    RecordingUsageSectionView()
 
-                    // Transcription preferences (language selection)
-                    TranscriptionLanguageSectionView()
+                    // Non-destructive exports
+                    ExportDataSectionView()
 
-                    // Data management (exports + delete)
-                    DataManagementSectionView()
-
-                    // About, support, and legal content
+                    // About & Support (version/build, help, diagnostics)
                     AboutSupportLegalSectionView()
+
+                    // Privacy & Legal (policies + disclaimer)
+                    PrivacyLegalSectionView()
+
+                    // Destructive actions clearly separated at bottom
+                    DangerZoneSectionView()
                 }
                 .padding(.horizontal)
                 .padding(.top, Spacing.lg)
-                .padding(.bottom, Spacing.xl)
+                .padding(.bottom, Spacing.lg)
             }
             .background(Color.semantic(.bgPrimary).ignoresSafeArea())
         }

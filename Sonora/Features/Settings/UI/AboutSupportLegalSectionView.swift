@@ -6,7 +6,7 @@ struct AboutSupportLegalSectionView: View {
     var body: some View {
         SettingsCard {
             VStack(alignment: .leading, spacing: Spacing.lg) {
-                Label("About, Support & Legal", systemImage: "info.circle")
+                Label("About & Support", systemImage: "info.circle")
                     .font(SonoraDesignSystem.Typography.headingSmall)
                     .accessibilityAddTraits(.isHeader)
 
@@ -30,31 +30,6 @@ struct AboutSupportLegalSectionView: View {
                     }
                     .buttonStyle(.plain)
                     #endif
-                }
-
-                Divider().background(Color.semantic(.separator))
-
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    sectionHeader("Privacy & Legal")
-                    Button(action: viewModel.openPrivacyPolicy) {
-                        SettingsRow(icon: "hand.raised", title: "Privacy Policy", subtitle: "How we protect your data", trailingSystemImage: "arrow.up.right")
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(action: viewModel.openTerms) {
-                        SettingsRow(icon: "doc.text", title: "Terms of Service", subtitle: "Usage terms and conditions", trailingSystemImage: "arrow.up.right")
-                    }
-                    .buttonStyle(.plain)
-
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: "info.circle")
-                            .foregroundColor(.semantic(.textSecondary))
-                            .font(.footnote)
-                        Text("Transcription and analysis happen via Sonora's secure cloud services. Manage exports above when you need a copy.")
-                            .font(.caption)
-                            .foregroundColor(.semantic(.textSecondary))
-                    }
-                    .padding(.top, Spacing.xs)
                 }
             }
         }
