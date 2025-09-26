@@ -13,7 +13,7 @@ struct HowItWorksView: View {
     
     // MARK: - Constants
     private let steps = HowItWorksStep.allCases
-    private let animationDuration: Double = 4.0
+    private let animationDuration: Double = 3.0
     
     // MARK: - Body
     var body: some View {
@@ -24,8 +24,8 @@ struct HowItWorksView: View {
                     // Icon
                     Image(systemName: "lightbulb.circle")
                         .font(.system(size: 64, weight: .medium))
-                        .foregroundColor(.semantic(.brandPrimary))
-                        .symbolRenderingMode(.hierarchical)
+                        .symbolRenderingMode(.multicolor)
+                        .foregroundStyle(.blue, .yellow)
                         .accessibilityHidden(true)
                     
                     // Title and description
@@ -66,22 +66,19 @@ struct HowItWorksView: View {
                 
                 // Action buttons
                 VStack(spacing: Spacing.md) {
-                    // Continue button
+                    // Continue button (match first page)
                     Button(action: {
                         HapticManager.shared.playSelection()
                         onContinue()
                     }) {
-                        Text("Continue")
+                        Label("Continue", systemImage: "arrow.right.circle.fill")
                             .font(.system(.body, design: .serif))
                             .fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
-                            .frame(minHeight: 52)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.blue)
                     .controlSize(.large)
-                    .buttonBorderShape(.roundedRectangle)
-                    .contentShape(RoundedRectangle(cornerRadius: 12))
+                    .buttonBorderShape(.capsule)
                     .accessibilityLabel("Continue to next step")
                     .accessibilityHint("Double tap to proceed to the recording prompt")
                     
@@ -98,7 +95,7 @@ struct HowItWorksView: View {
                 }
             }
             .padding(.horizontal, Spacing.xl)
-            .padding(.bottom, Spacing.xl)
+            .padding(.bottom, 120)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.semantic(.bgPrimary))
@@ -140,9 +137,8 @@ struct HowItWorksView: View {
             // Step icon with animation
             Image(systemName: currentStepData.iconName)
                 .font(.system(size: 48, weight: .medium))
-                .foregroundColor(.semantic(.brandPrimary))
-                .symbolRenderingMode(.hierarchical)
-                .symbolEffect(.pulse, isActive: isAnimating)
+                .symbolRenderingMode(.multicolor)
+                .symbolEffect(.bounce, value: currentStep)
                 .frame(height: 60)
                 .accessibilityHidden(true)
             
@@ -155,7 +151,7 @@ struct HowItWorksView: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color.semantic(.fillSecondary))
         )
-        .animation(.easeInOut(duration: 0.5), value: currentStep)
+        .animation(.spring(response: 0.6, dampingFraction: 0.85), value: currentStep)
     }
     
     @ViewBuilder
@@ -174,7 +170,7 @@ struct HowItWorksView: View {
                         .frame(width: 4, height: CGFloat.random(in: 20...40))
                         .scaleEffect(y: isAnimating ? CGFloat.random(in: 0.5...1.5) : 1.0)
                         .animation(
-                            .easeInOut(duration: 0.6)
+                            .spring(response: 0.6, dampingFraction: 0.9)
                             .repeatForever()
                             .delay(Double(index) * 0.2),
                             value: isAnimating
@@ -196,8 +192,8 @@ struct HowItWorksView: View {
                             .opacity(isAnimating ? 1.0 : 0.3)
                             .scaleEffect(x: isAnimating ? 1.0 : 0.1, anchor: .leading)
                             .animation(
-                                .easeOut(duration: 0.5)
-                                .delay(Double(index) * 0.3),
+                                .spring(response: 0.5, dampingFraction: 0.9)
+                                    .delay(Double(index) * 0.25),
                                 value: isAnimating
                             )
                     }
@@ -238,7 +234,7 @@ struct HowItWorksView: View {
                 }
             }
             .scaleEffect(isAnimating ? 1.1 : 0.9)
-            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isAnimating)
+            .animation(.spring(response: 0.8, dampingFraction: 0.8).repeatForever(autoreverses: true), value: isAnimating)
             .accessibilityLabel("Analyzing and extracting insights")
         }
     }
@@ -262,7 +258,7 @@ struct HowItWorksView: View {
                 .multilineTextAlignment(.center)
                 .lineSpacing(2)
         }
-        .animation(.easeInOut(duration: 0.3), value: currentStep)
+        .animation(.spring(response: 0.4, dampingFraction: 0.9), value: currentStep)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(currentStepData.title). \(currentStepData.description)")
     }
@@ -300,7 +296,7 @@ struct HowItWorksView: View {
         
         Timer.scheduledTimer(withTimeInterval: animationDuration, repeats: true) { timer in
             Task { @MainActor in
-                withAnimation(.easeInOut(duration: 0.5)) {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) {
                     currentStep = (currentStep + 1) % steps.count
                 }
             }

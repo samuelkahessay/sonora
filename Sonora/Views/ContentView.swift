@@ -16,16 +16,16 @@ struct ContentView: View {
     // Debug toggles removed
     
     var body: some View {
-        Group {
-            if onboardingConfiguration.shouldShowOnboarding {
+        mainAppContent
+            .fullScreenCover(
+                isPresented: Binding<Bool>(
+                    get: { onboardingConfiguration.shouldShowOnboarding },
+                    set: { onboardingConfiguration.shouldShowOnboarding = $0 }
+                )
+            ) {
                 OnboardingView()
-                    .transition(.opacity.combined(with: .scale))
-            } else {
-                mainAppContent
-                    .transition(.opacity.combined(with: .scale))
+                    .interactiveDismissDisabled() // avoid accidental dismiss during setup
             }
-        }
-        .animation(.easeInOut(duration: 0.5), value: onboardingConfiguration.shouldShowOnboarding)
     }
     
     @ViewBuilder

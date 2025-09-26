@@ -6,7 +6,6 @@ struct FirstRecordingPromptView: View {
     // MARK: - Properties
     let userName: String
     let onStartRecording: () -> Void
-    let onSkip: () -> Void
     
     // MARK: - State
     @State private var isAnimating: Bool = false
@@ -43,53 +42,28 @@ struct FirstRecordingPromptView: View {
                 
                 Spacer(minLength: Spacing.xl)
                 
-                // Action buttons
+                // Action button
                 VStack(spacing: Spacing.md) {
                     // Start Recording button (primary)
                     Button(action: {
                         HapticManager.shared.playProcessingComplete()
                         onStartRecording()
                     }) {
-                        HStack(spacing: Spacing.sm) {
-                            Image(systemName: "mic.badge.plus")
-                                .font(.title3)
-                                .symbolRenderingMode(.hierarchical)
-                            
-                            Text("Start Recording")
-                                .font(.system(.body, design: .serif))
-                                .fontWeight(.semibold)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 52)
+                        Label("Start Recording", systemImage: "mic.badge.plus")
+                            .font(.system(.body, design: .serif))
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Color.semantic(.brandPrimary))
                     .controlSize(.large)
-                    .buttonBorderShape(.roundedRectangle)
-                    .scaleEffect(pulseScale)
-                    .animation(
-                        .easeInOut(duration: 1.5)
-                        .repeatForever(autoreverses: true),
-                        value: isAnimating
-                    )
-                    .contentShape(RoundedRectangle(cornerRadius: 12))
+                    .buttonBorderShape(.capsule)
                     .accessibilityLabel("Start your first recording")
                     .accessibilityHint("Double tap to start recording your first voice memo")
                     
-                    // Skip button
-                    Button("Complete Setup") {
-                        HapticManager.shared.playSelection()
-                        onSkip()
-                    }
-                    .font(.system(.body, design: .serif))
-                    .foregroundColor(.semantic(.textSecondary))
-                    .padding(.vertical, Spacing.sm)
-                    .accessibilityLabel("Complete setup without recording")
-                    .accessibilityHint("Double tap to complete onboarding without making a recording")
                 }
             }
             .padding(.horizontal, Spacing.xl)
-            .padding(.bottom, Spacing.xl)
+            .padding(.bottom, 120)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.semantic(.bgPrimary))
@@ -232,9 +206,7 @@ struct FirstRecordingPromptView: View {
         isAnimating = true
         
         // Start pulse animation for the recording button
-        withAnimation {
-            pulseScale = 1.05
-        }
+        // Native look: remove pulsing CTA
     }
     
     private func stopAnimations() {
@@ -248,35 +220,20 @@ struct FirstRecordingPromptView: View {
 #Preview("First Recording - Sam") {
     FirstRecordingPromptView(
         userName: "Sam",
-        onStartRecording: {
-            print("Start recording tapped")
-        },
-        onSkip: {
-            print("Complete setup tapped")
-        }
+        onStartRecording: { print("Start recording tapped") }
     )
 }
 
 #Preview("First Recording - Friend") {
     FirstRecordingPromptView(
         userName: "friend",
-        onStartRecording: {
-            print("Start recording tapped")
-        },
-        onSkip: {
-            print("Complete setup tapped")
-        }
+        onStartRecording: { print("Start recording tapped") }
     )
 }
 
 #Preview("First Recording - Long Name") {
     FirstRecordingPromptView(
         userName: "Alexandra",
-        onStartRecording: {
-            print("Start recording tapped")
-        },
-        onSkip: {
-            print("Complete setup tapped")
-        }
+        onStartRecording: { print("Start recording tapped") }
     )
 }
