@@ -3,8 +3,17 @@ import Combine
 
 @MainActor
 final class PromptViewModel: ObservableObject {
+    // MARK: - Lightweight State
+    enum State: Equatable {
+        case idle(current: InterpolatedPrompt?)
+        case loading(current: InterpolatedPrompt?)
+        case ready(current: InterpolatedPrompt)
+        case error(current: InterpolatedPrompt?, message: String?)
+    }
+
     @Published var currentPrompt: InterpolatedPrompt?
     @Published var isLoading: Bool = false
+    @Published private(set) var state: State = .idle(current: nil)
 
     private let getDynamic: any GetDynamicPromptUseCaseProtocol
     private let getCategory: any GetPromptCategoryUseCaseProtocol
@@ -14,18 +23,21 @@ final class PromptViewModel: ObservableObject {
     init(getDynamic: any GetDynamicPromptUseCaseProtocol, getCategory: any GetPromptCategoryUseCaseProtocol) {
         self.getDynamic = getDynamic
         self.getCategory = getCategory
-}
+    }
 
     func loadInitial() {
         // Preserve current prompt across tab switches; only load if empty
         if currentPrompt == nil {
             refresh()
+        } else {
+            state = .ready(current: currentPrompt!)
         }
     }
 
     func refresh(excludingCurrent: Bool = false) {
         refreshTask?.cancel()
         isLoading = true
+        state = .loading(current: currentPrompt)
         let name = OnboardingConfiguration.shared.getUserName()
         let currentId = excludingCurrent ? currentPrompt?.id : nil
         refreshTask = Task { [weak self] in
@@ -35,19 +47,27 @@ final class PromptViewModel: ObservableObject {
                 let req = SelectPromptRequest(userName: name, policy: policy, currentPromptId: currentId, rotationToken: excludingCurrent ? self?.rotationToken : nil)
                 let res = try await self?.getDynamic.next(req)
                 await MainActor.run { [weak self] in
-                    self?.currentPrompt = res?.prompt
+                    guard let self else { return }
+                    self.currentPrompt = res?.prompt
                     // Reset or update rotation token based on policy
                     if excludingCurrent {
-                        self?.rotationToken = res?.rotationToken
+                        self.rotationToken = res?.rotationToken
                     } else {
-                        self?.rotationToken = nil
+                        self.rotationToken = nil
                     }
-                    self?.isLoading = false
+                    self.isLoading = false
+                    if let prompt = self.currentPrompt {
+                        self.state = .ready(current: prompt)
+                    } else {
+                        self.state = .idle(current: nil)
+                    }
                 }
             } catch {
                 await MainActor.run { [weak self] in
-                    self?.currentPrompt = nil
-                    self?.isLoading = false
+                    guard let self else { return }
+                    // Keep prior prompt visible on error for a graceful fallback
+                    self.isLoading = false
+                    self.state = .error(current: self.currentPrompt, message: (error as NSError).localizedDescription)
                 }
             }
         }

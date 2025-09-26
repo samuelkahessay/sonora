@@ -20,6 +20,7 @@ struct DynamicPromptCard: View {
                 .lineLimit(nil)
                 .minimumScaleFactor(0.9)
                 .fixedSize(horizontal: false, vertical: true)
+                .contentTransition(.opacity)
         }
         .padding(.vertical, 18)
         .padding(.horizontal, 16)
