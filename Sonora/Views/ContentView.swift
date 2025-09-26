@@ -52,14 +52,6 @@ struct ContentView: View {
             }
             .tag(1)
 
-            // Settings tab navigation
-            NavigationStack {
-                SettingsView()
-            }
-            .tabItem {
-                Label("Settings", systemImage: selectedTab == 2 ? "gearshape.fill" : "gearshape")
-            }
-            .tag(2)
         }
         .animation(nil, value: selectedTab)
         .onChange(of: selectedTab) { oldValue, newValue in

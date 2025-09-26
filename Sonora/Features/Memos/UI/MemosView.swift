@@ -12,6 +12,7 @@ struct MemosView: View {
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     let popToRoot: (() -> Void)?
     @Binding var navigationPath: NavigationPath
+    @State private var showSettings: Bool = false
     
     init(popToRoot: (() -> Void)? = nil, navigationPath: Binding<NavigationPath>) {
         self.popToRoot = popToRoot
@@ -87,6 +88,28 @@ struct MemosView: View {
         .navigationTitle("Memos")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
+            // Settings gear in the leading position
+            ToolbarItem(placement: .navigationBarLeading) {
+                if #available(iOS 26, *) {
+                    Button(action: { showSettings = true }) {
+                        Image(systemName: "gearshape")
+                            .imageScale(.large)
+                            .accessibilityLabel("Settings")
+                            .accessibilityHint("Open app settings")
+                    }
+                    .buttonStyle(.plain)
+                    .tint(.semantic(.brandPrimary))
+                } else {
+                    Button(action: { showSettings = true }) {
+                        Image(systemName: "gearshape")
+                            .imageScale(.large)
+                            .symbolRenderingMode(.monochrome)
+                            .accessibilityLabel("Settings")
+                            .accessibilityHint("Open app settings")
+                    }
+                    .tint(.semantic(.brandPrimary))
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                     MemoListTopBarView(
                         isEmpty: viewModel.isEmpty,
@@ -94,6 +117,10 @@ struct MemosView: View {
                         onToggleEdit: { viewModel.toggleEditMode() }
                     )
             }
+        }
+        // Present Settings without affecting the memos navigation stack
+        .sheet(isPresented: $showSettings) {
+            NavigationStack { SettingsView() }
         }
         .errorAlert($viewModel.error) { viewModel.retryLastOperation() }
         .loadingState(isLoading: viewModel.isLoading, message: "Loading memos...")
