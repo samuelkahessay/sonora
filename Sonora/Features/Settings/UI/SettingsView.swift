@@ -6,6 +6,9 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: Spacing.lg) {
+                    // Personalization (display name)
+                    PersonalizationSectionView()
+
                     // Consolidated Recording & Usage (quota + language)
                     RecordingUsageSectionView()
 

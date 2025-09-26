@@ -53,6 +53,17 @@ final class OnboardingConfiguration: ObservableObject {
         objectWillChange.send()
         print("✅ OnboardingConfiguration: Onboarding marked as completed (version \(currentOnboardingVersion))")
     }
+    
+    /// Force the onboarding flow to appear again for testing/debugging.
+    /// Resets completion flag and publishes state so ContentView can react.
+    func forceShowOnboardingForTesting() {
+        hasCompletedOnboarding = false
+        shouldShowOnboarding = true
+        userDefaults.set(false, forKey: UserDefaultsKey.hasCompletedOnboarding)
+        userDefaults.set(Date(), forKey: UserDefaultsKey.lastOnboardingDate)
+        objectWillChange.send()
+        print("🧪 OnboardingConfiguration: Forced onboarding to show again for testing")
+    }
         
     // MARK: - User Name Management
     

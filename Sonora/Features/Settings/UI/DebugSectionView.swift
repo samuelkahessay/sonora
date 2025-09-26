@@ -17,6 +17,14 @@ struct DebugSectionView: View {
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Button {
+                    OnboardingConfiguration.shared.forceShowOnboardingForTesting()
+                } label: {
+                    HStack { Label("Show Onboarding Again", systemImage: "rectangle.ons.rectangle"); Spacer() }
+                }
+                .buttonStyle(.bordered)
+                .tint(.semantic(.brandPrimary))
+
+                Button {
                     prepareSampleEvents()
                     showEventsSheet = true
                 } label: {
