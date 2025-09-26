@@ -126,45 +126,37 @@ struct SonicBloomRecordButton: View {
             .brandShadow()
     }
     
-    /// Organic waveform pattern that transforms during recording
+    /// Organic waveform pattern that transforms during recording (time-driven)
     private var waveformBloom: some View {
-        ZStack {
-            ForEach(0..<waveformCount, id: \.self) { index in
-                WaveformPetal(
-                    angle: Double(index) * (360.0 / Double(waveformCount)),
-                    phase: reduceMotion ? 0 : (isAnimating ? .pi * 2 : 0),
-                    isActive: isRecording,
-                    petalIndex: index
-                )
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.clarityWhite.opacity(isRecording ? 0.9 : 0.6),
-                            Color.clarityWhite.opacity(isRecording ? 0.4 : 0.2)
-                        ],
-                        startPoint: .center,
-                        endPoint: .trailing
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let rotationDeg: Double = reduceMotion ? 0 : (t.truncatingRemainder(dividingBy: 20.0) / 20.0) * 360.0
+            let phase: CGFloat = reduceMotion ? 0 : CGFloat((t.truncatingRemainder(dividingBy: 3.0) / 3.0) * 2.0 * .pi)
+
+            ZStack {
+                ForEach(0..<waveformCount, id: \.self) { index in
+                    WaveformPetal(
+                        angle: Double(index) * (360.0 / Double(waveformCount)),
+                        phase: phase,
+                        isActive: isRecording,
+                        petalIndex: index
                     )
-                )
-                .blendMode(isRecording ? .overlay : .normal)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.clarityWhite.opacity(isRecording ? 0.9 : 0.6),
+                                Color.clarityWhite.opacity(isRecording ? 0.4 : 0.2)
+                            ],
+                            startPoint: .center,
+                            endPoint: .trailing
+                        )
+                    )
+                    .blendMode(isRecording ? .overlay : .normal)
+                }
             }
+            .rotationEffect(.degrees(rotationDeg))
+            .opacity(isRecording ? 1.0 : 0.7)
         }
-        // Smooth, display-synced rotation for the bloom container
-        .rotationEffect(.degrees(reduceMotion ? 0 : (isAnimating ? 360 : 0)))
-        .animation(
-            reduceMotion
-            ? .default
-            : .linear(duration: 20.0).repeatForever(autoreverses: false),
-            value: isAnimating
-        )
-        // Drive the petal phase animation via the same trigger
-        .animation(
-            reduceMotion
-            ? .default
-            : .linear(duration: 3.0).repeatForever(autoreverses: false),
-            value: isAnimating
-        )
-        .opacity(isRecording ? 1.0 : 0.7)
     }
     
     /// Center icon with smooth state transitions
@@ -196,24 +188,23 @@ struct SonicBloomRecordButton: View {
     @ViewBuilder
     private var innerGeometry: some View {
         if isRecording {
-            ZStack {
-                ForEach(0..<6, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.clear)
-                        .frame(width: 60, height: 2)
-                        .offset(y: -20)
-                        // Inner geometry rotates at half the outer rate previously
-                        .rotationEffect(.degrees(Double(index) * 60))
+            TimelineView(.animation) { context in
+                let t = context.date.timeIntervalSinceReferenceDate
+                // Half the outer rotation rate: 180 degrees per 20s
+                let innerRotation: Double = reduceMotion ? 0 : (t.truncatingRemainder(dividingBy: 20.0) / 20.0) * 180.0
+
+                ZStack {
+                    ForEach(0..<6, id: \.self) { index in
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.clear)
+                            .frame(width: 60, height: 2)
+                            .offset(y: -20)
+                            .rotationEffect(.degrees(Double(index) * 60))
+                    }
                 }
+                .rotationEffect(.degrees(innerRotation))
+                .transition(.scale.combined(with: .opacity))
             }
-            .rotationEffect(.degrees(reduceMotion ? 0 : (isAnimating ? 180 : 0)))
-            .animation(
-                reduceMotion
-                ? .default
-                : .linear(duration: 20.0).repeatForever(autoreverses: false),
-                value: isAnimating
-            )
-            .transition(.scale.combined(with: .opacity))
             .animation(SonoraDesignSystem.Animation.gentleSpring.delay(0.2), value: isRecording)
         }
     }
@@ -367,4 +358,3 @@ extension SonicBloomRecordButton {
             .accessibilityRemoveTraits(isRecording ? [] : [.isSelected])
     }
 }
-
