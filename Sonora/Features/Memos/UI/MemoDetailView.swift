@@ -6,6 +6,7 @@ import UIKit
 struct MemoDetailView: View {
     let memo: Memo
     @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createMemoDetailViewModel()
+    @StateObject private var titleTracker = DIContainer.shared.titleGenerationTracker()
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
     @FocusState private var isTitleEditingFocused: Bool
     @State private var scrollOffset: CGFloat = 0
@@ -292,16 +293,25 @@ struct MemoDetailView: View {
                 }
             } else {
                 // Display mode: Title with double-tap to edit
-                Text(viewModel.currentMemoTitle)
-                    .font(.system(.title2, design: .serif))
-                    .fontWeight(.bold)
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityFocused($focusedElement, equals: .memoTitle)
-                    .accessibilityLabel("Memo title: \(viewModel.currentMemoTitle)")
-                    .accessibilityHint("Double tap to rename this memo")
-                    .onTapGesture(count: 2) {
-                        viewModel.startRenaming()
+                HStack(spacing: 8) {
+                    Text(viewModel.currentMemoTitle)
+                        .font(.system(.title2, design: .serif))
+                        .fontWeight(.bold)
+                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityFocused($focusedElement, equals: .memoTitle)
+                        .accessibilityLabel("Memo title: \(viewModel.currentMemoTitle)")
+                        .accessibilityHint("Double tap to rename this memo")
+                        .onTapGesture(count: 2) {
+                            viewModel.startRenaming()
+                        }
+
+                    if isAutoTitling {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .tint(.secondary)
+                            .accessibilityLabel("Naming your memo")
                     }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -669,5 +679,27 @@ struct MemoDetailView: View {
         
         // If no paragraphs were created, return the original text
         return paragraphs.isEmpty ? [text] : paragraphs
+    }
+    // MARK: - Auto-title indicator state
+    private var isAutoTitling: Bool {
+        switch titleTracker.state(for: memo.id) {
+        case .inProgress:
+            let hasCustomTitle: Bool = {
+                if let latest = DIContainer.shared.memoRepository().getMemo(by: memo.id),
+                   let t = latest.customTitle, !t.isEmpty { return true }
+                return false
+            }()
+            let show = !hasCustomTitle
+            if show { print("🧠 UI[Detail]: showing auto-title spinner for memo=\(memo.id)") }
+            return show
+        case .success(let title):
+            print("🧠 UI[Detail]: received title for memo=\(memo.id) -> \(title)")
+            return false
+        case .failed:
+            print("🧠 UI[Detail]: auto-title failed for memo=\(memo.id)")
+            return false
+        case .idle:
+            return false
+        }
     }
 }

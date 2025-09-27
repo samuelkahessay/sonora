@@ -10,17 +10,20 @@ final class GenerateAutoTitleUseCase: GenerateAutoTitleUseCaseProtocol, @uncheck
     private let titleService: any TitleServiceProtocol
     private let memoRepository: any MemoRepository
     private let transcriptionRepository: any TranscriptionRepository
+    private let titleTracker: any TitleGenerationTracking
     private let logger: any LoggerProtocol
 
     init(
         titleService: any TitleServiceProtocol,
         memoRepository: any MemoRepository,
         transcriptionRepository: any TranscriptionRepository,
+        titleTracker: any TitleGenerationTracking,
         logger: any LoggerProtocol = Logger.shared
     ) {
         self.titleService = titleService
         self.memoRepository = memoRepository
         self.transcriptionRepository = transcriptionRepository
+        self.titleTracker = titleTracker
         self.logger = logger
     }
 
@@ -33,13 +36,23 @@ final class GenerateAutoTitleUseCase: GenerateAutoTitleUseCaseProtocol, @uncheck
         let slice = Self.slice(transcript: transcript)
         let languageHint = transcriptionRepository.getTranscriptionMetadata(for: memoId)?.detectedLanguage
 
+        print("🧠 AutoTitle: start memo=\(memoId) lang=\(languageHint ?? "auto") sliceLen=\(slice.count)")
+        // Show in-progress UI state
+        titleTracker.setInProgress(memoId)
         do {
             if let title = try await titleService.generateTitle(transcript: slice, languageHint: languageHint) {
                 memoRepository.renameMemo(memo, newTitle: title)
+                titleTracker.setSuccess(memoId, title: title)
                 logger.info("Auto title set for memo: \(memoId)", category: .system, context: LogContext(additionalInfo: ["title": title]))
+                print("🧠 AutoTitle: success memo=\(memoId) title=\(title)")
+            } else {
+                titleTracker.setFailed(memoId)
+                print("🧠 AutoTitle: validation returned nil memo=\(memoId)")
             }
         } catch {
+            titleTracker.setFailed(memoId)
             logger.debug("Auto title generation failed: \(error.localizedDescription)", category: .system, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
+            print("🧠 AutoTitle: error memo=\(memoId) error=\(error.localizedDescription)")
         }
     }
 

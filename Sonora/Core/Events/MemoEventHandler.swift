@@ -243,23 +243,11 @@ public final class MemoEventHandler {
             await DIContainer.shared.generateAutoTitleUseCase().execute(memoId: memoId, transcript: text)
         }
 
-        // Auto-detect events/reminders if transcript suggests scheduling language
-        let defaults = UserDefaults.standard
-        let autoEvents = defaults.object(forKey: "autoDetectEvents") as? Bool ?? true
-        let autoReminders = defaults.object(forKey: "autoDetectReminders") as? Bool ?? true
-        if (autoEvents || autoReminders) && shouldRunEventDetection(transcript: text) {
-            logger.info("Auto-detection trigger conditions met; starting detection", category: .analysis, context: context)
-            Task { @MainActor in
-                do {
-                    let result = try await DIContainer.shared.detectEventsAndRemindersUseCase().execute(transcript: text, memoId: memoId)
-                    let eventsCount = autoEvents ? (result.events?.events.count ?? 0) : 0
-                    let remindersCount = autoReminders ? (result.reminders?.reminders.count ?? 0) : 0
-                    logger.info("Auto-detection completed: events=\(eventsCount), reminders=\(remindersCount)", category: .analysis, context: context)
-                } catch {
-                    logger.warning("Auto-detection failed: \(error.localizedDescription)", category: .analysis, context: context, error: error)
-                }
-            }
-        }
+        // Auto-detection disabled: Events/Reminders run when Distill is invoked
+        // If needed in the future, gate via explicit setting keys below (default false)
+        // let autoEvents = UserDefaults.standard.object(forKey: "autoDetectEvents") as? Bool ?? false
+        // let autoReminders = UserDefaults.standard.object(forKey: "autoDetectReminders") as? Bool ?? false
+        // Intentionally no-op here per product direction
     }
 
     // Simple heuristic to decide if we should run detection

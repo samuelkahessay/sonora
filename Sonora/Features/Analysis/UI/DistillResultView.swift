@@ -59,6 +59,9 @@ struct DistillResultView: View {
             } else if isShowingProgress {
                 reflectionQuestionsPlaceholder
             }
+
+            // Events & Reminders Section
+            eventsRemindersSection()
             
             // Performance info removed for cleaner UI
             
@@ -99,6 +102,14 @@ struct DistillResultView: View {
     
     private var effectiveReflectionQuestions: [String]? {
         return data?.reflection_questions ?? partialData?.reflectionQuestions
+    }
+
+    private var effectiveEvents: [EventsData.DetectedEvent] {
+        return data?.events ?? partialData?.events ?? []
+    }
+
+    private var effectiveReminders: [RemindersData.DetectedReminder] {
+        return data?.reminders ?? partialData?.reminders ?? []
     }
     
     private var shouldShowActionItemsPlaceholder: Bool {
@@ -259,6 +270,86 @@ struct DistillResultView: View {
             }
         }
     }
+
+    // MARK: - Events & Reminders Section
+    @ViewBuilder
+    private func eventsRemindersSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.subheadline)
+                    .foregroundColor(.semantic(.brandPrimary))
+                Text("Events & Reminders")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.semantic(.textPrimary))
+            }
+
+            if effectiveEvents.isEmpty && effectiveReminders.isEmpty {
+                Text("No events or reminders detected")
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    if !effectiveEvents.isEmpty {
+                        ForEach(effectiveEvents, id: \.id) { ev in
+                            HStack(spacing: 8) {
+                                Image(systemName: "calendar")
+                                    .font(.caption)
+                                    .foregroundColor(.semantic(.textSecondary))
+                                Text(eventLine(ev))
+                                    .font(.callout)
+                                    .foregroundColor(.semantic(.textPrimary))
+                                    .lineLimit(2)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                    if !effectiveReminders.isEmpty {
+                        ForEach(effectiveReminders, id: \.id) { rem in
+                            HStack(spacing: 8) {
+                                Image(systemName: "bell")
+                                    .font(.caption)
+                                    .foregroundColor(.semantic(.textSecondary))
+                                Text(reminderLine(rem))
+                                    .font(.callout)
+                                    .foregroundColor(.semantic(.textPrimary))
+                                    .lineLimit(2)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func eventLine(_ ev: EventsData.DetectedEvent) -> String {
+        var parts: [String] = [ev.title]
+        if let start = ev.startDate {
+            parts.append("– " + formatShortDate(start))
+        }
+        if let loc = ev.location, !loc.isEmpty {
+            parts.append("@ " + loc)
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private func reminderLine(_ r: RemindersData.DetectedReminder) -> String {
+        var parts: [String] = [r.title]
+        if let due = r.dueDate {
+            parts.append("– due " + formatShortDate(due))
+        }
+        parts.append("[" + r.priority.rawValue + "]")
+        return parts.joined(separator: " ")
+    }
+
+    private func formatShortDate(_ date: Date) -> String {
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.timeStyle = .short
+        return df.string(from: date)
+    }
     
     // MARK: - Placeholder Views
     
@@ -305,7 +396,7 @@ struct DistillResultView: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.semantic(.textPrimary))
-                Text("Gentle, tiny next steps tailored to your note")
+                Text("Next steps tailored to your note")
                     .font(.caption)
                     .foregroundColor(.semantic(.textSecondary))
             }
@@ -442,6 +533,20 @@ struct DistillResultView: View {
         if let questions = effectiveReflectionQuestions, !questions.isEmpty {
             let list = questions.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
             parts.append("Reflection Questions:\n" + list)
+        }
+        if !effectiveEvents.isEmpty || !effectiveReminders.isEmpty {
+            var lines: [String] = []
+            if !effectiveEvents.isEmpty {
+                lines.append("Events:")
+                lines.append(contentsOf: effectiveEvents.map(eventLine))
+            }
+            if !effectiveReminders.isEmpty {
+                lines.append("Reminders:")
+                lines.append(contentsOf: effectiveReminders.map(reminderLine))
+            }
+            parts.append(lines.joined(separator: "\n"))
+        } else {
+            parts.append("Events & Reminders:\nNo events or reminders detected")
         }
         return parts.joined(separator: "\n\n")
     }

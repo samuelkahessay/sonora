@@ -31,13 +31,21 @@ final class TitleService: TitleServiceProtocol, @unchecked Sendable {
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
 
+        print("🧠 TitleService: POST /title lang=\(languageHint ?? "auto") url=\(url.absoluteString)")
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let http = response as? HTTPURLResponse {
+                print("🧠 TitleService: /title non-200 status=\(http.statusCode) body=\(String(data: data, encoding: .utf8) ?? "<nil>")")
+            } else {
+                print("🧠 TitleService: /title no HTTPURLResponse")
+            }
             return nil
         }
         if let decoded = try? JSONDecoder().decode(TitleResponse.self, from: data) {
+            print("🧠 TitleService: /title decoded=\(decoded.title)")
             return Self.validate(decoded.title)
         }
+        print("🧠 TitleService: /title decode failed")
         return nil
     }
 
@@ -53,4 +61,3 @@ final class TitleService: TitleServiceProtocol, @unchecked Sendable {
         return trimmed
     }
 }
-

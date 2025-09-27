@@ -36,6 +36,7 @@ struct SonoraMemocCard: View {
     var isLastInSection: Bool = false
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var insightHintOpacity: Double = 0
+    @StateObject private var titleTracker = DIContainer.shared.titleGenerationTracker()
     
     // MARK: - Computed Properties
     
@@ -105,11 +106,21 @@ struct SonoraMemocCard: View {
     /// Title section with premium typography
     @ViewBuilder
     private var titleSection: some View {
-        Text(memo.displayName)
-            .font(SonoraDesignSystem.Typography.headingSmall)
-            .foregroundColor(.semantic(.textPrimary))
-            .lineLimit(2)
-            .multilineTextAlignment(.leading)
+        HStack(spacing: 8) {
+            Text(memo.displayName)
+                .font(SonoraDesignSystem.Typography.headingSmall)
+                .foregroundColor(.semantic(.textPrimary))
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+
+            // Subtle inline indicator while auto-title is being generated
+            if isAutoTitling {
+                ProgressView()
+                    .scaleEffect(0.7)
+                    .tint(.secondary)
+                    .accessibilityLabel("Naming your memo")
+            }
+        }
     }
     
     /// Unified metadata row with duration and relative time (single source of truth)
@@ -231,6 +242,23 @@ struct SonoraMemocCard: View {
     private func animateInsightHint() {
         withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {
             insightHintOpacity = 1.0
+        }
+    }
+
+    private var isAutoTitling: Bool {
+        switch titleTracker.state(for: memo.id) {
+        case .inProgress:
+            let show = memo.customTitle == nil || memo.customTitle?.isEmpty == true
+            if show { print("🧠 UI[List]: showing auto-title spinner for memo=\(memo.id)") }
+            return show
+        case .success(let title):
+            print("🧠 UI[List]: received title for memo=\(memo.id) -> \(title)")
+            return false
+        case .failed:
+            print("🧠 UI[List]: auto-title failed for memo=\(memo.id)")
+            return false
+        case .idle:
+            return false
         }
     }
 }

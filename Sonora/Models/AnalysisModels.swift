@@ -73,6 +73,8 @@ public struct DistillData: Codable, Sendable {
     public let summary: String
     public let action_items: [ActionItem]?
     public let reflection_questions: [String]
+    public let events: [EventsData.DetectedEvent]?
+    public let reminders: [RemindersData.DetectedReminder]?
     
     public struct ActionItem: Codable, Sendable, Equatable {
         public let text: String
@@ -89,6 +91,13 @@ public struct DistillData: Codable, Sendable {
                 }
             }
         }
+    }
+    public init(summary: String, action_items: [ActionItem]?, reflection_questions: [String], events: [EventsData.DetectedEvent]? = nil, reminders: [RemindersData.DetectedReminder]? = nil) {
+        self.summary = summary
+        self.action_items = action_items
+        self.reflection_questions = reflection_questions
+        self.events = events
+        self.reminders = reminders
     }
 }
 

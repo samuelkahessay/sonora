@@ -24,6 +24,8 @@ public struct PartialDistillData: Sendable, Equatable {
     public var summary: String?
     public var actionItems: [DistillData.ActionItem]?
     public var reflectionQuestions: [String]?
+    public var events: [EventsData.DetectedEvent]?
+    public var reminders: [RemindersData.DetectedReminder]?
     
     /// Convert to complete DistillData if all required components are present
     public func toDistillData() -> DistillData? {
@@ -35,7 +37,9 @@ public struct PartialDistillData: Sendable, Equatable {
         return DistillData(
             summary: summary,
             action_items: actionItems,
-            reflection_questions: reflectionQuestions
+            reflection_questions: reflectionQuestions,
+            events: events,
+            reminders: reminders
         )
     }
 }
@@ -44,6 +48,7 @@ enum DistillComponentData: Sendable {
     case summary(DistillSummaryData)
     case actions(DistillActionsData)
     case reflection(DistillReflectionData)
+    case detections(EventsData?, RemindersData?)
 }
 
 final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol, @unchecked Sendable {
@@ -54,6 +59,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     private let logger: any LoggerProtocol
     private let eventBus: any EventBusProtocol
     private let operationCoordinator: any OperationCoordinatorProtocol
+    private let detectUseCase: any DetectEventsAndRemindersUseCaseProtocol
     
     // MARK: - Constants
     private let componentModes: [AnalysisMode] = [.distillSummary, .distillActions, .distillReflection]
@@ -64,13 +70,15 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         analysisRepository: any AnalysisRepository,
         logger: any LoggerProtocol = Logger.shared,
         eventBus: any EventBusProtocol,
-        operationCoordinator: any OperationCoordinatorProtocol
+        operationCoordinator: any OperationCoordinatorProtocol,
+        detectUseCase: any DetectEventsAndRemindersUseCaseProtocol
     ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository
         self.logger = logger
         self.eventBus = eventBus
         self.operationCoordinator = operationCoordinator
+        self.detectUseCase = detectUseCase
     }
     
     // MARK: - Use Case Execution
@@ -150,11 +158,12 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         var combinedTokens = TokenUsage(input: 0, output: 0)
         
         // Send initial progress
+        let totalComponents = componentModes.count + 1
         let initialPartial = partialData
         await MainActor.run {
             progressHandler(DistillProgressUpdate(
                 completedComponents: 0,
-                totalComponents: componentModes.count,
+                totalComponents: totalComponents,
                 completedResults: initialPartial,
                 latestComponent: nil
             ))
@@ -163,7 +172,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         logger.analysis("Starting parallel execution of \(componentModes.count) components", context: context)
         
         // Execute all components in parallel using TaskGroup
-        try await withThrowingTaskGroup(of: (AnalysisMode, DistillComponentData, Int, TokenUsage).self) { group in
+        try await withThrowingTaskGroup(of: (AnalysisMode?, DistillComponentData, Int, TokenUsage).self) { group in
             
             // Add tasks for each component
             for mode in componentModes {
@@ -182,6 +191,18 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                     await saveComponentCache(data: result.data, latency: result.latency_ms, tokens: result.tokens, mode: mode, memoId: memoId)
                     
                     return (mode, result.data, result.latency_ms, result.tokens)
+                }
+            }
+
+            // Add detection task
+            group.addTask { [self] in
+                do {
+                    let det = try await detectUseCase.execute(transcript: transcript, memoId: memoId)
+                    let latencyMs = Int(det.detectionMetadata.processingTime * 1000)
+                    return (nil, .detections(det.events, det.reminders), latencyMs, TokenUsage(input: 0, output: 0))
+                } catch {
+                    logger.warning("Detection error; continuing without detections", category: .analysis, context: context, error: error)
+                    return (nil, .detections(nil, nil), 0, TokenUsage(input: 0, output: 0))
                 }
             }
             
@@ -204,13 +225,13 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                 await MainActor.run {
                     progressHandler(DistillProgressUpdate(
                         completedComponents: currentCompleted,
-                        totalComponents: componentModes.count,
+                        totalComponents: totalComponents,
                         completedResults: currentPartial,
                         latestComponent: mode
                     ))
                 }
-                
-                logger.debug("Component \(mode.rawValue) completed (\(completedCount)/\(componentModes.count))", 
+
+                logger.debug("Component \(mode?.rawValue ?? "detections") completed (\(completedCount)/\(totalComponents))", 
                            category: .analysis, context: context)
             }
         }
@@ -293,7 +314,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         }
     }
     
-    private func updatePartialData(_ partialData: inout PartialDistillData, mode: AnalysisMode, data: DistillComponentData) {
+    private func updatePartialData(_ partialData: inout PartialDistillData, mode: AnalysisMode?, data: DistillComponentData) {
         switch data {
         case .summary(let summaryData):
             partialData.summary = summaryData.summary
@@ -301,6 +322,9 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             partialData.actionItems = actionsData.action_items
         case .reflection(let reflectionData):
             partialData.reflectionQuestions = reflectionData.reflection_questions
+        case .detections(let ev, let rem):
+            partialData.events = ev?.events
+            partialData.reminders = rem?.reminders
         }
     }
 }

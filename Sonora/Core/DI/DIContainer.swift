@@ -50,6 +50,7 @@ final class DIContainer: ObservableObject, Resolver {
     // Titles
     private var _titleService: (any TitleServiceProtocol)?
     private var _generateAutoTitleUseCase: (any GenerateAutoTitleUseCaseProtocol)?
+    private var _titleGenerationTracker: TitleGenerationTracker?
 
     // MARK: - Phase 2: Core Optimization Services
     private var _audioQualityManager: AudioQualityManager?
@@ -391,6 +392,16 @@ final class DIContainer: ObservableObject, Resolver {
     }
 
     @MainActor
+    func titleGenerationTracker() -> TitleGenerationTracker {
+        ensureConfigured()
+        if _titleGenerationTracker == nil {
+            print("🏭 DI: Creating TitleGenerationTracker")
+            _titleGenerationTracker = TitleGenerationTracker()
+        }
+        return _titleGenerationTracker!
+    }
+
+    @MainActor
     func generateAutoTitleUseCase() -> any GenerateAutoTitleUseCaseProtocol {
         ensureConfigured()
         if let uc = _generateAutoTitleUseCase { return uc }
@@ -398,6 +409,7 @@ final class DIContainer: ObservableObject, Resolver {
             titleService: titleService(),
             memoRepository: memoRepository(),
             transcriptionRepository: transcriptionRepository(),
+            titleTracker: titleGenerationTracker(),
             logger: logger()
         )
         _generateAutoTitleUseCase = uc
