@@ -25,6 +25,10 @@ protocol AudioRepository: ObservableObject {
     var countdownPublisher: AnyPublisher<(Bool, TimeInterval), Never> { get }
     /// Normalized audio level (0.0 to 1.0), smoothed; emits only while recording
     var audioLevelPublisher: AnyPublisher<Double, Never> { get }
+    /// Emits pause state updates
+    var isPausedPublisher: AnyPublisher<Bool, Never> { get }
+    /// Current pause state snapshot
+    var isPaused: Bool { get }
     
     // MARK: - Playback Control
     func playAudio(at url: URL) throws
@@ -38,6 +42,8 @@ protocol AudioRepository: ObservableObject {
     /// Backward-compatible start method (calls startRecording(allowedCap: nil))
     func startRecording() async throws -> UUID
     func stopRecording()
+    func pauseRecording()
+    func resumeRecording()
     func checkMicrophonePermissions()
     
     // MARK: - Recording Callbacks

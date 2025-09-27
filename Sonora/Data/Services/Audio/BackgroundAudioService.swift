@@ -23,6 +23,7 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     
     // MARK: - Published Properties
     @Published var isRecording = false
+    @Published var isPaused = false
     @Published var recordingTime: TimeInterval = 0
     @Published var hasPermission = false
     @Published var isSessionActive = false
@@ -158,6 +159,7 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
             )
             
             print("🎵 BackgroundAudioService: Recording started successfully")
+            isPaused = false
             
         } catch {
             // Clean up on failure
@@ -167,10 +169,10 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
         }
     }
     
-    /// Stops the current recording
+    /// Stops the current recording (supports stopping from paused state)
     func stopRecording() {
-        guard isRecording else {
-            print("⚠️ BackgroundAudioService: Cannot stop - no active recording")
+        guard isRecording || isPaused else {
+            print("⚠️ BackgroundAudioService: Cannot stop - not recording or paused")
             return
         }
         
@@ -182,7 +184,31 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
         // 2. Stop recording (cleanup happens in delegate)
         recordingService.stopRecording()
         
+        isPaused = false
         print("🎵 BackgroundAudioService: Recording stop initiated")
+    }
+
+    /// Pauses the ongoing recording without finalizing the file
+    func pauseRecording() {
+        guard isRecording else {
+            print("⚠️ BackgroundAudioService: Cannot pause - not currently recording")
+            return
+        }
+        recordingService.pauseRecording()
+        isPaused = true
+        // Timer continues but reads a frozen currentTime; no need to stop
+        print("⏸️ BackgroundAudioService: Recording paused")
+    }
+
+    /// Resumes a paused recording
+    func resumeRecording() {
+        guard !isRecording, isPaused else {
+            print("⚠️ BackgroundAudioService: Cannot resume - not paused")
+            return
+        }
+        recordingService.resumeRecording()
+        isPaused = false
+        print("▶️ BackgroundAudioService: Recording resumed")
     }
     
     /// Checks microphone permissions
@@ -423,6 +449,7 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
         if isRecording {
             isRecording = false
         }
+        isPaused = false
 
         // Defer the reset to the next run loop tick so views have already reacted to `isRecording = false`
         Task { [weak self] in

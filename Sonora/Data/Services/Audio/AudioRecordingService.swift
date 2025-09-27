@@ -21,6 +21,8 @@ protocol AudioRecordingServiceProtocol: ObservableObject {
     func createRecorder(url: URL, sampleRate: Double, channels: Int, quality: Float) throws -> AVAudioRecorder
     func startRecording(with recorder: AVAudioRecorder) throws
     func stopRecording()
+    func pauseRecording()
+    func resumeRecording()
     func getCurrentTime() -> TimeInterval
     
     // Callbacks
@@ -280,28 +282,52 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
         print("🎙️ AudioRecordingService: Recording started for \(recorder.url.lastPathComponent)")
     }
     
-    /// Stops the current recording
+    /// Stops the current recording (supports stopping from paused state)
     func stopRecording() {
-        guard isRecording, let recorder = audioRecorder else {
-            print("⚠️ AudioRecordingService: Cannot stop - no active recording")
+        guard let recorder = audioRecorder else {
+            print("⚠️ AudioRecordingService: Cannot stop - no recorder instance")
             return
         }
-        
         print("🎙️ AudioRecordingService: Stopping recording...")
         recorder.stop()
         self.isRecording = false
         stopLevelMetering()
-        
         // Note: Cleanup happens in delegate method to ensure proper callback handling
         print("🎙️ AudioRecordingService: Recording stop initiated")
     }
     
     /// Gets the current recording time
     func getCurrentTime() -> TimeInterval {
-        guard let recorder = audioRecorder, recorder.isRecording else {
-            return 0
-        }
+        guard let recorder = audioRecorder else { return 0 }
         return recorder.currentTime
+    }
+
+    /// Pauses the current recording (does not finalize the file)
+    func pauseRecording() {
+        guard isRecording, let recorder = audioRecorder, recorder.isRecording else {
+            print("⚠️ AudioRecordingService: Cannot pause - not currently recording")
+            return
+        }
+        recorder.pause()
+        isRecording = false
+        stopLevelMetering()
+        print("⏸️ AudioRecordingService: Recording paused at \(recorder.currentTime)s")
+    }
+
+    /// Resumes a paused recording into the same file
+    func resumeRecording() {
+        guard !isRecording, let recorder = audioRecorder, !recorder.isRecording else {
+            print("⚠️ AudioRecordingService: Cannot resume - not paused")
+            return
+        }
+        let resumed = recorder.record()
+        if resumed {
+            isRecording = true
+            startLevelMetering()
+            print("▶️ AudioRecordingService: Recording resumed at \(recorder.currentTime)s")
+        } else {
+            print("❌ AudioRecordingService: Failed to resume recording")
+        }
     }
     
     /// Generates a unique URL for a new recording

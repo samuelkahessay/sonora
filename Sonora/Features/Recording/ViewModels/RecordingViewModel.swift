@@ -40,6 +40,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     @Published var showingPaywall: Bool = false
     @Published var quotaBlocked: Bool = false
     @Published var isProUser: Bool = false
+    @Published var recordingState: RecordingSessionState = .idle
     
     // MARK: - Computed Properties
     
@@ -169,6 +170,14 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
                 guard let self = self else { return }
                 let didStop = self.wasRecording && !value
                 self.isRecording = value
+                // Update tri-state from repository signals
+                if value {
+                    self.recordingState = .recording
+                } else if self.audioRepository.isPaused {
+                    self.recordingState = .paused
+                } else {
+                    self.recordingState = .idle
+                }
                 if didStop {
                     // When recording stops automatically (cap reached), finalize operation and consume usage
                     if self.audioRepository.recordingStoppedAutomatically {
@@ -202,6 +211,19 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
             .sink { [weak self] value in
                 self?.recordingTime = value
                 self?.lastKnownRecordingTime = value
+            }
+            .store(in: &cancellables)
+
+        audioRepository.isPausedPublisher
+            .sink { [weak self] paused in
+                guard let self = self else { return }
+                if paused {
+                    self.recordingState = .paused
+                } else if self.isRecording {
+                    self.recordingState = .recording
+                } else {
+                    self.recordingState = .idle
+                }
             }
             .store(in: &cancellables)
         
@@ -354,6 +376,20 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
                 await refreshQuota()
             }
         }
+    }
+
+    /// Pause the ongoing recording
+    func pauseRecording() {
+        print("⏸️ RecordingViewModel: Pausing recording")
+        audioRepository.pauseRecording()
+        recordingState = .paused
+    }
+
+    /// Resume a paused recording
+    func resumeRecording() {
+        print("▶️ RecordingViewModel: Resuming recording")
+        audioRepository.resumeRecording()
+        recordingState = .recording
     }
     
     /// Cancel the current recording operation

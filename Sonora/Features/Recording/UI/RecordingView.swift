@@ -118,25 +118,36 @@ struct RecordingView: View {
                         }
                         .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
 
-                        // Recording cluster: button, timer overlay, inspire me (tighter spacing)
+                        // Recording cluster: button(s), timer overlay, inspire me (tighter spacing)
                         VStack(spacing: SonoraDesignSystem.Spacing.md) {
-                            // Sonic Bloom recording button with brand identity
-                            SonicBloomRecordButton(
-                            progress: viewModel.recordingProgress,
-                            isRecording: viewModel.isRecording,
-                            action: {
-                                HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
-                                viewModel.toggleRecording()
+                            if viewModel.recordingState == .idle {
+                                // Sonic Bloom recording button with brand identity
+                                SonicBloomRecordButton(
+                                    progress: viewModel.recordingProgress,
+                                    isRecording: viewModel.isRecording,
+                                    action: {
+                                        HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
+                                        viewModel.toggleRecording()
+                                    }
+                                )
+                                .disabled(viewModel.state.isRecordButtonDisabled)
+                                .accessibilityLabel(getRecordButtonAccessibilityLabel())
+                                .accessibilityHint(getRecordButtonAccessibilityHint())
+                                .accessibilityFocused($focusedElement, equals: .recordButton)
+                                .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
+                            } else {
+                                // Pause/Resume + Stop controls while active
+                                RecordingControlsView(
+                                    recordingState: viewModel.recordingState,
+                                    onPause: { viewModel.pauseRecording() },
+                                    onResume: { viewModel.resumeRecording() },
+                                    onStop: { viewModel.stopRecording() }
+                                )
+                                .transition(.scale.combined(with: .opacity))
                             }
-                            )
-                            .disabled(viewModel.state.isRecordButtonDisabled)
-                            .accessibilityLabel(getRecordButtonAccessibilityLabel())
-                            .accessibilityHint(getRecordButtonAccessibilityHint())
-                            .accessibilityFocused($focusedElement, equals: .recordButton)
-                            .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
 
                             // Monthly usage meter (Free only)
-                            if !viewModel.isProUser {
+                            if false { // usage meter disabled per request
                                 Text("This month • \(viewModel.monthlyUsageMinutes) of 60 min used")
                                     .font(.caption)
                                     .foregroundColor(.semantic(.textSecondary))
@@ -146,14 +157,14 @@ struct RecordingView: View {
                             // Timer overlay area (fixed height to avoid layout shifts)
                             ZStack(alignment: .top) {
                                 timerOverlayView
-                                    .opacity(viewModel.isRecording ? 1 : 0)
+                                    .opacity(viewModel.recordingState.isActive ? 1 : 0)
                                     .transition(.move(edge: .top).combined(with: .opacity))
-                                    .accessibilityHidden(!viewModel.isRecording)
+                                    .accessibilityHidden(!viewModel.recordingState.isActive)
                             }
                             .frame(height: 80)
                             .animation(
                                 UIAccessibility.isReduceMotionEnabled ? nil : .easeInOut(duration: 0.25),
-                                value: viewModel.isRecording
+                                value: viewModel.recordingState.isActive
                             )
 
                             Button(action: {
@@ -382,7 +393,7 @@ private extension RecordingView {
         VStack(spacing: Spacing.sm) {
             Text(viewModel.formattedRecordingTime)
                 .font(SonoraDesignSystem.Typography.timerDisplay)
-                .foregroundColor(.semantic(.textPrimary))
+                .foregroundColor(timerTextColor)
                 .contentTransition(.numericText())
                 .accessibilityLabel("Recording duration")
                 .accessibilityValue(getTimeAccessibilityLabel())
@@ -405,6 +416,14 @@ private extension RecordingView {
             }
         }
         .accessibilityElement(children: .contain)
+    }
+
+    private var timerTextColor: Color {
+        switch viewModel.recordingState {
+        case .recording: return .semantic(.textPrimary)
+        case .paused: return .semantic(.warning)
+        case .idle: return .semantic(.textSecondary)
+        }
     }
 
     // MARK: - Inspire Me Animation & Accessibility
@@ -457,4 +476,3 @@ func getInspireMeAccessibilityHint() -> String {
         }
     }
 }
-

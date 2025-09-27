@@ -27,6 +27,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     private let permissionStatusSubject = CurrentValueSubject<MicrophonePermissionStatus, Never>(.notDetermined)
     private let countdownSubject = CurrentValueSubject<(Bool, TimeInterval), Never>((false, 0))
     private let audioLevelSubject = CurrentValueSubject<Double, Never>(0)
+    private let isPausedSubject = CurrentValueSubject<Bool, Never>(false)
     
     // MARK: - AudioRepository Publishers
     var isRecordingPublisher: AnyPublisher<Bool, Never> { isRecordingSubject.eraseToAnyPublisher() }
@@ -34,6 +35,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     var permissionStatusPublisher: AnyPublisher<MicrophonePermissionStatus, Never> { permissionStatusSubject.eraseToAnyPublisher() }
     var countdownPublisher: AnyPublisher<(Bool, TimeInterval), Never> { countdownSubject.eraseToAnyPublisher() }
     var audioLevelPublisher: AnyPublisher<Double, Never> { audioLevelSubject.eraseToAnyPublisher() }
+    var isPausedPublisher: AnyPublisher<Bool, Never> { isPausedSubject.eraseToAnyPublisher() }
     
     init(backgroundAudioService: BackgroundAudioService) {
         self.backgroundAudioService = backgroundAudioService
@@ -90,6 +92,12 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
                 self?.audioLevelSubject.send(level)
             }
             .store(in: &cancellables)
+
+        backgroundAudioService.$isPaused
+            .sink { [weak self] paused in
+                self?.isPausedSubject.send(paused)
+            }
+            .store(in: &cancellables)
         
         print("🎵 AudioRepositoryImpl: BackgroundAudioService configured")
     }
@@ -116,6 +124,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         permissionStatusSubject.send(MicrophonePermissionStatus.current())
         countdownSubject.send((backgroundAudioService.isInCountdown, backgroundAudioService.remainingTime))
         audioLevelSubject.send(backgroundAudioService.audioLevel)
+        isPausedSubject.send(backgroundAudioService.isPaused)
     }
     
     
@@ -221,6 +230,16 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         print("🎵 AudioRepositoryImpl: Stopping background recording")
         backgroundAudioService.stopRecording()
     }
+
+    func pauseRecording() {
+        print("🎵 AudioRepositoryImpl: Pausing background recording")
+        backgroundAudioService.pauseRecording()
+    }
+
+    func resumeRecording() {
+        print("🎵 AudioRepositoryImpl: Resuming background recording")
+        backgroundAudioService.resumeRecording()
+    }
     
     /// Check if currently recording
     var isRecording: Bool {
@@ -231,6 +250,9 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     var recordingTime: TimeInterval {
         return backgroundAudioService.recordingTime
     }
+
+    /// Pause state
+    var isPaused: Bool { backgroundAudioService.isPaused }
     
     /// Check microphone permissions
     func checkMicrophonePermissions() {
