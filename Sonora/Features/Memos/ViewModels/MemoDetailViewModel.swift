@@ -65,7 +65,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         let repo = DIContainer.shared.analysisRepository()
         let hasDistill = repo.hasAnalysisResult(for: memo.id, mode: .distill)
             || repo.hasAnalysisResult(for: memo.id, mode: .distillSummary)
-            || repo.hasAnalysisResult(for: memo.id, mode: .distillThemes)
             || repo.hasAnalysisResult(for: memo.id, mode: .distillActions)
             || repo.hasAnalysisResult(for: memo.id, mode: .distillReflection)
         return hasDistill ? 1 : 0

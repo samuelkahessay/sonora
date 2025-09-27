@@ -266,9 +266,9 @@ struct RecordingView: View {
                         sharedDefaults.synchronize()
                         
                         // Stop recording if currently recording
-                        if viewModel.isRecording {
+                        if viewModel.isRecording || viewModel.recordingState == .paused {
                             HapticManager.shared.playRecordingFeedback(isStarting: false)
-                            viewModel.toggleRecording()
+                            viewModel.stopRecording()
                         }
                     }
                     // Resume idle pulse when returning active

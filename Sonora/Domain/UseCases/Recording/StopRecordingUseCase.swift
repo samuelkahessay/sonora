@@ -45,12 +45,13 @@ final class StopRecordingUseCase: StopRecordingUseCaseProtocol, @unchecked Senda
         
         // Stop via repository on main actor for thread safety
         await MainActor.run {
-            guard self.audioRepository.isRecording else {
-                logger.warning("Audio repository shows no recording in progress", category: .audio, context: context, error: nil)
-                return
+            // Allow stopping when paused as well as recording
+            if self.audioRepository.isRecording || self.audioRepository.isPaused {
+                self.audioRepository.stopRecording()
+                logger.info("Background recording stopped successfully", category: .audio, context: context)
+            } else {
+                logger.warning("Audio repository shows no active or paused recording", category: .audio, context: context, error: nil)
             }
-            self.audioRepository.stopRecording()
-            logger.info("Background recording stopped successfully", category: .audio, context: context)
         }
         
         // Complete the recording operation

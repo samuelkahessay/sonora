@@ -7,11 +7,13 @@ import { FormData, File } from 'undici';
 import { RequestSchema, AnalysisDataSchema, DistillDataSchema, ThemesDataSchema, TodosDataSchema, EventsDataSchema, RemindersDataSchema, ModelSettings, AnalysisJsonSchemas } from './schema.js';
 import { buildPrompt } from './prompts.js';
 import { createChatJSON, createModeration } from './openai.js';
+import { sanitizeTranscript } from './sanitize.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://sonora.app';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 // Ensure uploads directory exists (defensive)
 try {
@@ -47,6 +49,116 @@ app.get('/', (req, res) => {
 // Legacy health check for Fly.io
 app.get('/health', (req, res) => {
   res.json({ ok: true });
+});
+
+// Title generation (OpenRouter: llama free)
+const TitleRequest = z.object({
+  transcript: z.string().min(1).max(100_000),
+  language: z.string().optional(),
+  rules: z.object({
+    words: z.string().optional(),
+    titleCase: z.boolean().optional(),
+    noPunctuation: z.boolean().optional(),
+    maxChars: z.number().optional()
+  }).optional()
+});
+
+function sliceForTitle(text: string): string {
+  const maxFirst = 1500; const maxLast = 400;
+  if (text.length <= maxFirst) return text;
+  const first = text.slice(0, maxFirst);
+  const last = text.slice(-maxLast);
+  return `${first}\n\n${last}`;
+}
+
+function normalizeWhitespace(s: string): string {
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function hasEmojiOrPunct(s: string): boolean {
+  // Reject punctuation and emoji presentation characters
+  const punctOrEmoji = /[\p{P}\p{Emoji_Presentation}]/u;
+  return punctOrEmoji.test(s);
+}
+
+function validateTitle(raw: string, maxChars = 32): string | null {
+  let t = normalizeWhitespace(raw);
+  if (!t) return null;
+  if (t.length > maxChars) return null;
+  const words = t.split(' ').filter(Boolean);
+  if (words.length < 3 || words.length > 5) return null;
+  if (hasEmojiOrPunct(t)) return null;
+  return t;
+}
+
+app.post('/title', async (req, res) => {
+  try {
+    const { transcript, language, rules } = TitleRequest.parse(req.body || {});
+    if (!OPENROUTER_API_KEY) {
+      return res.status(500).json({ error: 'Server missing OPENROUTER_API_KEY' });
+    }
+
+    const sanitized = sanitizeTranscript(String(transcript));
+    const sliced = sliceForTitle(sanitized);
+    const constraints = {
+      words: (rules?.words || '3-5'),
+      titleCase: rules?.titleCase ?? true,
+      noPunctuation: rules?.noPunctuation ?? true,
+      maxChars: rules?.maxChars ?? 32
+    };
+
+    const system = [
+      'You generate concise, high-quality titles for personal wellness notes.',
+      'Return ONLY the title, no quotes, no punctuation/emojis, no extra words.',
+      'Respect the transcript language. Keep it 3–5 words, Title Case, ≤32 chars.'
+    ].join(' ');
+
+    const user = [
+      language ? `Language hint: ${language}` : undefined,
+      `Rules: ${constraints.words} words, Title Case=${constraints.titleCase}, No Punctuation=${constraints.noPunctuation}, MaxChars=${constraints.maxChars}.`,
+      'Transcript:',
+      sliced
+    ].filter(Boolean).join('\n');
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.SONORA_SITE_URL || 'https://sonora.app',
+        'X-Title': process.env.SONORA_SITE_NAME || 'Sonora'
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-3.3-8b-instruct:free',
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user }
+        ],
+        temperature: 0.2,
+        max_tokens: 32
+      })
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      console.error('OpenRouter /title error:', response.status, response.statusText, text.slice(0, 200));
+      return res.status(502).json({ error: 'UpstreamFailed' });
+    }
+    const data: any = await response.json();
+    const content: string = data?.choices?.[0]?.message?.content ?? '';
+    const candidate = normalizeWhitespace(content.replace(/\n/g, ' '));
+    const validated = validateTitle(candidate, constraints.maxChars);
+    if (!validated) {
+      return res.status(502).json({ error: 'TitleValidationFailed' });
+    }
+    return res.json({ title: validated });
+  } catch (e: any) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: 'BadRequest', details: e.errors });
+    }
+    console.error('Title generation error:', e?.message || String(e));
+    return res.status(500).json({ error: 'Internal' });
+  }
 });
 
 // Transcription endpoint (existing functionality)
@@ -289,7 +401,7 @@ app.post('/analyze', async (req, res) => {
           textForModeration = `${vd.summary}\n${(vd.key_points || []).join(' \n')}`;
           break;
         case 'distill':
-          textForModeration = `${vd.summary}\n${(vd.action_items || []).map((a: any) => a.text).join(' \n')}\n${(vd.key_themes || []).join(' \n')}\n${(vd.reflection_questions || []).join(' \n')}`;
+          textForModeration = `${vd.summary}\n${(vd.action_items || []).map((a: any) => a.text).join(' \n')}\n${(vd.reflection_questions || []).join(' \n')}`;
           break;
         case 'distill-summary':
           textForModeration = vd.summary || '';

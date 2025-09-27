@@ -72,7 +72,6 @@ public struct TokenUsage: Codable, Sendable {
 public struct DistillData: Codable, Sendable {
     public let summary: String
     public let action_items: [ActionItem]?
-    public let key_themes: [String]
     public let reflection_questions: [String]
     
     public struct ActionItem: Codable, Sendable, Equatable {

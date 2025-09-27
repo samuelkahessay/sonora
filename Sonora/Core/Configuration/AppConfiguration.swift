@@ -176,6 +176,8 @@ public final class AppConfiguration: ObservableObject {
         set { UserDefaults.standard.set(newValue, forKey: "enableProgressiveAnalysisRouting") }
     }
 
+    // Auto Title always enabled (flag removed)
+
     // MARK: - Effective Recording Cap (by service)
     /// Returns the effective recording cap in seconds based on the user's selected transcription service.
     /// Daily quota is enforced elsewhere; there is no global per-session cap.

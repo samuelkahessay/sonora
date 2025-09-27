@@ -47,6 +47,9 @@ final class DIContainer: ObservableObject, Resolver {
     private var _spotlightIndexer: (any SpotlightIndexing)?
     var _modelContext: ModelContext? // Keep strong reference to ModelContext
     var _fillerWordFilter: (any FillerWordFiltering)?
+    // Titles
+    private var _titleService: (any TitleServiceProtocol)?
+    private var _generateAutoTitleUseCase: (any GenerateAutoTitleUseCaseProtocol)?
 
     // MARK: - Phase 2: Core Optimization Services
     private var _audioQualityManager: AudioQualityManager?
@@ -377,6 +380,28 @@ final class DIContainer: ObservableObject, Resolver {
             _analysisExporter = AnalysisExportService()
         }
         return _analysisExporter!
+    }
+
+    // MARK: - Title Service & Use Case
+    @MainActor
+    func titleService() -> any TitleServiceProtocol {
+        ensureConfigured()
+        if _titleService == nil { _titleService = TitleService() }
+        return _titleService!
+    }
+
+    @MainActor
+    func generateAutoTitleUseCase() -> any GenerateAutoTitleUseCaseProtocol {
+        ensureConfigured()
+        if let uc = _generateAutoTitleUseCase { return uc }
+        let uc = GenerateAutoTitleUseCase(
+            titleService: titleService(),
+            memoRepository: memoRepository(),
+            transcriptionRepository: transcriptionRepository(),
+            logger: logger()
+        )
+        _generateAutoTitleUseCase = uc
+        return uc
     }
 
     @MainActor

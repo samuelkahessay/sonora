@@ -238,6 +238,11 @@ public final class MemoEventHandler {
         // Start tracking analysis time
         analysisStartTime[memoId] = Date()
 
+        // Kick off Auto Title generation (non-blocking)
+        Task { @MainActor in
+            await DIContainer.shared.generateAutoTitleUseCase().execute(memoId: memoId, transcript: text)
+        }
+
         // Auto-detect events/reminders if transcript suggests scheduling language
         let defaults = UserDefaults.standard
         let autoEvents = defaults.object(forKey: "autoDetectEvents") as? Bool ?? true

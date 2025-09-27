@@ -10,6 +10,9 @@ struct DistillResultView: View {
     let envelope: AnalyzeEnvelope<DistillData>?
     let partialData: PartialDistillData?
     let progress: DistillProgressUpdate?
+    // Pro gating (Action Items are Pro-only per current plan)
+    private var isPro: Bool { DIContainer.shared.storeKitService().isPro }
+    @State private var showPaywall: Bool = false
     
     // Convenience initializers for backward compatibility
     init(data: DistillData, envelope: AnalyzeEnvelope<DistillData>) {
@@ -40,18 +43,14 @@ struct DistillResultView: View {
                 summaryPlaceholder
             }
             
-            // Action Items Section (only shown if present)
-            if let actionItems = effectiveActionItems, !actionItems.isEmpty {
+            // Action Items Section (Pro only)
+            if isPro, let actionItems = effectiveActionItems, !actionItems.isEmpty {
                 actionItemsSection(actionItems)
-            } else if isShowingProgress && shouldShowActionItemsPlaceholder {
+            } else if isPro && isShowingProgress && shouldShowActionItemsPlaceholder {
                 actionItemsPlaceholder
             }
-            
-            // Key Themes Section
-            if let keyThemes = effectiveKeyThemes, !keyThemes.isEmpty {
-                keyThemesSection(keyThemes)
-            } else if isShowingProgress {
-                keyThemesPlaceholder
+            else if !isPro {
+                upgradeCTA
             }
             
             // Reflection Questions Section
@@ -81,6 +80,7 @@ struct DistillResultView: View {
             }
         }
         .textSelection(.enabled)
+        .sheet(isPresented: $showPaywall) { PaywallView() }
     }
     
     // MARK: - Computed Properties
@@ -95,10 +95,6 @@ struct DistillResultView: View {
     
     private var effectiveActionItems: [DistillData.ActionItem]? {
         return data?.action_items ?? partialData?.actionItems
-    }
-    
-    private var effectiveKeyThemes: [String]? {
-        return data?.key_themes ?? partialData?.keyThemes
     }
     
     private var effectiveReflectionQuestions: [String]? {
@@ -217,46 +213,6 @@ struct DistillResultView: View {
         }
     }
     
-    // MARK: - Key Themes Section
-    
-    @ViewBuilder
-    private func keyThemesSection(_ themes: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "tag.circle")
-                    .font(.subheadline)
-                    .foregroundColor(.semantic(.info))
-                Text("Key Themes")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.semantic(.textPrimary))
-            }
-            
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 120, maximum: .infinity), spacing: 10)],
-                spacing: 10
-            ) {
-                ForEach(themes, id: \.self) { theme in
-                    Text(theme)
-                        .font(.callout)
-                        .foregroundColor(.semantic(.textPrimary))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity)
-                        .background(Color.semantic(.brandPrimary).opacity(0.1))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.semantic(.brandPrimary).opacity(0.3), lineWidth: 1)
-                        )
-                        .cornerRadius(8)
-                        .accessibilityLabel("Theme: \(theme)")
-                }
-            }
-        }
-    }
-    
     // MARK: - Reflection Questions Section
     
     @ViewBuilder
@@ -336,6 +292,42 @@ struct DistillResultView: View {
         .redacted(reason: .placeholder)
         .frame(minHeight: 130)
     }
+
+    // MARK: - Upgrade CTA (Subtle)
+    @ViewBuilder
+    private var upgradeCTA: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "lock.fill")
+                .font(.caption)
+                .foregroundColor(.semantic(.brandPrimary))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Action Items with Pro")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.semantic(.textPrimary))
+                Text("Gentle, tiny next steps tailored to your note")
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+            }
+            Spacer()
+            Button("Learn more") {
+                HapticManager.shared.playSelection()
+                showPaywall = true
+            }
+            .font(.caption)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .accessibilityLabel("Learn more about Sonora Pro")
+        }
+        .padding(12)
+        .background(Color.semantic(.fillSecondary))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.semantic(.brandPrimary).opacity(0.15), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+    }
     
     @ViewBuilder
     private var actionItemsPlaceholder: some View {
@@ -371,35 +363,6 @@ struct DistillResultView: View {
         }
         .redacted(reason: .placeholder)
         .frame(minHeight: 180)
-    }
-    
-    @ViewBuilder
-    private var keyThemesPlaceholder: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "tag.circle")
-                    .font(.subheadline)
-                    .foregroundColor(.semantic(.textSecondary))
-                Text("Key Themes")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.semantic(.textSecondary))
-                
-                Spacer()
-                
-                LoadingIndicator(size: .small)
-            }
-            
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], spacing: 8) {
-                ForEach(0..<3, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.semantic(.separator).opacity(0.2))
-                        .frame(width: index == 0 ? 80 : (index == 1 ? 65 : 100), height: 28)
-                }
-            }
-        }
-        .redacted(reason: .placeholder)
-        .frame(minHeight: 120)
     }
     
     @ViewBuilder
@@ -475,9 +438,7 @@ struct DistillResultView: View {
             let list = items.enumerated().map { "\($0.offset + 1). \($0.element.text) [\($0.element.priority.rawValue)]" }.joined(separator: "\n")
             parts.append("Action Items:\n" + list)
         }
-        if let themes = effectiveKeyThemes, !themes.isEmpty {
-            parts.append("Key Themes:\n" + themes.joined(separator: ", "))
-        }
+        // Key Themes intentionally omitted from Distill (Themes is a separate mode)
         if let questions = effectiveReflectionQuestions, !questions.isEmpty {
             let list = questions.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
             parts.append("Reflection Questions:\n" + list)
@@ -486,4 +447,3 @@ struct DistillResultView: View {
     }
 
 }
-

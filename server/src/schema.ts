@@ -36,7 +36,6 @@ export const DistillDataSchema = z.object({
     text: z.string(),
     priority: z.enum(['high', 'medium', 'low'])
   })),
-  key_themes: z.array(z.string()),
   reflection_questions: z.array(z.string())
 });
 
@@ -125,13 +124,6 @@ export const DistillJsonSchema = {
           additionalProperties: false
         }
       },
-      key_themes: {
-        type: "array",
-        description: "2-4 main themes/topics extracted from the memo",
-        items: { type: "string" },
-        minItems: 2,
-        maxItems: 4
-      },
       reflection_questions: {
         type: "array",
         description: "2-3 coaching questions to help the user think deeper",
@@ -140,7 +132,7 @@ export const DistillJsonSchema = {
         maxItems: 3
       }
     },
-    required: ["summary", "action_items", "key_themes", "reflection_questions"],
+    required: ["summary", "action_items", "reflection_questions"],
     additionalProperties: false
   }
 };

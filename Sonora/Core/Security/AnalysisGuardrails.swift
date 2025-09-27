@@ -68,10 +68,6 @@ enum AnalysisGuardrails {
             }
         }
         
-        // Validate key themes
-        guard distill.key_themes.count > 0 && distill.key_themes.count <= 10 else { return false }
-        guard distill.key_themes.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 500 }) else { return false }
-        
         // Validate reflection questions
         guard distill.reflection_questions.count > 0 && distill.reflection_questions.count <= 5 else { return false }
         guard distill.reflection_questions.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 1000 }) else { return false }
@@ -79,4 +75,3 @@ enum AnalysisGuardrails {
         return true
     }
 }
-

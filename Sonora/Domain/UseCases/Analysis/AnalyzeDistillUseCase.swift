@@ -96,7 +96,6 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sen
                               "apiLatencyMs": result.latency_ms,
                               "summaryLength": result.data.summary.count,
                               "actionItemsCount": result.data.action_items?.count ?? 0,
-                              "themesCount": result.data.key_themes.count,
                               "questionsCount": result.data.reflection_questions.count,
                               "model": result.model
                           ]))

@@ -23,13 +23,11 @@ public struct DistillProgressUpdate: Sendable, Equatable {
 public struct PartialDistillData: Sendable, Equatable {
     public var summary: String?
     public var actionItems: [DistillData.ActionItem]?
-    public var keyThemes: [String]?
     public var reflectionQuestions: [String]?
     
-    /// Convert to complete DistillData if all components are present
+    /// Convert to complete DistillData if all required components are present
     public func toDistillData() -> DistillData? {
         guard let summary = summary,
-              let keyThemes = keyThemes,
               let reflectionQuestions = reflectionQuestions else {
             return nil
         }
@@ -37,7 +35,6 @@ public struct PartialDistillData: Sendable, Equatable {
         return DistillData(
             summary: summary,
             action_items: actionItems,
-            key_themes: keyThemes,
             reflection_questions: reflectionQuestions
         )
     }
@@ -46,7 +43,6 @@ public struct PartialDistillData: Sendable, Equatable {
 enum DistillComponentData: Sendable {
     case summary(DistillSummaryData)
     case actions(DistillActionsData)
-    case themes(DistillThemesData)
     case reflection(DistillReflectionData)
 }
 
@@ -60,7 +56,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     private let operationCoordinator: any OperationCoordinatorProtocol
     
     // MARK: - Constants
-    private let componentModes: [AnalysisMode] = [.distillSummary, .distillActions, .distillThemes, .distillReflection]
+    private let componentModes: [AnalysisMode] = [.distillSummary, .distillActions, .distillReflection]
     
     // MARK: - Initialization
     init(
@@ -254,10 +250,6 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                 if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillActionsData.self) {
                     return (.actions(result.data), result.latency_ms, result.tokens)
                 }
-            case .distillThemes:
-                if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillThemesData.self) {
-                    return (.themes(result.data), result.latency_ms, result.tokens)
-                }
             case .distillReflection:
                 if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillReflectionData.self) {
                     return (.reflection(result.data), result.latency_ms, result.tokens)
@@ -277,9 +269,6 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         case .distillActions:
             let envelope = try await analysisService.analyzeDistillActions(transcript: transcript)
             return (.actions(envelope.data), envelope.latency_ms, envelope.tokens)
-        case .distillThemes:
-            let envelope = try await analysisService.analyzeDistillThemes(transcript: transcript)
-            return (.themes(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillReflection:
             let envelope = try await analysisService.analyzeDistillReflection(transcript: transcript)
             return (.reflection(envelope.data), envelope.latency_ms, envelope.tokens)
@@ -297,9 +286,6 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             case .actions(let actionsData):
                 let envelope = AnalyzeEnvelope(mode: mode, data: actionsData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
                 analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
-            case .themes(let themesData):
-                let envelope = AnalyzeEnvelope(mode: mode, data: themesData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
-                analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
             case .reflection(let reflectionData):
                 let envelope = AnalyzeEnvelope(mode: mode, data: reflectionData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
                 analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
@@ -313,8 +299,6 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             partialData.summary = summaryData.summary
         case .actions(let actionsData):
             partialData.actionItems = actionsData.action_items
-        case .themes(let themesData):
-            partialData.keyThemes = themesData.key_themes
         case .reflection(let reflectionData):
             partialData.reflectionQuestions = reflectionData.reflection_questions
         }
