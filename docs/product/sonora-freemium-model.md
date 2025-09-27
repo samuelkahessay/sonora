@@ -456,3 +456,81 @@ This freemium model balances aggressive user acquisition with sustainable econom
 ---
 
 *"The best freemium models provide genuine value at every tier while creating natural desire for advancement. Sonora's philosophy-driven approach creates deeper user engagement than traditional productivity apps, leading to higher conversion rates and stronger retention."*
+
+---
+
+## Remaining Tasks Before App Store Update (Freemium)
+
+Use this checklist to ship the first freemium build with a clear $100 MRR path. Everything is ordered by dependency. Items marked [Code] relate to the app; [ASC] is App Store Connect; [Ops] is process/content.
+
+### 1) Metering & Gating [Code]
+- Enforce monthly free limit (target 60 minutes) using existing daily usage repo
+  - Persist month-to-date seconds; reset on calendar month boundary (serverless acceptable)
+  - Block recording start when over limit with upgrade prompt
+  - Show remaining minutes UI: Recording screen + Settings
+- Free feature gating
+  - Analysis: restrict to Distill Lite only (already simplified); hide other modes and any references
+  - EventKit creation (events/reminders): Pro only; show paywall if attempted on free
+  - Advanced export (CSV/PDF/bulk): Pro only (if surfaced)
+- Notifications
+  - 75% and 100% of free quota local notifications (one per month)
+
+### 2) Paywall & Purchase Flow [Code]
+- StoreKit 2 integration
+  - Subscription group "Sonora Pro" with Monthly and Annual products
+  - Implement purchase, restore purchases, and entitlement cache
+  - Add "Manage Subscription" deep-link in Settings (opens iOS Subscriptions)
+- Paywall UI (single screen)
+  - Benefits grid, price, monthly/annual toggle, localized terms
+  - Legal copy required by App Review (auto-renewal text, trial terms if added)
+  - Entry points: quota reached, attempt Pro feature, Settings → Upgrade
+
+### 3) UX Polish for Freemium [Code]
+- Onboarding
+  - Add single slide clarifying Free (60 min/mo + Lite Distill) vs Pro benefits
+  - CTA to start free; optional "See Pro" link to paywall
+- In‑app surfaces
+  - Usage meter component in Recording/Settings
+  - Upgrade nudges: small banners after analysis and in Memo Detail when value is demonstrated
+- Copy pass for all references: hide AI “types”, call the free analysis "Lite Distill"
+
+### 4) Analytics & Alerts [Code]
+- Event logging (privacy‑safe, local if no backend)
+  - install_id, device locale, app version
+  - events: record_started, record_blocked_quota, analysis_completed, paywall_view, purchase_succeeded, restore_succeeded
+- Cost monitors (debug only)
+  - Accumulate token/second estimates to validate unit economics
+
+### 5) App Store Connect Setup [ASC]
+- Create auto‑renewable subscription group "Sonora Pro"
+  - Products: `pro.monthly`, `pro.annual`
+  - Prices: $6.99 monthly, $59.99 annual (no intro for v1 to simplify review)
+  - Localized display names and descriptions
+- App metadata
+  - Update screenshots showing Free/Pro and usage meter
+  - Update description with clear free tier and Pro benefits bullets
+  - Support URL, Privacy Policy, Terms of Use (public links)
+- Review notes
+  - Explain freemium gating, quota logic, and how to trigger paywall
+  - Test credentials not required (no account), include steps to hit quota
+
+### 6) Legal & Compliance [Ops]
+- Ensure Privacy Policy and Terms cover subscriptions, data storage, and export
+- Paywall must include auto‑renewal disclosure and links to terms/privacy
+- Restore Purchases present in Settings
+
+### 7) QA & Release [Ops]
+- Test matrix on iPhone 16 Pro (iOS 18.6) and iPhone 17 Pro (iOS 26)
+  - Free quota: under/over limit, month reset edge case
+  - Paywall: purchase, restore, cancellation path, upgrade prompts
+  - Gated features: EventKit, advanced export blocked correctly
+  - Offline behavior: purchase/restore error messaging
+- Staged rollout: 10% → 50% → 100%
+- Post‑release dashboard: paywall views, purchase rate, block events
+
+### 8) Nice‑to‑Have (post‑1.0)
+- Intro offer (7‑day trial or 1‑month introductory price)
+- Referral code for 1 bonus hour free
+- In‑app A/B framework for limits/messaging
+
+Deliverable for submission: a build with strict 60‑min monthly free limit, Lite Distill only for free users, a working StoreKit 2 paywall + restore, usage meter, and clear upgrade paths. After this lands, marketing copy/screenshots + ASC configuration complete the release.

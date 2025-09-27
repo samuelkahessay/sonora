@@ -210,7 +210,7 @@ public final class MemoEventHandler {
             return (key, label)
         }()
 
-        var info: [String: Any] = [
+        let info: [String: Any] = [
             "memoId": memoId.uuidString,
             "textLength": text.count,
             "transcriptionDurationSeconds": duration?.rounded() ?? 0,

@@ -194,7 +194,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
                     let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
                     let serviceLabel: String = serviceKey == "cloud_api" ? "Cloud API" : "unknown"
-                    var info: [String: Any] = [
+                    let info: [String: Any] = [
                         "memoId": memo.id.uuidString,
                         "textLength": textLen,
                         "language": langToSave,
@@ -243,7 +243,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
                 let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
                 let serviceLabel: String = serviceKey == "cloud_api" ? "Cloud API" : "unknown"
-                var info: [String: Any] = [
+                let info: [String: Any] = [
                     "memoId": memo.id.uuidString,
                     "textLength": textLen,
                     "language": langToSave,
@@ -310,7 +310,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
                 let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
                 let serviceLabel: String = serviceKey == "cloud_api" ? "Cloud API" : "unknown"
-                var info: [String: Any] = [
+                let info: [String: Any] = [
                     "memoId": memo.id.uuidString,
                     "textLength": textLen,
                     "language": langToSave,

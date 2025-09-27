@@ -54,4 +54,30 @@ extension DIContainer {
         _recordingUsageRepository = repo
         return repo
     }
+
+    /// Recording quota policy (monthly limits)
+    @MainActor
+    func recordingQuotaPolicy() -> any RecordingQuotaPolicyProtocol {
+        ensureConfigured()
+        if let policy = _recordingQuotaPolicy { return policy }
+        guard let policy = resolve((any RecordingQuotaPolicyProtocol).self) else {
+            fatalError("DIContainer not configured: recordingQuotaPolicy")
+        }
+        _recordingQuotaPolicy = policy
+        return policy
+    }
+
+    // MARK: - Use Cases (Recording Quota)
+
+    @MainActor
+    func getRemainingMonthlyQuotaUseCase() -> any GetRemainingMonthlyQuotaUseCaseProtocol {
+        ensureConfigured()
+        if let uc = _getRemainingMonthlyQuotaUseCase { return uc }
+        let uc = GetRemainingMonthlyQuotaUseCase(
+            quotaPolicy: recordingQuotaPolicy(),
+            usageRepository: recordingUsageRepository()
+        )
+        _getRemainingMonthlyQuotaUseCase = uc
+        return uc
+    }
 }

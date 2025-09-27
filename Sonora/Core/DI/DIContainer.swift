@@ -25,6 +25,7 @@ final class DIContainer: ObservableObject, Resolver {
     var _transcriptionRepository: (any TranscriptionRepository)?
     var _analysisRepository: (any AnalysisRepository)?
     var _recordingUsageRepository: (any RecordingUsageRepository)?
+    var _recordingQuotaPolicy: (any RecordingQuotaPolicyProtocol)?
     // Prompts
     private var _promptUsageRepository: (any PromptUsageRepository)?
     private var _promptCatalog: (any PromptCatalog)?
@@ -40,6 +41,8 @@ final class DIContainer: ObservableObject, Resolver {
     private var _liveActivityService: (any LiveActivityServiceProtocol)?
     private var _eventBus: (any EventBusProtocol)?
     private var _eventHandlerRegistry: (any EventHandlerRegistryProtocol)?
+    var _getRemainingMonthlyQuotaUseCase: (any GetRemainingMonthlyQuotaUseCaseProtocol)?
+    var _storeKitService: (any StoreKitServiceProtocol)?
     var _moderationService: (any ModerationServiceProtocol)?
     private var _spotlightIndexer: (any SpotlightIndexing)?
     var _modelContext: ModelContext? // Keep strong reference to ModelContext
@@ -192,6 +195,17 @@ final class DIContainer: ObservableObject, Resolver {
         // Register RecordingUsageRepository (UserDefaults-backed)
         register((any RecordingUsageRepository).self) { _ in
             return RecordingUsageRepositoryImpl() as any RecordingUsageRepository
+        }
+        
+        // Register StoreKit service for subscriptions
+        register((any StoreKitServiceProtocol).self) { _ in
+            return StoreKitService() as any StoreKitServiceProtocol
+        }
+
+        // Register RecordingQuotaPolicy (protocol-first)
+        register((any RecordingQuotaPolicyProtocol).self) { resolver in
+            let sk = resolver.resolve((any StoreKitServiceProtocol).self) ?? (StoreKitService() as any StoreKitServiceProtocol)
+            return DefaultRecordingQuotaPolicy(isProProvider: { sk.isPro }) as any RecordingQuotaPolicyProtocol
         }
                 
         // Register LiveActivityService

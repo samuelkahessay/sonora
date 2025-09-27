@@ -135,6 +135,14 @@ struct RecordingView: View {
                             .accessibilityFocused($focusedElement, equals: .recordButton)
                             .accessibilityAddTraits(viewModel.isRecording ? [.startsMediaSession] : [.startsMediaSession])
 
+                            // Monthly usage meter (Free only)
+                            if !viewModel.isProUser {
+                                Text("This month • \(viewModel.monthlyUsageMinutes) of 60 min used")
+                                    .font(.caption)
+                                    .foregroundColor(.semantic(.textSecondary))
+                                    .accessibilityLabel("This month, \(viewModel.monthlyUsageMinutes) of 60 minutes used")
+                            }
+
                             // Timer overlay area (fixed height to avoid layout shifts)
                             ZStack(alignment: .top) {
                                 timerOverlayView
@@ -268,6 +276,9 @@ struct RecordingView: View {
             contentView
         })
         // Removed category sheet; Inspire Me now shuffles the prompt inline
+        .sheet(isPresented: $viewModel.showingPaywall) {
+            PaywallView()
+        }
     }
     
     // MARK: - Permission UI Helpers
@@ -436,7 +447,7 @@ private extension RecordingView {
         idlePulseTask = nil
     }
 
-    func getInspireMeAccessibilityHint() -> String {
+func getInspireMeAccessibilityHint() -> String {
         if !hasSeenInspireMe {
             return "Need inspiration? Double tap to get a conversation starter"
         } else if idlePulseTask != nil {
@@ -446,3 +457,4 @@ private extension RecordingView {
         }
     }
 }
+

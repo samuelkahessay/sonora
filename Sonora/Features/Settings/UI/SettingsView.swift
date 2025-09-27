@@ -6,11 +6,21 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: Spacing.lg) {
+                    // Usage (monthly) — visible to all users
+                    MonthlyRecordingUsageSectionView()
+
+                    // Upgrade/Manage sections depending on entitlement
+                    if DIContainer.shared.storeKitService().isPro {
+                        SubscriptionManagementView()
+                    } else {
+                        UpgradeCallToActionView()
+                    }
                     // Personalization (display name)
                     PersonalizationSectionView()
 
-                    // Consolidated Recording & Usage (quota + language)
-                    RecordingUsageSectionView()
+                    // Transcription language settings
+                    // (Legacy usage meter removed in favor of monthly cap UI above)
+                    TranscriptionLanguageSectionView()
 
                     // Non-destructive exports
                     ExportDataSectionView()

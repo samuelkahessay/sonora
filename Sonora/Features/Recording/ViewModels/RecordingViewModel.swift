@@ -20,7 +20,9 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     private let canStartRecordingUseCase: any CanStartRecordingUseCaseProtocol
     private let consumeRecordingUsageUseCase: any ConsumeRecordingUsageUseCaseProtocol
     private let resetDailyUsageIfNeededUseCase: any ResetDailyUsageIfNeededUseCaseProtocol
-    private let getRemainingDailyQuotaUseCase: any GetRemainingDailyQuotaUseCaseProtocol
+    private let getRemainingMonthlyQuotaUseCase: any GetRemainingMonthlyQuotaUseCaseProtocol
+    private let usageRepository: any RecordingUsageRepository
+    private let storeKitService: any StoreKitServiceProtocol
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Debounce Management
@@ -34,6 +36,10 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     
     /// Single source of truth for all UI state
     @Published var state = RecordingViewState()
+    @Published var monthlyUsageMinutes: Int = 0
+    @Published var showingPaywall: Bool = false
+    @Published var quotaBlocked: Bool = false
+    @Published var isProUser: Bool = false
     
     // MARK: - Computed Properties
     
@@ -102,7 +108,9 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         canStartRecordingUseCase: any CanStartRecordingUseCaseProtocol,
         consumeRecordingUsageUseCase: any ConsumeRecordingUsageUseCaseProtocol,
         resetDailyUsageIfNeededUseCase: any ResetDailyUsageIfNeededUseCaseProtocol,
-        getRemainingDailyQuotaUseCase: any GetRemainingDailyQuotaUseCaseProtocol
+        getRemainingMonthlyQuotaUseCase: any GetRemainingMonthlyQuotaUseCaseProtocol,
+        usageRepository: any RecordingUsageRepository,
+        storeKitService: any StoreKitServiceProtocol
     ) {
         self.startRecordingUseCase = startRecordingUseCase
         self.stopRecordingUseCase = stopRecordingUseCase
@@ -114,11 +122,28 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         self.canStartRecordingUseCase = canStartRecordingUseCase
         self.consumeRecordingUsageUseCase = consumeRecordingUsageUseCase
         self.resetDailyUsageIfNeededUseCase = resetDailyUsageIfNeededUseCase
-        self.getRemainingDailyQuotaUseCase = getRemainingDailyQuotaUseCase
+        self.getRemainingMonthlyQuotaUseCase = getRemainingMonthlyQuotaUseCase
+        self.usageRepository = usageRepository
+        self.storeKitService = storeKitService
 
         setupBindings()
         setupRecordingCallback()
         setupOperationStatusMonitoring()
+
+        // Subscribe to monthly usage and Pro entitlement
+        usageRepository.monthUsagePublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] seconds in
+                self?.monthlyUsageMinutes = Int((seconds / 60.0).rounded(.toNearestOrEven))
+            }
+            .store(in: &cancellables)
+
+        storeKitService.isProPublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] isPro in
+                self?.isProUser = isPro
+            }
+            .store(in: &cancellables)
 
         // Initialize quota view
         Task { @MainActor in
@@ -198,8 +223,8 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     /// Refresh the quota state (service + remaining seconds)
     private func refreshQuota() async {
         state.quota.service = .cloudAPI
-        let rem = await getRemainingDailyQuotaUseCase.execute(service: .cloudAPI)
-        state.quota.remainingDailySeconds = rem ?? 0
+        let rem = try? await getRemainingMonthlyQuotaUseCase.execute()
+        state.quota.remainingDailySeconds = rem == .infinity ? 0 : (rem ?? 0)
         objectWillChange.send()
     }
     
@@ -259,10 +284,17 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
                     if let allowed = try await canStartRecordingUseCase.execute(service: .cloudAPI) {
                         capToApply = allowed
                     }
+                } catch let err as RecordingQuotaError {
+                    switch err {
+                    case .limitReached:
+                        self.quotaBlocked = true
+                        self.showingPaywall = true
+                        await refreshQuota()
+                        return
+                    }
                 } catch {
-                    // Surface quota errors
+                    // Other errors
                     self.error = ErrorMapping.mapError(error)
-                    // Also refresh quota for UI
                     await refreshQuota()
                     return
                 }

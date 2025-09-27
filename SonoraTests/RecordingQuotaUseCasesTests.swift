@@ -6,10 +6,14 @@ import Combine
 // In-memory RecordingUsageRepository mock
 final class InMemoryRecordingUsageRepository: RecordingUsageRepository {
     private var store: [String: TimeInterval] = [:]
+    private var monthStore: [String: TimeInterval] = [:]
     private let subject = CurrentValueSubject<TimeInterval, Never>(0)
+    private let monthSubject = CurrentValueSubject<TimeInterval, Never>(0)
     private let calendar: Calendar
     private let formatter: DateFormatter
     private var currentKey: String
+    private let monthFormatter: DateFormatter
+    private var currentMonthKey: String
 
     init(calendar: Calendar = .current) {
         self.calendar = calendar
@@ -20,9 +24,21 @@ final class InMemoryRecordingUsageRepository: RecordingUsageRepository {
         let today = calendar.startOfDay(for: Date())
         self.currentKey = formatter.string(from: today)
         self.subject.send(0)
+
+        self.monthFormatter = DateFormatter()
+        self.monthFormatter.calendar = calendar
+        self.monthFormatter.locale = Locale(identifier: "en_US_POSIX")
+        self.monthFormatter.dateFormat = "yyyy-MM"
+        if let interval = calendar.dateInterval(of: .month, for: Date()) {
+            self.currentMonthKey = monthFormatter.string(from: interval.start)
+        } else {
+            self.currentMonthKey = monthFormatter.string(from: Date())
+        }
+        self.monthSubject.send(0)
     }
 
     var todayUsagePublisher: AnyPublisher<TimeInterval, Never> { subject.eraseToAnyPublisher() }
+    var monthUsagePublisher: AnyPublisher<TimeInterval, Never> { monthSubject.eraseToAnyPublisher() }
 
     func usage(for day: Date) async -> TimeInterval {
         let key = formatter.string(from: calendar.startOfDay(for: day))
@@ -35,6 +51,18 @@ final class InMemoryRecordingUsageRepository: RecordingUsageRepository {
         let next = cur + max(0, seconds)
         store[key] = next
         if key == currentKey { subject.send(next) }
+
+        // monthly
+        let monthKey: String = {
+            if let interval = calendar.dateInterval(of: .month, for: day) {
+                return monthFormatter.string(from: interval.start)
+            }
+            return monthFormatter.string(from: day)
+        }()
+        let mcur = monthStore[monthKey] ?? 0
+        let mnext = mcur + max(0, seconds)
+        monthStore[monthKey] = mnext
+        if monthKey == currentMonthKey { monthSubject.send(mnext) }
     }
 
     func resetIfDayChanged(now: Date) async {
@@ -44,19 +72,47 @@ final class InMemoryRecordingUsageRepository: RecordingUsageRepository {
             subject.send(store[key] ?? 0)
         }
     }
+
+    func monthToDateUsage(for monthStart: Date) async -> TimeInterval {
+        let key = monthFormatter.string(from: monthStart)
+        return monthStore[key] ?? 0
+    }
+
+    func addMonthlyUsage(_ seconds: TimeInterval, for day: Date) async {
+        let key = monthFormatter.string(from: day)
+        let cur = monthStore[key] ?? 0
+        let next = cur + max(0, seconds)
+        monthStore[key] = next
+        if key == currentMonthKey { monthSubject.send(next) }
+    }
+
+    func resetIfMonthChanged(now: Date) async {
+        let key: String
+        if let interval = calendar.dateInterval(of: .month, for: now) {
+            key = monthFormatter.string(from: interval.start)
+        } else {
+            key = monthFormatter.string(from: now)
+        }
+        if key != currentMonthKey {
+            currentMonthKey = key
+            monthSubject.send(monthStore[key] ?? 0)
+        }
+    }
 }
 
 struct RecordingQuotaUseCasesTests {
-    @Test @MainActor func testCanStartRecordingUseCase_AllowsAndClamps() async throws {
+    @Test @MainActor func testCanStartRecordingUseCase_AllowsAndClamps_Monthly() async throws {
         let repo = InMemoryRecordingUsageRepository()
-        let canStart = CanStartRecordingUseCase(usageRepository: repo)
+        // Compose monthly UC over the in-memory repo and default policy (free)
+        let monthlyUC = GetRemainingMonthlyQuotaUseCase(quotaPolicy: DefaultRecordingQuotaPolicy(), usageRepository: repo)
+        let canStart = CanStartRecordingUseCase(getRemainingMonthlyQuotaUseCase: monthlyUC)
 
-        // Fresh day: remaining=600, allowed per-session equals remaining (no per-session cap)
+        // Fresh month: remaining=3600
         let allowed1 = try await canStart.execute(service: .cloudAPI)
-        #expect(allowed1 == 600)
+        #expect(allowed1 == 3600)
 
-        // Consume 590s
-        await repo.addUsage(590, for: Date())
+        // Consume 3590s
+        await repo.addUsage(3590, for: Date())
         let allowed2 = try await canStart.execute(service: .cloudAPI)
         #expect(allowed2 == 10)
 
@@ -70,18 +126,18 @@ struct RecordingQuotaUseCasesTests {
         }
     }
 
-    @Test @MainActor func testConsumeAndRemainingUseCases() async throws {
+    @Test @MainActor func testConsumeAndRemainingMonthlyUseCases() async throws {
         let repo = InMemoryRecordingUsageRepository()
         let consume = ConsumeRecordingUsageUseCase(usageRepository: repo)
-        let remaining = GetRemainingDailyQuotaUseCase(usageRepository: repo)
+        let monthly = GetRemainingMonthlyQuotaUseCase(quotaPolicy: DefaultRecordingQuotaPolicy(), usageRepository: repo)
 
         // Start with 0 used for cloud
-        var remCloud = await remaining.execute(service: .cloudAPI)
-        #expect(remCloud == 600)
+        var rem = try await monthly.execute()
+        #expect(rem == 3600)
 
-        // Consume 125s
+        // Consume 125s (adds to month via addUsage inside consume)
         await consume.execute(elapsed: 125, service: .cloudAPI)
-        remCloud = await remaining.execute(service: .cloudAPI)
-        #expect(remCloud == 475)
+        rem = try await monthly.execute()
+        #expect(rem == 3600 - 125)
     }
 }

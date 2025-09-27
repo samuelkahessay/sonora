@@ -11,8 +11,8 @@ extension DIContainer {
 
     @MainActor
     func canStartRecordingUseCase() -> any CanStartRecordingUseCaseProtocol {
-        let repo = recordingUsageRepository()
-        return CanStartRecordingUseCase(usageRepository: repo)
+        let monthlyUC = getRemainingMonthlyQuotaUseCase()
+        return CanStartRecordingUseCase(getRemainingMonthlyQuotaUseCase: monthlyUC)
     }
 
     @MainActor
@@ -27,4 +27,3 @@ extension DIContainer {
         return ResetDailyUsageIfNeededUseCase(usageRepository: repo)
     }
 }
-
