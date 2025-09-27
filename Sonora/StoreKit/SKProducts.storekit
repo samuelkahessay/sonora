@@ -1,0 +1,53 @@
+{
+  "storekitConfigurationVersion": 1,
+  "products": [
+    {
+      "id": "pro.monthly",
+      "type": "autoRenewableSubscription",
+      "displayName": "Pro Monthly",
+      "subscription": {
+        "group": "sonora.pro",
+        "duration": "P1M",
+        "familyShareable": false,
+        "introductoryOffer": {
+          "mode": "freeTrial",
+          "duration": "P7D"
+        }
+      },
+      "localizations": [
+        {
+          "locale": "en_US",
+          "displayName": "Pro Monthly",
+          "description": "Unlimited recording and premium features"
+        }
+      ]
+    },
+    {
+      "id": "pro.annual",
+      "type": "autoRenewableSubscription",
+      "displayName": "Pro Annual",
+      "subscription": {
+        "group": "sonora.pro",
+        "duration": "P1Y",
+        "familyShareable": false,
+        "introductoryOffer": {
+          "mode": "freeTrial",
+          "duration": "P7D"
+        }
+      },
+      "localizations": [
+        {
+          "locale": "en_US",
+          "displayName": "Pro Annual",
+          "description": "Save with the annual plan"
+        }
+      ]
+    }
+  ],
+  "subscriptionGroups": [
+    {
+      "id": "sonora.pro",
+      "displayName": "Sonora Pro"
+    }
+  ]
+}

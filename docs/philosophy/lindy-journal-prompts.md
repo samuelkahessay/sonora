@@ -7,249 +7,249 @@
 
 ## I. Self-Knowledge & Character
 
-1. **What virtue did I practice today, and where did I fall short of my ideals?**
+1. **What virtue did you practice this [DayPart], and where did you fall short of your ideals?**
 
-2. **Which of my actions today reflected my true character, and which reflected mere impulse or habit?**
+2. **Which of your actions today reflected your true character, and which reflected mere impulse or habit?**
 
-3. **What would I do differently if I knew this day would define how I am remembered?**
+3. **What would you do differently this [DayPart] if you knew today would define how you are remembered?**
 
-4. **In what ways am I still the same person I was five years ago, and in what ways have I grown?**
+4. **In what ways are you still the same person you were five years ago, and in what ways have you grown?**
 
-5. **What fear or desire currently has the strongest hold over my decisions?**
+5. **What fear or desire currently has the strongest hold over your decisions, [Name]?**
 
-6. **If I could observe my thoughts and actions from outside myself, what patterns would I notice?**
+6. **If you could observe your thoughts and actions from outside yourself, what patterns would you notice?**
 
-7. **What talents or abilities do I possess that I am not fully developing or using in service of others?**
+7. **What talents or abilities do you possess that you are not fully developing or using in service of others?**
 
-8. **How do my private thoughts and actions align with the person I present to the world?**
+8. **How do your private thoughts and actions align with the person you present to the world?**
 
-9. **What would those who know me best say is my greatest strength and my greatest weakness?**
+9. **What would those who know you best say is your greatest strength and your greatest weakness?**
 
-10. **If I had to choose only three values to guide all my decisions, what would they be, and why?**
+10. **If you had to choose only three values to guide your decisions this [WeekPart], [Name], what would they be and why?**
 
 ---
 
 ## II. Control & Acceptance
 
-11. **What am I trying to control today that is ultimately beyond my influence?**
+11. **What are you trying to control this [DayPart] that is ultimately beyond your influence?**
 
-12. **How can I find peace with circumstances that I cannot change?**
+12. **How can you find peace with circumstances that you cannot change?**
 
-13. **What would I accept about my current situation if I truly believed it was exactly what I needed for my growth?**
+13. **What would you accept about your current situation if you truly believed it was exactly what you needed for your growth?**
 
-14. **Where am I wasting energy on outcomes rather than focusing on my efforts and intentions?**
+14. **Where are you wasting energy on outcomes rather than focusing on your efforts and intentions?**
 
-15. **What opinion of others am I allowing to disturb my inner tranquility?**
+15. **What opinion of others are you allowing to disturb your inner tranquility?**
 
-16. **How would my perspective on today's challenges change if I viewed them as exactly what I needed to practice virtue?**
+16. **How would your perspective on challenges this [WeekPart] change if you viewed them as exactly what you needed to practice virtue?**
 
-17. **What external circumstances am I blaming for my internal state of mind?**
+17. **What external circumstances are you blaming for your internal state of mind?**
 
-18. **If I surrendered my need for a specific outcome, how would my actions change?**
+18. **If you surrendered your need for a specific outcome, how would your actions change?**
 
-19. **What am I resisting that, if accepted, might actually bring me peace?**
+19. **What are you resisting that, if accepted, might actually bring you peace?**
 
-20. **How can I love my fate today, even the difficult parts?**
+20. **How can you love your fate today, even the difficult parts?**
 
 ---
 
 ## III. Death & Impermanence
 
-21. **If I knew I had one year to live, what would I start doing immediately?**
+21. **If I knew I had one year to live, what would I start doing this [WeekPart], [Name]?**
 
-22. **What would I want written on my tombstone, and how are my daily actions moving me toward or away from that legacy?**
+22. **What would you want written on your tombstone, and how are your daily actions moving you toward or away from that legacy?**
 
-23. **How does remembering my mortality change the importance I place on today's worries?**
+23. **How does remembering your mortality change the importance you place on today's worries?**
 
-24. **What wisdom would I want to pass on if I could only share one piece of advice?**
+24. **What wisdom would you want to pass on if you could only share one piece of advice?**
 
-25. **How would I spend today if it were my last day with the people I love most?**
+25. **How would I spend this [DayPart] if it were my last with the people I love most?**
 
-26. **What am I postponing that I would regret never experiencing or expressing?**
+26. **What are you postponing that you would regret never experiencing or expressing?**
 
-27. **How does contemplating the impermanence of all things affect my attachment to material possessions?**
+27. **How does contemplating the impermanence of all things affect your attachment to material possessions?**
 
-28. **What legacy am I creating through my daily choices and interactions?**
+28. **What legacy are you creating through your daily choices and interactions?**
 
 ---
 
 ## IV. Relationships & Community
 
-29. **How did I serve others today without expecting anything in return?**
+29. **How did you serve others today without expecting anything in return?**
 
-30. **What assumptions am I making about someone that might be preventing me from understanding them better?**
+30. **What assumptions are you making about someone that might be preventing you from understanding them better?**
 
-31. **Who in my life deserves gratitude that I haven't expressed recently?**
+31. **Who in my life deserves gratitude this [WeekPart], [Name], that I haven't expressed recently?**
 
-32. **How can I be more present and attentive in my relationships?**
+32. **How can you be more present and attentive in your relationships?**
 
-33. **What judgment or resentment am I holding that only harms my own peace of mind?**
+33. **What judgment or resentment are you holding that only harms your own peace of mind?**
 
-34. **How can I better honor the trust that others place in me?**
+34. **How can you better honor the trust that others place in you?**
 
-35. **What conflict in my life could be resolved if I focused on understanding rather than being understood?**
+35. **What conflict in your life could be resolved if you focused on understanding rather than being understood?**
 
-36. **How do my actions and words contribute to the well-being of my community?**
+36. **How do your actions and words contribute to the well-being of your community?**
 
 ---
 
 ## V. Action & Purpose
 
-37. **What meaningful work did I accomplish today that aligns with my deeper purpose?**
+37. **What meaningful work did I accomplish this [DayPart] that aligns with my deeper purpose?**
 
-38. **How am I using my unique position and abilities to make a positive difference?**
+38. **How are you using your unique position and abilities to make a positive difference?**
 
-39. **What small action could I take tomorrow that would move me closer to who I want to become?**
+39. **What small action could you take tomorrow that would move you closer to who you want to become?**
 
-40. **Where am I choosing comfort over growth, and what is the cost of that choice?**
+40. **Where are you choosing comfort over growth, and what is the cost of that choice?**
 
-41. **How do my daily habits either support or undermine my highest aspirations?**
+41. **How do your daily habits either support or undermine your highest aspirations?**
 
-42. **What would I attempt if I knew failure was impossible, and what does that reveal about my true desires?**
+42. **What would you attempt if you knew failure was impossible, and what does that reveal about your true desires?**
 
-43. **How can I bring more intention and mindfulness to routine activities?**
+43. **How can you bring more intention and mindfulness to routine activities?**
 
 ---
 
 ## VI. Adversity & Resilience
 
-44. **What is this current challenge teaching me about my own strength and character?**
+44. **What is this current challenge teaching you about your own strength and character?**
 
-45. **How can I reframe today's obstacles as opportunities for growth and practice?**
+45. **How can I reframe obstacles this [WeekPart] as opportunities for growth and practice?**
 
-46. **What would I tell a dear friend facing the same difficulties I am experiencing?**
+46. **What would you tell a dear friend facing the same difficulties, [Name]?**
 
-47. **How have past struggles prepared me for current challenges?**
+47. **How have past struggles prepared you for current challenges?**
 
-48. **What good might come from this difficult situation that I cannot yet see?**
+48. **What good might come from this difficult situation that you cannot yet see?**
 
-49. **How can I maintain my values and character even when faced with setbacks?**
+49. **How can you maintain your values and character even when faced with setbacks?**
 
-50. **What story will I tell about this period of my life when I look back years from now?**
+50. **What story will you tell about this period of your life when you look back years from now?**
 
 ---
 
 ## VII. Cognitive Clarity & Distortions
 
-51. **What belief am I treating as absolute fact that might just be one interpretation among many?**
+51. **What belief are you treating as absolute fact that might just be one interpretation among many?**
 
-52. **Where am I catastrophizing today, and what's the realistic probability of my worst-case scenario?**
+52. **Where are you catastrophizing today, and what's the realistic probability of your worst-case scenario?**
 
-53. **What thinking trap am I falling into: all-or-nothing, mind reading, fortune telling, or personalization?**
+53. **What thinking trap are you falling into: all-or-nothing, mind reading, fortune telling, or personalization?**
 
-54. **What evidence contradicts the negative story I'm telling myself about this situation?**
+54. **What evidence contradicts the negative story you're telling yourself about this situation?**
 
-55. **How would I advise a close friend who was having the exact same thoughts I'm having?**
+55. **How would you advise a close friend who was having the exact same thoughts you're having?**
 
-56. **What would I need to believe about myself or the world for this worry to make complete sense?**
+56. **What would you need to believe about yourself or the world for this worry to make complete sense?**
 
-57. **Am I confusing my feelings about something with the facts of the situation?**
+57. **Are you confusing your feelings about something with the facts of the situation?**
 
-58. **What automatic thought keeps recurring, and what more balanced alternative could I practice?**
+58. **What automatic thought keeps recurring this [WeekPart], and what more balanced alternative could you practice?**
 
-59. **Where am I filtering out positive information and focusing only on what went wrong?**
+59. **Where are you filtering out positive information and focusing only on what went wrong?**
 
-60. **What rational statement could I record now to counter my current irrational fear?**
+60. **What rational statement could you record now to counter your current irrational fear?**
 
 ---
 
 ## VIII. Socratic Self-Inquiry
 
-61. **What exactly do I mean when I say I "should" do something - who determined this rule?**
+61. **What exactly do you mean when you say you "should" do something — who determined this rule?**
 
-62. **What assumption am I making that I haven't examined or questioned?**
+62. **What assumption are you making that you haven't examined or questioned?**
 
-63. **If I'm wrong about this conclusion, what would that mean for my next steps?**
+63. **If you're wrong about this conclusion, what would that mean for your next steps?**
 
-64. **What evidence would I need to see to change my mind about this belief?**
+64. **What evidence would you need to see to change your mind about this belief?**
 
-65. **Why do I believe what I believe about this situation - is it based on direct experience or hearsay?**
+65. **Why do you believe what you believe about this situation — is it based on your direct experience or hearsay?**
 
-66. **What question am I avoiding that might lead to greater clarity?**
+66. **What question are you avoiding that might lead to greater clarity?**
 
-67. **How might someone who disagrees with me make a reasonable case for their position?**
+67. **How might someone who disagrees with you make a reasonable case for their position?**
 
-68. **What would I discover if I approached this problem with genuine curiosity instead of predetermined answers?**
+68. **What would you discover if you approached this problem with genuine curiosity instead of predetermined answers?**
 
 ---
 
 ## IX. Non-Striving & Acceptance
 
-69. **What am I trying to force that might unfold naturally if I step back and allow it?**
+69. **What are you trying to force that might unfold naturally if you step back and allow it?**
 
-70. **Where am I creating unnecessary suffering by resisting what's already happening?**
+70. **Where are you creating unnecessary suffering by resisting what's already happening?**
 
-71. **How can I be fully engaged in this task without being attached to a specific outcome?**
+71. **How can you be fully engaged in this task without being attached to a specific outcome?**
 
-72. **What would change if I trusted that I'm exactly where I need to be right now?**
+72. **What would change if I trusted that I'm exactly where I need to be right now, [Name]?**
 
-73. **How can I act skillfully while simultaneously letting go of needing to control results?**
+73. **How can you act skillfully while simultaneously letting go of needing to control results?**
 
-74. **What would flow more easily if I stopped pushing so hard against it?**
+74. **What would flow more easily if you stopped pushing so hard against it?**
 
-75. **Where am I swimming against the current when I could work with natural forces instead?**
+75. **Where am I swimming against the current when I could work with natural forces instead, [Name]?**
 
-76. **How can I find peace within uncertainty rather than demanding guarantees?**
+76. **How can you find peace within uncertainty rather than demanding guarantees?**
 
 ---
 
 ## X. Narrative & Life Story
 
-77. **What story am I telling myself about who I am, and is this narrative empowering or limiting me?**
+77. **What story are you telling yourself about who you are, and is this narrative empowering or limiting you?**
 
-78. **How would I narrate today's events to my future self as part of a meaningful journey?**
+78. **How would you narrate today's events to your future self as part of a meaningful journey?**
 
-79. **What chapter of my life am I in now, and how does today's experience fit into the larger plot?**
+79. **What chapter of your life are you in now, and how does today's experience fit into your larger plot?**
 
-80. **If I could edit the story I tell about my past, what would I emphasize differently?**
+80. **If you could edit the story you tell about your past, what would you emphasize differently?**
 
-81. **What recurring themes appear across different periods of my life?**
+81. **What recurring themes appear across different periods of your life?**
 
-82. **How do I want the protagonist of my life story to respond to current challenges?**
+82. **How do you want the protagonist of your life story to respond to current challenges?**
 
-83. **What wisdom have I gained from previous chapters that applies to my current situation?**
+83. **What wisdom have you gained from previous chapters that applies to your current situation?**
 
-84. **If someone were to write my biography, what would I want this current period to demonstrate about my character?**
+84. **If someone were to write your biography, what would you want this current period to demonstrate about your character?**
 
 ---
 
 ## XI. Daily Review & Progress
 
-85. **What went well today, what went poorly, and what can I improve tomorrow?**
+85. **What went well this [DayPart], what went poorly, and what can I improve tomorrow, [Name]?**
 
-86. **Which of my core principles did I honor today, and which did I compromise?**
+86. **Which of your core principles did you honor today, and which did you compromise?**
 
-87. **What progress did I make toward my most important goals, however small?**
+87. **What progress did you make toward your most important goals, however small?**
 
-88. **How did I grow today, and what lesson will I carry forward?**
+88. **How did you grow today, and what lesson will you carry forward?**
 
-89. **What moment today am I most grateful for, and why?**
+89. **What moment today are you most grateful for, and why?**
 
-90. **Where did I act from habit versus conscious choice, and what does this reveal?**
+90. **Where did you act from habit versus conscious choice, and what does this reveal?**
 
-91. **What would I do differently if I could replay today with the wisdom I have now?**
+91. **What would you do differently if you could replay today with the wisdom you have now?**
 
-92. **How did my actions today align with the person I'm becoming?**
+92. **How did your actions today align with the person you're becoming?**
 
 ---
 
 ## XII. Stream to Structure
 
-93. **What recurring thought patterns have I noticed this week, and what might they be telling me?**
+93. **What recurring thought patterns have I noticed this [WeekPart], and what might they be telling me?**
 
-94. **What's the underlying emotion or need beneath my scattered thoughts right now?**
+94. **What's the underlying emotion or need beneath your scattered thoughts right now?**
 
-95. **If I had to summarize my mental state in one word, what would it be and why?**
+95. **If you had to summarize your mental state in one word, what would it be and why?**
 
-96. **What theme keeps emerging when I let my mind wander freely?**
+96. **What theme keeps emerging when you let your mind wander freely?**
 
-97. **What clarity is trying to emerge from the chaos of my current thinking?**
+97. **What clarity is trying to emerge from the chaos of your current thinking?**
 
-98. **If my stream of consciousness had a soundtrack, what would it sound like today?**
+98. **If your stream of consciousness had a soundtrack, what would it sound like today?**
 
-99. **What insight is hidden in the pattern of what I've been avoiding thinking about?**
+99. **What insight is hidden in the pattern of what you've been avoiding thinking about?**
 
-100. **What would happen if I trusted that my meandering thoughts are leading somewhere meaningful?**
+100. **What would happen if you trusted that your meandering thoughts are leading somewhere meaningful?**
 
 ---
 

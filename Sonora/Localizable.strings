@@ -73,8 +73,175 @@
 "prompt.mindfulness.mindful-walk" = "Take a mindful walk; describe what you observe.";
 "prompt.mindfulness.emotion-labeling" = "Take 30 seconds to describe how you're feeling and why.";
 "prompt.mindfulness.intention-for-day" = "Set an intention for this [DayPart], [Name].";
+"prompt.lindy.001" = "What virtue did you practice this [DayPart], and where did you fall short of your ideals?";
+"prompt.lindy.002" = "Which of your actions today reflected your true character, and which reflected mere impulse or habit?";
+
+/* Growth */
+"prompt.lindy.003" = "What would you do differently this [DayPart] if you knew today would define how you are remembered?";
+"prompt.lindy.004" = "In what ways are you still the same person you were five years ago, and in what ways have you grown?";
+
+/* Mindfulness */
+"prompt.lindy.005" = "What fear or desire currently has the strongest hold over your decisions, [Name]?";
+"prompt.lindy.006" = "If you could observe your thoughts and actions from outside yourself, what patterns would you notice?";
+
+/* Growth */
+"prompt.lindy.007" = "What talents or abilities do you possess that you are not fully developing or using in service of others?";
+
+/* Mindfulness */
+"prompt.lindy.008" = "How do your private thoughts and actions align with the person you present to the world?";
+"prompt.lindy.009" = "What would those who know you best say is your greatest strength and your greatest weakness?";
+
+/* Goals */
+"prompt.lindy.010" = "If you had to choose only three values to guide your decisions this [WeekPart], [Name], what would they be and why?";
+
+/* Mindfulness */
+"prompt.lindy.011" = "What are you trying to control this [DayPart] that is ultimately beyond your influence?";
+"prompt.lindy.012" = "How can you find peace with circumstances that you cannot change?";
+"prompt.lindy.013" = "What would you accept about your current situation if you truly believed it was exactly what you needed for your growth?";
+"prompt.lindy.014" = "Where are you wasting energy on outcomes rather than focusing on your efforts and intentions?";
+"prompt.lindy.015" = "What opinion of others are you allowing to disturb your inner tranquility?";
+"prompt.lindy.016" = "How would your perspective on challenges this [WeekPart] change if you viewed them as exactly what you needed to practice virtue?";
+"prompt.lindy.017" = "What external circumstances are you blaming for your internal state of mind?";
+"prompt.lindy.018" = "If you surrendered your need for a specific outcome, how would your actions change?";
+"prompt.lindy.019" = "What are you resisting that, if accepted, might actually bring you peace?";
+"prompt.lindy.020" = "How can you love your fate today, even the difficult parts?";
+
+/* Growth */
+"prompt.lindy.021" = "If you knew you had one year to live, what would you start doing this [WeekPart], [Name]?";
+"prompt.lindy.022" = "What would you want written on your tombstone, and how are your daily actions moving you toward or away from that legacy?";
+
+/* Mindfulness */
+"prompt.lindy.023" = "How does remembering your mortality change the importance you place on today's worries?";
+
+/* Growth */
+"prompt.lindy.024" = "What wisdom would you want to pass on if you could only share one piece of advice?";
+
+/* Relationships */
+"prompt.lindy.025" = "How would you spend this [DayPart] if it were your last with the people you love most?";
+
+/* Growth */
+"prompt.lindy.026" = "What are you postponing that you would regret never experiencing or expressing?";
+
+/* Mindfulness */
+"prompt.lindy.027" = "How does contemplating the impermanence of all things affect your attachment to material possessions?";
+
+/* Goals */
+"prompt.lindy.028" = "What legacy are you creating through your daily choices and interactions?";
+
+/* Relationships */
+"prompt.lindy.029" = "How did you serve others today without expecting anything in return?";
+"prompt.lindy.030" = "What assumptions are you making about someone that might be preventing you from understanding them better?";
+"prompt.lindy.031" = "Who in your life deserves gratitude this [WeekPart], [Name], that you haven't expressed recently?";
+"prompt.lindy.032" = "How can you be more present and attentive in your relationships?";
+"prompt.lindy.033" = "What judgment or resentment are you holding that only harms your own peace of mind?";
+"prompt.lindy.034" = "How can you better honor the trust that others place in you?";
+"prompt.lindy.035" = "What conflict in your life could be resolved if you focused on understanding rather than being understood?";
+"prompt.lindy.036" = "How do your actions and words contribute to the well-being of your community?";
+
+/* Goals */
+"prompt.lindy.037" = "What meaningful work did you accomplish this [DayPart] that aligns with your deeper purpose?";
+"prompt.lindy.038" = "How are you using your unique position and abilities to make a positive difference?";
+"prompt.lindy.039" = "What small action could you take tomorrow that would move you closer to who you want to become?";
+
+/* Growth */
+"prompt.lindy.040" = "Where are you choosing comfort over growth, and what is the cost of that choice?";
+
+/* Goals */
+"prompt.lindy.041" = "How do your daily habits either support or undermine your highest aspirations?";
+
+/* Growth */
+"prompt.lindy.042" = "What would you attempt if you knew failure was impossible, and what does that reveal about your true desires?";
+
+/* Mindfulness */
+"prompt.lindy.043" = "How can you bring more intention and mindfulness to routine activities?";
+
+/* Growth */
+"prompt.lindy.044" = "What is this current challenge teaching you about your own strength and character?";
+"prompt.lindy.045" = "How can you reframe obstacles this [WeekPart] as opportunities for growth and practice?";
+
+/* Mindfulness */
+"prompt.lindy.046" = "What would you tell a dear friend facing the same difficulties, [Name]?";
+
+/* Growth */
+"prompt.lindy.047" = "How have past struggles prepared you for current challenges?";
+
+/* Mindfulness */
+"prompt.lindy.048" = "What good might come from this difficult situation that you cannot yet see?";
+
+/* Growth */
+"prompt.lindy.049" = "How can you maintain your values and character even when faced with setbacks?";
+
+/* Creative */
+"prompt.lindy.050" = "What story will you tell about this period of your life when you look back years from now?";
+
+/* Mindfulness */
+"prompt.lindy.051" = "What belief are you treating as absolute fact that might just be one interpretation among many?";
+"prompt.lindy.052" = "Where are you catastrophizing today, and what's the realistic probability of your worst-case scenario?";
+"prompt.lindy.053" = "What thinking trap are you falling into: all-or-nothing, mind reading, fortune telling, or personalization?";
+"prompt.lindy.054" = "What evidence contradicts the negative story you're telling yourself about this situation?";
+"prompt.lindy.055" = "How would you advise a close friend who was having the exact same thoughts you're having?";
+"prompt.lindy.056" = "What would you need to believe about yourself or the world for this worry to make complete sense?";
+"prompt.lindy.057" = "Are you confusing your feelings about something with the facts of the situation?";
+"prompt.lindy.058" = "What automatic thought keeps recurring this [WeekPart], and what more balanced alternative could you practice?";
+"prompt.lindy.059" = "Where are you filtering out positive information and focusing only on what went wrong?";
+"prompt.lindy.060" = "What rational statement could you record now to counter your current irrational fear?";
+"prompt.lindy.061" = "What exactly do you mean when you say you \"should\" do something — who determined this rule?";
+"prompt.lindy.062" = "What assumption are you making that you haven't examined or questioned?";
+"prompt.lindy.063" = "If you're wrong about this conclusion, what would that mean for your next steps?";
+"prompt.lindy.064" = "What evidence would you need to see to change your mind about this belief?";
+"prompt.lindy.065" = "Why do you believe what you believe about this situation — is it based on your direct experience or hearsay?";
+"prompt.lindy.066" = "What question are you avoiding that might lead to greater clarity?";
+"prompt.lindy.067" = "How might someone who disagrees with you make a reasonable case for their position?";
+"prompt.lindy.068" = "What would you discover if you approached this problem with genuine curiosity instead of predetermined answers?";
+"prompt.lindy.069" = "What are you trying to force that might unfold naturally if you step back and allow it?";
+"prompt.lindy.070" = "Where are you creating unnecessary suffering by resisting what's already happening?";
+"prompt.lindy.071" = "How can you be fully engaged in this task without being attached to a specific outcome?";
+"prompt.lindy.072" = "What would change if you trusted that you're exactly where you need to be right now, [Name]?";
+"prompt.lindy.073" = "How can you act skillfully while simultaneously letting go of needing to control results?";
+"prompt.lindy.074" = "What would flow more easily if you stopped pushing so hard against it?";
+"prompt.lindy.075" = "Where are you swimming against the current when you could work with natural forces instead, [Name]?";
+"prompt.lindy.076" = "How can you find peace within uncertainty rather than demanding guarantees?";
+
+/* Creative */
+"prompt.lindy.077" = "What story are you telling yourself about who you are, and is this narrative empowering or limiting you?";
+"prompt.lindy.078" = "How would you narrate today's events to your future self as part of a meaningful journey?";
+"prompt.lindy.079" = "What chapter of your life are you in now, and how does today's experience fit into your larger plot?";
+"prompt.lindy.080" = "If you could edit the story you tell about your past, what would you emphasize differently?";
+"prompt.lindy.081" = "What recurring themes appear across different periods of your life?";
+"prompt.lindy.082" = "How do you want the protagonist of your life story to respond to current challenges?";
+"prompt.lindy.083" = "What wisdom have you gained from previous chapters that applies to your current situation?";
+"prompt.lindy.084" = "If someone were to write your biography, what would you want this current period to demonstrate about your character?";
+
+/* Goals */
+"prompt.lindy.085" = "What went well this [DayPart], what went poorly, and what can you improve tomorrow, [Name]?";
+"prompt.lindy.086" = "Which of your core principles did you honor today, and which did you compromise?";
+"prompt.lindy.087" = "What progress did you make toward your most important goals, however small?";
+"prompt.lindy.088" = "How did you grow today, and what lesson will you carry forward?";
+
+/* Mindfulness */
+"prompt.lindy.089" = "What moment today are you most grateful for, and why?";
+"prompt.lindy.090" = "Where did you act from habit versus conscious choice, and what does this reveal?";
+
+/* Goals */
+"prompt.lindy.091" = "What would you do differently if you could replay today with the wisdom you have now?";
+"prompt.lindy.092" = "How did your actions today align with the person you're becoming?";
+
+/* Creative */
+"prompt.lindy.093" = "What recurring thought patterns have you noticed this [WeekPart], and what might they be telling you?";
+
+/* Mindfulness */
+"prompt.lindy.094" = "What's the underlying emotion or need beneath your scattered thoughts right now?";
+"prompt.lindy.095" = "If you had to summarize your mental state in one word, what would it be and why?";
+
+/* Creative */
+"prompt.lindy.096" = "What theme keeps emerging when you let your mind wander freely?";
+"prompt.lindy.097" = "What clarity is trying to emerge from the chaos of your current thinking?";
+"prompt.lindy.098" = "If your stream of consciousness had a soundtrack, what would it sound like today?";
+"prompt.lindy.099" = "What insight is hidden in the pattern of what you've been avoiding thinking about?";
+"prompt.lindy.100" = "What would happen if you trusted that your meandering thoughts are leading somewhere meaningful?";
 
 /* === AUTO-GENERATED PROMPTS END === */
+
 
 /* Morning Focus */
 "prompt.morning.win-today" = "What would make today a win?";
