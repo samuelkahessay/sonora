@@ -5,6 +5,7 @@ import Foundation
 struct AnalysisSectionView: View {
     let transcript: String
     @ObservedObject var viewModel: MemoDetailViewModel
+    @State private var loaderMessageIndex = -1
     
     var body: some View {
         let isDistillCompleted = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
@@ -78,16 +79,19 @@ struct AnalysisSectionView: View {
 
             // Loading State
             if viewModel.isAnalyzing {
+                let loaderMessage = DistillCopy.loaderMessages[safe: loaderMessageIndex] ?? DistillCopy.loaderMessages.first ?? "Distilling your voice"
                 HStack(spacing: 12) {
                     LoadingIndicator(size: .small)
-                    Text("Analyzing your memo...")
+                    Text(loaderMessage)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
+                        .id(loaderMessageIndex)
                     Spacer()
                 }
                 .padding()
                 .background(Color.semantic(.brandPrimary).opacity(0.05))
                 .cornerRadius(8)
+                .animation(.easeInOut(duration: 0.35), value: loaderMessageIndex)
             }
             
             // Results with AI disclaimer (only when there are results)
@@ -128,6 +132,10 @@ struct AnalysisSectionView: View {
         }
         .modifier(AnalysisContainerStyle(isCompleted: isDistillCompleted, showDebugBorder: showDebugBorders))
         .frame(maxWidth: .infinity)
+        .onChange(of: viewModel.isAnalyzing) { _, isAnalyzing in
+            guard isAnalyzing, !DistillCopy.loaderMessages.isEmpty else { return }
+            loaderMessageIndex = (loaderMessageIndex + 1) % DistillCopy.loaderMessages.count
+        }
     }
 }
 
@@ -162,6 +170,24 @@ private enum DistillLayout {
     static let debugContainerBorder: Color = .blue.opacity(0.4)
 }
 
+private enum DistillCopy {
+    static let loaderMessages: [String] = [
+        "Turning chaos into clarity",
+        "Distilling your voice",
+        "Listening for what matters",
+        "Letting meaning rise to the surface",
+        "Tracing the path through your thoughts",
+        "Making room for the insight ahead",
+        "Organizing your thoughts",
+        "Surfacing what matters",
+        "Extracting the signal",
+        "Bringing structure to speech",
+        "Mapping the meaning",
+        "Decoding your direction",
+        "Reading between the lines"
+    ]
+}
+
 #if DEBUG
 private enum LayoutDebug {
     static let distillButton = ProcessInfo.processInfo.environment["DISTILL_DEBUG_BORDER"] == "1"
@@ -192,5 +218,12 @@ private struct DebugBorderModifier: ViewModifier {
 private extension View {
     func debugBorder(_ show: Bool, color: Color, cornerRadius: CGFloat) -> some View {
         modifier(DebugBorderModifier(show: show, color: color, cornerRadius: cornerRadius))
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        guard indices.contains(index) else { return nil }
+        return self[index]
     }
 }
