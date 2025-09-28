@@ -129,12 +129,6 @@ struct MemoDetailViewState: Equatable {
     struct UIState: Equatable {
         var error: SonoraError? = nil
         var isLoading: Bool = false
-        // Event/Reminder auto-detection banner
-        var showEventDetectionBanner: Bool = false
-        var eventDetectionCount: Int = 0
-        var autoBannerDismissedForMemo: [UUID: Bool] = [:]
-        var showReminderDetectionBanner: Bool = false
-        var reminderDetectionCount: Int = 0
         // Deletion state for memo details
         var didDeleteMemo: Bool = false
         

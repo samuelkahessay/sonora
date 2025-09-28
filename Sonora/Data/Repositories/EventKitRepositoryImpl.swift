@@ -49,68 +49,13 @@ final class EventKitRepositoryImpl: EventKitRepository {
     }
     
     // MARK: - Permission Management
-    func requestCalendarAccess() async throws -> Bool {
-        return await requestCalendarAccessOnMainActor()
-    }
-    
-    private func requestCalendarAccessOnMainActor() async -> Bool {
-        do {
-            let status = EKEventStore.authorizationStatus(for: .event)
-            
-            switch status {
-            case .notDetermined:
-                return try await eventStore.requestFullAccessToEvents()
-            case .authorized, .fullAccess:
-                return true
-            case .denied, .restricted:
-                return false
-            case .writeOnly:
-                // Request full access if we only have write access
-                return try await eventStore.requestFullAccessToEvents()
-            @unknown default:
-                return false
-            }
-        } catch {
-            logger.error("Failed to request calendar access",
-                        category: .eventkit,
-                        context: LogContext(),
-                        error: error)
-            return false
-        }
-    }
-    
-    func requestReminderAccess() async throws -> Bool {
-        return await requestReminderAccessOnMainActor()
-    }
-    
-    private func requestReminderAccessOnMainActor() async -> Bool {
-        do {
-            let status = EKEventStore.authorizationStatus(for: .reminder)
-            
-            switch status {
-            case .notDetermined:
-                return try await eventStore.requestFullAccessToReminders()
-            case .authorized, .fullAccess:
-                return true
-            case .denied, .restricted:
-                return false
-            case .writeOnly:
-                return try await eventStore.requestFullAccessToReminders()
-            @unknown default:
-                return false
-            }
-        } catch {
-            logger.error("Failed to request reminder access",
-                        category: .eventkit,
-                        context: LogContext(),
-                        error: error)
-            return false
-        }
-    }
+    // Permission requests are handled by EventKitPermissionService; repository stays focused on data ops.
     
     // MARK: - Calendar Operations
-    func getCalendars() async throws -> [EKCalendar] {
-        return getCalendarsOnMainActor()
+    func getCalendars() async throws -> [CalendarDTO] {
+        let cals = getCalendarsOnMainActor()
+        let defId = eventStore.defaultCalendarForNewEvents?.calendarIdentifier
+        return cals.map { makeCalendarDTO(from: $0, isDefault: $0.calendarIdentifier == defId, entity: .event) }
     }
     
     private func getCalendarsOnMainActor() -> [EKCalendar] {
@@ -160,8 +105,10 @@ final class EventKitRepositoryImpl: EventKitRepository {
         return calendars
     }
     
-    func getReminderLists() async throws -> [EKCalendar] {
-        return getReminderListsOnMainActor()
+    func getReminderLists() async throws -> [CalendarDTO] {
+        let lists = getReminderListsOnMainActor()
+        let defId = eventStore.defaultCalendarForNewReminders()?.calendarIdentifier
+        return lists.map { makeCalendarDTO(from: $0, isDefault: $0.calendarIdentifier == defId, entity: .reminder) }
     }
     
     private func getReminderListsOnMainActor() -> [EKCalendar] {
@@ -211,41 +158,46 @@ final class EventKitRepositoryImpl: EventKitRepository {
         return reminderLists
     }
     
-    func getDefaultCalendar() async throws -> EKCalendar? {
+    func getDefaultCalendar() async throws -> CalendarDTO? {
         let defaultCalendar = eventStore.defaultCalendarForNewEvents
         if let calendar = defaultCalendar {
             logger.debug("Found default calendar: \(calendar.title)",
                         category: .eventkit,
                         context: LogContext())
+            return makeCalendarDTO(from: calendar, isDefault: true, entity: .event)
         } else {
             logger.warning("No default calendar available",
                           category: .eventkit,
                           context: LogContext(),
                           error: nil)
+            return nil
         }
-        return defaultCalendar
     }
     
-    func getDefaultReminderList() async throws -> EKCalendar? {
+    func getDefaultReminderList() async throws -> CalendarDTO? {
         let defaultList = eventStore.defaultCalendarForNewReminders()
         if let list = defaultList {
             logger.debug("Found default reminder list: \(list.title)",
                         category: .eventkit,
                         context: LogContext())
+            return makeCalendarDTO(from: list, isDefault: true, entity: .reminder)
         } else {
             logger.warning("No default reminder list available",
                           category: .eventkit,
                           context: LogContext(),
                           error: nil)
+            return nil
         }
-        return defaultList
     }
     
     // MARK: - Event Creation
-    func createEvent(_ event: EventsData.DetectedEvent, 
-                     in calendar: EKCalendar,
+    func createEvent(_ event: EventsData.DetectedEvent,
+                     in calendar: CalendarDTO,
                      maxRetries: Int = 3) async throws -> String {
-        return try createEventOnMainActor(event: event, calendar: calendar, maxRetries: maxRetries)
+        guard let ekCalendar = eventStore.calendar(withIdentifier: calendar.id) else {
+            throw EventKitError.calendarNotFound(identifier: calendar.id)
+        }
+        return try createEventOnMainActor(event: event, calendar: ekCalendar, maxRetries: maxRetries)
     }
     
     private func createEventOnMainActor(
@@ -306,10 +258,13 @@ final class EventKitRepositoryImpl: EventKitRepository {
     
     // MARK: - Reminder Creation  
     func createReminder(_ reminder: RemindersData.DetectedReminder,
-                        in reminderList: EKCalendar,
+                        in reminderList: CalendarDTO,
                         maxRetries: Int = 3) async throws -> String {
-        return try createReminderOnMainActor(reminder: reminder, 
-                                            reminderList: reminderList, 
+        guard let ekList = eventStore.calendar(withIdentifier: reminderList.id) else {
+            throw EventKitError.reminderListNotFound(identifier: reminderList.id)
+        }
+        return try createReminderOnMainActor(reminder: reminder,
+                                            reminderList: ekList,
                                             maxRetries: maxRetries)
     }
     
@@ -388,11 +343,15 @@ final class EventKitRepositoryImpl: EventKitRepository {
     
     // MARK: - Batch Operations
     func createEvents(_ events: [EventsData.DetectedEvent],
-                      calendarMapping: [String: EKCalendar],
+                      calendarMapping: [String: CalendarDTO],
                       maxRetries: Int = 3) async throws -> [String: Result<String, Error>] {
-        return createEventsOnMainActor(events: events, 
-                                      calendarMapping: calendarMapping, 
-                                      maxRetries: maxRetries)
+        let ekMap: [String: EKCalendar] = calendarMapping.reduce(into: [:]) { acc, pair in
+            let (key, dto) = pair
+            if let cal = eventStore.calendar(withIdentifier: dto.id) { acc[key] = cal }
+        }
+        return createEventsOnMainActor(events: events,
+                                       calendarMapping: ekMap,
+                                       maxRetries: maxRetries)
     }
     
     private func createEventsOnMainActor(
@@ -424,11 +383,15 @@ final class EventKitRepositoryImpl: EventKitRepository {
     }
     
     func createReminders(_ reminders: [RemindersData.DetectedReminder],
-                         listMapping: [String: EKCalendar],
+                         listMapping: [String: CalendarDTO],
                          maxRetries: Int = 3) async throws -> [String: Result<String, Error>] {
+        let ekMap: [String: EKCalendar] = listMapping.reduce(into: [:]) { acc, pair in
+            let (key, dto) = pair
+            if let list = eventStore.calendar(withIdentifier: dto.id) { acc[key] = list }
+        }
         return createRemindersOnMainActor(reminders: reminders,
-                                         reminderListMapping: listMapping,
-                                         maxRetries: maxRetries)
+                                          reminderListMapping: ekMap,
+                                          maxRetries: maxRetries)
     }
     
     private func createRemindersOnMainActor(
@@ -464,8 +427,16 @@ final class EventKitRepositoryImpl: EventKitRepository {
     // MARK: - Update/Delete Operations (trimmed from shipped surface)
     
     // MARK: - Conflict Detection
-    func detectConflicts(for event: EventsData.DetectedEvent) async throws -> [EKEvent] {
-        return checkForConflictsOnMainActor(event: event)
+    func detectConflicts(for event: EventsData.DetectedEvent) async throws -> [ExistingEventDTO] {
+        return checkForConflictsOnMainActor(event: event).map {
+            ExistingEventDTO(
+                identifier: $0.eventIdentifier,
+                title: $0.title,
+                startDate: $0.startDate,
+                endDate: $0.endDate,
+                isAllDay: $0.isAllDay
+            )
+        }
     }
     
     private func checkForConflictsOnMainActor(event: EventsData.DetectedEvent) -> [EKEvent] {
@@ -506,8 +477,12 @@ final class EventKitRepositoryImpl: EventKitRepository {
     }
     
     // MARK: - Smart Suggestions
-    func suggestCalendar(for event: EventsData.DetectedEvent) async throws -> EKCalendar? {
-        return suggestCalendarOnMainActor(for: event)
+    func suggestCalendar(for event: EventsData.DetectedEvent) async throws -> CalendarDTO? {
+        if let cal = suggestCalendarOnMainActor(for: event) {
+            let defId = eventStore.defaultCalendarForNewEvents?.calendarIdentifier
+            return makeCalendarDTO(from: cal, isDefault: cal.calendarIdentifier == defId, entity: .event)
+        }
+        return nil
     }
     
     private func suggestCalendarOnMainActor(for event: EventsData.DetectedEvent) -> EKCalendar? {
@@ -567,8 +542,12 @@ final class EventKitRepositoryImpl: EventKitRepository {
         return suggestedCalendar
     }
     
-    func suggestReminderList(for reminder: RemindersData.DetectedReminder) async throws -> EKCalendar? {
-        return suggestReminderListOnMainActor(for: reminder)
+    func suggestReminderList(for reminder: RemindersData.DetectedReminder) async throws -> CalendarDTO? {
+        if let list = suggestReminderListOnMainActor(for: reminder) {
+            let defId = eventStore.defaultCalendarForNewReminders()?.calendarIdentifier
+            return makeCalendarDTO(from: list, isDefault: list.calendarIdentifier == defId, entity: .reminder)
+        }
+        return nil
     }
     
     private func suggestReminderListOnMainActor(for reminder: RemindersData.DetectedReminder) -> EKCalendar? {
@@ -649,5 +628,32 @@ final class EventKitRepositoryImpl: EventKitRepository {
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+}
+
+// MARK: - DTO Mapping Helpers
+extension EventKitRepositoryImpl {
+    fileprivate func makeCalendarDTO(from calendar: EKCalendar, isDefault: Bool, entity: CalendarEntityType) -> CalendarDTO {
+        CalendarDTO(
+            id: calendar.calendarIdentifier,
+            title: calendar.title,
+            colorHex: hexString(from: calendar.cgColor),
+            entityType: entity,
+            allowsModifications: calendar.allowsContentModifications,
+            isDefault: isDefault
+        )
+    }
+
+    fileprivate func hexString(from color: CGColor?) -> String? {
+        guard var cg = color else { return nil }
+        if cg.colorSpace?.model != .rgb, let converted = cg.converted(to: CGColorSpaceCreateDeviceRGB(), intent: .defaultIntent, options: nil) {
+            cg = converted
+        }
+        guard let comps = cg.components else { return nil }
+        // Ensure at least 3 components
+        let r = Int((comps.count > 0 ? comps[0] : 0) * 255.0)
+        let g = Int((comps.count > 1 ? comps[1] : 0) * 255.0)
+        let b = Int((comps.count > 2 ? comps[2] : 0) * 255.0)
+        return String(format: "#%02X%02X%02X", r, g, b)
     }
 }

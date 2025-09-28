@@ -1,5 +1,4 @@
 import SwiftUI
-import EventKit
 
 /// View for displaying detected events analysis results
 struct EventsResultView: View {

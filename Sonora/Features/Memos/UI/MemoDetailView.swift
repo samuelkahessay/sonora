@@ -42,36 +42,7 @@ struct MemoDetailView: View {
                     .padding(.horizontal)
                     .padding(.bottom, 20)
 
-                // Auto-detection banner for events/reminders
-                if viewModel.showEventDetectionBanner {
-                    NotificationBanner.info(
-                        message: "📅 Found \(viewModel.eventDetectionCount) event\(viewModel.eventDetectionCount == 1 ? "" : "s") — Tap to review"
-                    ) {
-                        viewModel.dismissEventDetectionBanner()
-                    }
-                    .onTapGesture {
-                        // Present quick add flow
-                        let events = viewModel.latestDetectedEvents()
-                        if !events.isEmpty { quickAddEvents = events; showQuickAddSheet = true }
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 12)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-                if viewModel.showReminderDetectionBanner {
-                    NotificationBanner.info(
-                        message: "⏰ Found \(viewModel.reminderDetectionCount) reminder\(viewModel.reminderDetectionCount == 1 ? "" : "s") — Tap to review"
-                    ) {
-                        viewModel.dismissReminderDetectionBanner()
-                    }
-                    .onTapGesture {
-                        let reminders = viewModel.latestDetectedReminders()
-                        if !reminders.isEmpty { quickAddReminders = reminders; showQuickAddRemindersSheet = true }
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 12)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
+                // Banners for events/reminders were removed; Action Items now handles review/adding.
                 
                 headerInfoView
                     .padding(.bottom, 20)
@@ -147,14 +118,7 @@ struct MemoDetailView: View {
                 viewModel.showShareSheet = false
             }
         }
-        .sheet(isPresented: $showQuickAddSheet) {
-            EventConfirmationView(detectedEvents: quickAddEvents)
-                .withDIContainer()
-        }
-        .sheet(isPresented: $showQuickAddRemindersSheet) {
-            ReminderConfirmationView(detectedReminders: quickAddReminders)
-                .withDIContainer()
-        }
+        // Legacy quick-add sheets removed; flows are integrated in Action Items UI.
         .onAppear {
             viewModel.configure(with: memo)
             viewModel.onViewAppear()
@@ -246,10 +210,7 @@ struct MemoDetailView: View {
     }
 
     // MARK: - Extracted Sections
-    @State private var showQuickAddSheet: Bool = false
-    @State private var quickAddEvents: [EventsData.DetectedEvent] = []
-    @State private var showQuickAddRemindersSheet: Bool = false
-    @State private var quickAddReminders: [RemindersData.DetectedReminder] = []
+    // Quick-add state removed (superseded by Action Items UI)
     
     // Collapsed transcript + banners state
     @State private var isTranscriptExpanded: Bool = false

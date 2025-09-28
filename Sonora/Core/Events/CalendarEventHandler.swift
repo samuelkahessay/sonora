@@ -1,5 +1,5 @@
 import Foundation
-import EventKit
+// No direct EventKit dependency here; repository returns DTOs
 
 /// Event handler for calendar integration using EventKit and analysis results
 @MainActor

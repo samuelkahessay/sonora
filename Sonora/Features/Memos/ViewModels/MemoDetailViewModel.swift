@@ -251,22 +251,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             }
         }
 
-        // Auto-detected Events/Reminders banner trigger
-        let analysisRepo = DIContainer.shared.analysisRepository()
-        if let eventsEnvelope: AnalyzeEnvelope<EventsData> = analysisRepo.getAnalysisResult(for: memo.id, mode: .events, responseType: EventsData.self) {
-            let count = eventsEnvelope.data.events.count
-            if count > 0 && autoBannerDismissedForMemo[memo.id] != true {
-                eventDetectionCount = count
-                showEventDetectionBanner = true
-            }
-        }
-        if let remEnvelope: AnalyzeEnvelope<RemindersData> = analysisRepo.getAnalysisResult(for: memo.id, mode: .reminders, responseType: RemindersData.self) {
-            let count = remEnvelope.data.reminders.count
-            if count > 0 && autoBannerDismissedForMemo[memo.id] != true {
-                reminderDetectionCount = count
-                showReminderDetectionBanner = true
-            }
-        }
+        // Legacy auto-detection banners removed. Distill/Action Items surface detections inline.
     }
     
     // MARK: - Public Methods
@@ -1164,35 +1149,7 @@ extension MemoDetailViewModel {
         set { state.language.bannerMessage = newValue }
     }
 
-    // MARK: - Event Detection Banner
-    var showEventDetectionBanner: Bool {
-        get { state.ui.showEventDetectionBanner }
-        set { state.ui.showEventDetectionBanner = newValue }
-    }
-    var eventDetectionCount: Int {
-        get { state.ui.eventDetectionCount }
-        set { state.ui.eventDetectionCount = newValue }
-    }
-    var showReminderDetectionBanner: Bool {
-        get { state.ui.showReminderDetectionBanner }
-        set { state.ui.showReminderDetectionBanner = newValue }
-    }
-    var reminderDetectionCount: Int {
-        get { state.ui.reminderDetectionCount }
-        set { state.ui.reminderDetectionCount = newValue }
-    }
-    var autoBannerDismissedForMemo: [UUID: Bool] {
-        get { state.ui.autoBannerDismissedForMemo }
-        set { state.ui.autoBannerDismissedForMemo = newValue }
-    }
-    func dismissEventDetectionBanner() {
-        if let memo = currentMemo { autoBannerDismissedForMemo[memo.id] = true }
-        showEventDetectionBanner = false
-    }
-    func dismissReminderDetectionBanner() {
-        if let memo = currentMemo { autoBannerDismissedForMemo[memo.id] = true }
-        showReminderDetectionBanner = false
-    }
+    // Event/reminder detection banners removed; detections are shown via Action Items.
     
     func latestDetectedEvents() -> [EventsData.DetectedEvent] {
         guard let memo = currentMemo else { return [] }

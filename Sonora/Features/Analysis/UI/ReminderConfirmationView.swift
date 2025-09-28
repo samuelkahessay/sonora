@@ -1,5 +1,4 @@
 import SwiftUI
-import EventKit
 
 struct ReminderConfirmationView: View {
     let detectedReminders: [RemindersData.DetectedReminder]
@@ -20,8 +19,8 @@ struct ReminderConfirmationView: View {
     @SwiftUI.Environment(\.diContainer) private var container: DIContainer
     @SwiftUI.Environment(\.dismiss) private var dismiss: DismissAction
 
-    @State private var lists: [EKCalendar] = []
-    @State private var selectedList: EKCalendar? = nil
+    @State private var lists: [CalendarDTO] = []
+    @State private var selectedList: CalendarDTO? = nil
     @State private var selectedIds: Set<String> = []
     @State private var editable: [String: EditableReminder] = [:]
     @State private var isLoading: Bool = false
@@ -126,7 +125,7 @@ struct ReminderConfirmationView: View {
                     guard selectedIds.contains(o.id), let e = editable[o.id] else { return nil }
                     return e.toDetectedReminder()
                 }
-                var mapping: [String: EKCalendar] = [:]
+                var mapping: [String: CalendarDTO] = [:]
                 for r in selected { mapping[r.id] = list }
                 let results = try await container.createReminderUseCase().execute(reminders: selected, listMapping: mapping)
                 let failures = results.values.filter { if case .failure = $0 { true } else { false } }

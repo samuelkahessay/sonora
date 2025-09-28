@@ -1,12 +1,12 @@
 import Foundation
-@preconcurrency import EventKit
+// Domain stays pure; use CalendarDTO bridging model
 
 /// Use case for creating reminders with validation and error handling
 protocol CreateReminderUseCaseProtocol: Sendable {
     @MainActor
-    func execute(reminder: RemindersData.DetectedReminder, list: EKCalendar) async throws -> String
+    func execute(reminder: RemindersData.DetectedReminder, list: CalendarDTO) async throws -> String
     @MainActor
-    func execute(reminders: [RemindersData.DetectedReminder], listMapping: [String: EKCalendar]) async throws -> [String: Result<String, Error>]
+    func execute(reminders: [RemindersData.DetectedReminder], listMapping: [String: CalendarDTO]) async throws -> [String: Result<String, Error>]
 }
 
 final class CreateReminderUseCase: CreateReminderUseCaseProtocol, @unchecked Sendable {
@@ -33,7 +33,7 @@ final class CreateReminderUseCase: CreateReminderUseCaseProtocol, @unchecked Sen
     // MARK: - Use Case Execution
     
     @MainActor
-    func execute(reminder: RemindersData.DetectedReminder, list: EKCalendar) async throws -> String {
+    func execute(reminder: RemindersData.DetectedReminder, list: CalendarDTO) async throws -> String {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: [
             "reminderTitle": reminder.title,
@@ -63,11 +63,7 @@ final class CreateReminderUseCase: CreateReminderUseCaseProtocol, @unchecked Sen
         
         do {
             // Create the reminder
-            let reminderId = try await eventKitRepository.createReminder(
-                reminder,
-                in: list,
-                maxRetries: 3
-            )
+            let reminderId = try await eventKitRepository.createReminder(reminder, in: list, maxRetries: 3)
             
             // Publish success event
             await MainActor.run {
@@ -104,8 +100,8 @@ final class CreateReminderUseCase: CreateReminderUseCaseProtocol, @unchecked Sen
     }
     
     @MainActor
-    func execute(reminders: [RemindersData.DetectedReminder], 
-                listMapping: [String: EKCalendar]) async throws -> [String: Result<String, Error>] {
+    func execute(reminders: [RemindersData.DetectedReminder],
+                listMapping: [String: CalendarDTO]) async throws -> [String: Result<String, Error>] {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: [
             "reminderCount": reminders.count,
@@ -135,11 +131,7 @@ final class CreateReminderUseCase: CreateReminderUseCaseProtocol, @unchecked Sen
         }
         
         // Create reminders in batch
-        let results = try await eventKitRepository.createReminders(
-            reminders,
-            listMapping: listMapping,
-            maxRetries: 3
-        )
+        let results = try await eventKitRepository.createReminders(reminders, listMapping: listMapping, maxRetries: 3)
         
         // Analyze results and publish events
         let successCount = results.values.compactMap { try? $0.get() }.count
@@ -227,21 +219,12 @@ final class CreateReminderUseCase: CreateReminderUseCaseProtocol, @unchecked Sen
         }
     }
     
-    private func validateReminderListInput(_ list: EKCalendar) throws {
-        // Check if calendar allows modifications
-        guard list.allowsContentModifications else {
+    private func validateReminderListInput(_ list: CalendarDTO) throws {
+        guard list.allowsModifications else {
             throw EventKitError.reminderListNotFound(identifier: "List does not allow modifications: \(list.title)")
         }
-        
-        // Check if it's a reminder calendar (not an event calendar)
-        guard list.type == .local || list.type == .calDAV || 
-              list.type == .exchange else {
-            throw EventKitError.reminderListNotFound(identifier: "Invalid calendar type for reminders: \(list.title)")
-        }
-        
-        // Additional check to ensure it's configured for reminders
-        guard list.allowedEntityTypes.contains(.reminder) else {
-            throw EventKitError.reminderListNotFound(identifier: "Calendar not configured for reminders: \(list.title)")
+        guard list.entityType == .reminder else {
+            throw EventKitError.reminderListNotFound(identifier: "Invalid calendar for reminders: \(list.title)")
         }
     }
 }

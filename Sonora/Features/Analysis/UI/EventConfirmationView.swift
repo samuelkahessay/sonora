@@ -1,5 +1,5 @@
 import SwiftUI
-import EventKit
+// Uses CalendarDTO for selection
 
 struct EventConfirmationView: View {
     let detectedEvents: [EventsData.DetectedEvent]
@@ -20,8 +20,8 @@ struct EventConfirmationView: View {
     @SwiftUI.Environment(\.diContainer) private var container: DIContainer
     @SwiftUI.Environment(\.dismiss) private var dismiss: DismissAction
 
-    @State private var calendars: [EKCalendar] = []
-    @State private var selectedCalendar: EKCalendar? = nil
+    @State private var calendars: [CalendarDTO] = []
+    @State private var selectedCalendar: CalendarDTO? = nil
     @State private var selectedEventIds: Set<String> = []
     @State private var editableEvents: [String: EditableEvent] = [:]
     @State private var isLoading: Bool = false
@@ -155,7 +155,7 @@ struct EventConfirmationView: View {
                     return e.toDetectedEvent()
                 }
 
-                var mapping: [String: EKCalendar] = [:]
+                var mapping: [String: CalendarDTO] = [:]
                 for ev in selected { mapping[ev.id] = calendar }
 
                 let results = try await container.createCalendarEventUseCase().execute(events: selected, calendarMapping: mapping)
@@ -195,8 +195,8 @@ struct EventConfirmationView: View {
 // MARK: - Calendar Selection
 
 struct CalendarSelectionView: View {
-    @Binding var selectedCalendar: EKCalendar?
-    let calendars: [EKCalendar]
+    @Binding var selectedCalendar: CalendarDTO?
+    let calendars: [CalendarDTO]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -204,16 +204,16 @@ struct CalendarSelectionView: View {
                 .font(.subheadline)
                 .fontWeight(.semibold)
             Picker("Calendar", selection: Binding(
-                get: { selectedCalendar?.calendarIdentifier ?? "" },
-                set: { newId in selectedCalendar = calendars.first(where: { $0.calendarIdentifier == newId }) }
+                get: { selectedCalendar?.id ?? "" },
+                set: { newId in selectedCalendar = calendars.first(where: { $0.id == newId }) }
             )) {
-                ForEach(calendars, id: \.calendarIdentifier) { cal in
+                ForEach(calendars, id: \.id) { cal in
                     HStack(spacing: 8) {
                         Circle()
-                            .fill(Color(cgColor: cal.cgColor))
+                            .fill(Color(hex: cal.colorHex))
                             .frame(width: 10, height: 10)
                         Text(cal.title)
-                    }.tag(cal.calendarIdentifier)
+                    }.tag(cal.id)
                 }
             }
             .pickerStyle(.menu)
@@ -264,6 +264,31 @@ struct EventEditView: View {
             }
         }
         .onAppear { hasDate = event.startDate != nil }
+    }
+}
+
+// MARK: - Color helper
+private extension Color {
+    init(hex: String?) {
+        guard let hex = hex else { self = .gray; return }
+        let cleaned = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#")).uppercased()
+        var rgba: UInt64 = 0
+        Scanner(string: cleaned).scanHexInt64(&rgba)
+        switch cleaned.count {
+        case 6: // RRGGBB
+            let r = Double((rgba & 0xFF0000) >> 16) / 255.0
+            let g = Double((rgba & 0x00FF00) >> 8) / 255.0
+            let b = Double(rgba & 0x0000FF) / 255.0
+            self = Color(red: r, green: g, blue: b)
+        case 8: // RRGGBBAA
+            let r = Double((rgba & 0xFF000000) >> 24) / 255.0
+            let g = Double((rgba & 0x00FF0000) >> 16) / 255.0
+            let b = Double((rgba & 0x0000FF00) >> 8) / 255.0
+            let a = Double(rgba & 0x000000FF) / 255.0
+            self = Color(red: r, green: g, blue: b).opacity(a)
+        default:
+            self = .gray
+        }
     }
 }
 

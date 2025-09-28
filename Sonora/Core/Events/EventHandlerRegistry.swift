@@ -225,9 +225,9 @@ public final class EventHandlerRegistry {
                     status += " - Tracking \(handler.currentMemoCount) memos"
                 }
             case "CalendarEventHandler":
-                status += " - Placeholder implementation"
+                status += " - Calendar integration registered"
             case "RemindersEventHandler":
-                status += " - Placeholder implementation"
+                status += " - Reminders integration registered"
             default:
                 break
             }

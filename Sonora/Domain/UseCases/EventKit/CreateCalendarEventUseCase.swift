@@ -1,12 +1,12 @@
 import Foundation
-@preconcurrency import EventKit
+// Domain stays pure; use CalendarDTO bridging model
 
 /// Use case for creating calendar events with validation and error handling
 protocol CreateCalendarEventUseCaseProtocol: Sendable {
     @MainActor
-    func execute(event: EventsData.DetectedEvent, calendar: EKCalendar) async throws -> String
+    func execute(event: EventsData.DetectedEvent, calendar: CalendarDTO) async throws -> String
     @MainActor
-    func execute(events: [EventsData.DetectedEvent], calendarMapping: [String: EKCalendar]) async throws -> [String: Result<String, Error>]
+    func execute(events: [EventsData.DetectedEvent], calendarMapping: [String: CalendarDTO]) async throws -> [String: Result<String, Error>]
 }
 
 final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unchecked Sendable {
@@ -33,7 +33,7 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
     // MARK: - Use Case Execution
     
     @MainActor
-    func execute(event: EventsData.DetectedEvent, calendar: EKCalendar) async throws -> String {
+    func execute(event: EventsData.DetectedEvent, calendar: CalendarDTO) async throws -> String {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: [
             "eventTitle": event.title,
@@ -90,11 +90,7 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
         
         do {
             // Create the event
-            let eventId = try await eventKitRepository.createEvent(
-                event,
-                in: calendar,
-                maxRetries: 3
-            )
+            let eventId = try await eventKitRepository.createEvent(event, in: calendar, maxRetries: 3)
             
             // Publish success event
             await MainActor.run {
@@ -131,8 +127,8 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
     }
     
     @MainActor
-    func execute(events: [EventsData.DetectedEvent], 
-                calendarMapping: [String: EKCalendar]) async throws -> [String: Result<String, Error>] {
+    func execute(events: [EventsData.DetectedEvent],
+                calendarMapping: [String: CalendarDTO]) async throws -> [String: Result<String, Error>] {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: [
             "eventCount": events.count,
@@ -162,11 +158,7 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
         }
         
         // Create events in batch
-        let results = try await eventKitRepository.createEvents(
-            events,
-            calendarMapping: calendarMapping,
-            maxRetries: 3
-        )
+        let results = try await eventKitRepository.createEvents(events, calendarMapping: calendarMapping, maxRetries: 3)
         
         // Analyze results and publish events
         let successCount = results.values.compactMap { try? $0.get() }.count
@@ -260,16 +252,12 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
         }
     }
     
-    private func validateCalendarInput(_ calendar: EKCalendar) throws {
-        // Check if calendar allows modifications
-        guard calendar.allowsContentModifications else {
+    private func validateCalendarInput(_ calendar: CalendarDTO) throws {
+        guard calendar.allowsModifications else {
             throw EventKitError.calendarNotFound(identifier: "Calendar does not allow modifications: \(calendar.title)")
         }
-        
-        // Check if it's an event calendar (not a reminder calendar)
-        guard calendar.type == .local || calendar.type == .calDAV || 
-              calendar.type == .exchange || calendar.type == .subscription else {
-            throw EventKitError.calendarNotFound(identifier: "Invalid calendar type for events: \(calendar.title)")
+        guard calendar.entityType == .event else {
+            throw EventKitError.calendarNotFound(identifier: "Invalid calendar for events: \(calendar.title)")
         }
     }
 }

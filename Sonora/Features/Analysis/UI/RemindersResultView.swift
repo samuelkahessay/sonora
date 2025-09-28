@@ -1,5 +1,4 @@
 import SwiftUI
-import EventKit
 
 /// View for displaying detected reminders analysis results
 struct RemindersResultView: View {
