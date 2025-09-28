@@ -30,6 +30,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     private let context: ModelContext
     
     private var player: AVAudioPlayer?
+    private var playbackTimer: Timer?
+    private let playbackSubject = PassthroughSubject<PlaybackProgress, Never>()
     
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private let memosDirectoryPath: URL
@@ -94,6 +96,15 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         }
         
         do {
+            // Ensure audio session is configured for playback (speaker)
+            let session = AVAudioSession.sharedInstance()
+            do {
+                try session.setCategory(.playback, mode: .default, options: [])
+                try session.setActive(true)
+            } catch {
+                print("⚠️ MemoRepository: Failed to configure playback session: \(error)")
+            }
+
             let audio = try AVAudioPlayer(contentsOf: memo.fileURL)
             player = audio
             audio.prepareToPlay()
@@ -101,6 +112,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             playingMemo = memo
             isPlaying = true
             print("▶️ MemoRepository: Playing \(memo.filename)")
+            startPlaybackTimer()
+            publishProgress(forcedMemo: memo)
 
         } catch {
             print("❌ MemoRepository: Failed to play \(memo.filename): \(error)")
@@ -113,6 +126,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         player?.pause()
         isPlaying = false
         print("⏸️ MemoRepository: Paused playback")
+        publishProgress()
     }
     
     func stopPlaying() {
@@ -121,6 +135,43 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         isPlaying = false
         playingMemo = nil
         print("⏹️ MemoRepository: Stopped playback")
+        stopPlaybackTimer()
+    }
+
+    func seek(to time: TimeInterval, for memo: Memo) {
+        guard let current = playingMemo, current.id == memo.id, let player = player else { return }
+        let clamped = max(0, min(time, player.duration))
+        player.currentTime = clamped
+        publishProgress(forcedMemo: memo)
+    }
+
+    var playbackProgressPublisher: AnyPublisher<PlaybackProgress, Never> {
+        playbackSubject.eraseToAnyPublisher()
+    }
+
+    private func startPlaybackTimer() {
+        stopPlaybackTimer()
+        playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            self.publishProgress()
+        }
+        RunLoop.main.add(playbackTimer!, forMode: .common)
+    }
+
+    private func stopPlaybackTimer() {
+        playbackTimer?.invalidate()
+        playbackTimer = nil
+    }
+
+    private func publishProgress(forcedMemo memo: Memo? = nil) {
+        guard let memo = memo ?? playingMemo, let player = player else { return }
+        let progress = PlaybackProgress(
+            memoId: memo.id,
+            currentTime: player.currentTime,
+            duration: player.duration,
+            isPlaying: isPlaying
+        )
+        playbackSubject.send(progress)
     }
     
     // MARK: - File Helpers

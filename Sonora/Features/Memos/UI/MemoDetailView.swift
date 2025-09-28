@@ -238,6 +238,9 @@ struct MemoDetailView: View {
     // Collapsed transcript + banners state
     @State private var isTranscriptExpanded: Bool = false
     @State private var dismissTranscriptionErrorBanner: Bool = false
+    // Scrubber state
+    @State private var isScrubbing: Bool = false
+    @State private var scrubValue: Double = 0
     
     @ViewBuilder
     private var languageBannerView: some View {
@@ -325,40 +328,63 @@ struct MemoDetailView: View {
     
     @ViewBuilder
     private var audioControlsView: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Button(action: {
-                    HapticManager.shared.playSelection()
-                    viewModel.playMemo()
-                }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: viewModel.playButtonIcon)
-                            .font(.title2)
-                            .foregroundColor(.semantic(.textOnColored))
-                            .frame(minWidth: 50, minHeight: 50)
-                            .background(Color.semantic(.brandPrimary))
-                            .clipShape(Circle())
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(viewModel.isPlaying ? "Pause" : "Play")
-                                .font(.system(.headline, design: .serif))
-                                .fontWeight(.semibold)
-                            Text(memo.durationString)
-                                .font(.subheadline)
-                                .foregroundColor(.semantic(.textSecondary))
-                        }
-                        Spacer()
+        HStack(spacing: 12) {
+            // Play/Pause button (compact, icon-only)
+            Button(action: {
+                HapticManager.shared.playSelection()
+                viewModel.playMemo()
+            }) {
+                Image(systemName: viewModel.playButtonIcon)
+                    .font(.title2)
+                    .foregroundColor(.semantic(.textOnColored))
+                    .frame(width: 44, height: 44)
+                    .background(Color.semantic(.brandPrimary))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(viewModel.isPlaying ? "Pause \(viewModel.currentMemoTitle)" : "Play \(viewModel.currentMemoTitle)")
+            .accessibilityHint("Double tap to \(viewModel.isPlaying ? "pause" : "play") this memo")
+            .accessibilityFocused($focusedElement, equals: .playButton)
+            .accessibilityAddTraits(.startsMediaSession)
+
+            // Scrubber and time labels inline
+            VStack(spacing: 4) {
+                Slider(
+                    value: Binding(
+                        get: { isScrubbing ? scrubValue : viewModel.currentTime },
+                        set: { scrubValue = $0 }
+                    ),
+                    in: 0...(max(viewModel.totalDuration, 0.001)),
+                    onEditingChanged: { editing in
+                        isScrubbing = editing
+                        if !editing { viewModel.seek(to: scrubValue) }
                     }
+                )
+                .tint(.semantic(.brandPrimary))
+                .accessibilityLabel("Playback position")
+                .accessibilityValue("\(Int((isScrubbing ? scrubValue : viewModel.currentTime) / max(viewModel.totalDuration, 1) * 100)) percent")
+
+                HStack {
+                    Text(formatTime(isScrubbing ? scrubValue : viewModel.currentTime))
+                        .font(.caption)
+                        .foregroundColor(.semantic(.textSecondary))
+                    Spacer()
+                    Text(formatTime(viewModel.totalDuration))
+                        .font(.caption)
+                        .foregroundColor(.semantic(.textSecondary))
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(viewModel.isPlaying ? "Pause \(viewModel.currentMemoTitle)" : "Play \(viewModel.currentMemoTitle)")
-                .accessibilityHint("Double tap to \(viewModel.isPlaying ? "pause" : "play") this memo")
-                .accessibilityFocused($focusedElement, equals: .playButton)
-                .accessibilityAddTraits(.startsMediaSession)
             }
         }
         .padding()
         .background(Color.semantic(.fillSecondary))
         .cornerRadius(12)
+    }
+
+    private func formatTime(_ seconds: Double) -> String {
+        let total = max(0, Int(seconds.rounded()))
+        let m = total / 60
+        let s = total % 60
+        return String(format: "%d:%02d", m, s)
     }
     
     @ViewBuilder

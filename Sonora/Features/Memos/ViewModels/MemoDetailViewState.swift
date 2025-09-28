@@ -18,9 +18,16 @@ struct MemoDetailViewState: Equatable {
     /// Audio playback state
     struct AudioState: Equatable {
         var isPlaying: Bool = false
+        var currentTime: TimeInterval = 0
+        var duration: TimeInterval = 0
         
         var playButtonIcon: String {
             isPlaying ? "pause.fill" : "play.fill"
+        }
+
+        var progressFraction: Double {
+            guard duration > 0 else { return 0 }
+            return min(1.0, max(0.0, currentTime / duration))
         }
     }
     

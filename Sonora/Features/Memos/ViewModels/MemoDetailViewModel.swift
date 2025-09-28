@@ -58,6 +58,11 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         state.transcription.state.text
     }
 
+    /// Current playback time (seconds)
+    var currentTime: TimeInterval { state.audio.currentTime }
+    /// Current memo duration (seconds)
+    var totalDuration: TimeInterval { state.audio.duration }
+
     /// Count of available analysis categories. With the simplified model,
     /// only Distill is considered.
     var analysisAvailableCount: Int {
@@ -160,6 +165,19 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             }
             .store(in: &cancellables)
 
+        // Playback progress updates (throttled by repository timer)
+        memoRepository.playbackProgressPublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] progress in
+                guard let self = self, let memo = self.currentMemo, progress.memoId == memo.id else { return }
+                self.state.audio.currentTime = progress.currentTime
+                let dur = progress.duration.isFinite && progress.duration > 0 ? progress.duration : memo.duration
+                self.state.audio.duration = dur
+                if self.isPlaying != progress.isPlaying {
+                    self.isPlaying = progress.isPlaying
+                }
+            }
+            .store(in: &cancellables)
     }
     
     private func setupOperationMonitoring() {
@@ -210,6 +228,10 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         let newIsPlaying = memoRepository.playingMemo?.id == memo.id && memoRepository.isPlaying
         if isPlaying != newIsPlaying {
             isPlaying = newIsPlaying
+        }
+        // Update duration baseline from memo if not set yet
+        if state.audio.duration == 0 {
+            state.audio.duration = memo.duration
         }
 
         // Update language detection + moderation from metadata if available
@@ -318,6 +340,12 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                 }
             }
         }
+    }
+
+    /// Seek within current memo playback
+    func seek(to time: TimeInterval) {
+        guard let memo = currentMemo else { return }
+        memoRepository.seek(to: time, for: memo)
     }
     
     /// Perform analysis with the specified mode

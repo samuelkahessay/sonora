@@ -16,6 +16,10 @@ protocol MemoRepository: ObservableObject {
     var isPlaying: Bool { get }
     func playMemo(_ memo: Memo)
     func stopPlaying()
+    /// Seek playback position for the specified memo (no-op if not the active memo)
+    func seek(to time: TimeInterval, for memo: Memo)
+    /// Publishes periodic playback progress updates for the active memo
+    var playbackProgressPublisher: AnyPublisher<PlaybackProgress, Never> { get }
     
     // Persistence
     func loadMemos()
@@ -27,4 +31,12 @@ protocol MemoRepository: ObservableObject {
     func handleNewRecording(at url: URL) -> Memo
     func updateMemoMetadata(_ memo: Memo, metadata: [String: Any])
     func renameMemo(_ memo: Memo, newTitle: String)
+}
+
+/// Playback progress update
+struct PlaybackProgress: Equatable, Sendable {
+    let memoId: UUID
+    let currentTime: TimeInterval
+    let duration: TimeInterval
+    let isPlaying: Bool
 }
