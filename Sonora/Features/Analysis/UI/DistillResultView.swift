@@ -10,7 +10,7 @@ struct DistillResultView: View {
     let envelope: AnalyzeEnvelope<DistillData>?
     let partialData: PartialDistillData?
     let progress: DistillProgressUpdate?
-    // Pro gating (Action Items are Pro-only per current plan)
+    // Pro gating (Action Items: detection visible to all; adds gated later)
     private var isPro: Bool { DIContainer.shared.storeKitService().isPro }
     @State private var showPaywall: Bool = false
     
@@ -43,15 +43,8 @@ struct DistillResultView: View {
                 summaryPlaceholder
             }
             
-            // Action Items Section (Pro only)
-            if isPro, let actionItems = effectiveActionItems, !actionItems.isEmpty {
-                actionItemsSection(actionItems)
-            } else if isPro && isShowingProgress && shouldShowActionItemsPlaceholder {
-                actionItemsPlaceholder
-            }
-            else if !isPro {
-                upgradeCTA
-            }
+            // Action Items Section (host both tasks and detections)
+            actionItemsHostSection
             
             // Reflection Questions Section
             if let reflectionQuestions = effectiveReflectionQuestions, !reflectionQuestions.isEmpty {
@@ -59,10 +52,7 @@ struct DistillResultView: View {
             } else if isShowingProgress {
                 reflectionQuestionsPlaceholder
             }
-
-            // Events & Reminders Section
-            eventsRemindersSection()
-            
+        
             // Performance info removed for cleaner UI
             
             // Copy results action (also triggers smart transcript expand via notification)
@@ -96,26 +86,31 @@ struct DistillResultView: View {
         return data?.summary ?? partialData?.summary
     }
     
-    private var effectiveActionItems: [DistillData.ActionItem]? {
-        return data?.action_items ?? partialData?.actionItems
-    }
-    
     private var effectiveReflectionQuestions: [String]? {
         return data?.reflection_questions ?? partialData?.reflectionQuestions
     }
 
-    private var effectiveEvents: [EventsData.DetectedEvent] {
-        return data?.events ?? partialData?.events ?? []
+    private var dedupedDetectionResults: ([EventsData.DetectedEvent], [RemindersData.DetectedReminder]) {
+        dedupeDetections(
+            events: data?.events ?? partialData?.events ?? [],
+            reminders: data?.reminders ?? partialData?.reminders ?? []
+        )
     }
 
-    private var effectiveReminders: [RemindersData.DetectedReminder] {
-        return data?.reminders ?? partialData?.reminders ?? []
-    }
-    
-    private var shouldShowActionItemsPlaceholder: Bool {
-        // Only show placeholder if we haven't received action items yet
-        return partialData?.actionItems == nil
-    }
+    private var eventsForUI: [EventsData.DetectedEvent] { dedupedDetectionResults.0 }
+    private var remindersForUI: [RemindersData.DetectedReminder] { dedupedDetectionResults.1 }
+
+    // MARK: - Detections (Events + Reminders)
+    @State private var detectionItems: [ActionItemDetectionUI] = []
+    @State private var dismissedDetections: Set<UUID> = []
+    @State private var editingDetections: Set<UUID> = []
+    @State private var addedDetections: Set<UUID> = []
+    @State private var showBatchSheet: Bool = false
+    @State private var batchInclude: Set<UUID> = []
+    @State private var showToast: Bool = false
+    @State private var toastText: String = ""
+    @State private var toastUndoId: UUID? = nil
+    @StateObject private var permissionService = DIContainer.shared.eventKitPermissionService() as! EventKitPermissionService
     
     // MARK: - Progress Section
     
@@ -175,51 +170,80 @@ struct DistillResultView: View {
         }
     }
     
-    // MARK: - Action Items Section
-    
+    // MARK: - Action Items Host Section
     @ViewBuilder
-    private func actionItemsSection(_ items: [DistillData.ActionItem]) -> some View {
+    private var actionItemsHostSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.subheadline)
-                    .foregroundColor(.semantic(.success))
+            if shouldShowPermissionExplainer {
+                PermissionExplainerCard(
+                    permissions: permissionService,
+                    onOpenSettings: { DIContainer.shared.systemNavigator().openSettings(completion: nil) }
+                )
+            }
+            HStack(spacing: 10) {
+                Image(systemName: "bolt.fill").foregroundColor(.semantic(.warning))
                 Text("Action Items")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.semantic(.textPrimary))
-            }
-            
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(items, id: \.text) { item in
-                    HStack(alignment: .top, spacing: 10) {
-                        // Priority indicator
-                        Circle()
-                            .fill(priorityColor(item.priority))
-                            .frame(width: 8, height: 8)
-                            .padding(.top, 6)
-                        
-                        // Action text
-                        Text(item.text)
-                            .font(.body)
-                            .foregroundColor(.semantic(.textPrimary))
-                            .multilineTextAlignment(.leading)
-                        
-                        // Priority badge
-                        Text(item.priority.rawValue.capitalized)
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(priorityColor(item.priority))
-                            .cornerRadius(4)
-                    }
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 8)
-                    .background(Color.semantic(.fillSecondary))
-                    .cornerRadius(8)
+                Spacer()
+                if reviewCount > 0 {
+                    Button("Review & Add All (\(reviewCount))") { openBatchReview() }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
                 }
+            }
+
+            // Detection Cards (visible to all; adds gated by Pro later)
+            if !detectionItemsFiltered.isEmpty {
+                VStack(spacing: 12) {
+                    ForEach(detectionItemsFiltered) { m in
+                        ActionItemDetectionCard(
+                            model: m,
+                            isPro: isPro,
+                            onAdd: { _ in onAddSingle(m.id) },
+                            onEditToggle: { id in toggleEdit(id) },
+                            onDismiss: { id in dismiss(id) },
+                            onQuickChip: { id, chip in applyChip(id, chip: chip) }
+                        )
+                    }
+                }
+            } else {
+                Text("No events or reminders detected")
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+            }
+        }
+        .onAppear(perform: prepareDetectionsIfNeeded)
+        .onChange(of: eventsForUI.count + remindersForUI.count) { _, _ in
+            prepareDetectionsIfNeeded()
+        }
+        .sheet(isPresented: $showBatchSheet) {
+            BatchAddActionItemsSheet(
+                items: $detectionItems,
+                include: $batchInclude,
+                isPro: isPro,
+                onEdit: { id in toggleEdit(id) },
+                onAddSelected: { _ in showBatchSheet = false },
+                onDismiss: { showBatchSheet = false }
+            )
+        }
+        .overlay(alignment: .bottom) {
+            if showToast {
+                HStack {
+                    Text(toastText)
+                        .font(.callout)
+                    Spacer()
+                    if let id = toastUndoId {
+                        Button("Undo") { undoAdd(id) }
+                            .buttonStyle(.bordered)
+                    }
+                }
+                .padding()
+                .background(Color.semantic(.fillSecondary))
+                .cornerRadius(12)
+                .shadow(radius: 8)
+                .padding()
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
     }
@@ -271,57 +295,92 @@ struct DistillResultView: View {
         }
     }
 
-    // MARK: - Events & Reminders Section
-    @ViewBuilder
-    private func eventsRemindersSection() -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "calendar.badge.clock")
-                    .font(.subheadline)
-                    .foregroundColor(.semantic(.brandPrimary))
-                Text("Events & Reminders")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.semantic(.textPrimary))
+    // MARK: - Detection helpers
+    private var detectionItemsFiltered: [ActionItemDetectionUI] {
+        detectionItems
+            .filter { !dismissedDetections.contains($0.id) && !addedDetections.contains($0.id) }
+            .sorted(by: { lhs, rhs in
+                if lhs.confidence != rhs.confidence {
+                    return order(lhs.confidence) < order(rhs.confidence)
+                }
+                // Earlier dates first if both present
+                if let ld = lhs.suggestedDate, let rd = rhs.suggestedDate {
+                    return ld < rd
+                }
+                return false
+            })
+    }
+    private func order(_ c: ActionItemConfidence) -> Int { c == .high ? 0 : (c == .medium ? 1 : 2) }
+    private var reviewCount: Int { detectionItemsFiltered.count }
+    private func openBatchReview() {
+        batchInclude = Set(detectionItemsFiltered.map { $0.id }) // default include all
+        showBatchSheet = true
+    }
+    private func prepareDetectionsIfNeeded() {
+        let events = eventsForUI
+        let reminders = remindersForUI
+        var arr: [ActionItemDetectionUI] = []
+        arr.append(contentsOf: events.map { ActionItemDetectionUI.fromEvent($0) })
+        arr.append(contentsOf: reminders.map { ActionItemDetectionUI.fromReminder($0) })
+        detectionItems = arr
+    }
+    private func toggleEdit(_ id: UUID) {
+        if let idx = detectionItems.firstIndex(where: { $0.id == id }) {
+            detectionItems[idx].isEditing.toggle()
+        }
+    }
+    private func dismiss(_ id: UUID) { dismissedDetections.insert(id) }
+    private func onAddSingle(_ id: UUID) {
+        addedDetections.insert(id)
+        if let m = detectionItems.first(where: { $0.id == id }) {
+            toastText = m.kind == .reminder ? "Added to Reminders" : "Added to Calendar"
+            toastUndoId = id
+            withAnimation { showToast = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                withAnimation { showToast = false }
+                toastUndoId = nil
             }
-
-            if effectiveEvents.isEmpty && effectiveReminders.isEmpty {
-                Text("No events or reminders detected")
-                    .font(.caption)
-                    .foregroundColor(.semantic(.textSecondary))
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    if !effectiveEvents.isEmpty {
-                        ForEach(effectiveEvents, id: \.id) { ev in
-                            HStack(spacing: 8) {
-                                Image(systemName: "calendar")
-                                    .font(.caption)
-                                    .foregroundColor(.semantic(.textSecondary))
-                                Text(eventLine(ev))
-                                    .font(.callout)
-                                    .foregroundColor(.semantic(.textPrimary))
-                                    .lineLimit(2)
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-                    if !effectiveReminders.isEmpty {
-                        ForEach(effectiveReminders, id: \.id) { rem in
-                            HStack(spacing: 8) {
-                                Image(systemName: "bell")
-                                    .font(.caption)
-                                    .foregroundColor(.semantic(.textSecondary))
-                                Text(reminderLine(rem))
-                                    .font(.callout)
-                                    .foregroundColor(.semantic(.textPrimary))
-                                    .lineLimit(2)
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
+        }
+    }
+    private func undoAdd(_ id: UUID) {
+        addedDetections.remove(id)
+        withAnimation { showToast = false }
+        toastUndoId = nil
+    }
+    private func applyChip(_ id: UUID, chip: String) {
+        // Stub mapping for chips – will be wired later
+        if let idx = detectionItems.firstIndex(where: { $0.id == id }) {
+            var d = detectionItems[idx]
+            // Simple demo: set date to now with small offsets
+            switch chip.lowercased() {
+            case "today", "today evening": d.suggestedDate = Date().addingTimeInterval(60*60*3)
+            case "tomorrow": d.suggestedDate = Calendar.current.date(byAdding: .day, value: 1, to: Date())
+            case "this weekend": d.suggestedDate = nextSaturday(atHour: 10)
+            case "all day": d.isAllDay.toggle()
+            default: break
+            }
+            detectionItems[idx] = d
+        }
+    }
+    private func nextSaturday(atHour hour: Int) -> Date? {
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday
+        let now = Date()
+        for i in 0..<14 {
+            if let d = cal.date(byAdding: .day, value: i, to: now) {
+                if cal.component(.weekday, from: d) == 7 { // Saturday
+                    return cal.date(bySettingHour: hour, minute: 0, second: 0, of: d)
                 }
             }
         }
+        return nil
+    }
+
+    private var shouldShowPermissionExplainer: Bool {
+        // Show explainer if either permission not determined or denied/restricted
+        let cal = permissionService.calendarPermissionState
+        let rem = permissionService.reminderPermissionState
+        return !(cal.isAuthorized && rem.isAuthorized)
     }
 
     private func eventLine(_ ev: EventsData.DetectedEvent) -> String {
@@ -349,6 +408,86 @@ struct DistillResultView: View {
         df.dateStyle = .medium
         df.timeStyle = .short
         return df.string(from: date)
+    }
+
+    private func dedupeDetections(
+        events: [EventsData.DetectedEvent],
+        reminders: [RemindersData.DetectedReminder]
+    ) -> ([EventsData.DetectedEvent], [RemindersData.DetectedReminder]) {
+        var finalEvents: [EventsData.DetectedEvent] = []
+        var finalReminders = reminders
+        var reservedReminderKeys = Set<String>()
+
+        func normalize(_ text: String) -> String {
+            text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        func reminderKey(for reminder: RemindersData.DetectedReminder) -> String {
+            let source = reminder.sourceText.isEmpty ? reminder.title : reminder.sourceText
+            return normalize(source)
+        }
+
+        func eventKey(for event: EventsData.DetectedEvent) -> String {
+            let source = event.sourceText.isEmpty ? event.title : event.sourceText
+            return normalize(source)
+        }
+
+        let meetingKeywords = [
+            "meeting", "meet", "sync", "call", "review", "session",
+            "standup", "retro", "1:1", "one-on-one", "interview", "doctor",
+            "appointment", "consult", "therapy", "coaching"
+        ]
+
+        for event in events {
+            let key = eventKey(for: event)
+            let titleLower = event.title.lowercased()
+            let hasKeyword = meetingKeywords.contains { titleLower.contains($0) }
+            let hasParticipants = !(event.participants?.isEmpty ?? true)
+            let hasLocation = !(event.location?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+            let hasStartDate = event.startDate != nil
+            let qualifiesAsEvent = hasStartDate && (hasKeyword || hasParticipants || hasLocation)
+
+            if qualifiesAsEvent {
+                finalEvents.append(event)
+                if !key.isEmpty { reservedReminderKeys.insert(key) }
+            } else {
+                // Treat as reminder-style task; ensure a reminder exists
+                let alreadyHasReminder = finalReminders.contains { reminderKey(for: $0) == key && !key.isEmpty }
+                if !alreadyHasReminder {
+                    let converted = RemindersData.DetectedReminder(
+                        id: event.id,
+                        title: event.title,
+                        dueDate: event.startDate,
+                        priority: .medium,
+                        confidence: event.confidence,
+                        sourceText: event.sourceText,
+                        memoId: event.memoId
+                    )
+                    finalReminders.append(converted)
+                }
+            }
+        }
+
+        if !reservedReminderKeys.isEmpty {
+            finalReminders.removeAll { reminder in
+                let key = reminderKey(for: reminder)
+                return !key.isEmpty && reservedReminderKeys.contains(key)
+            }
+        }
+
+        // Deduplicate reminders by key while preserving order
+        var seenReminderKeys = Set<String>()
+        finalReminders = finalReminders.filter { reminder in
+            let key = reminderKey(for: reminder)
+            if key.isEmpty { return true }
+            if seenReminderKeys.contains(key) {
+                return false
+            }
+            seenReminderKeys.insert(key)
+            return true
+        }
+
+        return (finalEvents, finalReminders)
     }
     
     // MARK: - Placeholder Views
@@ -384,78 +523,6 @@ struct DistillResultView: View {
         .frame(minHeight: 130)
     }
 
-    // MARK: - Upgrade CTA (Subtle)
-    @ViewBuilder
-    private var upgradeCTA: some View {
-        HStack(alignment: .center, spacing: 10) {
-            Image(systemName: "lock.fill")
-                .font(.caption)
-                .foregroundColor(.semantic(.brandPrimary))
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Action Items with Pro")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.semantic(.textPrimary))
-                Text("Next steps tailored to your note")
-                    .font(.caption)
-                    .foregroundColor(.semantic(.textSecondary))
-            }
-            Spacer()
-            Button("Learn more") {
-                HapticManager.shared.playSelection()
-                showPaywall = true
-            }
-            .font(.caption)
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .accessibilityLabel("Learn more about Sonora Pro")
-        }
-        .padding(12)
-        .background(Color.semantic(.fillSecondary))
-        .cornerRadius(10)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.semantic(.brandPrimary).opacity(0.15), lineWidth: 1)
-        )
-        .accessibilityElement(children: .combine)
-    }
-    
-    @ViewBuilder
-    private var actionItemsPlaceholder: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.subheadline)
-                    .foregroundColor(.semantic(.textSecondary))
-                Text("Action Items")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.semantic(.textSecondary))
-                
-                Spacer()
-                
-                LoadingIndicator(size: .small)
-            }
-            
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(0..<2, id: \.self) { _ in
-                    HStack(spacing: 10) {
-                        Circle()
-                            .fill(Color.semantic(.separator).opacity(0.3))
-                            .frame(width: 8, height: 8)
-                            .padding(.top, 6)
-                        
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.semantic(.separator).opacity(0.3))
-                            .frame(height: 12)
-                    }
-                }
-            }
-        }
-        .redacted(reason: .placeholder)
-        .frame(minHeight: 180)
-    }
-    
     @ViewBuilder
     private var reflectionQuestionsPlaceholder: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -506,43 +573,28 @@ struct DistillResultView: View {
     
     // Performance info removed — simplified progress UI (no technical details)
     
-    // MARK: - Helper Methods
-    
-    private func priorityColor(_ priority: DistillData.ActionItem.Priority) -> Color {
-        switch priority {
-        case .high:
-            return .semantic(.error)
-        case .medium:
-            return .semantic(.warning)
-        case .low:
-            return .semantic(.success)
-        }
-    }
-
     // Build a concatenated text representation for copying
     private func buildCopyText() -> String {
         var parts: [String] = []
         if let s = effectiveSummary, !s.isEmpty {
             parts.append("Summary:\n" + s)
         }
-        if let items = effectiveActionItems, !items.isEmpty {
-            let list = items.enumerated().map { "\($0.offset + 1). \($0.element.text) [\($0.element.priority.rawValue)]" }.joined(separator: "\n")
-            parts.append("Action Items:\n" + list)
-        }
         // Key Themes intentionally omitted from Distill (Themes is a separate mode)
         if let questions = effectiveReflectionQuestions, !questions.isEmpty {
             let list = questions.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
             parts.append("Reflection Questions:\n" + list)
         }
-        if !effectiveEvents.isEmpty || !effectiveReminders.isEmpty {
+        let events = eventsForUI
+        let reminders = remindersForUI
+        if !events.isEmpty || !reminders.isEmpty {
             var lines: [String] = []
-            if !effectiveEvents.isEmpty {
+            if !events.isEmpty {
                 lines.append("Events:")
-                lines.append(contentsOf: effectiveEvents.map(eventLine))
+                lines.append(contentsOf: events.map(eventLine))
             }
-            if !effectiveReminders.isEmpty {
+            if !reminders.isEmpty {
                 lines.append("Reminders:")
-                lines.append(contentsOf: effectiveReminders.map(reminderLine))
+                lines.append(contentsOf: reminders.map(reminderLine))
             }
             parts.append(lines.joined(separator: "\n"))
         } else {

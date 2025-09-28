@@ -43,10 +43,12 @@ enum DetectionContextBuilder {
     }
 
     private static func containsDateOrTime(_ text: String) -> Bool {
-        // naive: numbers with ":", am/pm, weekdays, or month names
+        // Expanded signals: times of day, parts of week, natural phrases
         let lower = text.lowercased()
-        let timePatterns = [":", "am", "pm"]
-        let weekdays = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday","today","tomorrow"]
+        let timePatterns = [":", "am", "pm", "eod", "end of day", "noon", "midnight",
+                            "morning", "afternoon", "evening", "tonight", "today", "tomorrow",
+                            "next "]
+        let weekdays = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"]
         let months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"]
         if timePatterns.contains(where: { lower.contains($0) }) { return true }
         if weekdays.contains(where: { lower.contains($0) }) { return true }
@@ -54,14 +56,19 @@ enum DetectionContextBuilder {
         // simple numeric date like 12/25 or 2025-01-02
         if lower.range(of: #"\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b"#, options: .regularExpression) != nil { return true }
         if lower.range(of: #"\b\d{4}-\d{2}-\d{2}\b"#, options: .regularExpression) != nil { return true }
+        // explicit clock time like 2pm or 10am PST
+        if lower.range(of: #"\b\d{1,2}\s?(?:am|pm)(?:\s?[a-z]{2,4})?\b"#, options: .regularExpression) != nil { return true }
         return false
     }
 
     private static func containsCalendarPhrase(_ text: String) -> Bool {
         let lower = text.lowercased()
+        // Expanded lexicon capturing common planning verbs/nouns and shorthand
         let phrases = [
-            "schedule", "meeting", "meet", "call", "appointment", "calendar",
-            "remind", "reminder", "follow up", "due", "deadline"
+            "schedule", "meeting", "meet", "call", "appointment", "calendar", "sync",
+            "lock in", "lock-in", "review", "audit", "onboarding", "teardown",
+            "remind", "reminder", "follow up", "follow-up", "due", "deadline", "push",
+            "circle back", "circle-back"
         ]
         return phrases.contains(where: { lower.contains($0) })
     }
@@ -76,4 +83,3 @@ enum DetectionContextBuilder {
         return Double(hits) / Double(tokens.count)
     }
 }
-

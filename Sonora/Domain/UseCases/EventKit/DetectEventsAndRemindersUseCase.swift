@@ -56,8 +56,8 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
     
     // MARK: - Configuration
     // Legacy static thresholds remain as a safety floor; adaptive policy refines per-context
-    private var legacyEventThreshold: Float { Float(UserDefaults.standard.object(forKey: "eventConfidenceThreshold") as? Double ?? 0.7) }
-    private var legacyReminderThreshold: Float { Float(UserDefaults.standard.object(forKey: "reminderConfidenceThreshold") as? Double ?? 0.7) }
+    private var legacyEventThreshold: Float { Float(UserDefaults.standard.object(forKey: "eventConfidenceThreshold") as? Double ?? 0.45) }
+    private var legacyReminderThreshold: Float { Float(UserDefaults.standard.object(forKey: "reminderConfidenceThreshold") as? Double ?? 0.45) }
     
     // MARK: - Initialization
     init(
@@ -149,6 +149,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
                             "hasCalendarPhrases": detectionContext.hasCalendarPhrases,
                             "imperativeVerbDensity": detectionContext.imperativeVerbDensity
                         ]))
+            print("🗓️ [Detect] thresholds event=\(eventThreshold) reminder=\(reminderThreshold) context hasDates=\(detectionContext.hasDatesOrTimes) hasCalendarPhrases=\(detectionContext.hasCalendarPhrases)")
             let result = try await performDetection(
                 transcript: transcript,
                 memoId: memoId,
@@ -237,8 +238,27 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         // Process results and filter by confidence
         let eventsEnvelope = try await eventsResult
         let remindersEnvelope = try await remindersResult
-        let filteredEvents = filterEventsByConfidence(eventsEnvelope.data, threshold: eventThreshold)
-        let filteredReminders = filterRemindersByConfidence(remindersEnvelope.data, threshold: reminderThreshold)
+        print("🗓️ [Detect] raw counts events=\(eventsEnvelope.data.events.count) reminders=\(remindersEnvelope.data.reminders.count)")
+        var filteredEvents = filterEventsByConfidence(eventsEnvelope.data, threshold: eventThreshold)
+        var filteredReminders = filterRemindersByConfidence(remindersEnvelope.data, threshold: reminderThreshold)
+
+        // Smart fallback: if nothing passes thresholds but raw contains items,
+        // include the strongest candidates at a relaxed bound to aid recall.
+        if filteredEvents == nil, !eventsEnvelope.data.events.isEmpty {
+            let fallback = eventsEnvelope.data.events
+                .sorted(by: { $0.confidence > $1.confidence })
+                .prefix(2)
+                .filter { $0.confidence >= max(0.40, eventThreshold - 0.25) }
+            if !fallback.isEmpty { filteredEvents = EventsData(events: Array(fallback)) }
+        }
+        if filteredReminders == nil, !remindersEnvelope.data.reminders.isEmpty {
+            let fallback = remindersEnvelope.data.reminders
+                .sorted(by: { $0.confidence > $1.confidence })
+                .prefix(3)
+                .filter { $0.confidence >= max(0.40, reminderThreshold - 0.25) }
+            if !fallback.isEmpty { filteredReminders = RemindersData(reminders: Array(fallback)) }
+        }
+        print("🗓️ [Detect] filtered counts events=\(filteredEvents?.events.count ?? 0) reminders=\(filteredReminders?.reminders.count ?? 0)")
         
         return DetectionResult(
             events: filteredEvents,

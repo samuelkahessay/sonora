@@ -17,6 +17,19 @@
 	<false/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Sonora records your voice memos. Recordings are saved on your device. Audio is sent securely for transcription.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Sonora can add calendar events you approve to keep you on track.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Sonora can add reminders you approve to help you follow through.</string>
+	<!-- iOS 17+ granular permission reasons -->
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Sonora needs full calendar access to add and manage events you choose.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Sonora needs write access to add events you choose without reading your existing calendar.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Sonora needs full reminders access to add and manage reminders you choose.</string>
+	<key>NSRemindersWriteOnlyAccessUsageDescription</key>
+	<string>Sonora needs write access to add reminders you choose without reading your existing reminders.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>

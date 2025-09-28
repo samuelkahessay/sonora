@@ -2,7 +2,7 @@
   "storekitConfigurationVersion": 1,
   "products": [
     {
-      "id": "pro.monthly",
+      "id": "sonora.pro.monthly",
       "type": "autoRenewableSubscription",
       "displayName": "Pro Monthly",
       "subscription": {
@@ -23,7 +23,7 @@
       ]
     },
     {
-      "id": "pro.annual",
+      "id": "sonora.pro.annual",
       "type": "autoRenewableSubscription",
       "displayName": "Pro Annual",
       "subscription": {

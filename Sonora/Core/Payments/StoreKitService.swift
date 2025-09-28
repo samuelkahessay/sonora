@@ -9,11 +9,12 @@ public protocol StoreKitServiceProtocol: Sendable {
     func restorePurchases() async throws -> Bool
     var isProPublisher: AnyPublisher<Bool, Never> { get }
     var isPro: Bool { get }
+    func refreshEntitlements() async
 }
 
 public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable {
     // MARK: - Constants
-    private let productIds: Set<String> = ["pro.monthly", "pro.annual"]
+    private let productIds: Set<String> = ["sonora.pro.monthly", "sonora.pro.annual"]
     private enum CacheKey {
         static let proFlag = "storekit.isPro.cached"
         static let proTs = "storekit.isPro.cached.ts"
@@ -56,40 +57,57 @@ public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable
 
     public func purchase(productId: String) async throws -> Bool {
         #if canImport(StoreKit)
-        let products = try await Product.products(for: Array(productIds))
-        guard let product = products.first(where: { $0.id == productId }) else { return false }
+        print("🛒 [StoreKitService] purchase() start, productId=\(productId)")
+        let ids = Array(productIds)
+        let products = try await Product.products(for: ids)
+        print("🛒 [StoreKitService] products fetched: \(products.map{ $0.id }) for ids=\(ids)")
+        guard let product = products.first(where: { $0.id == productId }) else {
+            print("🛒 [StoreKitService] requested product not found in fetched list")
+            return false
+        }
+        print("🛒 [StoreKitService] initiating purchase for \(product.id)")
         let result = try await product.purchase()
         switch result {
         case .success(let verification):
             switch verification {
             case .verified(let transaction):
                 await transaction.finish()
+                print("🛒 [StoreKitService] purchase verified; finishing transaction and refreshing entitlements")
                 await refreshEntitlements()
                 return true
             case .unverified:
+                print("🛒 [StoreKitService] purchase unverified")
                 return false
             }
         case .userCancelled:
+            print("🛒 [StoreKitService] purchase cancelled by user")
             return false
         case .pending:
             // Treat pending as not upgraded yet
+            print("🛒 [StoreKitService] purchase pending")
             return false
         @unknown default:
+            print("🛒 [StoreKitService] unknown purchase result")
             return false
         }
         #else
+        print("🛒 [StoreKitService] StoreKit not available in this build")
         return false
         #endif
     }
 
     public func restorePurchases() async throws -> Bool {
         #if canImport(StoreKit)
+        print("🛒 [StoreKitService] restorePurchases() start")
         try await AppStore.sync()
         // Sync triggers entitlement updates; refresh view of current state
         let before = subject.value
         await refreshEntitlements()
-        return subject.value != before || subject.value
+        let after = subject.value
+        print("🛒 [StoreKitService] restorePurchases() done, before=\(before), after=\(after)")
+        return after != before || after
         #else
+        print("🛒 [StoreKitService] StoreKit not available in this build")
         return false
         #endif
     }
@@ -112,14 +130,17 @@ public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable
     private func computeIsPro() async -> Bool {
         #if canImport(StoreKit)
         // Check latest verified transactions for known products
+        print("🛒 [StoreKitService] computeIsPro() scanning latest transactions for ids=\(productIds)")
         for id in productIds {
             if let result = await Transaction.latest(for: id) {
                 switch result {
                 case .verified(let transaction):
+                    print("🛒 [StoreKitService] latest transaction verified for id=\(id), revoked=\(transaction.revocationDate != nil)")
                     if transaction.revocationDate == nil {
                         return true
                     }
                 case .unverified:
+                    print("🛒 [StoreKitService] latest transaction unverified for id=\(id)")
                     continue
                 }
             }
@@ -128,6 +149,7 @@ public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable
         // (kept simple to avoid long-lived streams here)
         return false
         #else
+        print("🛒 [StoreKitService] computeIsPro() StoreKit not available")
         return false
         #endif
     }
@@ -136,10 +158,11 @@ public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable
         if let cached = getCachedIsProValid() {
             // Cache still valid; keep current subject (already set on init)
             await MainActor.run { self.subject.send(cached) }
+            print("🛒 [StoreKitService] refreshEntitlements() using cached isPro=\(cached)")
             return
         }
         let value = await computeIsPro()
         await MainActor.run { setIsPro(value) }
+        print("🛒 [StoreKitService] refreshEntitlements() computed isPro=\(value)")
     }
 }
-

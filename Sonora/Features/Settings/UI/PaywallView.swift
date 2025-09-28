@@ -1,5 +1,8 @@
 import SwiftUI
 import Combine
+#if canImport(StoreKit)
+import StoreKit
+#endif
 
 @MainActor
 final class PaywallViewModel: ObservableObject {
@@ -28,12 +31,20 @@ final class PaywallViewModel: ObservableObject {
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
-        let productId = selectedPlan == .monthly ? "pro.monthly" : "pro.annual"
+        let productId = selectedPlan == .monthly ? "sonora.pro.monthly" : "sonora.pro.annual"
         Task { @MainActor in
             do {
                 let ok = try await storeKitService.purchase(productId: productId)
-                purchaseSuccessful = ok
+                if ok {
+                    print("🛒 [Paywall] purchase succeeded for \(productId)")
+                    purchaseSuccessful = true
+                } else {
+                    print("🛒 [Paywall] purchase returned false for \(productId)")
+                    errorMessage = "Purchase failed or was cancelled."
+                    purchaseSuccessful = false
+                }
             } catch {
+                print("🛒 [Paywall] purchase threw error: \(error.localizedDescription)")
                 errorMessage = error.localizedDescription
             }
             isLoading = false
@@ -47,8 +58,16 @@ final class PaywallViewModel: ObservableObject {
         Task { @MainActor in
             do {
                 let ok = try await storeKitService.restorePurchases()
-                purchaseSuccessful = ok || storeKitService.isPro
+                let final = ok || storeKitService.isPro
+                print("🛒 [Paywall] restore result ok=\(ok) isPro=\(storeKitService.isPro) final=\(final)")
+                if final {
+                    purchaseSuccessful = true
+                } else {
+                    errorMessage = "No active purchases to restore."
+                    purchaseSuccessful = false
+                }
             } catch {
+                print("🛒 [Paywall] restore threw error: \(error.localizedDescription)")
                 errorMessage = error.localizedDescription
             }
             isLoading = false
@@ -144,6 +163,56 @@ struct PaywallView: View {
             Button("Restore Purchases") { viewModel.restore() }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.isLoading)
+
+            #if DEBUG
+            // Debug-only helper to force a local StoreKit purchase call for monthly
+            Button("Debug Purchase Monthly") {
+                Task { @MainActor in
+                    print("🛒 [Paywall] Debug Purchase Monthly tapped")
+                    let success = try? await DIContainer.shared.storeKitService().purchase(productId: "sonora.pro.monthly")
+                    print("🔁 Debug purchase result:", success as Any)
+                }
+            }
+            .buttonStyle(.bordered)
+            .tint(.semantic(.brandPrimary))
+
+            Button("Debug Fetch Products") {
+                Task { @MainActor in
+                    #if canImport(StoreKit)
+                    let ids = ["sonora.pro.monthly", "sonora.pro.annual"]
+                    do {
+                        let products = try await Product.products(for: ids)
+                        print("🛒 [Paywall] Debug fetch products:", products.map { $0.id }, "requested:", ids)
+                    } catch {
+                        print("🛒 [Paywall] Debug fetch products error:", error.localizedDescription)
+                    }
+                    #else
+                    print("🛒 [Paywall] StoreKit not available for debug fetch")
+                    #endif
+                }
+            }
+            .buttonStyle(.bordered)
+
+            HStack {
+                Button("Force Pro (Debug ON)") {
+                    let ud = UserDefaults.standard
+                    ud.set(true, forKey: "storekit.isPro.cached")
+                    ud.set(Date().timeIntervalSince1970, forKey: "storekit.isPro.cached.ts")
+                    Task { await DIContainer.shared.storeKitService().refreshEntitlements() }
+                    print("🛒 [Paywall] Forced Pro ON (debug)")
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button("Force Pro (Debug OFF)") {
+                    let ud = UserDefaults.standard
+                    ud.set(false, forKey: "storekit.isPro.cached")
+                    ud.set(Date().timeIntervalSince1970, forKey: "storekit.isPro.cached.ts")
+                    Task { await DIContainer.shared.storeKitService().refreshEntitlements() }
+                    print("🛒 [Paywall] Forced Pro OFF (debug)")
+                }
+                .buttonStyle(.bordered)
+            }
+            #endif
         }
     }
 

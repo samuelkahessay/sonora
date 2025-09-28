@@ -246,7 +246,17 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     private func refreshQuota() async {
         state.quota.service = .cloudAPI
         let rem = try? await getRemainingMonthlyQuotaUseCase.execute()
-        state.quota.remainingDailySeconds = rem == .infinity ? 0 : (rem ?? 0)
+        if let r = rem {
+            if r == .infinity {
+                // No limit for Pro or unlimited cases
+                state.quota.remainingDailySeconds = nil
+            } else {
+                state.quota.remainingDailySeconds = max(0, r)
+            }
+        } else {
+            // If unknown, assume not limited for UI purposes; back-end will still enforce if needed
+            state.quota.remainingDailySeconds = nil
+        }
         objectWillChange.send()
     }
     
@@ -277,14 +287,12 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     }
     
     private func setupRecordingCallback() {
-        print("🔧 RecordingViewModel: Setting up callback function")
         audioRepository.setRecordingFinishedHandler { [weak self] url in
             Task { @MainActor in
                 print("🎤 RecordingViewModel: Recording finished callback triggered for \(url.lastPathComponent)")
                 self?.handleRecordingFinished(at: url)
             }
         }
-        print("🔧 RecordingViewModel: Callback function set successfully")
     }
     
     
@@ -502,7 +510,6 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     // MARK: - Lifecycle
     
     func onViewAppear() {
-        print("🎬 RecordingViewModel: View appeared, ensuring callback is set")
         setupRecordingCallback()
     }
     

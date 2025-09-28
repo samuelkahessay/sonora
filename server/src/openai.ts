@@ -96,7 +96,7 @@ export async function createChatJSON({
   const { result } = await requestWithRetry(async () => {
     const startTime = Date.now();
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
+    const timeout = setTimeout(() => controller.abort(), 30000);
     try {
       const requestBody = {
         model: MODEL,

@@ -1,5 +1,37 @@
 import { z } from 'zod';
 
+// Normalize date-like strings to ISO 8601 to reduce schema mismatch errors from LLM output.
+function normalizeDateInput(value: unknown, allowNull: boolean): unknown {
+  if (value === null || value === undefined) {
+    return allowNull ? null : value;
+  }
+
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return allowNull ? null : value;
+  }
+
+  // If model returns date only (YYYY-MM-DD), assume start-of-day UTC for consistency.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return `${trimmed}T00:00:00Z`;
+  }
+
+  // Accept time strings without timezone; Date will normalise to ISO.
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString();
+  }
+
+  return value;
+}
+
+const IsoDateTime = z.preprocess((val) => normalizeDateInput(val, false), z.string().datetime());
+const IsoDateTimeNullable = z.preprocess((val) => normalizeDateInput(val, true), z.string().datetime().nullable());
+
 // GPT-5 Model Settings Configuration - Optimized per complexity
 export const ModelSettings = {
   distill:             { verbosity: 'medium', reasoningEffort: 'medium' }, // Complex analysis with coaching questions
@@ -59,8 +91,8 @@ export const EventsDataSchema = z.object({
   events: z.array(z.object({
     id: z.string(),
     title: z.string(),
-    startDate: z.string().datetime().nullable(),
-    endDate: z.string().datetime().nullable(),
+    startDate: IsoDateTimeNullable,
+    endDate: IsoDateTimeNullable,
     location: z.string().nullable().optional(),
     participants: z.array(z.string()).optional(),
     confidence: z.number().min(0).max(1),
@@ -73,7 +105,7 @@ export const RemindersDataSchema = z.object({
   reminders: z.array(z.object({
     id: z.string(),
     title: z.string(),
-    dueDate: z.string().datetime().nullable(),
+    dueDate: IsoDateTimeNullable,
     priority: z.enum(['High', 'Medium', 'Low']),
     confidence: z.number().min(0).max(1),
     sourceText: z.string(),

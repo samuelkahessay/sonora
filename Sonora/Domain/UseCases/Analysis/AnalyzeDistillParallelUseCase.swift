@@ -44,6 +44,23 @@ public struct PartialDistillData: Sendable, Equatable {
     }
 }
 
+extension PartialDistillData {
+    public static func == (lhs: PartialDistillData, rhs: PartialDistillData) -> Bool {
+        // Compare simple fields directly
+        guard lhs.summary == rhs.summary,
+              lhs.actionItems == rhs.actionItems,
+              lhs.reflectionQuestions == rhs.reflectionQuestions else {
+            return false
+        }
+        // Compare events/reminders by IDs (domain types are not Equatable)
+        let lEventIds = lhs.events?.map { $0.id } ?? []
+        let rEventIds = rhs.events?.map { $0.id } ?? []
+        let lReminderIds = lhs.reminders?.map { $0.id } ?? []
+        let rReminderIds = rhs.reminders?.map { $0.id } ?? []
+        return lEventIds == rEventIds && lReminderIds == rReminderIds
+    }
+}
+
 enum DistillComponentData: Sendable {
     case summary(DistillSummaryData)
     case actions(DistillActionsData)
@@ -310,6 +327,9 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             case .reflection(let reflectionData):
                 let envelope = AnalyzeEnvelope(mode: mode, data: reflectionData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
                 analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+            case .detections:
+                // No cache persistence for detection bundle in this use case.
+                break
             }
         }
     }

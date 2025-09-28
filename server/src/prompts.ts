@@ -53,7 +53,14 @@ export function buildPrompt(mode: string, transcript: string): { system: string;
       break;
     case 'events':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
-        `Extract concrete calendar events with date/time if present. Generate stable UUIDs for each event.\n` +
+        `Extract concrete calendar events explicitly implied by the transcript.\n` +
+        `Return only meetings, appointments, or time-bound sessions where the user must be available at a specific moment.\n` +
+        `Include when there is an explicit time/day AND it sounds like a meeting/call/review/sync or otherwise involves another person or location.\n` +
+        `If something is just a personal task/errand ("pick up milk", "text Ethan"), skip it entirely so it can appear as a reminder instead.\n` +
+        `Do not create both an event and a reminder for the same sentence. Errands belong in reminders, meetings belong here.\n` +
+        `Be liberal in recognizing time expressions like "next Tuesday at 2pm", "Friday EOD", "tomorrow morning", or explicit dates. If end time is missing, infer a 30–60 minute window or leave endDate null.\n` +
+        `If only a day is given (e.g., "next Tuesday"), set startDate to the day's start in local time and leave endDate null.\n` +
+        `Always include the exact source phrase(s) in sourceText. Generate stable UUIDs for id.\n` +
         `Return JSON: {"events":[{` +
         `"id":"uuid",` +
         `"title":"Meeting with ...",` +
@@ -67,7 +74,11 @@ export function buildPrompt(mode: string, transcript: string): { system: string;
       break;
     case 'reminders':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
-        `Extract concrete reminders/tasks. Generate stable UUIDs for each reminder.\n` +
+        `Extract concrete to-dos and reminders (e.g., "text Ethan to confirm", "push landing page by Friday EOD").\n` +
+        `Only include personal follow-ups, errands, prep work, or self-directed tasks. If something sounds like a meeting, call, or scheduled session with others, skip it so it can live in the events array instead.\n` +
+        `Use natural language date/time cues (today/tomorrow/weekend/evening/EOD). Infer dueDate if clear; otherwise leave null.\n` +
+        `Never duplicate an item that is already a calendar event.\n` +
+        `Always include the exact source phrase(s) in sourceText. Generate stable UUIDs for id.\n` +
         `Return JSON: {"reminders":[{` +
         `"id":"uuid",` +
         `"title":"...",` +
