@@ -149,17 +149,6 @@ struct OnboardingPageView: View {
                         .accessibilityAddTraits(isLoading ? [.updatesFrequently] : [])
                     }
                     
-                    // Skip button
-                    Button("Skip") {
-                        HapticManager.shared.playSelection()
-                        onSkip()
-                    }
-                    .font(.system(.body, design: .serif))
-                    .foregroundColor(.semantic(.textSecondary))
-                    .padding(.vertical, Spacing.sm)
-                    .accessibilityLabel("Skip onboarding")
-                    .accessibilityHint("Double tap to skip the onboarding process and go directly to the app")
-                    .accessibilityFocused($focusedElement, equals: .skipButton)
                 }
             }
             .padding(.horizontal, Spacing.xl)

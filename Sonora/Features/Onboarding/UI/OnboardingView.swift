@@ -45,13 +45,11 @@ struct OnboardingView: View {
                 onContinue: { name in
                     viewModel.saveUserName(name)
                     viewModel.goToNextPage()
-                },
-                onSkip: { viewModel.skipOnboarding() }
+                }
             )
         case .howItWorks:
             HowItWorksView(
-                onContinue: { viewModel.goToNextPage() },
-                onSkip: { viewModel.skipOnboarding() }
+                onContinue: { viewModel.goToNextPage() }
             )
         case .firstRecording:
             FirstRecordingPromptView(

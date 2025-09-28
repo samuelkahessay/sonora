@@ -5,267 +5,60 @@ struct HowItWorksView: View {
     
     // MARK: - Properties
     let onContinue: () -> Void
-    let onSkip: () -> Void
     
-    // MARK: - Animation State
-    @State private var currentStep: Int = 0
-    @State private var isAnimating: Bool = false
+    // MARK: - State
+    @State private var currentIndex: Int = 0
     
     // MARK: - Constants
     private let steps = HowItWorksStep.allCases
-    private let animationDuration: Double = 3.0
     
     // MARK: - Body
     var body: some View {
-        ScrollView {
-            VStack(spacing: Spacing.xl) {
-                // Header section
-                VStack(spacing: Spacing.lg) {
-                    // Icon
-                    Image(systemName: "lightbulb.circle")
-                        .font(.system(size: 64, weight: .medium))
-                        .symbolRenderingMode(.multicolor)
-                        .foregroundStyle(.blue, .yellow)
-                        .accessibilityHidden(true)
-                    
-                    // Title and description
-                    VStack(spacing: Spacing.md) {
-                        Text("How It Works")
-                            .font(.system(.largeTitle, design: .serif))
-                            .fontWeight(.bold)
-                            .foregroundColor(.semantic(.textPrimary))
-                            .multilineTextAlignment(.center)
-                            .accessibilityAddTraits(.isHeader)
-                        
-                        Text("Transform your voice into actionable insights.")
-                            .font(.system(.body, design: .serif))
-                            .foregroundColor(.semantic(.textSecondary))
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(4)
-                    }
-                }
-                .padding(.top, Spacing.xl)
-                
-                // Visual demonstration section
-                VStack(spacing: Spacing.lg) {
-                    // Step indicators
-                    stepIndicators
-                    
-                    // Current step visualization
-                    stepVisualization
-                    
-                    // Step description
-                    stepDescription
-                }
-                .padding(.horizontal, Spacing.lg)
-                
-                // Privacy emphasis
-                privacySection
-                
-                Spacer(minLength: Spacing.xl)
-                
-                // Action buttons
-                VStack(spacing: Spacing.md) {
-                    // Continue button (match first page)
-                    Button(action: {
-                        HapticManager.shared.playSelection()
-                        onContinue()
-                    }) {
-                        Label("Continue", systemImage: "arrow.right.circle.fill")
-                            .font(.system(.body, design: .serif))
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .buttonBorderShape(.capsule)
-                    .accessibilityLabel("Continue to next step")
-                    .accessibilityHint("Double tap to proceed to the recording prompt")
-                    
-                    // Skip button
-                    Button("Skip") {
-                        HapticManager.shared.playSelection()
-                        onSkip()
-                    }
-                    .font(.system(.body, design: .serif))
-                    .foregroundColor(.semantic(.textSecondary))
-                    .padding(.vertical, Spacing.sm)
-                    .accessibilityLabel("Skip demo")
-                    .accessibilityHint("Double tap to skip the demo and go directly to recording")
+        VStack(spacing: Spacing.md) {
+            headerSection
+            
+            TabView(selection: $currentIndex) {
+                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                    HowItWorksCard(step: step)
+                        .tag(index)
                 }
             }
-            .padding(.horizontal, Spacing.xl)
-            .padding(.bottom, 120)
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .indexViewStyle(.page(backgroundDisplayMode: .automatic))
+            .frame(height: 360)
+            .padding(.bottom, Spacing.md)
+            .padding(.horizontal, Spacing.lg)
+            
+            privacySection
+            
+            actionButtons
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.semantic(.bgPrimary))
+        .padding(.top, Spacing.lg)
+        .padding(.horizontal, Spacing.xl)
+        .padding(.bottom, 160)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color.semantic(.bgPrimary).ignoresSafeArea())
         .fontDesign(.serif)
-        .onAppear {
-            startAnimation()
-        }
-        .onDisappear {
-            stopAnimation()
-        }
     }
     
-    // MARK: - Step Indicators
+    // MARK: - Sections
     
-    @ViewBuilder
-    private var stepIndicators: some View {
-        HStack(spacing: Spacing.md) {
-            ForEach(Array(steps.enumerated()), id: \.offset) { index, _ in
-                Circle()
-                    .fill(index == currentStep ? 
-                          Color.semantic(.brandPrimary) : 
-                          Color.semantic(.separator))
-                    .frame(width: 12, height: 12)
-                    .scaleEffect(index == currentStep ? 1.2 : 1.0)
-                    .animation(.easeInOut(duration: 0.3), value: currentStep)
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Demo step \(currentStep + 1) of \(steps.count)")
-    }
-    
-    // MARK: - Step Visualization
-    
-    @ViewBuilder
-    private var stepVisualization: some View {
-        let currentStepData = steps[currentStep]
-        
-        VStack(spacing: Spacing.lg) {
-            // Step icon with animation
-            Image(systemName: currentStepData.iconName)
-                .font(.system(size: 48, weight: .medium))
-                .symbolRenderingMode(.multicolor)
-                .symbolEffect(.bounce, value: currentStep)
-                .frame(height: 60)
-                .accessibilityHidden(true)
-            
-            // Step visual representation
-            stepVisualContent(for: currentStepData)
-        }
-        .padding(.vertical, Spacing.lg)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.semantic(.fillSecondary))
-        )
-        .animation(.spring(response: 0.6, dampingFraction: 0.85), value: currentStep)
-    }
-    
-    @ViewBuilder
-    private func stepVisualContent(for step: HowItWorksStep) -> some View {
-        switch step {
-        case .record:
-            // Microphone with sound waves
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: "mic.fill")
-                    .font(.title2)
-                    .foregroundColor(.semantic(.brandPrimary))
-                
-                ForEach(0..<3, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.semantic(.brandPrimary))
-                        .frame(width: 4, height: CGFloat.random(in: 20...40))
-                        .scaleEffect(y: isAnimating ? CGFloat.random(in: 0.5...1.5) : 1.0)
-                        .animation(
-                            .spring(response: 0.6, dampingFraction: 0.9)
-                            .repeatForever()
-                            .delay(Double(index) * 0.2),
-                            value: isAnimating
-                        )
-                }
-            }
-            .accessibilityLabel("Recording voice memo")
-            
-        case .transcribe:
-            // Text lines appearing (avoid invalid widths on device; compute relative width safely)
-            GeometryReader { proxy in
-                let full = max(proxy.size.width, 1)
-                VStack(spacing: Spacing.xs) {
-                    ForEach(0..<3, id: \.self) { index in
-                        let width = index == 2 ? full * 0.7 : full
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.semantic(.textSecondary))
-                            .frame(width: width, height: 4, alignment: .leading)
-                            .opacity(isAnimating ? 1.0 : 0.3)
-                            .scaleEffect(x: isAnimating ? 1.0 : 0.1, anchor: .leading)
-                            .animation(
-                                .spring(response: 0.5, dampingFraction: 0.9)
-                                    .delay(Double(index) * 0.25),
-                                value: isAnimating
-                            )
-                    }
-                }
-            }
-            .frame(height: 28)
-            .padding(.horizontal, Spacing.md)
-            .accessibilityLabel("Converting speech to text")
-            
-        case .analyze:
-            // Sparkles and insights
-            HStack(spacing: Spacing.lg) {
-                VStack(spacing: Spacing.xs) {
-                    Circle()
-                        .fill(Color.semantic(.success))
-                        .frame(width: 8, height: 8)
-                    Text("Theme")
-                        .font(.caption2)
-                        .foregroundColor(.semantic(.textSecondary))
-                }
-                
-                VStack(spacing: Spacing.xs) {
-                    Circle()
-                        .fill(Color.semantic(.info))
-                        .frame(width: 8, height: 8)
-                    Text("Summary")
-                        .font(.caption2)
-                        .foregroundColor(.semantic(.textSecondary))
-                }
-                
-                VStack(spacing: Spacing.xs) {
-                    Circle()
-                        .fill(Color.semantic(.warning))
-                        .frame(width: 8, height: 8)
-                    Text("Actions")
-                        .font(.caption2)
-                        .foregroundColor(.semantic(.textSecondary))
-                }
-            }
-            .scaleEffect(isAnimating ? 1.1 : 0.9)
-            .animation(.spring(response: 0.8, dampingFraction: 0.8).repeatForever(autoreverses: true), value: isAnimating)
-            .accessibilityLabel("Analyzing and extracting insights")
-        }
-    }
-    
-    // MARK: - Step Description
-    
-    @ViewBuilder
-    private var stepDescription: some View {
-        let currentStepData = steps[currentStep]
-        
-        VStack(spacing: Spacing.sm) {
-            Text(currentStepData.title)
-                .font(.system(.headline, design: .serif))
-                .fontWeight(.semibold)
+    private var headerSection: some View {
+        VStack(spacing: Spacing.xs) {
+            Text("How It Works")
+                .font(.system(.title, design: .serif))
+                .fontWeight(.bold)
                 .foregroundColor(.semantic(.textPrimary))
                 .multilineTextAlignment(.center)
+                .accessibilityAddTraits(.isHeader)
             
-            Text(currentStepData.description)
-                .font(.system(.body, design: .serif))
+            Text("Transform your voice into actionable insights.")
+                .font(.system(.subheadline, design: .serif))
                 .foregroundColor(.semantic(.textSecondary))
                 .multilineTextAlignment(.center)
-                .lineSpacing(2)
         }
-        .animation(.spring(response: 0.4, dampingFraction: 0.9), value: currentStep)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(currentStepData.title). \(currentStepData.description)")
     }
     
-    // MARK: - Privacy Section
-    
-    @ViewBuilder
     private var privacySection: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: "lock.shield")
@@ -289,22 +82,167 @@ struct HowItWorksView: View {
         .accessibilityLabel("Privacy guarantee: All processing respects your privacy")
     }
     
-    // MARK: - Animation Methods
-    
-    private func startAnimation() {
-        isAnimating = true
-        
-        Timer.scheduledTimer(withTimeInterval: animationDuration, repeats: true) { timer in
-            Task { @MainActor in
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) {
-                    currentStep = (currentStep + 1) % steps.count
+    private var actionButtons: some View {
+        VStack(spacing: Spacing.md) {
+            Button(action: handleContinue) {
+                HStack(spacing: Spacing.sm) {
+                    Text(buttonTitle)
+                    Image(systemName: "arrow.right.circle.fill")
                 }
+                .font(.system(.body, design: .serif))
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .buttonBorderShape(.capsule)
+            .accessibilityLabel(buttonTitle)
         }
     }
     
-    private func stopAnimation() {
-        isAnimating = false
+    // MARK: - Helpers
+    
+    private var buttonTitle: String {
+        currentIndex < steps.count - 1 ? "Continue" : "Get Started"
+    }
+    
+    private func handleContinue() {
+        HapticManager.shared.playSelection()
+        if currentIndex < steps.count - 1 {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                currentIndex += 1
+            }
+        } else {
+            onContinue()
+        }
+    }
+}
+
+// MARK: - How It Works Card
+
+private struct HowItWorksCard: View {
+    let step: HowItWorksStep
+    @State private var isAnimating: Bool = false
+    private let barHeights: [CGFloat] = [28, 36, 24]
+    
+    var body: some View {
+        VStack(spacing: Spacing.md) {
+            Image(systemName: step.iconName)
+                .font(.system(size: 36, weight: .medium))
+                .symbolRenderingMode(.multicolor)
+                .frame(height: 60)
+                .accessibilityHidden(true)
+            
+            VStack(spacing: Spacing.sm) {
+                Text(step.title)
+                    .font(.system(.headline, design: .serif))
+                    .fontWeight(.semibold)
+                    .foregroundColor(.semantic(.textPrimary))
+                    .multilineTextAlignment(.center)
+                
+                Text(step.description)
+                    .font(.system(.body, design: .serif))
+                    .foregroundColor(.semantic(.textSecondary))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+            }
+            
+            stepVisualContent
+        }
+        .padding(.vertical, Spacing.lg)
+        .padding(.horizontal, Spacing.md)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.semantic(.fillSecondary))
+        )
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                isAnimating = true
+            }
+        }
+        .onDisappear {
+            isAnimating = false
+        }
+    }
+    
+    @ViewBuilder private var stepVisualContent: some View {
+        switch step {
+        case .record:
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "mic.fill")
+                    .font(.title2)
+                    .foregroundColor(.semantic(.brandPrimary))
+                
+                ForEach(Array(barHeights.enumerated()), id: \.offset) { index, height in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.semantic(.brandPrimary))
+                        .frame(width: 4, height: height)
+                        .scaleEffect(y: isAnimating ? 1.4 : 0.6, anchor: .bottom)
+                        .animation(
+                            .spring(response: 0.6, dampingFraction: 0.9)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.2),
+                            value: isAnimating
+                        )
+                }
+            }
+            .accessibilityLabel("Recording voice memo")
+            
+        case .transcribe:
+            GeometryReader { proxy in
+                let fullWidth = max(proxy.size.width, 1)
+                VStack(spacing: Spacing.xs) {
+                    ForEach(0..<3, id: \.self) { index in
+                        let width = index == 2 ? fullWidth * 0.7 : fullWidth
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.semantic(.textSecondary))
+                            .frame(width: width, height: 4, alignment: .leading)
+                            .opacity(isAnimating ? 1.0 : 0.3)
+                            .scaleEffect(x: isAnimating ? 1.0 : 0.1, anchor: .leading)
+                            .animation(
+                                .spring(response: 0.5, dampingFraction: 0.9)
+                                    .delay(Double(index) * 0.25),
+                                value: isAnimating
+                            )
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(height: 28)
+            .padding(.horizontal, Spacing.md)
+            .accessibilityLabel("Converting speech to text")
+            
+        case .analyze:
+            HStack(spacing: Spacing.lg) {
+                InsightPill(color: .semantic(.info), label: "Summary")
+                InsightPill(color: .semantic(.warning), label: "Action Items")
+                InsightPill(color: .semantic(.success), label: "Reflection")
+            }
+            .scaleEffect(isAnimating ? 1.05 : 0.95)
+            .animation(
+                .spring(response: 0.8, dampingFraction: 0.8)
+                    .repeatForever(autoreverses: true),
+                value: isAnimating
+            )
+            .accessibilityLabel("Analyzing and extracting insights")
+        }
+    }
+}
+
+private struct InsightPill: View {
+    let color: Color
+    let label: String
+    
+    var body: some View {
+        VStack(spacing: Spacing.xs) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.semantic(.textSecondary))
+        }
     }
 }
 
@@ -333,7 +271,7 @@ enum HowItWorksStep: CaseIterable {
         case .transcribe:
             return "Your voice is automatically converted to text with high accuracy."
         case .analyze:
-            return "AI extracts key themes, summaries, and actionable items from your thoughts."
+            return "Distill gives you a concise summary, action items, and a reflection from your memo."
         }
     }
     
@@ -355,9 +293,6 @@ enum HowItWorksStep: CaseIterable {
     HowItWorksView(
         onContinue: {
             print("Continue tapped")
-        },
-        onSkip: {
-            print("Skip tapped")
         }
     )
 }
@@ -371,10 +306,6 @@ enum HowItWorksStep: CaseIterable {
                 HowItWorksView(
                     onContinue: {
                         print("Continue tapped")
-                        isPresented = false
-                    },
-                    onSkip: {
-                        print("Skip tapped")
                         isPresented = false
                     }
                 )

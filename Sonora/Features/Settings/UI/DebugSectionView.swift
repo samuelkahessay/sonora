@@ -19,7 +19,7 @@ struct DebugSectionView: View {
                 Button {
                     OnboardingConfiguration.shared.forceShowOnboardingForTesting()
                 } label: {
-                    HStack { Label("Show Onboarding Again", systemImage: "rectangle.ons.rectangle"); Spacer() }
+                    HStack { Label("Show Onboarding Again", systemImage: "rectangle.on.rectangle"); Spacer() }
                 }
                 .buttonStyle(.bordered)
                 .tint(.semantic(.brandPrimary))

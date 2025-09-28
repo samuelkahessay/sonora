@@ -5,12 +5,12 @@ struct NameEntryView: View {
     
     // MARK: - Properties
     let onContinue: (String) -> Void
-    let onSkip: () -> Void
     
     // MARK: - State
     @State private var nameInput: String = ""
     @State private var isValid: Bool = true
     @FocusState private var isTextFieldFocused: Bool
+    @State private var shouldAutoFocus = true
     
     // MARK: - Constants
     private let maxNameLength = 20
@@ -63,23 +63,18 @@ struct NameEntryView: View {
             // Actions
             VStack(spacing: Spacing.md) {
                 Button(action: handleContinue) {
-                    Label("Continue", systemImage: "arrow.right.circle.fill")
-                        .font(.system(.body, design: .serif))
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
+                    HStack(spacing: Spacing.sm) {
+                        Text("Continue")
+                        Image(systemName: "arrow.right.circle.fill")
+                    }
+                    .font(.system(.body, design: .serif))
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .buttonBorderShape(.capsule)
                 .accessibilityLabel("Continue with name")
-
-                Button("Skip") {
-                    HapticManager.shared.playSelection()
-                    onSkip()
-                }
-                .font(.system(.body, design: .serif))
-                .foregroundColor(.semantic(.textSecondary))
-                .accessibilityLabel("Skip name entry")
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.bottom, 120)
@@ -87,7 +82,10 @@ struct NameEntryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.semantic(.bgPrimary))
         .fontDesign(.serif)
-        .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { isTextFieldFocused = true } }
+        .onAppear {
+            guard shouldAutoFocus else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { isTextFieldFocused = true }
+        }
     }
     
     // MARK: - Helper Methods
@@ -104,6 +102,8 @@ struct NameEntryView: View {
     
     private func handleContinue() {
         HapticManager.shared.playSelection()
+        isTextFieldFocused = false
+        shouldAutoFocus = false
         let processedName = nameInput.trimmingCharacters(in: .whitespacesAndNewlines)
         onContinue(processedName)
     }
@@ -115,9 +115,6 @@ struct NameEntryView: View {
     NameEntryView(
         onContinue: { name in
             print("Continue with name: '\(name)'")
-        },
-        onSkip: {
-            print("Skip name entry")
         }
     )
 }
@@ -130,9 +127,6 @@ struct NameEntryView: View {
             NameEntryView(
                 onContinue: { name in
                     print("Continue with name: '\(name)'")
-                },
-                onSkip: {
-                    print("Skip name entry")
                 }
             )
         }

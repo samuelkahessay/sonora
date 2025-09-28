@@ -14,6 +14,7 @@
 		0A875D9F2E600B7100245D4A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9E2E600B7100245D4A /* SwiftUI.framework */; };
 		0A875DAC2E600B7300245D4A /* SonoraLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0A875D9A2E600B7100245D4A /* SonoraLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0AA6FA102E63710600C8BF7A /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 0AA6FA0F2E63710600C8BF7A /* ZIPFoundation */; };
+		28AD2BFF2E88D5230037363C /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28AD2BFE2E88D5230037363C /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,6 +64,9 @@
 		0A875D9E2E600B7100245D4A /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		0A875DB32E600BB900245D4A /* SonoraLiveActivityExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SonoraLiveActivityExtension.entitlements; sourceTree = "<group>"; };
 		28AD2BFC2E88B2790037363C /* SKProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = SKProducts.storekit; path = Sonora/StoreKit/SKProducts.storekit; sourceTree = "<group>"; };
+		28AD2BFD2E88D4780037363C /* SKProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = SKProducts.storekit; path = Sonora/StoreKit/SKProducts.storekit; sourceTree = "<group>"; };
+		28AD2BFE2E88D5230037363C /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		28AD2C002E88D8B50037363C /* SKProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = SKProducts.storekit; path = Sonora/StoreKit/SKProducts.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -134,6 +138,7 @@
 			files = (
 				0A555EC32E6A5175008F5486 /* LLM in Frameworks */,
 				0AA6FA102E63710600C8BF7A /* ZIPFoundation in Frameworks */,
+				28AD2BFF2E88D5230037363C /* StoreKit.framework in Frameworks */,
 				0A633FA42E68BD9600E6AB88 /* Transformers in Frameworks */,
 				0A555EC52E6A5175008F5486 /* LLMMacros in Frameworks */,
 			);
@@ -169,6 +174,8 @@
 			isa = PBXGroup;
 			children = (
 				28AD2BFC2E88B2790037363C /* SKProducts.storekit */,
+				28AD2BFD2E88D4780037363C /* SKProducts.storekit */,
+				28AD2C002E88D8B50037363C /* SKProducts.storekit */,
 				0A875DB32E600BB900245D4A /* SonoraLiveActivityExtension.entitlements */,
 				0A39740C2E5A6CA400F27D16 /* Sonora */,
 				0A39741A2E5A6CA600F27D16 /* SonoraTests */,
@@ -193,6 +200,7 @@
 		0A875D9B2E600B7100245D4A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				28AD2BFE2E88D5230037363C /* StoreKit.framework */,
 				0A875D9C2E600B7100245D4A /* WidgetKit.framework */,
 				0A875D9E2E600B7100245D4A /* SwiftUI.framework */,
 			);

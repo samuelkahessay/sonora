@@ -9,7 +9,13 @@ public protocol StoreKitServiceProtocol: Sendable {
     func restorePurchases() async throws -> Bool
     var isProPublisher: AnyPublisher<Bool, Never> { get }
     var isPro: Bool { get }
-    func refreshEntitlements() async
+    func refreshEntitlements(force: Bool) async
+}
+
+public extension StoreKitServiceProtocol {
+    func refreshEntitlements() async {
+        await refreshEntitlements(force: false)
+    }
 }
 
 public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable {
@@ -73,7 +79,8 @@ public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable
             case .verified(let transaction):
                 await transaction.finish()
                 print("🛒 [StoreKitService] purchase verified; finishing transaction and refreshing entitlements")
-                await refreshEntitlements()
+                await MainActor.run { setIsPro(true) }
+                await refreshEntitlements(force: true)
                 return true
             case .unverified:
                 print("🛒 [StoreKitService] purchase unverified")
@@ -102,7 +109,7 @@ public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable
         try await AppStore.sync()
         // Sync triggers entitlement updates; refresh view of current state
         let before = subject.value
-        await refreshEntitlements()
+        await refreshEntitlements(force: true)
         let after = subject.value
         print("🛒 [StoreKitService] restorePurchases() done, before=\(before), after=\(after)")
         return after != before || after
@@ -154,13 +161,15 @@ public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable
         #endif
     }
 
-    public func refreshEntitlements() async {
-        if let cached = getCachedIsProValid() {
-            // Cache still valid; keep current subject (already set on init)
+    public func refreshEntitlements(force: Bool = false) async {
+        if !force, let cached = getCachedIsProValid(), cached {
+            // Only short-circuit on positive cache hits. A cached `false` should still recompute so
+            // upgrade flows reflect immediately.
             await MainActor.run { self.subject.send(cached) }
-            print("🛒 [StoreKitService] refreshEntitlements() using cached isPro=\(cached)")
+            print("🛒 [StoreKitService] refreshEntitlements() using cached isPro=true")
             return
         }
+
         let value = await computeIsPro()
         await MainActor.run { setIsPro(value) }
         print("🛒 [StoreKitService] refreshEntitlements() computed isPro=\(value)")
