@@ -85,7 +85,10 @@ final class HapticManager {
     
     /// Haptic feedback for deletion operations
     func playDeletionFeedback() {
-        playError()
+        guard isEnabled else { return }
+        // Use a warning notification instead of error to avoid double logging
+        // and better reflect a confirmed destructive action.
+        notificationFeedback.notificationOccurred(.warning)
         print("🗑️ HapticManager: Deletion feedback")
     }
     
@@ -118,4 +121,3 @@ final class HapticManager {
         notificationFeedback.prepare()
     }
 }
-

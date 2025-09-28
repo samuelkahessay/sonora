@@ -7,6 +7,7 @@ struct MemoDetailView: View {
     let memo: Memo
     @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createMemoDetailViewModel()
     @StateObject private var titleTracker = DIContainer.shared.titleGenerationTracker()
+    @SwiftUI.Environment(\.dismiss) private var _dismiss_tmp
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
     @FocusState private var isTitleEditingFocused: Bool
     @State private var scrollOffset: CGFloat = 0
@@ -78,8 +79,9 @@ struct MemoDetailView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     audioControlsView
 
-                    // Inline status/error banners
+                    // Inline status/error banners (hide for no-speech)
                     if case .failed(let err) = viewModel.transcriptionState,
+                       !err.lowercased().contains("no speech detected"),
                        err != TranscriptionError.noSpeechDetected.errorDescription,
                        !dismissTranscriptionErrorBanner {
                         NotificationBanner(
@@ -104,6 +106,9 @@ struct MemoDetailView: View {
 
                     // Collapsed transcript below Distill
                     transcriptCollapsedView
+
+                    // Delete memo action
+                    deleteSectionView
                 }
                 .padding(.horizontal)
             }
@@ -200,6 +205,11 @@ struct MemoDetailView: View {
                 }
             }
         }
+        .onChange(of: viewModel.didDeleteMemo) { _, deleted in
+            if deleted {
+                _dismiss_tmp()
+            }
+        }
         .handleErrorFocus($viewModel.error)
         .onTapGesture {
             // Dismiss title editing when tapping outside
@@ -241,6 +251,8 @@ struct MemoDetailView: View {
     // Scrubber state
     @State private var isScrubbing: Bool = false
     @State private var scrubValue: Double = 0
+    // Delete confirmation
+    @State private var showDeleteConfirm: Bool = false
     
     @ViewBuilder
     private var languageBannerView: some View {
@@ -446,6 +458,35 @@ struct MemoDetailView: View {
         .background(Color.semantic(.bgSecondary))
         .cornerRadius(12)
         .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
+    }
+
+    @ViewBuilder
+    private var deleteSectionView: some View {
+        Button(role: .destructive) {
+            HapticManager.shared.playSelection()
+            showDeleteConfirm = true
+        } label: {
+            HStack {
+                Image(systemName: "trash")
+                Text("Delete Memo")
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .tint(.semantic(.error))
+        .accessibilityLabel("Delete this memo")
+        .confirmationDialog(
+            "Delete this memo?",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                viewModel.deleteCurrentMemo()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This action cannot be undone.")
+        }
     }
     
     @ViewBuilder

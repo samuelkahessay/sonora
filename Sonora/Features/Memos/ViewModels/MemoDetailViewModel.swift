@@ -23,6 +23,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     private let renameMemoUseCase: RenameMemoUseCaseProtocol
     private let createTranscriptShareFileUseCase: CreateTranscriptShareFileUseCaseProtocol
     private let createAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtocol
+    private let deleteMemoUseCase: DeleteMemoUseCaseProtocol
     private let memoRepository: any MemoRepository // Still needed for state updates
     private let operationCoordinator: any OperationCoordinatorProtocol
     private var cancellables = Set<AnyCancellable>()
@@ -109,6 +110,8 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     /// Whether retry should be offered in UI
     var canRetryTranscription: Bool {
         if case .failed(let message) = transcriptionState {
+            let lower = message.lowercased()
+            if lower.contains("no speech detected") { return false }
             return message != TranscriptionError.noSpeechDetected.errorDescription
         }
         return false
@@ -129,6 +132,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         renameMemoUseCase: RenameMemoUseCaseProtocol,
         createTranscriptShareFileUseCase: CreateTranscriptShareFileUseCaseProtocol,
         createAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtocol,
+        deleteMemoUseCase: DeleteMemoUseCaseProtocol,
         memoRepository: any MemoRepository,
         operationCoordinator: any OperationCoordinatorProtocol
     ) {
@@ -144,6 +148,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         self.renameMemoUseCase = renameMemoUseCase
         self.createTranscriptShareFileUseCase = createTranscriptShareFileUseCase
         self.createAnalysisShareFileUseCase = createAnalysisShareFileUseCase
+        self.deleteMemoUseCase = deleteMemoUseCase
         self.memoRepository = memoRepository
         self.operationCoordinator = operationCoordinator
         
@@ -363,6 +368,28 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             return
         }
         seek(to: target)
+    }
+
+    /// Delete the current memo with cascading cleanup
+    func deleteCurrentMemo() {
+        guard let memo = currentMemo else { return }
+        print("🗑️ MemoDetailViewModel: Deleting memo: \(memo.filename)")
+        isLoading = true
+        Task {
+            do {
+                try await deleteMemoUseCase.execute(memo: memo)
+                await MainActor.run {
+                    self.isLoading = false
+                    self.state.ui.didDeleteMemo = true
+                    HapticManager.shared.playDeletionFeedback()
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoading = false
+                    self.error = ErrorMapping.mapError(error)
+                }
+            }
+        }
     }
     
     /// Perform analysis with the specified mode
@@ -1254,5 +1281,11 @@ extension MemoDetailViewModel {
     var memoOperationSummaries: [UUID] {
         get { state.operations.memoOperationSummaries }
         set { state.operations.memoOperationSummaries = newValue }
+    }
+
+    // MARK: - Deletion/UI flags
+    var didDeleteMemo: Bool {
+        get { state.ui.didDeleteMemo }
+        set { state.ui.didDeleteMemo = newValue }
     }
 }

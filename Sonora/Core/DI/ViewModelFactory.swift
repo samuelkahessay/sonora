@@ -151,6 +151,12 @@ final class DefaultViewModelFactory: ViewModelFactory {
             renameMemoUseCase: RenameMemoUseCase(memoRepository: memoRepository),
             createTranscriptShareFileUseCase: container.createTranscriptShareFileUseCase(),
             createAnalysisShareFileUseCase: container.createAnalysisShareFileUseCase(),
+            deleteMemoUseCase: DeleteMemoUseCase(
+                memoRepository: memoRepository,
+                analysisRepository: analysisRepository,
+                transcriptionRepository: transcriptionRepository,
+                logger: logger
+            ),
             memoRepository: memoRepository,
             operationCoordinator: operationCoordinator
         )

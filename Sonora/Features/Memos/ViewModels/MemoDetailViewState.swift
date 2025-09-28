@@ -135,6 +135,8 @@ struct MemoDetailViewState: Equatable {
         var autoBannerDismissedForMemo: [UUID: Bool] = [:]
         var showReminderDetectionBanner: Bool = false
         var reminderDetectionCount: Int = 0
+        // Deletion state for memo details
+        var didDeleteMemo: Bool = false
         
     }
     
