@@ -259,7 +259,11 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
             if !fallback.isEmpty { filteredReminders = RemindersData(reminders: Array(fallback)) }
         }
         print("🗓️ [Detect] filtered counts events=\(filteredEvents?.events.count ?? 0) reminders=\(filteredReminders?.reminders.count ?? 0)")
-        
+
+        // Temporal refinement: adjust times when explicit phrases like "6 p.m." are present
+        filteredEvents = TemporalRefiner.refine(eventsData: filteredEvents, transcript: transcript) ?? filteredEvents
+        filteredReminders = TemporalRefiner.refine(remindersData: filteredReminders, transcript: transcript) ?? filteredReminders
+
         return DetectionResult(
             events: filteredEvents,
             reminders: filteredReminders,

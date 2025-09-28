@@ -1,0 +1,100 @@
+import XCTest
+@testable import Sonora
+
+final class TemporalRefinerTests: XCTestCase {
+    func testRefinesTodayAtSixPMFromSourceText() {
+        // Given
+        let transcript = "I plan to go to the gym tomorrow. I also need to pick up milk today at 6 p.m."
+        let calendar = Calendar.current
+
+        // Use a fixed reference date for determinism
+        var comps = DateComponents()
+        comps.year = 2025
+        comps.month = 9
+        comps.day = 28
+        comps.hour = 9
+        comps.minute = 0
+        comps.second = 0
+        let now = calendar.date(from: comps) ?? Date()
+
+        // Upstream (incorrect) due at noon
+        let baseDay = calendar.startOfDay(for: now)
+        let upstreamDue = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: baseDay)
+
+        let reminder = RemindersData.DetectedReminder(
+            title: "Pick up milk",
+            dueDate: upstreamDue,
+            priority: .medium,
+            confidence: 0.9,
+            sourceText: "I also need to pick up milk today at 6 p.m.",
+            memoId: UUID()
+        )
+
+        let input = RemindersData(reminders: [reminder])
+
+        // When
+        let refined = TemporalRefiner.refine(remindersData: input, transcript: transcript, now: now)
+
+        // Then
+        guard let r = refined?.reminders.first, let due = r.dueDate else {
+            XCTFail("Expected refined reminder with due date")
+            return
+        }
+        let dc = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: due)
+        XCTAssertEqual(dc.year, 2025)
+        XCTAssertEqual(dc.month, 9)
+        XCTAssertEqual(dc.day, 28)
+        XCTAssertEqual(dc.hour, 18)
+        XCTAssertEqual(dc.minute, 0)
+    }
+
+    func testRefinesEventStartAndEndToExplicitTime() {
+        let transcript = "Plans to go to the gym today at 6 p.m."
+        let calendar = Calendar.current
+
+        var comps = DateComponents()
+        comps.year = 2025
+        comps.month = 9
+        comps.day = 28
+        comps.hour = 9
+        comps.minute = 0
+        let now = calendar.date(from: comps) ?? Date()
+
+        let startDay = calendar.startOfDay(for: now)
+        let upstreamStart = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: startDay)
+        let upstreamEnd = upstreamStart.flatMap { calendar.date(byAdding: .hour, value: 1, to: $0) }
+
+        let event = EventsData.DetectedEvent(
+            title: "Gym session",
+            startDate: upstreamStart,
+            endDate: upstreamEnd,
+            location: "Gym",
+            participants: nil,
+            confidence: 0.9,
+            sourceText: "Plans to go to the gym today at 6 p.m.",
+            memoId: UUID()
+        )
+
+        let input = EventsData(events: [event])
+
+        let refined = TemporalRefiner.refine(eventsData: input, transcript: transcript, now: now)
+
+        guard let e = refined?.events.first, let start = e.startDate else {
+            XCTFail("Expected refined event with start date")
+            return
+        }
+        let startComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: start)
+        XCTAssertEqual(startComponents.year, 2025)
+        XCTAssertEqual(startComponents.month, 9)
+        XCTAssertEqual(startComponents.day, 28)
+        XCTAssertEqual(startComponents.hour, 18)
+        XCTAssertEqual(startComponents.minute, 0)
+
+        if let end = e.endDate {
+            let duration = end.timeIntervalSince(start)
+            XCTAssertEqual(duration, 3600, accuracy: 0.5)
+        } else {
+            XCTFail("Expected event end date")
+        }
+    }
+}
