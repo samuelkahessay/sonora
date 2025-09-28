@@ -39,8 +39,12 @@ public final class GetPromptCategoryUseCase: GetPromptCategoryUseCaseProtocol, @
         let cal = dateProvider.calendar
         let since = cal.date(byAdding: .day, value: -7, to: now) ?? now
 
-        var candidates = catalog.prompts(in: category).filter { $0.allowedDayParts.contains(dayPart) && $0.allowedWeekParts.contains(weekPart) }
-        if candidates.isEmpty { candidates = catalog.prompts(in: category) }
+        var candidates = catalog
+            .prompts(in: category)
+            .filter { $0.allowedDayParts.contains(dayPart) && $0.allowedWeekParts.contains(weekPart) }
+        if candidates.isEmpty {
+            candidates = catalog.prompts(in: category)
+        }
 
         let recent = try await usageRepository.recentlyUsedPromptIds(since: since)
         candidates.removeAll { recent.contains($0.id) }

@@ -1,0 +1,145 @@
+# Generated from PromptCatalogStatic on migration. Edit freely; one object per line. Comments and blanks are ignored.
+{"id": "growth_micro_win_today", "text": "What's one small win this [DayPart], [Name]?", "category": "growth", "depth": "light", "dayParts": ["morning"], "weekParts": ["startOfWeek"], "weight": 2}
+{"id": "growth_stretch_one_percent", "text": "Where can you improve 1% this [WeekPart]?", "category": "growth", "depth": "medium"}
+{"id": "growth_lesson_from_setback", "text": "Name a recent setback and the lesson you learned.", "category": "growth", "depth": "deep", "dayParts": ["evening"]}
+{"id": "growth_three_highlights", "text": "Capture three [WeekPart] highlights so far.", "category": "growth", "depth": "light", "weekParts": ["midWeek"]}
+{"id": "growth_next_tiny_step", "text": "What's the next tiny step right now, [Name]?", "category": "growth", "depth": "light"}
+{"id": "growth_gratitude_for_progress", "text": "What progress are you grateful for this [WeekPart]?", "category": "growth", "depth": "medium", "dayParts": ["evening"], "weekParts": ["endOfWeek"]}
+{"id": "growth_teach_someone", "text": "What could you teach someone today to reinforce your learning?", "category": "growth", "depth": "medium", "dayParts": ["afternoon"], "weekParts": ["midWeek"]}
+{"id": "work_unblock_one_task", "text": "Which single task can you unblock this [DayPart]?", "category": "work", "depth": "light", "dayParts": ["afternoon"], "weekParts": ["midWeek"]}
+{"id": "work_define_top_three", "text": "Define your top three priorities for the [WeekPart].", "category": "work", "depth": "medium", "dayParts": ["morning"], "weekParts": ["startOfWeek"]}
+{"id": "work_midweek_checkpoint", "text": "Mid-week checkpoint: what's on track, what's not?", "category": "work", "depth": "medium", "dayParts": ["afternoon"], "weekParts": ["midWeek"], "weight": 2}
+{"id": "work_delegate_or_drop", "text": "What can you delegate or drop to move faster?", "category": "work", "depth": "medium"}
+{"id": "work_meeting_prep", "text": "What's your desired outcome for the next meeting?", "category": "work", "depth": "light", "dayParts": ["morning"], "weekParts": ["midWeek"]}
+{"id": "work_after_action_review", "text": "After-action review: what went well, what to improve?", "category": "work", "depth": "deep", "dayParts": ["evening"], "weekParts": ["endOfWeek"]}
+{"id": "work_flow_session_plan", "text": "Plan a focused flow session: when and on what?", "category": "work", "depth": "medium", "dayParts": ["morning"], "weekParts": ["startOfWeek", "midWeek"]}
+{"id": "relationships_share_a_thank_you", "text": "Who deserves a genuine thank you this [WeekPart], [Name]?", "category": "relationships", "depth": "light", "dayParts": ["evening"], "weekParts": ["endOfWeek"]}
+{"id": "relationships_check_in_one_person", "text": "Who could use a quick check-in from you today?", "category": "relationships", "depth": "light", "dayParts": ["afternoon"]}
+{"id": "relationships_repair_micro_moment", "text": "Name a small moment you'd like to repair or revisit.", "category": "relationships", "depth": "deep", "dayParts": ["evening"]}
+{"id": "relationships_celebrate_small_win", "text": "Celebrate a small win with someone you care about.", "category": "relationships", "depth": "light", "dayParts": ["night"], "weekParts": ["endOfWeek"]}
+{"id": "relationships_plan_connection", "text": "Plan one meaningful connection for the [WeekPart].", "category": "relationships", "depth": "medium", "dayParts": ["morning"], "weekParts": ["startOfWeek", "midWeek"]}
+{"id": "relationships_express_boundary_kindly", "text": "What boundary can you express kindly and clearly?", "category": "relationships", "depth": "deep", "dayParts": ["afternoon"], "weekParts": ["midWeek"]}
+{"id": "relationships_ask_for_help", "text": "Where could you ask for help this [DayPart]?", "category": "relationships", "depth": "medium"}
+{"id": "relationships_reach_out_old_friend", "text": "Reach out to an old friend—what's the first thing you'd say?", "category": "relationships", "depth": "medium", "dayParts": ["evening"]}
+{"id": "creative_new_angle_on_old_idea", "text": "Try a new angle on an old idea this [DayPart].", "category": "creative", "depth": "light", "dayParts": ["morning", "afternoon"]}
+{"id": "creative_constraints_challenge", "text": "Set one constraint and create within it, [Name].", "category": "creative", "depth": "medium"}
+{"id": "creative_mashup_two_things", "text": "Mash up two unrelated things from today—what do you get?", "category": "creative", "depth": "light", "dayParts": ["afternoon"]}
+{"id": "creative_remove_one_element", "text": "Remove one element from your idea—what changes?", "category": "creative", "depth": "light"}
+{"id": "creative_switch_medium", "text": "Switch mediums—how would your idea look in another format?", "category": "creative", "depth": "medium", "dayParts": ["evening"]}
+{"id": "creative_divergent_ideas", "text": "Spin up three divergent versions of your idea.", "category": "creative", "depth": "deep", "dayParts": ["morning"]}
+{"id": "creative_capture_random_detail", "text": "Capture a random detail from today as a spark.", "category": "creative", "depth": "light", "dayParts": ["night"]}
+{"id": "creative_storyboard_next_step", "text": "Storyboard the very next step for your idea.", "category": "creative", "depth": "medium", "dayParts": ["morning"], "weekParts": ["startOfWeek", "midWeek"]}
+{"id": "goals_weekly_review", "text": "Weekly review: what mattered most this [WeekPart]?", "category": "goals", "depth": "deep", "dayParts": ["evening"], "weekParts": ["endOfWeek"], "weight": 2}
+{"id": "goals_next_milestone", "text": "What's the next milestone, and why does it matter?", "category": "goals", "depth": "medium", "dayParts": ["morning"], "weekParts": ["startOfWeek"]}
+{"id": "goals_success_definition", "text": "Define success for the next [WeekPart] in one sentence.", "category": "goals", "depth": "medium"}
+{"id": "goals_risk_one_thing", "text": "What's one risk worth taking this [WeekPart]?", "category": "goals", "depth": "deep", "dayParts": ["afternoon"], "weekParts": ["midWeek"]}
+{"id": "goals_today_top_one", "text": "If you did only one thing today, what would it be?", "category": "goals", "depth": "light", "dayParts": ["morning"]}
+{"id": "goals_remove_nonessential", "text": "Remove one nonessential commitment to create space.", "category": "goals", "depth": "light"}
+{"id": "goals_habit_streak", "text": "How's your habit streak? What's the next link?", "category": "goals", "depth": "medium", "dayParts": ["night"]}
+{"id": "goals_reflect_quarter", "text": "Reflect on this quarter: one win, one lesson.", "category": "goals", "depth": "deep", "dayParts": ["evening"], "weekParts": ["midWeek", "endOfWeek"]}
+{"id": "mindfulness_name_three_calm_things", "text": "Name three calm things around you right now.", "category": "mindfulness", "depth": "light", "dayParts": ["night"]}
+{"id": "mindfulness_let_go_thought", "text": "Notice a sticky thought and let it pass.", "category": "mindfulness", "depth": "medium", "dayParts": ["night"]}
+{"id": "mindfulness_gratitude_three", "text": "Name three things you're grateful for this [WeekPart].", "category": "mindfulness", "depth": "light", "dayParts": ["evening"], "weekParts": ["endOfWeek"]}
+{"id": "mindfulness_mindful_walk", "text": "Take a mindful walk; describe what you observe.", "category": "mindfulness", "depth": "light", "dayParts": ["morning", "afternoon"]}
+{"id": "mindfulness_emotion_labeling", "text": "Take 30 seconds to describe how you're feeling and why.", "category": "mindfulness", "depth": "deep", "dayParts": ["afternoon"]}
+{"id": "mindfulness_intention_for_day", "text": "Set an intention for this [DayPart], [Name].", "category": "mindfulness", "depth": "light", "dayParts": ["morning"], "weekParts": ["startOfWeek"]}
+{"id": "lindy_001", "text": "What virtue did you practice this [DayPart], and where did you fall short of your ideals?", "category": "mindfulness", "depth": "medium", "dayParts": ["morning", "evening"]}
+{"id": "lindy_002", "text": "Which of your actions today reflected your true character, and which reflected mere impulse or habit?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_003", "text": "What would you do differently this [DayPart] if you knew today would define how you are remembered?", "category": "growth", "depth": "medium", "dayParts": ["afternoon", "evening"]}
+{"id": "lindy_004", "text": "In what ways are you still the same person you were five years ago, and in what ways have you grown?", "category": "growth", "depth": "deep"}
+{"id": "lindy_005", "text": "What fear or desire currently has the strongest hold over your decisions, [Name]?", "category": "mindfulness", "depth": "deep"}
+{"id": "lindy_006", "text": "If you could observe your thoughts and actions from outside yourself, what patterns would you notice?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_007", "text": "What talents or abilities do you possess that you are not fully developing or using in service of others?", "category": "growth", "depth": "medium"}
+{"id": "lindy_008", "text": "How do your private thoughts and actions align with the person you present to the world?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_009", "text": "What would those who know you best say is your greatest strength and your greatest weakness?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_010", "text": "If you had to choose only three values to guide your decisions this [WeekPart], [Name], what would they be and why?", "category": "goals", "depth": "medium", "weekParts": ["startOfWeek", "midWeek"]}
+{"id": "lindy_011", "text": "What are you trying to control this [DayPart] that is ultimately beyond your influence?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_012", "text": "How can you find peace with circumstances that you cannot change?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_013", "text": "What would you accept about your current situation if you truly believed it was exactly what you needed for your growth?", "category": "mindfulness", "depth": "deep"}
+{"id": "lindy_014", "text": "Where are you wasting energy on outcomes rather than focusing on your efforts and intentions?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_015", "text": "What opinion of others are you allowing to disturb your inner tranquility?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_016", "text": "How would your perspective on challenges this [WeekPart] change if you viewed them as exactly what you needed to practice virtue?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_017", "text": "What external circumstances are you blaming for your internal state of mind?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_018", "text": "If you surrendered your need for a specific outcome, how would your actions change?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_019", "text": "What are you resisting that, if accepted, might actually bring you peace?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_020", "text": "How can you love your fate today, even the difficult parts?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_021", "text": "If you knew you had one year to live, what would you start doing this [WeekPart], [Name]?", "category": "growth", "depth": "deep"}
+{"id": "lindy_022", "text": "What would you want written on your tombstone, and how are your daily actions moving you toward or away from that legacy?", "category": "growth", "depth": "deep"}
+{"id": "lindy_023", "text": "How does remembering your mortality change the importance you place on today's worries?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_024", "text": "What wisdom would you want to pass on if you could only share one piece of advice?", "category": "growth", "depth": "medium"}
+{"id": "lindy_025", "text": "How would you spend this [DayPart] if it were your last with the people you love most?", "category": "relationships", "depth": "deep", "dayParts": ["evening"]}
+{"id": "lindy_026", "text": "What are you postponing that you would regret never experiencing or expressing?", "category": "growth", "depth": "medium"}
+{"id": "lindy_027", "text": "How does contemplating the impermanence of all things affect your attachment to material possessions?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_028", "text": "What legacy are you creating through your daily choices and interactions?", "category": "goals", "depth": "medium"}
+{"id": "lindy_029", "text": "How did you serve others today without expecting anything in return?", "category": "relationships", "depth": "light"}
+{"id": "lindy_030", "text": "What assumptions are you making about someone that might be preventing you from understanding them better?", "category": "relationships", "depth": "medium"}
+{"id": "lindy_031", "text": "Who in your life deserves gratitude this [WeekPart], [Name], that you haven't expressed recently?", "category": "relationships", "depth": "light", "weekParts": ["endOfWeek"]}
+{"id": "lindy_032", "text": "How can you be more present and attentive in your relationships?", "category": "relationships", "depth": "light"}
+{"id": "lindy_033", "text": "What judgment or resentment are you holding that only harms your own peace of mind?", "category": "relationships", "depth": "medium"}
+{"id": "lindy_034", "text": "How can you better honor the trust that others place in you?", "category": "relationships", "depth": "medium"}
+{"id": "lindy_035", "text": "What conflict in your life could be resolved if you focused on understanding rather than being understood?", "category": "relationships", "depth": "medium"}
+{"id": "lindy_036", "text": "How do your actions and words contribute to the well-being of your community?", "category": "relationships", "depth": "light"}
+{"id": "lindy_037", "text": "What meaningful work did you accomplish this [DayPart] that aligns with your deeper purpose?", "category": "goals", "depth": "medium"}
+{"id": "lindy_038", "text": "How are you using your unique position and abilities to make a positive difference?", "category": "goals", "depth": "medium"}
+{"id": "lindy_039", "text": "What small action could you take tomorrow that would move you closer to who you want to become?", "category": "goals", "depth": "light"}
+{"id": "lindy_040", "text": "Where are you choosing comfort over growth, and what is the cost of that choice?", "category": "growth", "depth": "medium"}
+{"id": "lindy_041", "text": "How do your daily habits either support or undermine your highest aspirations?", "category": "goals", "depth": "medium"}
+{"id": "lindy_042", "text": "What would you attempt if you knew failure was impossible, and what does that reveal about your true desires?", "category": "growth", "depth": "medium"}
+{"id": "lindy_043", "text": "How can you bring more intention and mindfulness to routine activities?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_044", "text": "What is this current challenge teaching you about your own strength and character?", "category": "growth", "depth": "medium"}
+{"id": "lindy_045", "text": "How can you reframe obstacles this [WeekPart] as opportunities for growth and practice?", "category": "growth", "depth": "medium"}
+{"id": "lindy_046", "text": "What would you tell a dear friend facing the same difficulties, [Name]?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_047", "text": "How have past struggles prepared you for current challenges?", "category": "growth", "depth": "medium"}
+{"id": "lindy_048", "text": "What good might come from this difficult situation that you cannot yet see?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_049", "text": "How can you maintain your values and character even when faced with setbacks?", "category": "growth", "depth": "medium"}
+{"id": "lindy_050", "text": "What story will you tell about this period of your life when you look back years from now?", "category": "creative", "depth": "light"}
+{"id": "lindy_051", "text": "What belief are you treating as absolute fact that might just be one interpretation among many?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_052", "text": "Where are you catastrophizing today, and what's the realistic probability of your worst-case scenario?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_053", "text": "What thinking trap are you falling into: all-or-nothing, mind reading, fortune telling, or personalization?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_054", "text": "What evidence contradicts the negative story you're telling yourself about this situation?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_055", "text": "How would you advise a close friend who was having the exact same thoughts you're having?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_056", "text": "What would you need to believe about yourself or the world for this worry to make complete sense?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_057", "text": "Are you confusing your feelings about something with the facts of the situation?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_058", "text": "What automatic thought keeps recurring this [WeekPart], and what more balanced alternative could you practice?", "category": "mindfulness", "depth": "medium", "weekParts": ["midWeek", "endOfWeek"]}
+{"id": "lindy_059", "text": "Where are you filtering out positive information and focusing only on what went wrong?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_060", "text": "What rational statement could you record now to counter your current irrational fear?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_061", "text": "What exactly do you mean when you say you \\\"should\\\" do something — who determined this rule?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_062", "text": "What assumption are you making that you haven't examined or questioned?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_063", "text": "If you're wrong about this conclusion, what would that mean for your next steps?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_064", "text": "What evidence would you need to see to change your mind about this belief?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_065", "text": "Why do you believe what you believe about this situation — is it based on your direct experience or hearsay?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_066", "text": "What question are you avoiding that might lead to greater clarity?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_067", "text": "How might someone who disagrees with you make a reasonable case for their position?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_068", "text": "What would you discover if you approached this problem with genuine curiosity instead of predetermined answers?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_069", "text": "What are you trying to force that might unfold naturally if you step back and allow it?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_070", "text": "Where are you creating unnecessary suffering by resisting what's already happening?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_071", "text": "How can you be fully engaged in this task without being attached to a specific outcome?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_072", "text": "What would change if you trusted that you're exactly where you need to be right now, [Name]?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_073", "text": "How can you act skillfully while simultaneously letting go of needing to control results?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_074", "text": "What would flow more easily if you stopped pushing so hard against it?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_075", "text": "Where are you swimming against the current when you could work with natural forces instead, [Name]?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_076", "text": "How can you find peace within uncertainty rather than demanding guarantees?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_077", "text": "What story are you telling yourself about who you are, and is this narrative empowering or limiting you?", "category": "creative", "depth": "medium"}
+{"id": "lindy_078", "text": "How would you narrate today's events to your future self as part of a meaningful journey?", "category": "creative", "depth": "light"}
+{"id": "lindy_079", "text": "What chapter of your life are you in now, and how does today's experience fit into your larger plot?", "category": "creative", "depth": "medium"}
+{"id": "lindy_080", "text": "If you could edit the story you tell about your past, what would you emphasize differently?", "category": "creative", "depth": "medium"}
+{"id": "lindy_081", "text": "What recurring themes appear across different periods of your life?", "category": "creative", "depth": "light"}
+{"id": "lindy_082", "text": "How do you want the protagonist of your life story to respond to current challenges?", "category": "creative", "depth": "medium"}
+{"id": "lindy_083", "text": "What wisdom have you gained from previous chapters that applies to your current situation?", "category": "creative", "depth": "medium"}
+{"id": "lindy_084", "text": "If someone were to write your biography, what would you want this current period to demonstrate about your character?", "category": "creative", "depth": "medium"}
+{"id": "lindy_085", "text": "What went well this [DayPart], what went poorly, and what can you improve tomorrow, [Name]?", "category": "goals", "depth": "light", "dayParts": ["evening"]}
+{"id": "lindy_086", "text": "Which of your core principles did you honor today, and which did you compromise?", "category": "goals", "depth": "medium"}
+{"id": "lindy_087", "text": "What progress did you make toward your most important goals, however small?", "category": "goals", "depth": "light"}
+{"id": "lindy_088", "text": "How did you grow today, and what lesson will you carry forward?", "category": "goals", "depth": "light"}
+{"id": "lindy_089", "text": "What moment today are you most grateful for, and why?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_090", "text": "Where did you act from habit versus conscious choice, and what does this reveal?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_091", "text": "What would you do differently if you could replay today with the wisdom you have now?", "category": "goals", "depth": "medium"}
+{"id": "lindy_092", "text": "How did your actions today align with the person you're becoming?", "category": "goals", "depth": "medium"}
+{"id": "lindy_093", "text": "What recurring thought patterns have you noticed this [WeekPart], and what might they be telling you?", "category": "creative", "depth": "medium", "weekParts": ["midWeek", "endOfWeek"]}
+{"id": "lindy_094", "text": "What's the underlying emotion or need beneath your scattered thoughts right now?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_095", "text": "If you had to summarize your mental state in one word, what would it be and why?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_096", "text": "What theme keeps emerging when you let your mind wander freely?", "category": "creative", "depth": "light"}
+{"id": "lindy_097", "text": "What clarity is trying to emerge from the chaos of your current thinking?", "category": "creative", "depth": "medium"}
+{"id": "lindy_098", "text": "If your stream of consciousness had a soundtrack, what would it sound like today?", "category": "creative", "depth": "light"}
+{"id": "lindy_099", "text": "What insight is hidden in the pattern of what you've been avoiding thinking about?", "category": "creative", "depth": "medium"}
+{"id": "lindy_100", "text": "What would happen if you trusted that your meandering thoughts are leading somewhere meaningful?", "category": "creative", "depth": "medium"}

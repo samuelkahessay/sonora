@@ -414,6 +414,8 @@ public final class AppConfiguration: ObservableObject {
             maxRecordingDuration = duration
             print("🔧 AppConfiguration: Max recording duration overridden to \(duration)s")
         }
+
+        // Prompts configuration — no blocklist; use file-backed catalog for edits
         
         if let sizeString = ProcessInfo.processInfo.environment["SONORA_MAX_FILE_SIZE"],
            let size = Int64(sizeString) {

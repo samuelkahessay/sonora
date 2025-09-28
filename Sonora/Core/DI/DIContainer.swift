@@ -219,7 +219,9 @@ final class DIContainer: ObservableObject, Resolver {
 
         // Register Prompt Catalog & Providers
         register((any PromptCatalog).self) { _ in
-            return PromptCatalogStatic() as any PromptCatalog
+            // Use file-backed catalog only.
+            let fileCatalog = PromptCatalogFile() as any PromptCatalog
+            return fileCatalog
         }
         register((any DateProvider).self) { _ in
             return DefaultDateProvider() as any DateProvider
