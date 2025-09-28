@@ -170,14 +170,20 @@ struct MemoDetailView: View {
             viewModel.restoreAnalysisStateIfNeeded()
         }
         .onChange(of: viewModel.transcriptionState) { _, state in
-            if case .failed(let err) = state, err == TranscriptionError.noSpeechDetected.errorDescription {
-                // Ensure the transcription section is visible without expanding
-                isTranscriptExpanded = true
+            if case .failed(let err) = state {
+                let lower = err.lowercased()
+                if lower.contains("no speech detected") || err == TranscriptionError.noSpeechDetected.errorDescription {
+                    // Ensure the transcription section is visible without expanding
+                    isTranscriptExpanded = true
+                }
             }
         }
         .onAppear {
-            if case .failed(let err) = viewModel.transcriptionState, err == TranscriptionError.noSpeechDetected.errorDescription {
-                isTranscriptExpanded = true
+            if case .failed(let err) = viewModel.transcriptionState {
+                let lower = err.lowercased()
+                if lower.contains("no speech detected") || err == TranscriptionError.noSpeechDetected.errorDescription {
+                    isTranscriptExpanded = true
+                }
             }
         }
         .initialFocus {
@@ -659,6 +665,8 @@ struct MemoDetailView: View {
                         Text("Try recording again with clearer speech")
                             .font(.caption)
                             .foregroundColor(.semantic(.textSecondary))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.9)
                     }
 
                     Spacer()
