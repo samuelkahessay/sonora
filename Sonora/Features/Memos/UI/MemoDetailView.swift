@@ -328,27 +328,17 @@ struct MemoDetailView: View {
     
     @ViewBuilder
     private var audioControlsView: some View {
-        HStack(spacing: 12) {
-            // Play/Pause button (compact, icon-only)
-            Button(action: {
-                HapticManager.shared.playSelection()
-                viewModel.playMemo()
-            }) {
-                Image(systemName: viewModel.playButtonIcon)
-                    .font(.title2)
-                    .foregroundColor(.semantic(.textOnColored))
-                    .frame(width: 44, height: 44)
-                    .background(Color.semantic(.brandPrimary))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(viewModel.isPlaying ? "Pause \(viewModel.currentMemoTitle)" : "Play \(viewModel.currentMemoTitle)")
-            .accessibilityHint("Double tap to \(viewModel.isPlaying ? "pause" : "play") this memo")
-            .accessibilityFocused($focusedElement, equals: .playButton)
-            .accessibilityAddTraits(.startsMediaSession)
-
-            // Scrubber and time labels inline
-            VStack(spacing: 4) {
+        VStack(spacing: 10) {
+            let current = isScrubbing ? scrubValue : viewModel.currentTime
+            let duration = max(viewModel.totalDuration, 0)
+            let canSkipBack = current > 0.1
+            let canSkipForward = (duration - current) > 0.1
+            // Top row: time left, scrubber, time right
+            HStack(spacing: 8) {
+                Text(formatTime(isScrubbing ? scrubValue : viewModel.currentTime))
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+                    .frame(width: 48, alignment: .leading)
                 Slider(
                     value: Binding(
                         get: { isScrubbing ? scrubValue : viewModel.currentTime },
@@ -363,17 +353,56 @@ struct MemoDetailView: View {
                 .tint(.semantic(.brandPrimary))
                 .accessibilityLabel("Playback position")
                 .accessibilityValue("\(Int((isScrubbing ? scrubValue : viewModel.currentTime) / max(viewModel.totalDuration, 1) * 100)) percent")
-
-                HStack {
-                    Text(formatTime(isScrubbing ? scrubValue : viewModel.currentTime))
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                    Spacer()
-                    Text(formatTime(viewModel.totalDuration))
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                }
+                Text(formatTime(viewModel.totalDuration))
+                    .font(.caption)
+                    .foregroundColor(.semantic(.textSecondary))
+                    .frame(width: 48, alignment: .trailing)
             }
+
+            // Bottom row: -15, play/pause, +15 centered
+            HStack(spacing: 22) {
+                Button(action: {
+                    viewModel.skip(by: -15)
+                }) {
+                    Image(systemName: "gobackward.15")
+                        .font(.title3)
+                        .foregroundColor(.semantic(.brandPrimary))
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Skip back 15 seconds")
+                .opacity(canSkipBack ? 1 : 0.4)
+
+                Button(action: {
+                    HapticManager.shared.playSelection()
+                    viewModel.playMemo()
+                }) {
+                    Image(systemName: viewModel.playButtonIcon)
+                        .font(.title2)
+                        .foregroundColor(.semantic(.textOnColored))
+                        .frame(width: 40, height: 40)
+                        .background(Color.semantic(.brandPrimary))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(viewModel.isPlaying ? "Pause \(viewModel.currentMemoTitle)" : "Play \(viewModel.currentMemoTitle)")
+                .accessibilityHint("Double tap to \(viewModel.isPlaying ? "pause" : "play") this memo")
+                .accessibilityFocused($focusedElement, equals: .playButton)
+                .accessibilityAddTraits(.startsMediaSession)
+
+                Button(action: {
+                    viewModel.skip(by: 15)
+                }) {
+                    Image(systemName: "goforward.15")
+                        .font(.title3)
+                        .foregroundColor(.semantic(.brandPrimary))
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Skip forward 15 seconds")
+                .opacity(canSkipForward ? 1 : 0.4)
+            }
+            .frame(maxWidth: .infinity)
         }
         .padding()
         .background(Color.semantic(.fillSecondary))

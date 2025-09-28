@@ -272,6 +272,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         self.currentMemo = memo
         self.currentMemoTitle = memo.displayName
         state.transcription.service = nil
+        // Initialize audio duration/current for scrubber before playback starts
+        state.audio.duration = memo.duration
+        state.audio.currentTime = 0
         
 
         // Initial state update
@@ -346,6 +349,20 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     func seek(to time: TimeInterval) {
         guard let memo = currentMemo else { return }
         memoRepository.seek(to: time, for: memo)
+    }
+
+    /// Skip forward/backward by delta seconds
+    func skip(by delta: TimeInterval) {
+        let cur = currentTime
+        let dur = max(totalDuration, 0)
+        guard dur > 0 else { return }
+        let target = min(max(cur + delta, 0), dur)
+        // If target equals current (already at boundary), no-op
+        if abs(target - cur) < 0.01 {
+            HapticManager.shared.playLightImpact()
+            return
+        }
+        seek(to: target)
     }
     
     /// Perform analysis with the specified mode

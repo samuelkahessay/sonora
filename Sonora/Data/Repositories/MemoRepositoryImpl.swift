@@ -113,7 +113,9 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             isPlaying = true
             print("▶️ MemoRepository: Playing \(memo.filename)")
             startPlaybackTimer()
-            publishProgress(forcedMemo: memo)
+            Task { @MainActor in
+                self.publishProgress(forcedMemo: memo)
+            }
 
         } catch {
             print("❌ MemoRepository: Failed to play \(memo.filename): \(error)")
@@ -126,7 +128,9 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         player?.pause()
         isPlaying = false
         print("⏸️ MemoRepository: Paused playback")
-        publishProgress()
+        Task { @MainActor in
+            self.publishProgress()
+        }
     }
     
     func stopPlaying() {
@@ -139,10 +143,30 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
 
     func seek(to time: TimeInterval, for memo: Memo) {
-        guard let current = playingMemo, current.id == memo.id, let player = player else { return }
+        // Ensure player is prepared for this memo even if not currently playing
+        if playingMemo?.id != memo.id || player == nil {
+            do {
+                // Configure session but do not start playback
+                let session = AVAudioSession.sharedInstance()
+                try? session.setCategory(.playback, mode: .default, options: [])
+                try? session.setActive(true)
+
+                let audio = try AVAudioPlayer(contentsOf: memo.fileURL)
+                player = audio
+                audio.prepareToPlay()
+                playingMemo = memo
+                isPlaying = false
+            } catch {
+                print("❌ MemoRepository: Failed to prepare player for seek: \(error)")
+                return
+            }
+        }
+        guard let player = player else { return }
         let clamped = max(0, min(time, player.duration))
         player.currentTime = clamped
-        publishProgress(forcedMemo: memo)
+        Task { @MainActor in
+            self.publishProgress(forcedMemo: memo)
+        }
     }
 
     var playbackProgressPublisher: AnyPublisher<PlaybackProgress, Never> {
@@ -153,7 +177,9 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         stopPlaybackTimer()
         playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            self.publishProgress()
+            Task { @MainActor in
+                self.publishProgress()
+            }
         }
         RunLoop.main.add(playbackTimer!, forMode: .common)
     }

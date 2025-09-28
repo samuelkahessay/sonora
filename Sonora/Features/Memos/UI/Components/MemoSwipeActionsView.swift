@@ -26,16 +26,22 @@ struct MemoSwipeActionsView: View {
             .accessibilityLabel("Transcribe \(memo.displayName)")
             .accessibilityHint(MemoListConstants.AccessibilityLabels.transcribeHint)
         } else if state.isFailed {
-            Button {
-                HapticManager.shared.playSelection()
-                viewModel.retryTranscription(for: memo)
-            } label: {
-                Label(MemoListConstants.SwipeActions.retryTitle,
-                      systemImage: MemoListConstants.SwipeActions.retryIcon)
+            // Avoid showing retry for 'no speech' failures
+            if case .failed(let error) = state {
+                let lower = error.lowercased()
+                if !(lower.contains("no speech") || error == TranscriptionError.noSpeechDetected.errorDescription) {
+                    Button {
+                        HapticManager.shared.playSelection()
+                        viewModel.retryTranscription(for: memo)
+                    } label: {
+                        Label(MemoListConstants.SwipeActions.retryTitle,
+                              systemImage: MemoListConstants.SwipeActions.retryIcon)
+                    }
+                    .tint(.semantic(.warning))
+                    .accessibilityLabel("Retry transcription for \(memo.displayName)")
+                    .accessibilityHint(MemoListConstants.AccessibilityLabels.retryHint)
+                }
             }
-            .tint(.semantic(.warning))
-            .accessibilityLabel("Retry transcription for \(memo.displayName)")
-            .accessibilityHint(MemoListConstants.AccessibilityLabels.retryHint)
         }
     }
 
