@@ -31,7 +31,7 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
     
     var iconName: String {
         switch self {
-        case .distill: return "drop.fill"
+        case .distill: return "sparkles"
         case .analysis: return "magnifyingglass.circle"
         case .themes: return "tag.circle"
         case .todos: return "checkmark.circle.fill"

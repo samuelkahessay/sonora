@@ -236,7 +236,7 @@ public enum DomainAnalysisType: String, CaseIterable, Codable, Hashable, Sendabl
     
     public var iconName: String {
         switch self {
-        case .distill: return "drop.fill"
+        case .distill: return "sparkles"
         case .summary: return "text.quote"
         case .themes: return "tag.circle"
         case .actionItems: return "checkmark.circle.fill"
