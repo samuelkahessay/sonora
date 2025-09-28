@@ -75,20 +75,63 @@ function normalizeWhitespace(s: string): string {
   return s.replace(/\s+/g, ' ').trim();
 }
 
+function stripSoftPunctuation(s: string): string {
+  return s
+    // remove lightweight punctuation and quotes entirely
+    .replace(/["'“”‘’,.!?;:]+/gu, ' ')
+    // collapse stray hyphen/• between words
+    .replace(/[•·]+/gu, ' ');
+}
+
 function hasEmojiOrPunct(s: string): boolean {
   // Reject punctuation and emoji presentation characters
   const punctOrEmoji = /[\p{P}\p{Emoji_Presentation}]/u;
   return punctOrEmoji.test(s);
 }
 
-function validateTitle(raw: string, maxChars = 32): string | null {
-  let t = normalizeWhitespace(raw);
-  if (!t) return null;
-  if (t.length > maxChars) return null;
-  const words = t.split(' ').filter(Boolean);
-  if (words.length < 3 || words.length > 5) return null;
-  if (hasEmojiOrPunct(t)) return null;
-  return t;
+function isNoSpaceLanguage(language?: string): boolean {
+  if (!language) return false;
+  const normalized = language.toLowerCase();
+  return normalized.startsWith('ja') || normalized.startsWith('zh') || normalized.startsWith('ko');
+}
+
+function validateTitle(
+  raw: string,
+  {
+    maxChars = 32,
+    language,
+    isShortTranscript = false
+  }: { maxChars?: number; language?: string; isShortTranscript?: boolean } = {}
+): string | null {
+  let cleaned = normalizeWhitespace(raw.replace(/\n/g, ' '));
+  if (!cleaned) return null;
+  cleaned = normalizeWhitespace(stripSoftPunctuation(cleaned));
+  if (!cleaned) return null;
+  if (cleaned.length > maxChars) return null;
+
+  if (hasEmojiOrPunct(cleaned)) return null;
+
+  const words = cleaned.split(' ').filter(Boolean);
+  const noSpaceLang = isNoSpaceLanguage(language);
+  const minWords = noSpaceLang ? 1 : (isShortTranscript ? 2 : 3);
+  const maxWords = noSpaceLang ? 6 : 5;
+  if (words.length < minWords || words.length > maxWords) return null;
+
+  return cleaned;
+}
+
+function buildFallbackTitle(source: string): string {
+  const sanitized = normalizeWhitespace(stripSoftPunctuation(source));
+  if (!sanitized) return 'Voice Memo';
+  const words = sanitized.split(' ').filter(Boolean);
+  if (words.length === 0) return 'Voice Memo';
+  const snippet = words.slice(0, Math.min(words.length, 5)).map(word => {
+    if (word.length === 0) { return word; }
+    const [first, ...rest] = word;
+    return first.toUpperCase() + rest.join('').toLowerCase();
+  }).join(' ');
+  const truncated = snippet.slice(0, 32).trim();
+  return truncated || 'Voice Memo';
 }
 
 app.post('/title', async (req, res) => {
@@ -100,6 +143,7 @@ app.post('/title', async (req, res) => {
 
     const sanitized = sanitizeTranscript(String(transcript));
     const sliced = sliceForTitle(sanitized);
+    const isShortTranscript = sliced.trim().length < 80;
     const constraints = {
       words: (rules?.words || '3-5'),
       titleCase: rules?.titleCase ?? true,
@@ -147,11 +191,29 @@ app.post('/title', async (req, res) => {
     const data: any = await response.json();
     const content: string = data?.choices?.[0]?.message?.content ?? '';
     const candidate = normalizeWhitespace(content.replace(/\n/g, ' '));
-    const validated = validateTitle(candidate, constraints.maxChars);
-    if (!validated) {
-      return res.status(502).json({ error: 'TitleValidationFailed' });
+    const validated = validateTitle(candidate, {
+      maxChars: constraints.maxChars,
+      language,
+      isShortTranscript
+    });
+    if (validated) {
+      return res.json({ title: validated });
     }
-    return res.json({ title: validated });
+
+    console.warn('Title validation failed; using fallback', {
+      candidate,
+      maxChars: constraints.maxChars,
+      language,
+      isShortTranscript
+    });
+
+    const fallback = validateTitle(buildFallbackTitle(sliced), {
+      maxChars: constraints.maxChars,
+      language,
+      isShortTranscript: true
+    }) || 'Voice Memo';
+
+    return res.json({ title: fallback, fallback: true });
   } catch (e: any) {
     if (e instanceof z.ZodError) {
       return res.status(400).json({ error: 'BadRequest', details: e.errors });

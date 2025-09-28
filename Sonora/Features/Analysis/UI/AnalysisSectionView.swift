@@ -38,42 +38,30 @@ struct AnalysisSectionView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, 8)
             } else {
-                Button(action: {
-                    HapticManager.shared.playSelection()
-                    let hasCached = viewModel.hasCachedDistill
-                    let hasShown = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
-                    if hasCached {
-                        if !hasShown { viewModel.restoreCachedDistill() }
-                    } else {
-                        viewModel.performAnalysis(mode: .distill, transcript: transcript)
+                let hasCached = viewModel.hasCachedDistill
+                let hasShown = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
+                let isAnalyzing = viewModel.isAnalyzing
+
+                DistillCTAButton(
+                    isAnalyzing: isAnalyzing,
+                    hasCachedResult: hasCached,
+                    hasShownCachedResult: hasShown,
+                    action: {
+                        HapticManager.shared.playSelection()
+                        if hasCached {
+                            if !hasShown {
+                                viewModel.restoreCachedDistill()
+                            }
+                        } else {
+                            viewModel.performAnalysis(mode: .distill, transcript: transcript)
+                        }
                     }
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: AnalysisMode.distill.iconName)
-                            .font(.title3)
-                            .foregroundColor(.semantic(.brandPrimary))
-                        let hasCached = viewModel.hasCachedDistill
-                        let hasShown = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
-                        Text(
-                            viewModel.isAnalyzing ? "Analyzing…" : (
-                                hasCached ? (hasShown ? "Distilled" : "View Distill") : AnalysisMode.distill.displayName
-                            )
-                        )
-                        .font(.system(.headline, design: .serif))
-                        .fontWeight(.semibold)
-                        .foregroundColor(.semantic(.textPrimary))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: DistillLayout.buttonHeight, alignment: .center)
-                }
-                .buttonStyle(.plain)
+                )
+                .buttonStyle(PressableCardButtonStyle())
                 .contentShape(RoundedRectangle(cornerRadius: DistillLayout.buttonCornerRadius, style: .continuous))
-                .disabled(viewModel.isAnalyzing || (viewModel.hasCachedDistill && viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil))
-                .opacity(viewModel.isAnalyzing ? 0.6 : 1.0)
-                .accessibilityLabel("Distill")
-                .accessibilityHint("Double tap to generate or view AI insights for this memo")
-                .padding(.top, DistillLayout.buttonTopInset)
-                .padding(.bottom, DistillLayout.buttonBottomInset)
+                .disabled(isAnalyzing || (hasCached && hasShown))
+                .accessibilityLabel(hasCached ? "View Distill" : "Distill")
+                .accessibilityHint(hasCached ? "Double tap to open the saved AI insight" : "Double tap to generate AI insights for this memo")
                 .debugBorder(showDebugBorders, color: DistillLayout.debugButtonBorder, cornerRadius: DistillLayout.buttonCornerRadius)
             }
 
@@ -159,13 +147,75 @@ private struct AnalysisContainerStyle: ViewModifier {
     }
 }
 
+private struct DistillCTAButton: View {
+    let isAnalyzing: Bool
+    let hasCachedResult: Bool
+    let hasShownCachedResult: Bool
+    let action: () -> Void
+
+    private var displayText: String {
+        hasCachedResult ? "View Distill" : AnalysisMode.distill.displayName
+    }
+
+    private var trailingIcon: some View {
+        Group {
+            if hasCachedResult && !isAnalyzing && !hasShownCachedResult {
+                Image(systemName: "chevron.right")
+                    .font(.subheadline)
+                    .foregroundColor(.semantic(.textSecondary))
+            }
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: AnalysisMode.distill.iconName)
+                    .font(.title3)
+                    .foregroundColor(.semantic(.brandPrimary))
+
+                if isAnalyzing {
+                    LoadingIndicator(size: .small)
+                        .frame(width: 16, height: 16)
+                }
+
+                Text(displayText)
+                    .font(.system(.headline, design: .serif))
+                    .fontWeight(.semibold)
+                    .foregroundColor(.semantic(.textPrimary))
+
+                Spacer(minLength: 0)
+
+                trailingIcon
+            }
+            .padding(.vertical, DistillLayout.buttonVerticalPadding)
+            .padding(.horizontal, DistillLayout.buttonHorizontalPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.semantic(.fillSecondary))
+            .overlay(
+                RoundedRectangle(cornerRadius: DistillLayout.buttonCornerRadius, style: .continuous)
+                    .stroke(Color.semantic(.brandPrimary).opacity(0.2), lineWidth: 1)
+            )
+            .cornerRadius(DistillLayout.buttonCornerRadius)
+        }
+    }
+}
+
+private struct PressableCardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
 private enum DistillLayout {
     static let containerCornerRadius: CGFloat = 12
     static let containerVerticalPadding: CGFloat = 12
     static let buttonCornerRadius: CGFloat = 12
-    static let buttonHeight: CGFloat = 52
-    static let buttonTopInset: CGFloat = 8
-    static let buttonBottomInset: CGFloat = 0
+    static let buttonVerticalPadding: CGFloat = 14
+    static let buttonHorizontalPadding: CGFloat = 16
     static let debugButtonBorder: Color = .red.opacity(0.5)
     static let debugContainerBorder: Color = .blue.opacity(0.4)
 }

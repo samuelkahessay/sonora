@@ -562,50 +562,65 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             partialDistillData = nil
         }
         
-        do {
-            let startTime = CFAbsoluteTimeGetCurrent()
-            
-            let envelope = try await analyzeDistillParallelUseCase.execute(
-                transcript: transcript,
-                memoId: memoId
-            ) { [weak self] progress in
-                Task { @MainActor in
-                    self?.distillProgress = progress
-                    self?.partialDistillData = progress.completedResults
+        let startTime = CFAbsoluteTimeGetCurrent()
+        let stream = AsyncThrowingStream<DistillProgressUpdate, Error> { continuation in
+            let worker = Task {
+                do {
+                    let envelope = try await analyzeDistillParallelUseCase.execute(
+                        transcript: transcript,
+                        memoId: memoId
+                    ) { progress in
+                        continuation.yield(progress)
+                    }
+
+                    let duration = CFAbsoluteTimeGetCurrent() - startTime
+
+                    await MainActor.run {
+                        analysisResult = envelope.data
+                        analysisEnvelope = envelope
+                        isAnalyzing = false
+                        
+                        let wasCached = duration < 1.0
+                        analysisCacheStatus = wasCached ? "✅ Loaded from cache" : "🚀 Parallel execution"
+                        analysisPerformanceInfo = "Parallel: \(envelope.latency_ms)ms, Total: \(Int(duration * 1000))ms"
+                        
+                        print("📝 MemoDetailViewModel: Parallel Distill analysis completed in \(Int(duration * 1000))ms")
+                    }
+
+                    PerformanceMetricsService.shared.recordDuration(
+                        name: "DistillTotalDuration",
+                        start: Date(timeIntervalSinceNow: -duration),
+                        extras: ["mode": "parallel"]
+                    )
+
+                    continuation.finish()
+                } catch {
+                    await MainActor.run {
+                        analysisError = error.localizedDescription
+                        self.error = ErrorMapping.mapError(error)
+                        isAnalyzing = false
+                        distillProgress = nil
+                        partialDistillData = nil
+                        print("❌ MemoDetailViewModel: Parallel Distill analysis failed: \(error.localizedDescription)")
+                    }
+                    continuation.finish(throwing: error)
                 }
             }
-            
-            let duration = CFAbsoluteTimeGetCurrent() - startTime
-            
-            await MainActor.run {
-                analysisResult = envelope.data
-                analysisEnvelope = envelope
-                isAnalyzing = false
-                
-                // Performance info for parallel execution
-                let wasCached = duration < 1.0
-                analysisCacheStatus = wasCached ? "✅ Loaded from cache" : "🚀 Parallel execution"
-                analysisPerformanceInfo = "Parallel: \(envelope.latency_ms)ms, Total: \(Int(duration * 1000))ms"
-                
-                print("📝 MemoDetailViewModel: Parallel Distill analysis completed in \(Int(duration * 1000))ms")
+
+            continuation.onTermination = { _ in
+                worker.cancel()
             }
-            
-            // Record total duration metric
-            PerformanceMetricsService.shared.recordDuration(
-                name: "DistillTotalDuration",
-                start: Date(timeIntervalSinceNow: -duration),
-                extras: ["mode": "parallel"]
-            )
-            
+        }
+
+        do {
+            for try await progress in stream {
+                await MainActor.run {
+                    distillProgress = progress
+                    partialDistillData = progress.completedResults
+                }
+            }
         } catch {
-            await MainActor.run {
-                analysisError = error.localizedDescription
-                self.error = ErrorMapping.mapError(error)
-                isAnalyzing = false
-                distillProgress = nil
-                partialDistillData = nil
-                print("❌ MemoDetailViewModel: Parallel Distill analysis failed: \(error.localizedDescription)")
-            }
+            // Error state already handled in the stream task above.
         }
     }
     
