@@ -142,7 +142,19 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
             // Phase 1: VAD Analysis (10%)
             await updateProgress(operationId: operationId, fraction: 0.0, step: "Analyzing speech patterns...")
-            let segments = try await vadService.detectVoiceSegments(audioURL: audioURL)
+            // Heuristic: force chunking for imported/mismatched audio (stereo, high SR, or non-m4a)
+            let forceChunk = await shouldForceChunking(audioURL: audioURL)
+            let vadToUse: any VADSplittingService = {
+                if forceChunk, let _ = vadService as? DefaultVADSplittingService {
+                    // Use a slightly more sensitive VAD for imported audio (lower threshold)
+                    return DefaultVADSplittingService(config: VADConfig(silenceThreshold: -50.0,
+                                                                        minSpeechDuration: 0.4,
+                                                                        minSilenceGap: 0.25,
+                                                                        windowSize: 1024))
+                }
+                return vadService
+            }()
+            let segments = try await vadToUse.detectVoiceSegments(audioURL: audioURL)
 
             // If VAD found nothing, skip server call and report no speech
             if segments.isEmpty {
@@ -165,7 +177,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             // Branch: Preferred language set
             let preferredLang = AppConfiguration.shared.preferredTranscriptionLanguage
             if let lang = preferredLang {
-                if totalDurationSec < 90.0 {
+                if !forceChunk && totalDurationSec < 90.0 {
                     // Single-shot for short recordings
                     await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (\(lang.uppercased()))...")
                     let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang)
@@ -260,7 +272,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             }
 
             // Branch: Auto-detect mode
-            if totalDurationSec < 60.0 {
+            if !forceChunk && totalDurationSec < 60.0 {
                 // Single-shot auto with fallback if needed
                 await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (cloud)...")
                 let primaryResp = try await transcriptionAPI.transcribe(url: audioURL, language: nil)
@@ -566,6 +578,27 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         await MainActor.run {
             DIContainer.shared.transcriptionRepository().saveTranscriptionMetadata(meta, for: memoId)
         }
+    }
+}
+
+// MARK: - Imported Audio Heuristics
+extension StartTranscriptionUseCase {
+    /// Decide whether to force chunked transcription based on audio characteristics typical of imported files
+    fileprivate func shouldForceChunking(audioURL: URL) async -> Bool {
+        let ext = audioURL.pathExtension.lowercased()
+        if ext != "m4a" { return true }
+        // Inspect basic format; if stereo or not voice-optimized sample rate, prefer chunking
+        do {
+            let audioFile = try AudioReadiness.openIfReady(url: audioURL, maxWait: 0.4)
+            let sr = audioFile.processingFormat.sampleRate
+            let ch = Int(audioFile.processingFormat.channelCount)
+            let voiceSR = AppConfiguration.shared.voiceOptimizedSampleRate
+            if ch != 1 { return true }
+            if abs(sr - voiceSR) > 200 { return true }
+        } catch {
+            // If we cannot inspect, err on the safe side (no force)
+        }
+        return false
     }
 }
 

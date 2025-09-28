@@ -11,8 +11,9 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
     private let eventStore: EKEventStore
     private let logger: LoggerProtocol
     
-    // Permission caching
-    private var lastPermissionCheck: Date?
+    // Permission caching (track per-entity to avoid cross-suppression)
+    private var lastCalendarCheck: Date?
+    private var lastReminderCheck: Date?
     private let permissionCacheTimeout: TimeInterval = 30 // 30 seconds
     
     enum PermissionState: String, CaseIterable, Sendable {
@@ -92,8 +93,8 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
     }
     
     func checkCalendarPermission(ignoreCache: Bool = false) async {
-        // Check cache unless forced refresh
-        if !ignoreCache, let lastCheck = lastPermissionCheck,
+        // Check cache unless forced refresh (calendar-specific)
+        if !ignoreCache, let lastCheck = lastCalendarCheck,
            Date().timeIntervalSince(lastCheck) < permissionCacheTimeout {
             logger.debug("Using cached calendar permission state: \(calendarPermissionState.rawValue)",
                         category: .system, context: LogContext())
@@ -110,7 +111,7 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
         }
         
         calendarPermissionState = newState
-        lastPermissionCheck = Date()
+        lastCalendarCheck = Date()
         
         logger.debug("Calendar permission checked: \(newState.rawValue)",
                     category: .system,
@@ -118,8 +119,8 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
     }
     
     func checkReminderPermission(ignoreCache: Bool = false) async {
-        // Check cache unless forced refresh  
-        if !ignoreCache, let lastCheck = lastPermissionCheck,
+        // Check cache unless forced refresh (reminder-specific)
+        if !ignoreCache, let lastCheck = lastReminderCheck,
            Date().timeIntervalSince(lastCheck) < permissionCacheTimeout {
             logger.debug("Using cached reminder permission state: \(reminderPermissionState.rawValue)",
                         category: .system, context: LogContext())
@@ -136,7 +137,7 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
         }
         
         reminderPermissionState = newState
-        lastPermissionCheck = Date()
+        lastReminderCheck = Date()
         
         logger.debug("Reminder permission checked: \(newState.rawValue)",
                     category: .system,
@@ -172,7 +173,7 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
             
             // Update state immediately
             calendarPermissionState = granted ? .authorized : .denied
-            lastPermissionCheck = Date()
+            lastCalendarCheck = Date()
             
             logger.info("Calendar access request completed: \(granted ? "granted" : "denied")",
                        category: .system,
@@ -226,7 +227,7 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
             
             // Update state immediately
             reminderPermissionState = granted ? .authorized : .denied
-            lastPermissionCheck = Date()
+            lastReminderCheck = Date()
             
             logger.info("Reminder access request completed: \(granted ? "granted" : "denied")",
                        category: .system,
@@ -296,7 +297,8 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
         EventKit Permissions Status:
         - Calendar: \(calendarPermissionState.displayText) (\(calendarPermissionState.rawValue))
         - Reminders: \(reminderPermissionState.displayText) (\(reminderPermissionState.rawValue))
-        - Cache age: \(lastPermissionCheck?.timeIntervalSinceNow.magnitude ?? 0)s
+        - Calendar cache age: \(lastCalendarCheck?.timeIntervalSinceNow.magnitude ?? 0)s
+        - Reminders cache age: \(lastReminderCheck?.timeIntervalSinceNow.magnitude ?? 0)s
         - Is requesting: \(isRequestingPermission)
         """
     }
@@ -309,7 +311,8 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
             "has_all_permissions": hasAllPermissions,
             "has_any_permissions": hasAnyPermissions,
             "is_requesting": isRequestingPermission,
-            "cache_age_seconds": lastPermissionCheck?.timeIntervalSinceNow.magnitude ?? 0
+            "calendar_cache_age_seconds": lastCalendarCheck?.timeIntervalSinceNow.magnitude ?? 0,
+            "reminder_cache_age_seconds": lastReminderCheck?.timeIntervalSinceNow.magnitude ?? 0
         ]
     }
 }

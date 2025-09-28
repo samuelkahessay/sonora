@@ -95,14 +95,12 @@ struct DataManagementSectionView: View {
                 Text("No export available")
             }
         }
-        .fileImporter(isPresented: $isImporting, allowedContentTypes: [UTType.audio], allowsMultipleSelection: false) { result in
-            switch result {
-            case .success(let urls):
-                guard let url = urls.first else { return }
+        .sheet(isPresented: $isImporting) {
+            AudioImportPicker { url in
                 importURL(url)
-            case .failure(let error):
-                importErrorMessage = ErrorMapping.mapError(error).errorDescription
+                isImporting = false
             }
+            .ignoresSafeArea()
         }
     }
 }
