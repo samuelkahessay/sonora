@@ -6,9 +6,8 @@ public struct RecordingQuotaPolicy: Sendable {
 
     /// Daily limit in seconds for the given service type. `nil` means unlimited.
     public func dailyLimit(for service: TranscriptionServiceType) -> TimeInterval? {
-        switch service {
-        case .cloudAPI: return 600 // 10 minutes total per day
-        }
+        // Daily limit removed; monthly quota enforcement is handled separately.
+        return nil
     }
 
     /// Max session duration in seconds for the given service type. `nil` means unlimited.

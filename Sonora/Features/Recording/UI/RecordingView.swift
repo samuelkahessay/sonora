@@ -102,6 +102,20 @@ struct RecordingView: View {
                     .accessibilityElement(children: .contain)
                 } else {
                     VStack(spacing: SonoraDesignSystem.Spacing.xxl) {
+                        if viewModel.quotaBlocked {
+                            NotificationBanner(
+                                type: .warning,
+                                message: "You’ve reached your monthly recording limit. Upgrade to Pro to keep recording.",
+                                compact: false,
+                                onPrimaryAction: {
+                                    viewModel.showingPaywall = true
+                                },
+                                primaryTitle: "Upgrade",
+                                onDismiss: {
+                                    viewModel.quotaBlocked = false
+                                }
+                            )
+                        }
                         Group {
                             if let prompt = promptViewModel.currentPrompt {
                                 DynamicPromptCard(prompt: prompt) {

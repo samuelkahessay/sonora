@@ -5,6 +5,7 @@ struct NotificationBanner: View {
     let type: BannerType
     let message: String
     let onPrimaryAction: (() -> Void)?
+    let primaryTitle: String?
     let onDismiss: () -> Void
     let compact: Bool
     
@@ -60,12 +61,14 @@ struct NotificationBanner: View {
         message: String,
         compact: Bool = false,
         onPrimaryAction: (() -> Void)? = nil,
+        primaryTitle: String? = nil,
         onDismiss: @escaping () -> Void
     ) {
         self.type = type
         self.message = message
         self.compact = compact
         self.onPrimaryAction = onPrimaryAction
+        self.primaryTitle = primaryTitle
         self.onDismiss = onDismiss
     }
     
@@ -91,7 +94,7 @@ struct NotificationBanner: View {
                 HStack(spacing: Spacing.xs) {
                     // Primary action button (if provided)
                     if let primaryAction = onPrimaryAction {
-                        Button("Retry", action: {
+                        Button(primaryTitle ?? "Retry", action: {
                             HapticManager.shared.playSelection()
                             primaryAction()
                         })
@@ -171,6 +174,7 @@ extension NotificationBanner {
             message: error.errorDescription ?? "An error occurred",
             compact: compact,
             onPrimaryAction: error.isRetryable ? onRetry : nil,
+            primaryTitle: error.isRetryable ? "Retry" : nil,
             onDismiss: onDismiss
         )
     }
@@ -186,6 +190,7 @@ extension NotificationBanner {
             message: "Check your internet connection and try again",
             compact: compact,
             onPrimaryAction: onRetry,
+            primaryTitle: "Retry",
             onDismiss: onDismiss
         )
     }

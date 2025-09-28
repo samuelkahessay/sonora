@@ -59,8 +59,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         state.countdown.formattedRemainingTime
     }
 
-    /// Quota status label
-    var quotaStatusText: String { state.quota.statusText }
+    // Removed unused daily quota status string.
     
     /// Recording button color based on state
     var recordingButtonColor: Color {

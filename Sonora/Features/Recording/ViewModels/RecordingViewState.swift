@@ -125,13 +125,7 @@ struct RecordingViewState: Equatable {
             return false
         }
 
-        /// User-facing summary
-        var statusText: String {
-            let rem = Int(max(0, (remainingDailySeconds ?? 0).rounded()))
-            let mm = rem / 60
-            let ss = rem % 60
-            return String(format: "Remaining Today: %d:%02d (Cloud)", mm, ss)
-        }
+        // NOTE: Former user-facing daily quota string removed; monthly gating is handled elsewhere.
     }
 
     var quota: QuotaState = QuotaState()
