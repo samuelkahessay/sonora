@@ -1,18 +1,34 @@
 import SwiftUI
 
 struct ActionItemDetectionCard: View {
-    @State var model: ActionItemDetectionUI
+    let inputModel: ActionItemDetectionUI
+    @State private var model: ActionItemDetectionUI
     let isPro: Bool
     let onAdd: (ActionItemDetectionUI) -> Void
     let onEditToggle: (UUID) -> Void
     let onDismiss: (UUID) -> Void
     let onQuickChip: (UUID, String) -> Void
 
+    init(
+        model: ActionItemDetectionUI,
+        isPro: Bool,
+        onAdd: @escaping (ActionItemDetectionUI) -> Void,
+        onEditToggle: @escaping (UUID) -> Void,
+        onDismiss: @escaping (UUID) -> Void,
+        onQuickChip: @escaping (UUID, String) -> Void
+    ) {
+        self.inputModel = model
+        self._model = State(initialValue: model)
+        self.isPro = isPro
+        self.onAdd = onAdd
+        self.onEditToggle = onEditToggle
+        self.onDismiss = onDismiss
+        self.onQuickChip = onQuickChip
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // header removed (confidence badges)
             quoteChip
-            // type badge removed (Calendar/Reminder)
             titleSubtitle
             chipsRow
             buttonsRow
@@ -25,7 +41,6 @@ struct ActionItemDetectionCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(model.isEditing ? Color.semantic(.brandPrimary) : Color.clear, lineWidth: 1.5)
         )
-        // Dismiss control moved to top-right "X"
         .overlay(alignment: .topTrailing) {
             Button(action: { onDismiss(model.id) }) {
                 Image(systemName: "xmark.circle.fill")
@@ -36,6 +51,7 @@ struct ActionItemDetectionCard: View {
             .accessibilityLabel("Dismiss this item")
             .padding(8)
         }
+        .syncState(with: inputModel) { model = $0 }
     }
 
     @ViewBuilder private var quoteChip: some View {
@@ -43,7 +59,8 @@ struct ActionItemDetectionCard: View {
             Text("\"\(model.sourceQuote)\"")
                 .font(.caption)
                 .foregroundColor(.semantic(.textSecondary))
-                .padding(.horizontal, 12).padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
                 .background(Color.semantic(.bgSecondary))
                 .cornerRadius(10)
         }
@@ -105,19 +122,29 @@ struct ActionItemDetectionCard: View {
                 if isPro {
                     onAdd(model)
                 } else {
-                    // Gating placeholder — will be wired to paywall later
                     onAdd(model)
                 }
             }) {
-                Text(model.kind == .reminder ? "Add to Reminders" : "Add to Calendar")
-                    .font(.callout.weight(.semibold))
-                    .padding(.vertical, 10)
+                if model.isProcessing {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("Adding…")
+                            .fontWeight(.semibold)
+                    }
                     .frame(maxWidth: .infinity)
+                } else {
+                    Text(model.kind == .reminder ? "Add to Reminders" : "Add to Calendar")
+                        .font(.callout.weight(.semibold))
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                }
             }
             .buttonStyle(.borderedProminent)
+            .disabled(model.isProcessing)
 
             Button("Edit") { onEditToggle(model.id) }
                 .buttonStyle(.bordered)
+                .disabled(model.isProcessing)
         }
         .padding(.top, 2)
     }
@@ -125,30 +152,45 @@ struct ActionItemDetectionCard: View {
     @ViewBuilder private var editorIfNeeded: some View {
         if model.isEditing {
             VStack(alignment: .leading, spacing: 8) {
-                if model.kind == .reminder {
-                    // Minimal fields; full wiring later
-                    TextField("Title", text: Binding(
-                        get: { model.title },
-                        set: { model.title = $0 }
-                    ))
-                    .textFieldStyle(.roundedBorder)
-                } else {
-                    TextField("Title", text: Binding(
-                        get: { model.title },
-                        set: { model.title = $0 }
-                    ))
-                    .textFieldStyle(.roundedBorder)
-                }
+                TextField("Title", text: Binding(
+                    get: { model.title },
+                    set: { model.title = $0 }
+                ))
+                .textFieldStyle(.roundedBorder)
+
                 HStack {
                     Button("Save & Add") { onAdd(model) }
                         .buttonStyle(.borderedProminent)
+                        .disabled(model.isProcessing)
                     Button("Cancel") { onEditToggle(model.id) }
                         .buttonStyle(.bordered)
+                        .disabled(model.isProcessing)
                 }
             }
             .padding(.top, 8)
         }
     }
+}
 
-    // confidence badges removed from UI (kept in backend)
+private struct OnChangeSyncModifier<Value: Equatable>: ViewModifier {
+    let value: Value
+    let action: (Value) -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 17.0, *) {
+            content.onChange(of: value) { _, newValue in
+                action(newValue)
+            }
+        } else {
+            content.onChange(of: value) { newValue in
+                action(newValue)
+            }
+        }
+    }
+}
+
+private extension View {
+    func syncState<Value: Equatable>(with value: Value, action: @escaping (Value) -> Void) -> some View {
+        modifier(OnChangeSyncModifier(value: value, action: action))
+    }
 }

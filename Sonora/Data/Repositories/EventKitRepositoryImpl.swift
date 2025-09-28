@@ -381,6 +381,20 @@ final class EventKitRepositoryImpl: EventKitRepository {
         
         return results
     }
+
+    func deleteEvent(with identifier: String) async throws {
+        try await MainActor.run {
+            guard let ekEvent = eventStore.event(withIdentifier: identifier) else {
+                throw EventKitError.eventNotFound(identifier: identifier)
+            }
+            try eventStore.remove(ekEvent, span: .thisEvent, commit: true)
+            logger.info("Deleted calendar event",
+                       category: .eventkit,
+                       context: LogContext(additionalInfo: [
+                           "eventId": identifier
+                       ]))
+        }
+    }
     
     func createReminders(_ reminders: [RemindersData.DetectedReminder],
                          listMapping: [String: CalendarDTO],
@@ -422,6 +436,20 @@ final class EventKitRepositoryImpl: EventKitRepository {
         }
         
         return results
+    }
+
+    func deleteReminder(with identifier: String) async throws {
+        try await MainActor.run {
+            guard let item = eventStore.calendarItem(withIdentifier: identifier) as? EKReminder else {
+                throw EventKitError.reminderNotFound(identifier: identifier)
+            }
+            try eventStore.remove(item, commit: true)
+            logger.info("Deleted reminder",
+                       category: .eventkit,
+                       context: LogContext(additionalInfo: [
+                           "reminderId": identifier
+                       ]))
+        }
     }
     
     // MARK: - Update/Delete Operations (trimmed from shipped surface)

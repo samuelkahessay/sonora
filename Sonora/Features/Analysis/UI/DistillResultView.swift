@@ -13,6 +13,7 @@ struct DistillResultView: View {
     // Pro gating (Action Items: detection visible to all; adds gated later)
     private var isPro: Bool { DIContainer.shared.storeKitService().isPro }
     @State private var showPaywall: Bool = false
+    @SwiftUI.Environment(\.diContainer) private var container: DIContainer
     
     // Convenience initializers for backward compatibility
     init(data: DistillData, envelope: AnalyzeEnvelope<DistillData>) {
@@ -115,7 +116,21 @@ struct DistillResultView: View {
     @State private var showToast: Bool = false
     @State private var toastText: String = ""
     @State private var toastUndoId: UUID? = nil
+    @State private var eventSources: [UUID: EventsData.DetectedEvent] = [:]
+    @State private var reminderSources: [UUID: RemindersData.DetectedReminder] = [:]
+    @State private var createdArtifacts: [UUID: CreatedArtifact] = [:]
+    @State private var availableCalendars: [CalendarDTO] = []
+    @State private var availableReminderLists: [CalendarDTO] = []
+    @State private var defaultCalendar: CalendarDTO? = nil
+    @State private var defaultReminderList: CalendarDTO? = nil
+    @State private var calendarsLoaded = false
+    @State private var reminderListsLoaded = false
     @StateObject private var permissionService = DIContainer.shared.eventKitPermissionService() as! EventKitPermissionService
+
+    private struct CreatedArtifact: Equatable {
+        let kind: ActionItemDetectionKind
+        let identifier: String
+    }
     
     // MARK: - Progress Section
     
@@ -206,7 +221,7 @@ struct DistillResultView: View {
                         ActionItemDetectionCard(
                             model: m,
                             isPro: isPro,
-                            onAdd: { _ in onAddSingle(m.id) },
+                            onAdd: { updated in onAddSingle(updated) },
                             onEditToggle: { id in toggleEdit(id) },
                             onDismiss: { id in dismiss(id) },
                             onQuickChip: { id, chip in applyChip(id, chip: chip) }
@@ -236,8 +251,15 @@ struct DistillResultView: View {
                 items: $detectionItems,
                 include: $batchInclude,
                 isPro: isPro,
+                calendars: availableCalendars,
+                reminderLists: availableReminderLists,
+                defaultCalendar: defaultCalendar,
+                defaultReminderList: defaultReminderList,
                 onEdit: { id in toggleEdit(id) },
-                onAddSelected: { _ in showBatchSheet = false },
+                onAddSelected: { selected, calendar, reminderList in
+                    showBatchSheet = false
+                    Task { @MainActor in await handleBatchAdd(selected: selected, calendar: calendar, reminderList: reminderList) }
+                },
                 onDismiss: { showBatchSheet = false }
             )
         }
@@ -327,67 +349,434 @@ struct DistillResultView: View {
     private func order(_ c: ActionItemConfidence) -> Int { c == .high ? 0 : (c == .medium ? 1 : 2) }
     private var reviewCount: Int { detectionItemsFiltered.count }
     private func openBatchReview() {
-        batchInclude = Set(detectionItemsFiltered.map { $0.id }) // default include all
-        showBatchSheet = true
+        let reviewItems = detectionItemsFiltered
+        batchInclude = Set(reviewItems.map { $0.id })
+        Task { @MainActor in
+            do {
+                try await loadDestinationsIfNeeded(for: reviewItems)
+                showBatchSheet = true
+            } catch {
+                showToast(message: error.localizedDescription, undoId: nil)
+            }
+        }
     }
     private func prepareDetectionsIfNeeded() {
         let events = eventsForUI
         let reminders = remindersForUI
-        var arr: [ActionItemDetectionUI] = []
-        arr.append(contentsOf: events.map { ActionItemDetectionUI.fromEvent($0) })
-        arr.append(contentsOf: reminders.map { ActionItemDetectionUI.fromReminder($0) })
-        detectionItems = arr
+        let existingBySource = Dictionary(uniqueKeysWithValues: detectionItems.map { ($0.sourceId, $0) })
+
+        var mergedItems: [ActionItemDetectionUI] = []
+        var newEventSources: [UUID: EventsData.DetectedEvent] = [:]
+        var newReminderSources: [UUID: RemindersData.DetectedReminder] = [:]
+
+        for event in events {
+            let baseUI = ActionItemDetectionUI.fromEvent(event)
+            let merged = merge(base: baseUI, existing: existingBySource[event.id])
+            mergedItems.append(merged)
+            newEventSources[merged.id] = event
+        }
+
+        for reminder in reminders {
+            let baseUI = ActionItemDetectionUI.fromReminder(reminder)
+            let merged = merge(base: baseUI, existing: existingBySource[reminder.id])
+            mergedItems.append(merged)
+            newReminderSources[merged.id] = reminder
+        }
+
+        detectionItems = mergedItems
+        eventSources = newEventSources
+        reminderSources = newReminderSources
     }
     private func toggleEdit(_ id: UUID) {
         if let idx = detectionItems.firstIndex(where: { $0.id == id }) {
             detectionItems[idx].isEditing.toggle()
         }
     }
-    private func dismiss(_ id: UUID) { dismissedDetections.insert(id) }
-    private func onAddSingle(_ id: UUID) {
-        addedDetections.insert(id)
-        if let m = detectionItems.first(where: { $0.id == id }) {
-            toastText = m.kind == .reminder ? "Added to Reminders" : "Added to Calendar"
-            toastUndoId = id
-            withAnimation { showToast = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                withAnimation { showToast = false }
-                toastUndoId = nil
-            }
+    private func dismiss(_ id: UUID) {
+        dismissedDetections.insert(id)
+        if let idx = detectionItems.firstIndex(where: { $0.id == id }) {
+            detectionItems[idx].isDismissed = true
         }
+    }
+    private func onAddSingle(_ updatedModel: ActionItemDetectionUI) {
+        updateDetection(updatedModel)
+        Task { @MainActor in await handleSingleAdd(updatedModel) }
     }
     private func undoAdd(_ id: UUID) {
-        addedDetections.remove(id)
-        withAnimation { showToast = false }
-        toastUndoId = nil
+        Task { @MainActor in await handleUndo(id: id) }
     }
     private func applyChip(_ id: UUID, chip: String) {
-        // Stub mapping for chips – will be wired later
-        if let idx = detectionItems.firstIndex(where: { $0.id == id }) {
-            var d = detectionItems[idx]
-            // Simple demo: set date to now with small offsets
-            switch chip.lowercased() {
-            case "today", "today evening": d.suggestedDate = Date().addingTimeInterval(60*60*3)
-            case "tomorrow": d.suggestedDate = Calendar.current.date(byAdding: .day, value: 1, to: Date())
-            case "this weekend": d.suggestedDate = nextSaturday(atHour: 10)
-            case "all day": d.isAllDay.toggle()
-            default: break
+        guard let idx = detectionItems.firstIndex(where: { $0.id == id }) else { return }
+        var model = detectionItems[idx]
+        let calendar = Calendar.current
+
+        switch chip.lowercased() {
+        case "today", "today evening":
+            let hour = chip.contains("evening") ? 18 : calendar.component(.hour, from: Date())
+            model.suggestedDate = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: Date())
+        case "tomorrow":
+            if let base = calendar.date(byAdding: .day, value: 1, to: Date()) {
+                model.suggestedDate = calendar.date(bySettingHour: model.kind == .event ? 9 : 10, minute: 0, second: 0, of: base)
             }
-            detectionItems[idx] = d
+        case "this weekend":
+            if let weekend = calendar.nextWeekend(startingAfter: Date())?.start {
+                model.suggestedDate = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: weekend)
+            }
+        case "all day":
+            model.isAllDay.toggle()
+        default:
+            break
+        }
+
+        detectionItems[idx] = model
+    }
+
+    private func merge(base: ActionItemDetectionUI, existing: ActionItemDetectionUI?) -> ActionItemDetectionUI {
+        guard let existing else { return base }
+        return ActionItemDetectionUI(
+            id: existing.id,
+            sourceId: base.sourceId,
+            kind: base.kind,
+            confidence: base.confidence,
+            sourceQuote: base.sourceQuote,
+            title: existing.title,
+            suggestedDate: existing.suggestedDate ?? base.suggestedDate,
+            isAllDay: existing.isAllDay,
+            location: existing.location ?? base.location,
+            priorityLabel: existing.priorityLabel ?? base.priorityLabel,
+            memoId: base.memoId,
+            isEditing: existing.isEditing,
+            isAdded: existing.isAdded,
+            isDismissed: existing.isDismissed,
+            isProcessing: existing.isProcessing
+        )
+    }
+
+    @MainActor
+    private func updateDetection(_ updated: ActionItemDetectionUI) {
+        if let idx = detectionItems.firstIndex(where: { $0.id == updated.id }) {
+            detectionItems[idx] = updated
         }
     }
-    private func nextSaturday(atHour hour: Int) -> Date? {
-        var cal = Calendar.current
-        cal.firstWeekday = 2 // Monday
-        let now = Date()
-        for i in 0..<14 {
-            if let d = cal.date(byAdding: .day, value: i, to: now) {
-                if cal.component(.weekday, from: d) == 7 { // Saturday
-                    return cal.date(bySettingHour: hour, minute: 0, second: 0, of: d)
+
+    @MainActor
+    private func handleSingleAdd(_ item: ActionItemDetectionUI) async {
+        setProcessing(item.id, to: true)
+        defer { setProcessing(item.id, to: false) }
+
+        do {
+            let identifier: String
+            switch item.kind {
+            case .event:
+                identifier = try await addEvent(for: item)
+                createdArtifacts[item.id] = CreatedArtifact(kind: .event, identifier: identifier)
+            case .reminder:
+                identifier = try await addReminder(for: item)
+                createdArtifacts[item.id] = CreatedArtifact(kind: .reminder, identifier: identifier)
+            }
+
+            addedDetections.insert(item.id)
+            if let idx = detectionItems.firstIndex(where: { $0.id == item.id }) {
+                detectionItems[idx].isAdded = true
+            }
+
+            HapticManager.shared.playSuccess()
+            let message = item.kind == .event ? "Added to Calendar" : "Added to Reminders"
+            showToast(message: message, undoId: item.id)
+        } catch {
+            HapticManager.shared.playError()
+            showToast(message: error.localizedDescription, undoId: nil)
+        }
+    }
+
+    @MainActor
+    private func handleUndo(id: UUID) async {
+        withAnimation { showToast = false }
+        toastUndoId = nil
+
+        guard let artifact = createdArtifacts[id] else {
+            addedDetections.remove(id)
+            createdArtifacts.removeValue(forKey: id)
+            return
+        }
+
+        do {
+            switch artifact.kind {
+            case .event:
+                try await container.eventKitRepository().deleteEvent(with: artifact.identifier)
+            case .reminder:
+                try await container.eventKitRepository().deleteReminder(with: artifact.identifier)
+            }
+            addedDetections.remove(id)
+            createdArtifacts.removeValue(forKey: id)
+            HapticManager.shared.playSuccess()
+            showToast(message: "Undo successful", undoId: nil)
+        } catch {
+            HapticManager.shared.playError()
+            showToast(message: error.localizedDescription, undoId: nil)
+        }
+    }
+
+    @MainActor
+    private func setProcessing(_ id: UUID, to value: Bool) {
+        if let idx = detectionItems.firstIndex(where: { $0.id == id }) {
+            detectionItems[idx].isProcessing = value
+        }
+    }
+
+    @MainActor
+    private func addEvent(for item: ActionItemDetectionUI) async throws -> String {
+        guard let base = eventSources[item.id] else {
+            throw EventKitError.invalidEventData(field: "event source missing")
+        }
+
+        let event = buildEventPayload(from: item, base: base)
+        try await ensureCalendarPermission()
+        try await loadDestinationsIfNeeded(for: [item])
+
+        let repo = container.eventKitRepository()
+        let suggested = try await repo.suggestCalendar(for: event)
+        let calendar = suggested ?? defaultCalendar ?? availableCalendars.first
+        guard let calendar else {
+            throw EventKitError.calendarNotFound(identifier: "default")
+        }
+
+        let useCase = container.createCalendarEventUseCase()
+        return try await useCase.execute(event: event, calendar: calendar)
+    }
+
+    @MainActor
+    private func addReminder(for item: ActionItemDetectionUI) async throws -> String {
+        guard let base = reminderSources[item.id] else {
+            throw EventKitError.invalidEventData(field: "reminder source missing")
+        }
+
+        let reminder = buildReminderPayload(from: item, base: base)
+        try await ensureReminderPermission()
+        try await loadDestinationsIfNeeded(for: [item])
+
+        let repo = container.eventKitRepository()
+        let suggested = try await repo.suggestReminderList(for: reminder)
+        let list = suggested ?? defaultReminderList ?? availableReminderLists.first
+        guard let list else {
+            throw EventKitError.reminderListNotFound(identifier: "default")
+        }
+
+        let useCase = container.createReminderUseCase()
+        return try await useCase.execute(reminder: reminder, list: list)
+    }
+
+    @MainActor
+    private func handleBatchAdd(selected: [ActionItemDetectionUI], calendar: CalendarDTO?, reminderList: CalendarDTO?) async {
+        guard !selected.isEmpty else { return }
+
+        selected.forEach { updateDetection($0) }
+        let ids = selected.map { $0.id }
+        ids.forEach { setProcessing($0, to: true) }
+        defer { ids.forEach { setProcessing($0, to: false) } }
+
+        let eventItems = selected.filter { $0.kind == .event }
+        let reminderItems = selected.filter { $0.kind == .reminder }
+
+        do {
+            var totalAdded = 0
+            var failureMessages: [String] = []
+
+            if !eventItems.isEmpty {
+                try await ensureCalendarPermission()
+                try await loadDestinationsIfNeeded(for: eventItems)
+                let destination = calendar ?? defaultCalendar ?? availableCalendars.first
+                guard let destination else { throw EventKitError.calendarNotFound(identifier: "default") }
+
+                let tuples = try eventItems.map { item -> (ActionItemDetectionUI, EventsData.DetectedEvent) in
+                    guard let base = eventSources[item.id] else {
+                        throw EventKitError.invalidEventData(field: "event source missing")
+                    }
+                    return (item, buildEventPayload(from: item, base: base))
                 }
+
+                let result = try await batchAddEvents(tuples, calendar: destination)
+                totalAdded += result.success
+                failureMessages.append(contentsOf: result.failures)
+            }
+
+            if !reminderItems.isEmpty {
+                try await ensureReminderPermission()
+                try await loadDestinationsIfNeeded(for: reminderItems)
+                let destination = reminderList ?? defaultReminderList ?? availableReminderLists.first
+                guard let destination else { throw EventKitError.reminderListNotFound(identifier: "default") }
+
+                let tuples = try reminderItems.map { item -> (ActionItemDetectionUI, RemindersData.DetectedReminder) in
+                    guard let base = reminderSources[item.id] else {
+                        throw EventKitError.invalidEventData(field: "reminder source missing")
+                    }
+                    return (item, buildReminderPayload(from: item, base: base))
+                }
+
+                let result = try await batchAddReminders(tuples, list: destination)
+                totalAdded += result.success
+                failureMessages.append(contentsOf: result.failures)
+            }
+
+            if failureMessages.isEmpty {
+                HapticManager.shared.playSuccess()
+                showToast(message: "Added \(totalAdded) item\(totalAdded == 1 ? "" : "s")", undoId: nil)
+            } else {
+                HapticManager.shared.playWarning()
+                showToast(message: "Added \(totalAdded); \(failureMessages.count) failed", undoId: nil)
+            }
+        } catch {
+            HapticManager.shared.playError()
+            showToast(message: error.localizedDescription, undoId: nil)
+        }
+    }
+
+    @MainActor
+    private func batchAddEvents(_ items: [(ActionItemDetectionUI, EventsData.DetectedEvent)], calendar: CalendarDTO) async throws -> (success: Int, failures: [String]) {
+        let useCase = container.createCalendarEventUseCase()
+        let events = items.map { $0.1 }
+        var mapping: [String: CalendarDTO] = [:]
+        for event in events { mapping[event.id] = calendar }
+
+        let results = try await useCase.execute(events: events, calendarMapping: mapping)
+        var successCount = 0
+        var failures: [String] = []
+
+        for (ui, event) in items {
+            switch results[event.id] {
+            case .success(let createdId):
+                successCount += 1
+                createdArtifacts[ui.id] = CreatedArtifact(kind: .event, identifier: createdId)
+                addedDetections.insert(ui.id)
+                if let idx = detectionItems.firstIndex(where: { $0.id == ui.id }) {
+                    detectionItems[idx].isAdded = true
+                }
+            case .failure(let error):
+                failures.append(error.localizedDescription)
+            case .none:
+                failures.append("Failed to create \(ui.title)")
             }
         }
-        return nil
+
+        return (successCount, failures)
+    }
+
+    @MainActor
+    private func batchAddReminders(_ items: [(ActionItemDetectionUI, RemindersData.DetectedReminder)], list: CalendarDTO) async throws -> (success: Int, failures: [String]) {
+        let useCase = container.createReminderUseCase()
+        let reminders = items.map { $0.1 }
+        var mapping: [String: CalendarDTO] = [:]
+        for reminder in reminders { mapping[reminder.id] = list }
+
+        let results = try await useCase.execute(reminders: reminders, listMapping: mapping)
+        var successCount = 0
+        var failures: [String] = []
+
+        for (ui, reminder) in items {
+            switch results[reminder.id] {
+            case .success(let createdId):
+                successCount += 1
+                createdArtifacts[ui.id] = CreatedArtifact(kind: .reminder, identifier: createdId)
+                addedDetections.insert(ui.id)
+                if let idx = detectionItems.firstIndex(where: { $0.id == ui.id }) {
+                    detectionItems[idx].isAdded = true
+                }
+            case .failure(let error):
+                failures.append(error.localizedDescription)
+            case .none:
+                failures.append("Failed to create \(ui.title)")
+            }
+        }
+
+        return (successCount, failures)
+    }
+
+    private func buildEventPayload(from item: ActionItemDetectionUI, base: EventsData.DetectedEvent) -> EventsData.DetectedEvent {
+        let startDate = item.suggestedDate ?? base.startDate
+        var endDate = base.endDate
+
+        if let baseStart = base.startDate, let baseEnd = base.endDate, let startDate {
+            let duration = baseEnd.timeIntervalSince(baseStart)
+            if duration > 0 {
+                endDate = startDate.addingTimeInterval(duration)
+            }
+        }
+
+        return EventsData.DetectedEvent(
+            id: base.id,
+            title: item.title,
+            startDate: startDate,
+            endDate: endDate,
+            location: item.location ?? base.location,
+            participants: base.participants,
+            confidence: base.confidence,
+            sourceText: base.sourceText,
+            memoId: base.memoId
+        )
+    }
+
+    private func buildReminderPayload(from item: ActionItemDetectionUI, base: RemindersData.DetectedReminder) -> RemindersData.DetectedReminder {
+        RemindersData.DetectedReminder(
+            id: base.id,
+            title: item.title,
+            dueDate: item.suggestedDate ?? base.dueDate,
+            priority: base.priority,
+            confidence: base.confidence,
+            sourceText: base.sourceText,
+            memoId: base.memoId
+        )
+    }
+
+    @MainActor
+    private func loadDestinationsIfNeeded(for items: [ActionItemDetectionUI]) async throws {
+        if items.contains(where: { $0.kind == .event }) && !calendarsLoaded {
+            let repo = container.eventKitRepository()
+            availableCalendars = try await repo.getCalendars()
+            defaultCalendar = try await repo.getDefaultCalendar() ?? availableCalendars.first
+            calendarsLoaded = true
+        }
+
+        if items.contains(where: { $0.kind == .reminder }) && !reminderListsLoaded {
+            let repo = container.eventKitRepository()
+            availableReminderLists = try await repo.getReminderLists()
+            defaultReminderList = try await repo.getDefaultReminderList() ?? availableReminderLists.first
+            reminderListsLoaded = true
+        }
+    }
+
+    @MainActor
+    private func ensureCalendarPermission() async throws {
+        await permissionService.checkCalendarPermission(ignoreCache: true)
+        if permissionService.calendarPermissionState.isAuthorized { return }
+        if permissionService.calendarPermissionState.canRequest {
+            _ = try await permissionService.requestCalendarAccess()
+        }
+        if !permissionService.calendarPermissionState.isAuthorized {
+            throw EventKitError.permissionDenied(type: .calendar)
+        }
+    }
+
+    @MainActor
+    private func ensureReminderPermission() async throws {
+        await permissionService.checkReminderPermission(ignoreCache: true)
+        if permissionService.reminderPermissionState.isAuthorized { return }
+        if permissionService.reminderPermissionState.canRequest {
+            _ = try await permissionService.requestReminderAccess()
+        }
+        if !permissionService.reminderPermissionState.isAuthorized {
+            throw EventKitError.permissionDenied(type: .reminder)
+        }
+    }
+
+    @MainActor
+    private func showToast(message: String, undoId: UUID?) {
+        toastText = message
+        toastUndoId = undoId
+        withAnimation { showToast = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+            withAnimation { showToast = false }
+            toastUndoId = nil
+        }
     }
 
     private var shouldShowPermissionExplainer: Bool {

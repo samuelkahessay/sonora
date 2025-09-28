@@ -29,11 +29,14 @@ protocol EventKitRepository: Sendable {
     func createEvents(_ events: [EventsData.DetectedEvent],
                      calendarMapping: [String: CalendarDTO],
                      maxRetries: Int) async throws -> [String: Result<String, Error>]
-    
+
     // Update/delete operations not shipped; trimmed
-    
+
+    /// Delete a calendar event by identifier
+    func deleteEvent(with identifier: String) async throws
+
     // MARK: - Reminder Operations
-    
+
     /// Create a reminder with retry mechanism
     func createReminder(_ reminder: RemindersData.DetectedReminder,
                        in list: CalendarDTO,
@@ -43,8 +46,11 @@ protocol EventKitRepository: Sendable {
     func createReminders(_ reminders: [RemindersData.DetectedReminder],
                         listMapping: [String: CalendarDTO],
                         maxRetries: Int) async throws -> [String: Result<String, Error>]
-    
+
     // Update/delete operations not shipped; trimmed
+
+    /// Delete a reminder by identifier
+    func deleteReminder(with identifier: String) async throws
     
     // MARK: - Smart Features
     

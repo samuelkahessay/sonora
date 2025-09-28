@@ -7,6 +7,8 @@ public enum EventKitError: LocalizedError, Sendable {
     case permissionUnknown(type: EventKitType)
     case calendarNotFound(identifier: String)
     case reminderListNotFound(identifier: String)
+    case eventNotFound(identifier: String)
+    case reminderNotFound(identifier: String)
     case eventCreationFailed(underlying: Error)
     case reminderCreationFailed(underlying: Error)
     case eventStoreSyncFailed
@@ -40,6 +42,10 @@ public enum EventKitError: LocalizedError, Sendable {
             return "The selected calendar (\(id)) could not be found. It may have been deleted."
         case .reminderListNotFound(let id):
             return "The selected reminder list (\(id)) could not be found. It may have been deleted."
+        case .eventNotFound(let id):
+            return "The calendar event (\(id)) could not be found. It may have been deleted."
+        case .reminderNotFound(let id):
+            return "The reminder (\(id)) could not be found. It may have been deleted."
         case .eventCreationFailed(let error):
             return "Failed to create calendar event: \(error.localizedDescription)"
         case .reminderCreationFailed(let error):
@@ -68,7 +74,7 @@ public enum EventKitError: LocalizedError, Sendable {
             return "Check Screen Time or other device restrictions in Settings."
         case .permissionUnknown:
             return "Restart the app or check your device settings."
-        case .calendarNotFound, .reminderListNotFound:
+        case .calendarNotFound, .reminderListNotFound, .eventNotFound, .reminderNotFound:
             return "Select a different calendar or create a new one in the Calendar app."
         case .eventCreationFailed, .reminderCreationFailed:
             return "Check your internet connection and try again, or try creating the event manually."
@@ -93,7 +99,7 @@ public enum EventKitError: LocalizedError, Sendable {
             return "Insufficient permissions to access calendars or reminders."
         case .permissionUnknown:
             return "Permission state could not be determined."
-        case .calendarNotFound, .reminderListNotFound:
+        case .calendarNotFound, .reminderListNotFound, .eventNotFound, .reminderNotFound:
             return "The target calendar or list is no longer available."
         case .eventCreationFailed, .reminderCreationFailed:
             return "EventKit was unable to save the item."
@@ -117,8 +123,8 @@ public enum EventKitError: LocalizedError, Sendable {
         switch self {
         case .networkUnavailable, .eventStoreSyncFailed, .cacheExpired, .permissionUnknown:
             return true
-        case .permissionDenied, .permissionRestricted, .calendarNotFound, .reminderListNotFound, 
-             .eventStoreUnavailable, .invalidEventData:
+        case .permissionDenied, .permissionRestricted, .calendarNotFound, .reminderListNotFound,
+             .eventStoreUnavailable, .invalidEventData, .eventNotFound, .reminderNotFound:
             return false
         case .eventCreationFailed, .reminderCreationFailed, .conflictDetected:
             return true // These might be transient
@@ -128,7 +134,7 @@ public enum EventKitError: LocalizedError, Sendable {
     /// Whether the error requires user intervention to resolve
     public var requiresUserAction: Bool {
         switch self {
-        case .permissionDenied, .permissionRestricted, .calendarNotFound, .reminderListNotFound, .conflictDetected:
+        case .permissionDenied, .permissionRestricted, .calendarNotFound, .reminderListNotFound, .eventNotFound, .reminderNotFound, .conflictDetected:
             return true
         case .networkUnavailable, .cacheExpired, .eventStoreSyncFailed, .permissionUnknown,
              .eventCreationFailed, .reminderCreationFailed, .invalidEventData, .eventStoreUnavailable:
@@ -144,6 +150,8 @@ public enum EventKitError: LocalizedError, Sendable {
         case .permissionUnknown(let type): return "permission_unknown_\(type.rawValue.lowercased())"
         case .calendarNotFound: return "calendar_not_found"
         case .reminderListNotFound: return "reminder_list_not_found"
+        case .eventNotFound: return "event_not_found"
+        case .reminderNotFound: return "reminder_not_found"
         case .eventCreationFailed: return "event_creation_failed"
         case .reminderCreationFailed: return "reminder_creation_failed"
         case .eventStoreSyncFailed: return "eventstore_sync_failed"

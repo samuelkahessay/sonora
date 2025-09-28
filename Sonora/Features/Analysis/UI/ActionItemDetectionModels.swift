@@ -22,6 +22,7 @@ enum ActionItemConfidence: String, Sendable, Equatable {
 
 struct ActionItemDetectionUI: Identifiable, Equatable {
     let id: UUID
+    let sourceId: String
     let kind: ActionItemDetectionKind
     let confidence: ActionItemConfidence
     let sourceQuote: String
@@ -34,13 +35,17 @@ struct ActionItemDetectionUI: Identifiable, Equatable {
     // For reminders
     var priorityLabel: String?
 
+    var memoId: UUID?
+
     // UI state (local-only)
     var isEditing: Bool = false
     var isAdded: Bool = false
     var isDismissed: Bool = false
+    var isProcessing: Bool = false
 
     init(
         id: UUID = UUID(),
+        sourceId: String,
         kind: ActionItemDetectionKind,
         confidence: ActionItemConfidence,
         sourceQuote: String,
@@ -48,9 +53,15 @@ struct ActionItemDetectionUI: Identifiable, Equatable {
         suggestedDate: Date? = nil,
         isAllDay: Bool = false,
         location: String? = nil,
-        priorityLabel: String? = nil
+        priorityLabel: String? = nil,
+        memoId: UUID? = nil,
+        isEditing: Bool = false,
+        isAdded: Bool = false,
+        isDismissed: Bool = false,
+        isProcessing: Bool = false
     ) {
         self.id = id
+        self.sourceId = sourceId
         self.kind = kind
         self.confidence = confidence
         self.sourceQuote = sourceQuote
@@ -59,6 +70,11 @@ struct ActionItemDetectionUI: Identifiable, Equatable {
         self.isAllDay = isAllDay
         self.location = location
         self.priorityLabel = priorityLabel
+        self.memoId = memoId
+        self.isEditing = isEditing
+        self.isAdded = isAdded
+        self.isDismissed = isDismissed
+        self.isProcessing = isProcessing
     }
 }
 
@@ -77,6 +93,7 @@ extension ActionItemDetectionUI {
 extension ActionItemDetectionUI {
     static func fromEvent(_ e: EventsData.DetectedEvent) -> ActionItemDetectionUI {
         ActionItemDetectionUI(
+            sourceId: e.id,
             kind: .event,
             confidence: .from(e.confidence),
             sourceQuote: e.sourceText,
@@ -84,12 +101,14 @@ extension ActionItemDetectionUI {
             suggestedDate: e.startDate,
             isAllDay: false,
             location: e.location,
-            priorityLabel: nil
+            priorityLabel: nil,
+            memoId: e.memoId
         )
     }
 
     static func fromReminder(_ r: RemindersData.DetectedReminder) -> ActionItemDetectionUI {
         ActionItemDetectionUI(
+            sourceId: r.id,
             kind: .reminder,
             confidence: .from(r.confidence),
             sourceQuote: r.sourceText,
@@ -97,7 +116,8 @@ extension ActionItemDetectionUI {
             suggestedDate: r.dueDate,
             isAllDay: false,
             location: nil,
-            priorityLabel: r.priority.rawValue
+            priorityLabel: r.priority.rawValue,
+            memoId: r.memoId
         )
     }
 }
@@ -110,4 +130,3 @@ extension DateFormatter {
         return df
     }()
 }
-
