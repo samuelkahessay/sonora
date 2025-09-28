@@ -71,11 +71,8 @@ private struct ReminderItemView: View {
                 Text(reminder.title)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                
                 Spacer()
-                
                 PriorityBadge(priority: reminder.priority)
-                ConfidenceBadge(confidence: reminder.confidence)
             }
             
             if let dueDate = reminder.dueDate {
@@ -138,29 +135,7 @@ private struct PriorityBadge: View {
     }
 }
 
-/// Confidence level badge (reused from EventsResultView but with different styling)
-private struct ConfidenceBadge: View {
-    let confidence: Float
-    
-    private var confidenceLevel: EventsData.DetectedEvent.ConfidenceLevel {
-        switch confidence {
-        case 0.8...1.0: return .high
-        case 0.6..<0.8: return .medium
-        default: return .low
-        }
-    }
-    
-    var body: some View {
-        Text("\(Int(confidence * 100))%")
-            .font(.caption2)
-            .fontWeight(.medium)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Color(confidenceLevel.color).opacity(0.1))
-            .foregroundColor(Color(confidenceLevel.color))
-            .cornerRadius(4)
-    }
-}
+// Confidence badges removed from UI (logic retained in backend)
 
 #Preview {
     RemindersResultView(

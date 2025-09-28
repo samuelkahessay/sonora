@@ -24,17 +24,7 @@ struct BatchAddActionItemsSheet: View {
                         .labelsHidden()
 
                         VStack(alignment: .leading, spacing: 6) {
-                            HStack(spacing: 6) {
-                                Text(item.kind == .reminder ? "REMINDER" : "CALENDAR")
-                                    .font(.caption2.weight(.bold))
-                                    .padding(.horizontal, 8).padding(.vertical, 2)
-                                    .background(item.kind == .reminder ? Color.blue.opacity(0.2) : Color.red.opacity(0.2))
-                                    .foregroundColor(item.kind == .reminder ? .blue : .red)
-                                    .cornerRadius(6)
-                                Text(item.confidenceText)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
+                            // Removed type and confidence badges for a cleaner UI
                             Text(item.title)
                                 .font(.body.weight(.semibold))
                             if let d = item.suggestedDate {
@@ -66,4 +56,3 @@ struct BatchAddActionItemsSheet: View {
         }
     }
 }
-

@@ -69,7 +69,7 @@ final class CalendarEventHandler {
 
     private func handleTranscriptionCompleted(memoId: UUID, text: String) async {
         let defaults = UserDefaults.standard
-        let autoEvents = defaults.object(forKey: "autoDetectEvents") as? Bool ?? true
+        let autoEvents = defaults.object(forKey: "autoDetectEvents") as? Bool ?? false
         guard autoEvents else { return }
 
         await permissionService.checkCalendarPermission(ignoreCache: false)

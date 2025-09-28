@@ -10,9 +10,9 @@ struct ActionItemDetectionCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            header
+            // header removed (confidence badges)
             quoteChip
-            typeBadge
+            // type badge removed (Calendar/Reminder)
             titleSubtitle
             chipsRow
             buttonsRow
@@ -25,26 +25,16 @@ struct ActionItemDetectionCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(model.isEditing ? Color.semantic(.brandPrimary) : Color.clear, lineWidth: 1.5)
         )
-    }
-
-    @ViewBuilder private var header: some View {
-        HStack {
-            HStack(spacing: 6) {
-                confidenceDots
-                Text(model.confidenceText)
-                    .font(.caption)
-                    .foregroundColor(.semantic(.textSecondary))
+        // Dismiss control moved to top-right "X"
+        .overlay(alignment: .topTrailing) {
+            Button(action: { onDismiss(model.id) }) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.semantic(.textTertiary))
+                    .font(.system(size: 16, weight: .semibold))
             }
-            Spacer()
-            Text(model.confidence == .high ? "HIGH" : model.confidence == .medium ? "MEDIUM" : "LOW")
-                .font(.caption2.weight(.semibold))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    (model.confidence == .high ? Color.semantic(.success) : model.confidence == .medium ? Color.semantic(.warning) : Color.semantic(.separator)).opacity(0.15)
-                )
-                .foregroundColor(model.confidence == .high ? .semantic(.success) : model.confidence == .medium ? .semantic(.warning) : .semantic(.textSecondary))
-                .cornerRadius(6)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss this item")
+            .padding(8)
         }
     }
 
@@ -57,16 +47,6 @@ struct ActionItemDetectionCard: View {
                 .background(Color.semantic(.bgSecondary))
                 .cornerRadius(10)
         }
-    }
-
-    @ViewBuilder private var typeBadge: some View {
-        Text(model.typeBadgeText)
-            .font(.caption2.weight(.bold))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(model.kind == .reminder ? Color.blue.opacity(0.25) : Color.red.opacity(0.25))
-            .foregroundColor(model.kind == .reminder ? .blue : .red)
-            .cornerRadius(6)
     }
 
     @ViewBuilder private var titleSubtitle: some View {
@@ -138,10 +118,6 @@ struct ActionItemDetectionCard: View {
 
             Button("Edit") { onEditToggle(model.id) }
                 .buttonStyle(.bordered)
-
-            Button("Dismiss") { onDismiss(model.id) }
-                .buttonStyle(.bordered)
-                .tint(.semantic(.textSecondary))
         }
         .padding(.top, 2)
     }
@@ -174,20 +150,5 @@ struct ActionItemDetectionCard: View {
         }
     }
 
-    @ViewBuilder private var confidenceDots: some View {
-        HStack(spacing: 4) {
-            Circle().fill(colorForDot(0)).frame(width: 6, height: 6)
-            Circle().fill(colorForDot(1)).frame(width: 6, height: 6)
-            Circle().fill(colorForDot(2)).frame(width: 6, height: 6)
-        }
-    }
-
-    private func colorForDot(_ index: Int) -> Color {
-        switch model.confidence {
-        case .high: return .semantic(.success)
-        case .medium: return index < 2 ? .semantic(.warning) : .semantic(.separator)
-        case .low: return .semantic(.separator)
-        }
-    }
+    // confidence badges removed from UI (kept in backend)
 }
-

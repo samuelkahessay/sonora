@@ -137,11 +137,11 @@ private struct AnalysisContainerStyle: ViewModifier {
                 .padding(.vertical, DistillLayout.containerVerticalPadding)
                 .debugBorder(showDebugBorder, color: DistillLayout.debugContainerBorder, cornerRadius: DistillLayout.containerCornerRadius)
         } else {
+            // Remove outer background container to preserve symmetry
+            // with other cards on the detail screen. The Distill CTA
+            // itself remains a single card with its own background.
             content
                 .padding(.vertical, DistillLayout.containerVerticalPadding)
-                .padding(.horizontal, 16)
-                .background(Color.semantic(.bgSecondary))
-                .cornerRadius(DistillLayout.containerCornerRadius)
                 .debugBorder(showDebugBorder, color: DistillLayout.debugContainerBorder, cornerRadius: DistillLayout.containerCornerRadius)
         }
     }

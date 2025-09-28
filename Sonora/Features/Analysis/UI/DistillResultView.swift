@@ -82,6 +82,11 @@ struct DistillResultView: View {
         progress != nil && partialData != nil
     }
     
+    private var isProgressComplete: Bool {
+        guard let p = progress else { return false }
+        return p.completedComponents >= p.totalComponents
+    }
+    
     private var effectiveSummary: String? {
         return data?.summary ?? partialData?.summary
     }
@@ -181,7 +186,8 @@ struct DistillResultView: View {
                 )
             }
             HStack(spacing: 10) {
-                Image(systemName: "bolt.fill").foregroundColor(.semantic(.warning))
+                Image(systemName: "calendar.badge.clock")
+                    .foregroundColor(.semantic(.brandPrimary))
                 Text("Action Items")
                     .font(.subheadline)
                     .fontWeight(.semibold)
@@ -207,6 +213,14 @@ struct DistillResultView: View {
                         )
                     }
                 }
+            } else if isDetectionPending {
+                HStack(spacing: 8) {
+                    LoadingIndicator(size: .small)
+                    Text("Detecting events & reminders…")
+                        .font(.caption)
+                        .foregroundColor(.semantic(.textSecondary))
+                }
+                .padding(.vertical, 4)
             } else {
                 Text("No events or reminders detected")
                     .font(.caption)
@@ -597,10 +611,17 @@ struct DistillResultView: View {
                 lines.append(contentsOf: reminders.map(reminderLine))
             }
             parts.append(lines.joined(separator: "\n"))
-        } else {
+        } else if !(isShowingProgress && !isProgressComplete) {
+            // Only append a "none" message when not mid-stream
             parts.append("Events & Reminders:\nNo events or reminders detected")
         }
         return parts.joined(separator: "\n\n")
+    }
+
+    // Detection is pending if we are streaming and haven't received any detection payload yet
+    private var isDetectionPending: Bool {
+        guard isShowingProgress else { return false }
+        return partialData?.events == nil && partialData?.reminders == nil && !isProgressComplete
     }
 
 }

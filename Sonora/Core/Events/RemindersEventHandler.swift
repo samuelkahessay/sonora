@@ -69,7 +69,7 @@ final class RemindersEventHandler {
 
     private func handleTranscriptionCompleted(memoId: UUID, text: String) async {
         let defaults = UserDefaults.standard
-        let autoReminders = defaults.object(forKey: "autoDetectReminders") as? Bool ?? true
+        let autoReminders = defaults.object(forKey: "autoDetectReminders") as? Bool ?? false
         guard autoReminders else { return }
 
         await permissionService.checkReminderPermission(ignoreCache: false)
