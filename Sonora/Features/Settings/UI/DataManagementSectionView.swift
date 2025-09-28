@@ -1,7 +1,11 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct DataManagementSectionView: View {
     @StateObject private var controller = PrivacyController()
+    @State private var isImporting = false
+    @State private var showImportSuccess = false
+    @State private var importErrorMessage: String?
 
     var body: some View {
         SettingsCard {
@@ -36,31 +40,44 @@ struct DataManagementSectionView: View {
 
                 Divider().background(Color.semantic(.separator))
 
-                // Delete all data
-                Button(role: .destructive, action: { controller.requestDeleteAll() }) {
-                    Label("Delete All Data", systemImage: "trash")
+                // Import voice memos
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Button {
+                        isImporting = true
+                    } label: {
+                        HStack(spacing: Spacing.sm) {
+                            Label("Import Voice Memos", systemImage: "square.and.arrow.down")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.semantic(.textPrimary))
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundColor(.semantic(.textTertiary))
+                        }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Select an audio file to import as a memo")
+
+                    Text("Add audio from Files: m4a, mp3, wav, aiff")
+                        .font(.caption)
+                        .foregroundColor(.semantic(.textSecondary))
                 }
-                .buttonStyle(.bordered)
-                .tint(.semantic(.error))
-                .disabled(controller.isDeleting)
+
+                if showImportSuccess {
+                    NotificationBanner.success(message: "Imported memo") {
+                        showImportSuccess = false
+                    }
+                }
+                if let msg = importErrorMessage {
+                    NotificationBanner(type: .error, message: msg) {
+                        importErrorMessage = nil
+                    }
+                }
             }
         }
-        .alert(item: $controller.alertItem) { item in
-            Alert(title: Text(item.title), message: Text(item.message), dismissButton: .default(Text("OK")))
-        }
-        .confirmationDialog(
-            "Delete All Data?",
-            isPresented: $controller.showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Delete Everything", role: .destructive) {
-                Task { await controller.deleteAllNow() }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This action permanently deletes all memos, transcripts, and analysis. This cannot be undone.")
-        }
+        // Delete flow moved back to Danger Zone section
         .sheet(isPresented: $controller.isPresentingExportSheet, onDismiss: {
             controller.isPresentingExportSheet = false
         }) {
@@ -76,6 +93,15 @@ struct DataManagementSectionView: View {
                     .ignoresSafeArea()
             } else {
                 Text("No export available")
+            }
+        }
+        .fileImporter(isPresented: $isImporting, allowedContentTypes: [UTType.audio], allowsMultipleSelection: false) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                importURL(url)
+            case .failure(let error):
+                importErrorMessage = ErrorMapping.mapError(error).errorDescription
             }
         }
     }
@@ -199,5 +225,33 @@ private struct ExportDataSheet: View {
         .disabled(!available)
         .opacity(available ? 1 : 0.4)
         .accessibilityHint(available ? "Include in export" : "No data available")
+    }
+}
+
+// MARK: - Import Helpers
+extension DataManagementSectionView {
+    private func importURL(_ url: URL) {
+        let needsStop = url.startAccessingSecurityScopedResource()
+        Task { @MainActor in
+            defer { if needsStop { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let memoRepository = DIContainer.shared.memoRepository()
+                let useCase = HandleNewRecordingUseCase(
+                    memoRepository: memoRepository,
+                    eventBus: DIContainer.shared.eventBus()
+                )
+                let memo = try await useCase.execute(at: url)
+                let base = url.deletingPathExtension().lastPathComponent
+                if !base.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let rename = RenameMemoUseCase(memoRepository: memoRepository)
+                    try? await rename.execute(memo: memo, newTitle: base)
+                }
+                showImportSuccess = true
+                importErrorMessage = nil
+            } catch {
+                importErrorMessage = ErrorMapping.mapError(error).errorDescription
+                showImportSuccess = false
+            }
+        }
     }
 }

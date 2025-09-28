@@ -22,8 +22,8 @@ struct SettingsView: View {
                     // (Legacy usage meter removed in favor of monthly cap UI above)
                     TranscriptionLanguageSectionView()
 
-                    // Non-destructive exports
-                    ExportDataSectionView()
+                    // Data Management (includes Export + Import)
+                    DataManagementSectionView()
 
                     // About & Support (version/build, help, diagnostics)
                     AboutSupportLegalSectionView()

@@ -98,6 +98,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
             retryTranscriptionUseCase: retryTranscriptionUseCase,
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
             renameMemoUseCase: renameMemoUseCase,
+            handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository, eventBus: container.eventBus()),
             memoRepository: memoRepository,
             transcriptionRepository: transcriptionRepository
         )

@@ -17,6 +17,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     private let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
     private let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
     private let renameMemoUseCase: RenameMemoUseCaseProtocol
+    private let handleNewRecordingUseCase: any HandleNewRecordingUseCaseProtocol
     private let memoRepository: any MemoRepository // Still needed for state updates
     private let transcriptionRepository: any TranscriptionRepository // For transcription states
     private var cancellables = Set<AnyCancellable>()
@@ -162,6 +163,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol,
         getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
         renameMemoUseCase: RenameMemoUseCaseProtocol,
+        handleNewRecordingUseCase: any HandleNewRecordingUseCaseProtocol,
         memoRepository: any MemoRepository,
         transcriptionRepository: any TranscriptionRepository
     ) {
@@ -172,6 +174,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         self.retryTranscriptionUseCase = retryTranscriptionUseCase
         self.getTranscriptionStateUseCase = getTranscriptionStateUseCase
         self.renameMemoUseCase = renameMemoUseCase
+        self.handleNewRecordingUseCase = handleNewRecordingUseCase
         self.memoRepository = memoRepository
         self.transcriptionRepository = transcriptionRepository
         
@@ -179,6 +182,21 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         loadMemos()
         
         logger.debug("MemoListViewModel initialized", category: .viewModel, context: LogContext())
+    }
+
+    // MARK: - Import
+    /// Import an external audio file (e.g., from Files app) as a memo
+    func importAudio(at url: URL) {
+        Task {
+            do {
+                _ = try await handleNewRecordingUseCase.execute(at: url)
+                await MainActor.run { self.error = nil }
+            } catch {
+                await MainActor.run {
+                    self.error = ErrorMapping.mapError(error)
+                }
+            }
+        }
     }
     
     

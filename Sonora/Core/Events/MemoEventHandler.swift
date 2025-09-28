@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 
 /// Primary event handler for memo-related events
 /// Handles cross-cutting concerns like logging, analytics, and audit trail
@@ -153,6 +154,33 @@ public final class MemoEventHandler {
             // Only start if nothing has begun yet
             guard state.isNotStarted else { return }
             do {
+                // Gate against monthly quota (Pro: unlimited)
+                let remaining = try await DIContainer.shared.getRemainingMonthlyQuotaUseCase().execute()
+                if remaining.isFinite {
+                    // Determine required seconds for this memo
+                    let required: TimeInterval
+                    if let secs = domainMemo.durationSeconds {
+                        required = max(0, secs)
+                    } else {
+                        let asset = AVURLAsset(url: domainMemo.fileURL)
+                        if let dur = try? await asset.load(.duration) {
+                            required = max(0, CMTimeGetSeconds(dur))
+                        } else {
+                            required = 0
+                        }
+                    }
+
+                    if required > remaining {
+                        // Fail immediately and do not start API work
+                        let message = "Monthly quota reached"
+                        self.transcriptionRepository.saveTranscriptionState(.failed(message), for: domainMemo.id)
+                        self.logger.info("Transcription blocked by monthly quota (required=\(Int(required))s, remaining=\(Int(remaining))s)",
+                                         category: .transcription,
+                                         context: context)
+                        return
+                    }
+                }
+
                 try await DIContainer.shared.startTranscriptionUseCase().execute(memo: domainMemo)
             } catch {
                 // Non-fatal: log and continue. Already-completed/in-progress errors are expected in races.
@@ -237,6 +265,19 @@ public final class MemoEventHandler {
         
         // Start tracking analysis time
         analysisStartTime[memoId] = Date()
+
+        // Record monthly usage (counts audio seconds transcribed via cloud)
+        Task { @MainActor in
+            let usageRepo = DIContainer.shared.recordingUsageRepository()
+            let memo = DIContainer.shared.memoRepository().getMemo(by: memoId)
+            let seconds = memo?.durationSeconds ?? 0
+            if seconds > 0 {
+                await usageRepo.addMonthlyUsage(seconds, for: Date())
+                self.logger.debug("Recorded monthly usage: \(Int(seconds))s for memo \(memoId)",
+                                   category: .transcription,
+                                   context: context)
+            }
+        }
 
         // Kick off Auto Title generation (non-blocking)
         Task { @MainActor in
