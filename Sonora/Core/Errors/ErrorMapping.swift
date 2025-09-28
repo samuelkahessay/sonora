@@ -56,7 +56,7 @@ public final class ErrorMapping {
         // Fallback for unknown errors (apply simple heuristics)
         let message = error.localizedDescription
         if message.lowercased().contains("no speech detected") {
-            return .transcriptionFailed("No speech detected")
+            return .transcriptionFailed("Sonora didn't quite catch that")
         }
         if message.contains("Analysis service error") && message.contains("timed out") {
             return .analysisTimeout
@@ -84,7 +84,7 @@ public final class ErrorMapping {
             // Heuristic: common ASR engines report "No speech detected" in various domains
             let message = nsError.localizedDescription
             if message.lowercased().contains("no speech detected") {
-                return .transcriptionFailed("No speech detected")
+                return .transcriptionFailed("Sonora didn't quite catch that")
             }
             if message.contains("Analysis service error") && message.contains("timed out") {
                 return .analysisTimeout
@@ -444,7 +444,7 @@ public final class ErrorMapping {
         case .systemBusy:
             return .transcriptionServiceUnavailable
         case .noSpeechDetected:
-            return .transcriptionFailed("No speech detected")
+            return .transcriptionFailed("Sonora didn't quite catch that")
         case .transcriptionFailed(let reason):
             return .transcriptionFailed(reason)
         }

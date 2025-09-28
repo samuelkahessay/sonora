@@ -42,8 +42,9 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol, @unche
             }
         }
 
-        // Do not retry when the previous failure was "No speech detected"
-        if case .failed(let message) = currentState, message == TranscriptionError.noSpeechDetected.errorDescription {
+        // Do not retry when the previous failure was "No speech detected" (legacy) or the new phrasing
+        if case .failed(let message) = currentState,
+           (message == TranscriptionError.noSpeechDetected.errorDescription || message.lowercased().contains("no speech detected")) {
             print("⚠️ RetryTranscriptionUseCase: No speech detected previously; retry not allowed")
             throw TranscriptionError.noSpeechDetected
         }

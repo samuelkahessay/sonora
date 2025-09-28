@@ -548,7 +548,7 @@ struct MemoDetailView: View {
     @ViewBuilder
     private func failedTranscriptionView(error: String) -> some View {
         VStack(spacing: 12) {
-            if error == TranscriptionError.noSpeechDetected.errorDescription {
+            if error == TranscriptionError.noSpeechDetected.errorDescription || error.lowercased().contains("no speech detected") {
                 // Option A: Minimal inline message with neutral tone
                 HStack(spacing: 12) {
                     Image(systemName: "mic.slash")
@@ -556,7 +556,7 @@ struct MemoDetailView: View {
                         .foregroundColor(.semantic(.textSecondary))
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("No speech detected")
+                        Text("Sonora didn't quite catch that")
                             .font(.subheadline)
                             .foregroundColor(.semantic(.textPrimary))
 
@@ -596,7 +596,7 @@ struct MemoDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(error == TranscriptionError.noSpeechDetected.errorDescription ? Color.clear : Color.semantic(.warning).opacity(0.05))
+        .background((error == TranscriptionError.noSpeechDetected.errorDescription || error.lowercased().contains("no speech detected")) ? Color.clear : Color.semantic(.warning).opacity(0.05))
         .cornerRadius(8)
     }
     

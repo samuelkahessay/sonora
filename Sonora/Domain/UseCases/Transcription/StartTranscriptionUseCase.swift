@@ -82,7 +82,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         if case .completed = preState {
             throw TranscriptionError.alreadyCompleted
         }
-        if case .failed(let msg) = preState, msg.lowercased().contains("no speech detected") {
+        if case .failed(let msg) = preState, (msg.lowercased().contains("no speech detected") || msg.localizedCaseInsensitiveContains("didn't quite catch")) {
             // Treat silence as non-actionable; skip quietly
             logger.info("Skipping transcription: previous attempt reported no speech", category: .transcription, context: context)
             return
@@ -146,9 +146,9 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
             // If VAD found nothing, skip server call and report no speech
             if segments.isEmpty {
-                await updateProgress(operationId: operationId, fraction: 0.9, step: "No speech detected")
+                await updateProgress(operationId: operationId, fraction: 0.9, step: "Sonora didn't quite catch that")
                 await MainActor.run {
-                    let failedState = TranscriptionState.failed("No speech detected")
+                    let failedState = TranscriptionState.failed("Sonora didn't quite catch that")
                     transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
                 }
                 // Treat as completed/skipped to avoid warning-level noise in coordinator
@@ -606,7 +606,7 @@ public enum TranscriptionError: LocalizedError {
         case .systemBusy:
             return "System is busy - transcription queue is full"
         case .noSpeechDetected:
-            return "No speech detected"
+            return "Sonora didn't quite catch that"
         }
     }
 }
