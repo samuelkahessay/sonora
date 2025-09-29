@@ -89,7 +89,7 @@ struct AnalysisSectionView: View {
                     if mode == .distill && viewModel.isParallelDistillEnabled,
                        let partialData = viewModel.partialDistillData,
                        let progress = viewModel.distillProgress {
-                        DistillResultView(partialData: partialData, progress: progress)
+                        DistillResultView(partialData: partialData, progress: progress, memoId: viewModel.memoId)
                             // Avoid scale transitions that can cause visual overlap with siblings
                             .transition(.opacity)
                             .animation(.easeInOut(duration: 0.3), value: progress.completedComponents)
@@ -105,7 +105,8 @@ struct AnalysisSectionView: View {
                         AnalysisResultsView(
                             mode: mode,
                             result: result,
-                            envelope: envelope
+                            envelope: envelope,
+                            memoId: viewModel.memoId
                         )
 
                         // Show disclaimer only with actual results

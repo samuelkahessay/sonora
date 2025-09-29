@@ -10,24 +10,27 @@ struct DistillResultView: View {
     let envelope: AnalyzeEnvelope<DistillData>?
     let partialData: PartialDistillData?
     let progress: DistillProgressUpdate?
+    let memoId: UUID?
     // Pro gating (Action Items: detection visible to all; adds gated later)
     private var isPro: Bool { DIContainer.shared.storeKitService().isPro }
     @State private var showPaywall: Bool = false
     @SwiftUI.Environment(\.diContainer) private var container: DIContainer
     
     // Convenience initializers for backward compatibility
-    init(data: DistillData, envelope: AnalyzeEnvelope<DistillData>) {
+    init(data: DistillData, envelope: AnalyzeEnvelope<DistillData>, memoId: UUID? = nil) {
         self.data = data
         self.envelope = envelope
         self.partialData = nil
         self.progress = nil
+        self.memoId = memoId
     }
-    
-    init(partialData: PartialDistillData, progress: DistillProgressUpdate) {
+
+    init(partialData: PartialDistillData, progress: DistillProgressUpdate, memoId: UUID? = nil) {
         self.data = partialData.toDistillData()
         self.envelope = nil
         self.partialData = partialData
         self.progress = progress
+        self.memoId = memoId
     }
     
     var body: some View {
@@ -113,9 +116,9 @@ struct DistillResultView: View {
     @State private var addedDetections: Set<UUID> = []
     @State private var showBatchSheet: Bool = false
     @State private var batchInclude: Set<UUID> = []
-    @State private var showToast: Bool = false
-    @State private var toastText: String = ""
-    @State private var toastUndoId: UUID? = nil
+    @State private var addedRecords: [AddedRecord] = []
+    @State private var restoredAddedRecords = false
+    @State private var handledStore = HandledDetectionsStore()
     @State private var eventSources: [UUID: EventsData.DetectedEvent] = [:]
     @State private var reminderSources: [UUID: RemindersData.DetectedReminder] = [:]
     @State private var createdArtifacts: [UUID: CreatedArtifact] = [:]
@@ -130,6 +133,62 @@ struct DistillResultView: View {
     private struct CreatedArtifact: Equatable {
         let kind: ActionItemDetectionKind
         let identifier: String
+    }
+    private struct AddedRecord: Identifiable, Equatable {
+        let id: String
+        let text: String
+    }
+
+    // Persistently remember which detections were added (per memo), so they don't reappear
+    private struct HandledDetectionsStore {
+        struct Entry: Equatable { let id: String; let message: String }
+
+        private var cache: [UUID: [Entry]] = [:]
+        private let defaults = UserDefaults.standard
+
+        private func storageKey(_ memoId: UUID) -> String { "handledDetections." + memoId.uuidString }
+
+        mutating func entries(for memoId: UUID) -> [Entry] {
+            if let cached = cache[memoId] { return cached }
+            guard let raw = defaults.array(forKey: storageKey(memoId)) as? [[String: String]] else {
+                cache[memoId] = []
+                return []
+            }
+            let entries = raw.compactMap { dict -> Entry? in
+                guard let id = dict["id"], let message = dict["message"] else { return nil }
+                return Entry(id: id, message: message)
+            }
+            cache[memoId] = entries
+            return entries
+        }
+
+        mutating func add(_ key: String, message: String, for memoId: UUID) {
+            var entries = entries(for: memoId)
+            if let idx = entries.firstIndex(where: { $0.id == key }) {
+                entries[idx] = Entry(id: key, message: message)
+            } else {
+                entries.append(Entry(id: key, message: message))
+            }
+            cache[memoId] = entries
+            defaults.set(entries.map { ["id": $0.id, "message": $0.message] }, forKey: storageKey(memoId))
+        }
+
+        mutating func remove(_ key: String, for memoId: UUID) {
+            var entries = entries(for: memoId)
+            if let idx = entries.firstIndex(where: { $0.id == key }) {
+                entries.remove(at: idx)
+                cache[memoId] = entries
+                defaults.set(entries.map { ["id": $0.id, "message": $0.message] }, forKey: storageKey(memoId))
+            }
+        }
+
+        mutating func messages(for memoId: UUID) -> [Entry] {
+            entries(for: memoId)
+        }
+
+        mutating func contains(_ key: String, for memoId: UUID) -> Bool {
+            entries(for: memoId).contains { $0.id == key }
+        }
     }
     
     // MARK: - Progress Section
@@ -214,6 +273,22 @@ struct DistillResultView: View {
                 }
             }
 
+            if !addedRecords.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(addedRecords) { rec in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill").foregroundColor(.semantic(.success))
+                            Text(rec.text)
+                                .font(.footnote)
+                                .foregroundColor(.semantic(.textSecondary))
+                        }
+                    }
+                }
+                .padding(10)
+                .background(Color.semantic(.fillSecondary))
+                .cornerRadius(8)
+            }
+
             // Detection Cards (visible to all; adds gated by Pro later)
             if !detectionItemsFiltered.isEmpty {
                 VStack(spacing: 12) {
@@ -236,7 +311,7 @@ struct DistillResultView: View {
                         .foregroundColor(.semantic(.textSecondary))
                 }
                 .padding(.vertical, 4)
-            } else {
+            } else if addedRecords.isEmpty {
                 Text("No events or reminders detected")
                     .font(.caption)
                     .foregroundColor(.semantic(.textSecondary))
@@ -262,25 +337,6 @@ struct DistillResultView: View {
                 },
                 onDismiss: { showBatchSheet = false }
             )
-        }
-        .overlay(alignment: .bottom) {
-            if showToast {
-                HStack {
-                    Text(toastText)
-                        .font(.callout)
-                    Spacer()
-                    if let id = toastUndoId {
-                        Button("Undo") { undoAdd(id) }
-                            .buttonStyle(.bordered)
-                    }
-                }
-                .padding()
-                .background(Color.semantic(.fillSecondary))
-                .cornerRadius(12)
-                .shadow(radius: 8)
-                .padding()
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
         }
     }
     
@@ -352,12 +408,7 @@ struct DistillResultView: View {
         let reviewItems = detectionItemsFiltered
         batchInclude = Set(reviewItems.map { $0.id })
         Task { @MainActor in
-            do {
-                try await loadDestinationsIfNeeded(for: reviewItems)
-                showBatchSheet = true
-            } catch {
-                showToast(message: error.localizedDescription, undoId: nil)
-            }
+            do { try await loadDestinationsIfNeeded(for: reviewItems); showBatchSheet = true } catch { }
         }
     }
     private func prepareDetectionsIfNeeded() {
@@ -369,21 +420,40 @@ struct DistillResultView: View {
         var newEventSources: [UUID: EventsData.DetectedEvent] = [:]
         var newReminderSources: [UUID: RemindersData.DetectedReminder] = [:]
 
+        if !restoredAddedRecords {
+            if let memoId {
+                let stored = handledStore.messages(for: memoId)
+                addedRecords = stored.map { AddedRecord(id: $0.id, text: $0.message) }
+            } else {
+                addedRecords = []
+            }
+            restoredAddedRecords = true
+        }
+
         for event in events {
-            let baseUI = ActionItemDetectionUI.fromEvent(event)
+            var baseUI = ActionItemDetectionUI.fromEvent(event)
+            if baseUI.memoId == nil { baseUI.memoId = memoId ?? event.memoId }
             let merged = merge(base: baseUI, existing: existingBySource[event.id])
             mergedItems.append(merged)
             newEventSources[merged.id] = event
         }
 
         for reminder in reminders {
-            let baseUI = ActionItemDetectionUI.fromReminder(reminder)
+            var baseUI = ActionItemDetectionUI.fromReminder(reminder)
+            if baseUI.memoId == nil { baseUI.memoId = memoId ?? reminder.memoId }
             let merged = merge(base: baseUI, existing: existingBySource[reminder.id])
             mergedItems.append(merged)
             newReminderSources[merged.id] = reminder
         }
 
-        detectionItems = mergedItems
+        // Filter out items previously added (persisted per memo)
+        let filtered = mergedItems.filter { ui in
+            guard let memoId = ui.memoId else { return true }
+            let key = detectionKey(for: ui)
+            return !handledStore.contains(key, for: memoId)
+        }
+
+        detectionItems = filtered
         eventSources = newEventSources
         reminderSources = newReminderSources
     }
@@ -459,6 +529,12 @@ struct DistillResultView: View {
         }
     }
 
+    // Key used to persist "handled" detections.
+    // Use the detection's own stable sourceId (UUID from detection payload) for uniqueness.
+    private func detectionKey(for ui: ActionItemDetectionUI) -> String {
+        return ui.sourceId
+    }
+
     @MainActor
     private func handleSingleAdd(_ item: ActionItemDetectionUI) async {
         setProcessing(item.id, to: true)
@@ -481,19 +557,14 @@ struct DistillResultView: View {
             }
 
             HapticManager.shared.playSuccess()
-            let message = item.kind == .event ? "Added to Calendar" : "Added to Reminders"
-            showToast(message: message, undoId: item.id)
+            appendAddedMessage(for: item)
         } catch {
             HapticManager.shared.playError()
-            showToast(message: error.localizedDescription, undoId: nil)
         }
     }
 
     @MainActor
     private func handleUndo(id: UUID) async {
-        withAnimation { showToast = false }
-        toastUndoId = nil
-
         guard let artifact = createdArtifacts[id] else {
             addedDetections.remove(id)
             createdArtifacts.removeValue(forKey: id)
@@ -509,11 +580,16 @@ struct DistillResultView: View {
             }
             addedDetections.remove(id)
             createdArtifacts.removeValue(forKey: id)
+            if let ui = detectionItems.first(where: { $0.id == id }) {
+                let key = detectionKey(for: ui)
+                addedRecords.removeAll { $0.id == key }
+                if let memoId = ui.memoId ?? memoId {
+                    handledStore.remove(key, for: memoId)
+                }
+            }
             HapticManager.shared.playSuccess()
-            showToast(message: "Undo successful", undoId: nil)
         } catch {
             HapticManager.shared.playError()
-            showToast(message: error.localizedDescription, undoId: nil)
         }
     }
 
@@ -618,16 +694,9 @@ struct DistillResultView: View {
                 failureMessages.append(contentsOf: result.failures)
             }
 
-            if failureMessages.isEmpty {
-                HapticManager.shared.playSuccess()
-                showToast(message: "Added \(totalAdded) item\(totalAdded == 1 ? "" : "s")", undoId: nil)
-            } else {
-                HapticManager.shared.playWarning()
-                showToast(message: "Added \(totalAdded); \(failureMessages.count) failed", undoId: nil)
-            }
+            if failureMessages.isEmpty { HapticManager.shared.playSuccess() } else { HapticManager.shared.playWarning() }
         } catch {
             HapticManager.shared.playError()
-            showToast(message: error.localizedDescription, undoId: nil)
         }
     }
 
@@ -651,6 +720,7 @@ struct DistillResultView: View {
                 if let idx = detectionItems.firstIndex(where: { $0.id == ui.id }) {
                     detectionItems[idx].isAdded = true
                 }
+                appendAddedMessage(for: ui)
             case .failure(let error):
                 failures.append(error.localizedDescription)
             case .none:
@@ -681,6 +751,7 @@ struct DistillResultView: View {
                 if let idx = detectionItems.firstIndex(where: { $0.id == ui.id }) {
                     detectionItems[idx].isAdded = true
                 }
+                appendAddedMessage(for: ui)
             case .failure(let error):
                 failures.append(error.localizedDescription)
             case .none:
@@ -769,13 +840,29 @@ struct DistillResultView: View {
     }
 
     @MainActor
-    private func showToast(message: String, undoId: UUID?) {
-        toastText = message
-        toastUndoId = undoId
-        withAnimation { showToast = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-            withAnimation { showToast = false }
-            toastUndoId = nil
+    private func appendAddedMessage(for item: ActionItemDetectionUI) {
+        let date: Date? = {
+            if let d = item.suggestedDate { return d }
+            switch item.kind {
+            case .event: return eventSources[item.id]?.startDate
+            case .reminder: return reminderSources[item.id]?.dueDate
+            }
+        }()
+        let dateText = date.map { formatShortDate($0) }
+        let prefix = item.kind == .event ? "Added event to calendar" : "Added reminder"
+        let quotedTitle = "“\(item.title)”"
+        let msg: String
+        if let dateText {
+            msg = "\(prefix) \(quotedTitle) for \(dateText)"
+        } else {
+            // For reminders without a date, omit the trailing date phrase
+            msg = "\(prefix) \(quotedTitle)"
+        }
+        let key = detectionKey(for: item)
+        addedRecords.removeAll { $0.id == key }
+        addedRecords.append(AddedRecord(id: key, text: msg))
+        if let memoId = item.memoId ?? memoId {
+            handledStore.add(key, message: msg, for: memoId)
         }
     }
 

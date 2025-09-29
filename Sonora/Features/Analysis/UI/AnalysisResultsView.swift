@@ -5,6 +5,7 @@ struct AnalysisResultsView: View {
     let mode: AnalysisMode
     let result: Any
     let envelope: Any
+    let memoId: UUID?
     
     var body: some View {
         // Avoid nested ScrollViews; parent provides scrolling.
@@ -49,7 +50,7 @@ struct AnalysisResultsView: View {
                 case .distill:
                     if let data = result as? DistillData,
                        let env = envelope as? AnalyzeEnvelope<DistillData> {
-                        DistillResultView(data: data, envelope: env)
+                        DistillResultView(data: data, envelope: env, memoId: memoId)
                     }
                 // Distill component modes (used internally for parallel processing)
                 case .distillSummary, .distillActions, .distillThemes, .distillReflection:

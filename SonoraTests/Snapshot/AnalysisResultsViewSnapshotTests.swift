@@ -10,14 +10,14 @@ final class AnalysisResultsViewSnapshotTests: SnapshotTestCase {
     func testAnalysisResults_TLDR_LightMode() {
         let data = TLDRData(summary: "Short summary goes here.", key_points: ["Point A", "Point B", "Point C"])
         let env = sampleEnvelope(mode: .tldr, data: data)
-        let view = AnalysisResultsView(mode: .tldr, result: data, envelope: env)
+        let view = AnalysisResultsView(mode: .tldr, result: data, envelope: env, memoId: nil)
         assertSnapshot(view, name: "AnalysisResults_TLDR", appearance: .light)
     }
 
     func testAnalysisResults_TLDR_DarkMode() {
         let data = TLDRData(summary: "Short summary goes here.", key_points: ["Point A", "Point B", "Point C"])
         let env = sampleEnvelope(mode: .tldr, data: data)
-        let view = AnalysisResultsView(mode: .tldr, result: data, envelope: env)
+        let view = AnalysisResultsView(mode: .tldr, result: data, envelope: env, memoId: nil)
         assertSnapshot(view, name: "AnalysisResults_TLDR", appearance: .dark)
     }
 
@@ -27,7 +27,7 @@ final class AnalysisResultsViewSnapshotTests: SnapshotTestCase {
             .init(name: "Performance", evidence: ["Cache API responses", "Batch network calls"])
         ], sentiment: "mixed")
         let env = sampleEnvelope(mode: .themes, data: data)
-        let view = AnalysisResultsView(mode: .themes, result: data, envelope: env)
+        let view = AnalysisResultsView(mode: .themes, result: data, envelope: env, memoId: nil)
         assertSnapshot(view, name: "AnalysisResults_Themes", appearance: .light)
     }
 
@@ -37,8 +37,7 @@ final class AnalysisResultsViewSnapshotTests: SnapshotTestCase {
             .init(name: "Performance", evidence: ["Cache API responses", "Batch network calls"])
         ], sentiment: "mixed")
         let env = sampleEnvelope(mode: .themes, data: data)
-        let view = AnalysisResultsView(mode: .themes, result: data, envelope: env)
+        let view = AnalysisResultsView(mode: .themes, result: data, envelope: env, memoId: nil)
         assertSnapshot(view, name: "AnalysisResults_Themes", appearance: .dark)
     }
 }
-

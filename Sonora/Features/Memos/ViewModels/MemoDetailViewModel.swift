@@ -304,6 +304,11 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             }
         }
     }
+
+    /// Current memo identifier (nil until configured)
+    var memoId: UUID? {
+        currentMemo?.id
+    }
     
     /// Retry transcription for the current memo
     func retryTranscription() {
