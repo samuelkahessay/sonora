@@ -266,7 +266,7 @@ struct DistillResultView: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
-                if reviewCount > 0 {
+                if reviewCount > 1 {
                     Button("Review & Add All (\(reviewCount))") { openBatchReview() }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.small)
