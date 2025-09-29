@@ -117,23 +117,11 @@ struct RecordingView: View {
                                 }
                             )
                         }
-                        if showGuidedPrompts {
-                            Group {
-                                if let prompt = promptViewModel.currentPrompt {
-                                    DynamicPromptCard(prompt: prompt) {
-                                        promptViewModel.refresh(excludingCurrent: true)
-                                    }
-                                } else if promptViewModel.isLoading {
-                                    // Initial load only: show placeholder to reduce perceived latency
-                                    PromptPlaceholderCard()
-                                } else {
-                                    FallbackPromptCard {
-                                        promptViewModel.refresh(excludingCurrent: true)
-                                    }
-                                }
-                            }
-                            .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
-                        }
+                        promptContent
+                        .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
+                        .opacity(showGuidedPrompts ? 1 : 0)
+                        .accessibilityHidden(!showGuidedPrompts)
+                        .allowsHitTesting(showGuidedPrompts)
 
                         // Recording cluster: button(s), timer overlay, inspire me (tighter spacing)
                         VStack(spacing: SonoraDesignSystem.Spacing.md) {
@@ -412,6 +400,25 @@ struct RecordingView: View {
             return "Recording time: \(minutes) minutes and \(seconds) seconds"
         }
         return "Recording time: \(viewModel.formattedRecordingTime)"
+    }
+}
+
+extension RecordingView {
+    private var promptContent: some View {
+        Group {
+            if let prompt = promptViewModel.currentPrompt {
+                DynamicPromptCard(prompt: prompt) {
+                    promptViewModel.refresh(excludingCurrent: true)
+                }
+            } else if promptViewModel.isLoading {
+                // Initial load only: show placeholder to reduce perceived latency
+                PromptPlaceholderCard()
+            } else {
+                FallbackPromptCard {
+                    promptViewModel.refresh(excludingCurrent: true)
+                }
+            }
+        }
     }
 }
 
