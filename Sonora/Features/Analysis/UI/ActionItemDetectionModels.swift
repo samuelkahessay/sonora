@@ -23,7 +23,7 @@ enum ActionItemConfidence: String, Sendable, Equatable {
 struct ActionItemDetectionUI: Identifiable, Equatable {
     let id: UUID
     let sourceId: String
-    let kind: ActionItemDetectionKind
+    var kind: ActionItemDetectionKind
     let confidence: ActionItemConfidence
     let sourceQuote: String
     var title: String

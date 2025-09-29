@@ -298,8 +298,7 @@ struct DistillResultView: View {
                             isPro: isPro,
                             onAdd: { updated in onAddSingle(updated) },
                             onEditToggle: { id in toggleEdit(id) },
-                            onDismiss: { id in dismiss(id) },
-                            onQuickChip: { id, chip in applyChip(id, chip: chip) }
+                            onDismiss: { id in dismiss(id) }
                         )
                     }
                 }
@@ -475,32 +474,6 @@ struct DistillResultView: View {
     private func undoAdd(_ id: UUID) {
         Task { @MainActor in await handleUndo(id: id) }
     }
-    private func applyChip(_ id: UUID, chip: String) {
-        guard let idx = detectionItems.firstIndex(where: { $0.id == id }) else { return }
-        var model = detectionItems[idx]
-        let calendar = Calendar.current
-
-        switch chip.lowercased() {
-        case "today", "today evening":
-            let hour = chip.contains("evening") ? 18 : calendar.component(.hour, from: Date())
-            model.suggestedDate = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: Date())
-        case "tomorrow":
-            if let base = calendar.date(byAdding: .day, value: 1, to: Date()) {
-                model.suggestedDate = calendar.date(bySettingHour: model.kind == .event ? 9 : 10, minute: 0, second: 0, of: base)
-            }
-        case "this weekend":
-            if let weekend = calendar.nextWeekend(startingAfter: Date())?.start {
-                model.suggestedDate = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: weekend)
-            }
-        case "all day":
-            model.isAllDay.toggle()
-        default:
-            break
-        }
-
-        detectionItems[idx] = model
-    }
-
     private func merge(base: ActionItemDetectionUI, existing: ActionItemDetectionUI?) -> ActionItemDetectionUI {
         guard let existing else { return base }
         return ActionItemDetectionUI(

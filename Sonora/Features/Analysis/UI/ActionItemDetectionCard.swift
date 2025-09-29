@@ -7,15 +7,13 @@ struct ActionItemDetectionCard: View {
     let onAdd: (ActionItemDetectionUI) -> Void
     let onEditToggle: (UUID) -> Void
     let onDismiss: (UUID) -> Void
-    let onQuickChip: (UUID, String) -> Void
 
     init(
         model: ActionItemDetectionUI,
         isPro: Bool,
         onAdd: @escaping (ActionItemDetectionUI) -> Void,
         onEditToggle: @escaping (UUID) -> Void,
-        onDismiss: @escaping (UUID) -> Void,
-        onQuickChip: @escaping (UUID, String) -> Void
+        onDismiss: @escaping (UUID) -> Void
     ) {
         self.inputModel = model
         self._model = State(initialValue: model)
@@ -23,14 +21,12 @@ struct ActionItemDetectionCard: View {
         self.onAdd = onAdd
         self.onEditToggle = onEditToggle
         self.onDismiss = onDismiss
-        self.onQuickChip = onQuickChip
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             quoteChip
             titleSubtitle
-            chipsRow
             buttonsRow
             editorIfNeeded
         }
@@ -84,91 +80,135 @@ struct ActionItemDetectionCard: View {
         }
     }
 
-    @ViewBuilder private var chipsRow: some View {
-        if model.canQuickChip {
-            HStack(spacing: 8) {
-                if model.kind == .reminder {
-                    chip("Today evening")
-                    chip("Tomorrow")
-                    chip("This weekend")
-                } else {
-                    chip("Today")
-                    chip("Tomorrow")
-                    chip("All day")
-                }
-                Spacer()
-            }
-            .padding(.top, 2)
-        }
-    }
-
-    private func chip(_ text: String) -> some View {
-        Button(action: {
-            onQuickChip(model.id, text)
-        }) {
-            Text(text)
-                .font(.caption.weight(.medium))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.semantic(.fillPrimary))
-                .cornerRadius(16)
-        }
-        .buttonStyle(.plain)
-    }
-
     @ViewBuilder private var buttonsRow: some View {
         HStack(spacing: 12) {
-            Button(action: {
-                if isPro {
-                    onAdd(model)
-                } else {
-                    onAdd(model)
-                }
-            }) {
-                if model.isProcessing {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                        Text("Adding…")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                } else {
-                    Text(model.kind == .reminder ? "Add to Reminders" : "Add to Calendar")
-                        .font(.callout.weight(.semibold))
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: .infinity)
-                }
+            if !model.isEditing {
+                primaryAddButton
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(model.isProcessing)
 
-            Button("Edit") { onEditToggle(model.id) }
-                .buttonStyle(.bordered)
-                .disabled(model.isProcessing)
+            Button(action: { onEditToggle(model.id) }) {
+                Image(systemName: model.isEditing ? "xmark.circle" : "pencil")
+            }
+            .buttonStyle(.bordered)
+            .disabled(model.isProcessing)
+            .accessibilityLabel(model.isEditing ? "Cancel editing" : "Edit details")
         }
         .padding(.top, 2)
     }
 
     @ViewBuilder private var editorIfNeeded: some View {
         if model.isEditing {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
+                Picker("Type", selection: Binding(
+                    get: { model.kind },
+                    set: { newKind in model.kind = newKind }
+                )) {
+                    Text("Event").tag(ActionItemDetectionKind.event)
+                    Text("Reminder").tag(ActionItemDetectionKind.reminder)
+                }
+                .pickerStyle(.segmented)
+
                 TextField("Title", text: Binding(
                     get: { model.title },
                     set: { model.title = $0 }
                 ))
                 .textFieldStyle(.roundedBorder)
 
-                HStack {
-                    Button("Save & Add") { onAdd(model) }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(model.isProcessing)
-                    Button("Cancel") { onEditToggle(model.id) }
-                        .buttonStyle(.bordered)
-                        .disabled(model.isProcessing)
+                if model.kind == .event {
+                    EventDateControls
+                } else {
+                    ReminderDateControls
                 }
+
+                primaryAddButton
+                    .disabled(model.isProcessing || (model.kind == .event && model.suggestedDate == nil))
+                    .padding(.top, 4)
             }
             .padding(.top, 8)
         }
+    }
+
+    @ViewBuilder private var EventDateControls: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            DatePicker(
+                "Event Date",
+                selection: Binding(
+                    get: { model.suggestedDate ?? Date() },
+                    set: { model.suggestedDate = $0 }
+                ),
+                displayedComponents: model.isAllDay ? [.date] : [.date, .hourAndMinute]
+            )
+            .datePickerStyle(.compact)
+
+            Toggle("All-day", isOn: Binding(
+                get: { model.isAllDay },
+                set: { model.isAllDay = $0 }
+            ))
+        }
+        .onAppear {
+            if model.suggestedDate == nil {
+                model.suggestedDate = Date()
+            }
+        }
+    }
+
+    @ViewBuilder private var ReminderDateControls: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle("Include date", isOn: Binding(
+                get: { model.suggestedDate != nil },
+                set: { include in
+                    if include {
+                        if model.suggestedDate == nil { model.suggestedDate = Date() }
+                    } else {
+                        model.suggestedDate = nil
+                        model.isAllDay = false
+                    }
+                }
+            ))
+
+            if model.suggestedDate != nil {
+                DatePicker(
+                    "Reminder Date",
+                    selection: Binding(
+                        get: { model.suggestedDate ?? Date() },
+                        set: { model.suggestedDate = $0 }
+                    ),
+                    displayedComponents: model.isAllDay ? [.date] : [.date, .hourAndMinute]
+                )
+                .datePickerStyle(.compact)
+
+                Toggle("All-day", isOn: Binding(
+                    get: { model.isAllDay },
+                    set: { model.isAllDay = $0 }
+                ))
+            }
+        }
+    }
+
+    private var addButtonTitle: String {
+        model.kind == .reminder ? "Add to Reminders" : "Add to Calendar"
+    }
+
+    @ViewBuilder private var primaryAddButton: some View {
+        Button(action: {
+            onAdd(model)
+        }) {
+            if model.isProcessing {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("Adding…")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                Text(addButtonTitle)
+                    .font(.callout.weight(.semibold))
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(model.isProcessing || (model.kind == .event && model.suggestedDate == nil))
     }
 }
 
