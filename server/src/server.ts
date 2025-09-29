@@ -164,23 +164,147 @@ app.post('/title', async (req, res) => {
       sliced
     ].filter(Boolean).join('\n');
 
+    const wantsStream = (req.headers['accept'] || '').toLowerCase().includes('text/event-stream') || req.query.stream === '1';
+
+    const basePayload: Record<string, any> = {
+      model: 'meta-llama/llama-3.3-8b-instruct:free',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user }
+      ],
+      temperature: 0.2,
+      max_tokens: 32
+    };
+
+    const upstreamHeaders: Record<string, string> = {
+      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.SONORA_SITE_URL || 'https://sonora.app',
+      'X-Title': process.env.SONORA_SITE_NAME || 'Sonora'
+    };
+
+    if (wantsStream) {
+      res.status(200);
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      (res as any).flushHeaders?.();
+
+      const sendEvent = (event: string, data: Record<string, unknown>) => {
+        res.write(`event: ${event}\n`);
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      };
+
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            ...upstreamHeaders,
+            'Accept': 'text/event-stream'
+          },
+          body: JSON.stringify({
+            ...basePayload,
+            stream: true
+          })
+        });
+
+        if (!response.ok || !response.body) {
+          const text = await response.text().catch(() => '');
+          console.error('OpenRouter /title stream error:', response.status, response.statusText, text.slice(0, 200));
+          sendEvent('error', { error: 'UpstreamFailed', status: response.status });
+          res.end();
+          return;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let aggregated = '';
+        let finished = false;
+
+        const processEvent = (rawEvent: string) => {
+          if (!rawEvent.trim()) {
+            return;
+          }
+          const lines = rawEvent.split('\n');
+          const dataLines = lines
+            .filter(line => line.startsWith('data:'))
+            .map(line => line.slice(5).trim())
+            .filter(Boolean);
+          if (dataLines.length === 0) {
+            return;
+          }
+          const payload = dataLines.join('');
+          if (payload === '[DONE]') {
+            const candidate = normalizeWhitespace(aggregated.replace(/\n/g, ' '));
+            const validated = validateTitle(candidate, {
+              maxChars: constraints.maxChars,
+              language,
+              isShortTranscript
+            });
+            if (validated) {
+              sendEvent('final', { title: validated });
+            } else {
+              console.warn('Streaming title validation failed; using fallback');
+              const fallback = validateTitle(buildFallbackTitle(sliced), {
+                maxChars: constraints.maxChars,
+                language,
+                isShortTranscript: true
+              }) || 'Voice Memo';
+              sendEvent('final', { title: fallback, fallback: true });
+            }
+            res.end();
+            finished = true;
+            return;
+          }
+          try {
+            const json = JSON.parse(payload);
+            const delta = json?.choices?.[0]?.delta?.content ?? '';
+            if (typeof delta === 'string' && delta.length > 0) {
+              aggregated += delta;
+              const partial = normalizeWhitespace(aggregated.replace(/\n/g, ' '));
+              if (partial.length > 0) {
+                sendEvent('interim', { title: partial.slice(0, constraints.maxChars * 2) });
+              }
+            }
+          } catch (error) {
+            console.error('Failed to parse streaming chunk', error);
+          }
+        };
+
+        for await (const chunk of response.body as any) {
+          buffer += decoder.decode(chunk, { stream: true });
+          let separatorIndex = buffer.indexOf('\n\n');
+          while (separatorIndex !== -1) {
+            const rawEvent = buffer.slice(0, separatorIndex);
+            buffer = buffer.slice(separatorIndex + 2);
+            processEvent(rawEvent);
+            if (finished) {
+              return;
+            }
+            separatorIndex = buffer.indexOf('\n\n');
+          }
+        }
+
+        if (buffer.trim().length > 0) {
+          processEvent(buffer);
+        }
+
+        if (!res.writableEnded && !finished) {
+          res.end();
+        }
+        return;
+      } catch (error) {
+        console.error('Streaming /title error:', error);
+        sendEvent('error', { error: 'Internal' });
+        res.end();
+        return;
+      }
+    }
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.SONORA_SITE_URL || 'https://sonora.app',
-        'X-Title': process.env.SONORA_SITE_NAME || 'Sonora'
-      },
-      body: JSON.stringify({
-        model: 'meta-llama/llama-3.3-8b-instruct:free',
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user }
-        ],
-        temperature: 0.2,
-        max_tokens: 32
-      })
+      headers: upstreamHeaders,
+      body: JSON.stringify(basePayload)
     });
 
     if (!response.ok) {

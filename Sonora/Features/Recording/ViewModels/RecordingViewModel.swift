@@ -41,7 +41,6 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     @Published var quotaBlocked: Bool = false
     @Published var isProUser: Bool = false
     @Published var recordingState: RecordingSessionState = .idle
-    
     // MARK: - Computed Properties
     
     /// Status text for the current recording state
@@ -94,9 +93,9 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         guard currentRecordingOperationId != nil else { return false }
         return recordingOperationStatus?.isInProgress == true
     }
-    
+
     // MARK: - Initialization
-    
+
     init(
         startRecordingUseCase: any StartRecordingUseCaseProtocol,
         stopRecordingUseCase: any StopRecordingUseCaseProtocol,
@@ -144,6 +143,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
                 self?.isProUser = isPro
             }
             .store(in: &cancellables)
+
 
         // Initialize quota view
         Task { @MainActor in

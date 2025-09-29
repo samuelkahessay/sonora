@@ -6,7 +6,7 @@ import UIKit
 struct MemoDetailView: View {
     let memo: Memo
     @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createMemoDetailViewModel()
-    @StateObject private var titleTracker = DIContainer.shared.titleGenerationTracker()
+    @ObservedObject private var titleCoordinator = DIContainer.shared.titleGenerationCoordinator()
     @SwiftUI.Environment(\.dismiss) private var _dismiss_tmp
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
     @FocusState private var isTitleEditingFocused: Bool
@@ -275,17 +275,28 @@ struct MemoDetailView: View {
                 }
             } else {
                 // Display mode: Title with double-tap to edit
-                HStack(spacing: 8) {
-                    Text(viewModel.currentMemoTitle)
-                        .font(.system(.title2, design: .serif))
-                        .fontWeight(.bold)
-                        .accessibilityAddTraits(.isHeader)
-                        .accessibilityFocused($focusedElement, equals: .memoTitle)
-                        .accessibilityLabel("Memo title: \(viewModel.currentMemoTitle)")
-                        .accessibilityHint("Double tap to rename this memo")
-                        .onTapGesture(count: 2) {
-                            viewModel.startRenaming()
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(primaryTitle)
+                            .font(.system(.title2, design: .serif))
+                            .fontWeight(.bold)
+                            .accessibilityAddTraits(.isHeader)
+                            .accessibilityFocused($focusedElement, equals: .memoTitle)
+                            .accessibilityLabel("Memo title: \(primaryTitle)")
+                            .accessibilityHint("Double tap to rename this memo")
+                            .onTapGesture(count: 2) {
+                                viewModel.startRenaming()
+                            }
+
+                        if let streaming = streamingTitle, streaming != viewModel.currentMemoTitle {
+                            Text(viewModel.currentMemoTitle)
+                                .font(.callout)
+                                .foregroundColor(.semantic(.textSecondary))
+                                .lineLimit(2)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                .accessibilityHidden(true)
                         }
+                    }
 
                     if isAutoTitling {
                         ProgressView()
@@ -302,7 +313,7 @@ struct MemoDetailView: View {
         .cornerRadius(12)
         .padding(.horizontal)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(viewModel.isRenamingTitle ? "Editing memo title" : "Memo: \(viewModel.currentMemoTitle), Duration: \(memo.durationString)")
+        .accessibilityLabel(viewModel.isRenamingTitle ? "Editing memo title" : "Memo: \(primaryTitle), Duration: \(memo.durationString)")
     }
     
     @ViewBuilder
@@ -747,7 +758,7 @@ struct MemoDetailView: View {
     }
     // MARK: - Auto-title indicator state
     private var isAutoTitling: Bool {
-        switch titleTracker.state(for: memo.id) {
+        switch titleCoordinator.state(for: memo.id) {
         case .inProgress:
             let hasCustomTitle: Bool = {
                 if let latest = DIContainer.shared.memoRepository().getMemo(by: memo.id),
@@ -757,14 +768,37 @@ struct MemoDetailView: View {
             let show = !hasCustomTitle
             if show { print("🧠 UI[Detail]: showing auto-title spinner for memo=\(memo.id)") }
             return show
+        case .streaming:
+            let hasCustomTitle: Bool = {
+                if let latest = DIContainer.shared.memoRepository().getMemo(by: memo.id),
+                   let t = latest.customTitle, !t.isEmpty { return true }
+                return false
+            }()
+            let show = !hasCustomTitle
+            if show { print("🧠 UI[Detail]: streaming auto-title for memo=\(memo.id)") }
+            return show
         case .success(let title):
             print("🧠 UI[Detail]: received title for memo=\(memo.id) -> \(title)")
             return false
-        case .failed:
+        case .failed(_, _):
             print("🧠 UI[Detail]: auto-title failed for memo=\(memo.id)")
             return false
         case .idle:
             return false
         }
+    }
+
+    private var streamingTitle: String? {
+        if case .streaming(let partial) = titleCoordinator.state(for: memo.id) {
+            return partial
+        }
+        return nil
+    }
+
+    private var primaryTitle: String {
+        if let streaming = streamingTitle, !streaming.isEmpty {
+            return streaming
+        }
+        return viewModel.currentMemoTitle
     }
 }

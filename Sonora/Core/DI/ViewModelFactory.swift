@@ -29,7 +29,6 @@ final class DefaultViewModelFactory: ViewModelFactory {
         let audioRepository = container.audioRepository()
         let memoRepository = container.memoRepository()
         let logger = container.logger()
-        
         return RecordingViewModel(
             startRecordingUseCase: StartRecordingUseCase(
                 audioRepository: audioRepository,
@@ -65,6 +64,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
         let transcriptionRepository = container.transcriptionRepository()
         let transcriptionAPI = container.createTranscriptionService()
         let fillerWordFilter = container.fillerWordFilter()
+        let titleCoordinator = container.titleGenerationCoordinator()
 
         let startTranscriptionUseCase = StartTranscriptionUseCase(
             transcriptionRepository: transcriptionRepository,
@@ -100,7 +100,8 @@ final class DefaultViewModelFactory: ViewModelFactory {
             renameMemoUseCase: renameMemoUseCase,
             handleNewRecordingUseCase: HandleNewRecordingUseCase(memoRepository: memoRepository, eventBus: container.eventBus()),
             memoRepository: memoRepository,
-            transcriptionRepository: transcriptionRepository
+            transcriptionRepository: transcriptionRepository,
+            titleCoordinator: titleCoordinator
         )
     }
     

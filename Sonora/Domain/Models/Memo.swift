@@ -11,6 +11,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
     public let analysisResults: [DomainAnalysisResult]
     public let customTitle: String?
     public let shareableFileName: String?
+    public let autoTitleState: TitleGenerationState
     
     public init(
         id: UUID = UUID(),
@@ -21,7 +22,8 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
         transcriptionStatus: DomainTranscriptionStatus = .notStarted,
         analysisResults: [DomainAnalysisResult] = [],
         customTitle: String? = nil,
-        shareableFileName: String? = nil
+        shareableFileName: String? = nil,
+        autoTitleState: TitleGenerationState = .idle
     ) {
         self.id = id
         self.filename = filename
@@ -32,6 +34,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
         self.analysisResults = analysisResults
         self.customTitle = customTitle
         self.shareableFileName = shareableFileName
+        self.autoTitleState = autoTitleState
     }
     
     // MARK: - Computed Properties
@@ -114,7 +117,8 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
             transcriptionStatus: status,
             analysisResults: analysisResults,
             customTitle: customTitle,
-            shareableFileName: shareableFileName
+            shareableFileName: shareableFileName,
+            autoTitleState: autoTitleState
         )
     }
     
@@ -130,10 +134,11 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
             transcriptionStatus: transcriptionStatus,
             analysisResults: analysisResults,
             customTitle: title,
-            shareableFileName: newShareableFileName
+            shareableFileName: newShareableFileName,
+            autoTitleState: autoTitleState
         )
     }
-    
+
     /// Creates a copy with added analysis result
     public func withAnalysisResult(_ result: DomainAnalysisResult) -> Memo {
         var updatedResults = analysisResults
@@ -148,7 +153,24 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
             transcriptionStatus: transcriptionStatus,
             analysisResults: updatedResults,
             customTitle: customTitle,
-            shareableFileName: shareableFileName
+            shareableFileName: shareableFileName,
+            autoTitleState: autoTitleState
+        )
+    }
+
+    /// Creates a copy with an updated auto-title state
+    public func withAutoTitleState(_ state: TitleGenerationState) -> Memo {
+        Memo(
+            id: id,
+            filename: filename,
+            fileURL: fileURL,
+            creationDate: creationDate,
+            durationSeconds: durationSeconds,
+            transcriptionStatus: transcriptionStatus,
+            analysisResults: analysisResults,
+            customTitle: customTitle,
+            shareableFileName: shareableFileName,
+            autoTitleState: state
         )
     }
     

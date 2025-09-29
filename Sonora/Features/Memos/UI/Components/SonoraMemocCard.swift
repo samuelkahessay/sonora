@@ -36,7 +36,7 @@ struct SonoraMemocCard: View {
     var isLastInSection: Bool = false
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var insightHintOpacity: Double = 0
-    @StateObject private var titleTracker = DIContainer.shared.titleGenerationTracker()
+    @ObservedObject private var titleCoordinator = DIContainer.shared.titleGenerationCoordinator()
     
     // MARK: - Computed Properties
     
@@ -106,14 +106,25 @@ struct SonoraMemocCard: View {
     /// Title section with premium typography
     @ViewBuilder
     private var titleSection: some View {
-        HStack(spacing: 8) {
-            Text(memo.displayName)
-                .font(SonoraDesignSystem.Typography.headingSmall)
-                .foregroundColor(.semantic(.textPrimary))
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(primaryTitleText)
+                    .font(SonoraDesignSystem.Typography.headingSmall)
+                    .foregroundColor(.semantic(.textPrimary))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .animation(.easeInOut(duration: 0.2), value: primaryTitleText)
 
-            // Subtle inline indicator while auto-title is being generated
+                if streamingTitle != nil, memo.displayName != primaryTitleText {
+                    Text(memo.displayName)
+                        .font(.subheadline)
+                        .foregroundColor(.semantic(.textSecondary))
+                        .lineLimit(2)
+                        .transition(.opacity)
+                        .accessibilityHidden(true)
+                }
+            }
+
             if isAutoTitling {
                 ProgressView()
                     .scaleEffect(0.7)
@@ -246,20 +257,38 @@ struct SonoraMemocCard: View {
     }
 
     private var isAutoTitling: Bool {
-        switch titleTracker.state(for: memo.id) {
+        switch titleCoordinator.state(for: memo.id) {
         case .inProgress:
             let show = memo.customTitle == nil || memo.customTitle?.isEmpty == true
             if show { print("🧠 UI[List]: showing auto-title spinner for memo=\(memo.id)") }
             return show
+        case .streaming:
+            let show = memo.customTitle == nil || memo.customTitle?.isEmpty == true
+            if show { print("🧠 UI[List]: streaming auto-title for memo=\(memo.id)") }
+            return show
         case .success(let title):
             print("🧠 UI[List]: received title for memo=\(memo.id) -> \(title)")
             return false
-        case .failed:
+        case .failed(_, _):
             print("🧠 UI[List]: auto-title failed for memo=\(memo.id)")
             return false
         case .idle:
             return false
         }
+    }
+
+    private var streamingTitle: String? {
+        if case .streaming(let partial) = titleCoordinator.state(for: memo.id) {
+            return partial
+        }
+        return nil
+    }
+
+    private var primaryTitleText: String {
+        if let streaming = streamingTitle, !streaming.isEmpty {
+            return streaming
+        }
+        return memo.displayName
     }
 }
 

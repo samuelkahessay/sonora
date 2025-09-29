@@ -12,6 +12,8 @@ struct ContentView: View {
     @State private var selectedTab: Int = 0
     @State private var memosPath: NavigationPath = NavigationPath()
     @StateObject private var onboardingConfiguration = OnboardingConfiguration.shared
+    @StateObject private var titleCoordinator = DIContainer.shared.titleGenerationCoordinator()
+    @SwiftUI.Environment(\.scenePhase) private var scenePhase
     
     // Debug toggles removed
     
@@ -57,6 +59,11 @@ struct ContentView: View {
         .onChange(of: selectedTab) { oldValue, newValue in
             if oldValue == 1 && newValue == 1 {
                 popToRoot()
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                titleCoordinator.appDidBecomeActive()
             }
         }
     }

@@ -38,4 +38,20 @@ final class SonoraUITests: XCTestCase {
             XCUIApplication().launch()
         }
     }
+
+    @MainActor
+    func testTabNavigationDuringTitleGeneration() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        let tabBar = app.tabBars
+        let recordButton = tabBar.buttons["Record"]
+        let memosButton = tabBar.buttons["Memos"]
+
+        XCTAssertTrue(recordButton.waitForExistence(timeout: 2))
+        XCTAssertTrue(memosButton.waitForExistence(timeout: 2))
+
+        memosButton.tap()
+        recordButton.tap()
+    }
 }

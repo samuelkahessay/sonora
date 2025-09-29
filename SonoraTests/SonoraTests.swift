@@ -7,9 +7,29 @@
 
 import Testing
 import Foundation
+import SwiftData
 @testable import Sonora
-
 struct SonoraTests {
+
+    @MainActor
+    private func makeTestMemoRepository() throws -> MemoRepositoryImpl {
+        let schema = Schema([
+            MemoModel.self,
+            TranscriptionModel.self,
+            AnalysisResultModel.self,
+            AutoTitleJobModel.self
+        ])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        let transcriptionRepo = TranscriptionRepositoryImpl(context: context)
+        let jobRepo = AutoTitleJobRepositoryImpl(context: context)
+        return MemoRepositoryImpl(
+            context: context,
+            transcriptionRepository: transcriptionRepo,
+            autoTitleJobRepository: jobRepo
+        )
+    }
 
     @Test func example() async throws {
         // Write your test here and use APIs like `#expect(...)` to check expected conditions.
@@ -17,7 +37,7 @@ struct SonoraTests {
     
     @Test @MainActor func testMemoRepositoryAtomicOperations() async throws {
         // Create a test repository
-        let repository = MemoRepositoryImpl()
+        let repository = try makeTestMemoRepository()
         
         // Create a test memo with a dummy audio file
         let testURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_audio.m4a")
@@ -49,12 +69,12 @@ struct SonoraTests {
     
     @Test @MainActor func testUpdatedMemoUseCases() async throws {
         // Create test repository
-        let repository = MemoRepositoryImpl()
+        let repository = try makeTestMemoRepository()
         
         // Create use cases
         let loadMemosUseCase = LoadMemosUseCase(memoRepository: repository)
         let deleteMemosUseCase = DeleteMemoUseCase(memoRepository: repository)
-        let handleRecordingUseCase = HandleNewRecordingUseCase(memoRepository: repository)
+        let handleRecordingUseCase = HandleNewRecordingUseCase(memoRepository: repository, eventBus: EventBus.shared)
         let playMemoUseCase = PlayMemoUseCase(memoRepository: repository)
         
         // Test loading memos

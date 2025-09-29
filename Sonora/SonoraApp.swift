@@ -46,7 +46,8 @@ struct SonoraApp: App {
         let schema = Schema([
             MemoModel.self,
             TranscriptionModel.self,
-            AnalysisResultModel.self
+            AnalysisResultModel.self,
+            AutoTitleJobModel.self
         ])
         do {
             self.modelContainer = try ModelContainer(for: schema)

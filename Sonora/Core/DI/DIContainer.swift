@@ -49,8 +49,9 @@ final class DIContainer: ObservableObject, Resolver {
     var _fillerWordFilter: (any FillerWordFiltering)?
     // Titles
     private var _titleService: (any TitleServiceProtocol)?
+    private var _autoTitleJobRepository: (any AutoTitleJobRepository)?
+    private var _titleGenerationCoordinator: TitleGenerationCoordinator?
     private var _generateAutoTitleUseCase: (any GenerateAutoTitleUseCaseProtocol)?
-    private var _titleGenerationTracker: TitleGenerationTracker?
 
     // MARK: - Phase 2: Core Optimization Services
     private var _audioQualityManager: AudioQualityManager?
@@ -394,13 +395,28 @@ final class DIContainer: ObservableObject, Resolver {
     }
 
     @MainActor
-    func titleGenerationTracker() -> TitleGenerationTracker {
+    func autoTitleJobRepository() -> any AutoTitleJobRepository {
         ensureConfigured()
-        if _titleGenerationTracker == nil {
-            print("🏭 DI: Creating TitleGenerationTracker")
-            _titleGenerationTracker = TitleGenerationTracker()
-        }
-        return _titleGenerationTracker!
+        if let repo = _autoTitleJobRepository { return repo }
+        guard let ctx = _modelContext else { fatalError("ModelContext not configured: autoTitleJobRepository") }
+        let repo = AutoTitleJobRepositoryImpl(context: ctx)
+        _autoTitleJobRepository = repo
+        return repo
+    }
+
+    @MainActor
+    func titleGenerationCoordinator() -> TitleGenerationCoordinator {
+        ensureConfigured()
+        if let coordinator = _titleGenerationCoordinator { return coordinator }
+        let coordinator = TitleGenerationCoordinator(
+            titleService: titleService(),
+            memoRepository: memoRepository(),
+            transcriptionRepository: transcriptionRepository(),
+            jobRepository: autoTitleJobRepository(),
+            logger: logger()
+        )
+        _titleGenerationCoordinator = coordinator
+        return coordinator
     }
 
     @MainActor
@@ -408,10 +424,8 @@ final class DIContainer: ObservableObject, Resolver {
         ensureConfigured()
         if let uc = _generateAutoTitleUseCase { return uc }
         let uc = GenerateAutoTitleUseCase(
-            titleService: titleService(),
             memoRepository: memoRepository(),
-            transcriptionRepository: transcriptionRepository(),
-            titleTracker: titleGenerationTracker(),
+            coordinator: titleGenerationCoordinator(),
             logger: logger()
         )
         _generateAutoTitleUseCase = uc
@@ -647,6 +661,8 @@ final class DIContainer: ObservableObject, Resolver {
         self._transcriptionRepository = trRepo
         let anRepo = AnalysisRepositoryImpl(context: ctx)
         self._analysisRepository = anRepo
+        let titleJobRepo = AutoTitleJobRepositoryImpl(context: ctx)
+        self._autoTitleJobRepository = titleJobRepo
 
         guard let trFactory = _transcriptionServiceFactory, let bus = _eventBus, let mod = _moderationService else {
             fatalError("DIContainer not fully configured: missing dependencies for memo repository")
@@ -664,7 +680,8 @@ final class DIContainer: ObservableObject, Resolver {
         self._startTranscriptionUseCase = startTranscriptionUseCase
         self._memoRepository = MemoRepositoryImpl(
             context: ctx,
-            transcriptionRepository: trRepo
+            transcriptionRepository: trRepo,
+            autoTitleJobRepository: titleJobRepo
         )
 
         // Initialize PromptUsageRepository (SwiftData)

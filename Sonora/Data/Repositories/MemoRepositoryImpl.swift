@@ -13,6 +13,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     // Lightweight in-memory cache for common list queries
     private var memosCache: [Memo]? = nil
     private var memosCacheTime: Date? = nil
+    private var cancellables: Set<AnyCancellable> = []
     
     // MARK: - Reactive Publishers (Swift 6 Compliant)
     
@@ -27,6 +28,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     
     // Transcription is handled via dedicated repository and use cases
     private let transcriptionRepository: any TranscriptionRepository
+    private let autoTitleJobRepository: any AutoTitleJobRepository
     private let context: ModelContext
     
     private var player: AVAudioPlayer?
@@ -42,14 +44,23 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     // MARK: - Initialization
     init(
         context: ModelContext,
-        transcriptionRepository: any TranscriptionRepository
+        transcriptionRepository: any TranscriptionRepository,
+        autoTitleJobRepository: any AutoTitleJobRepository
     ) {
         self.context = context
         self.transcriptionRepository = transcriptionRepository
+        self.autoTitleJobRepository = autoTitleJobRepository
 
         self.memosDirectoryPath = documentsPath.appendingPathComponent("Memos")
         createDirectoriesIfNeeded()
         loadMemos()
+
+        autoTitleJobRepository.jobsPublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.refreshAutoTitleStatesFromJobs()
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Directory Management
@@ -226,7 +237,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             transcriptionStatus: status,
             analysisResults: [],
             customTitle: model.customTitle,
-            shareableFileName: model.shareableFileName
+            shareableFileName: model.shareableFileName,
+            autoTitleState: autoTitleState(for: model.id)
         )
     }
 
@@ -237,6 +249,24 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         case .completed(let text): return .completed(text)
         case .failed(let error): return .failed(error)
         }
+    }
+
+    private func autoTitleState(for memoId: UUID) -> TitleGenerationState {
+        guard let job = autoTitleJobRepository.job(for: memoId) else { return .idle }
+        return TitleGenerationState(job: job)
+    }
+
+    private func refreshAutoTitleStatesFromJobs() {
+        let updated = memos.map { memo -> Memo in
+            let state = autoTitleState(for: memo.id)
+            return memo.autoTitleState == state ? memo : memo.withAutoTitleState(state)
+        }
+
+        guard updated != memos else { return }
+
+        memos = updated
+        memosCache = updated
+        memosCacheTime = Date()
     }
 
 
@@ -275,7 +305,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                     transcriptionStatus: mapToDomainStatus(state),
                     analysisResults: [],
                     customTitle: model.customTitle,
-                    shareableFileName: model.shareableFileName
+                    shareableFileName: model.shareableFileName,
+                    autoTitleState: autoTitleState(for: model.id)
                 )
             }
             self.memos = mapped
@@ -364,7 +395,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 transcriptionStatus: memo.transcriptionStatus,
                 analysisResults: memo.analysisResults,
                 customTitle: memo.customTitle,
-                shareableFileName: memo.shareableFileName
+                shareableFileName: memo.shareableFileName,
+                autoTitleState: autoTitleState(for: memo.id)
             )
             
             // Update in-memory list

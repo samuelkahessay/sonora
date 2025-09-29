@@ -7,61 +7,34 @@ protocol GenerateAutoTitleUseCaseProtocol: Sendable {
 
 @MainActor
 final class GenerateAutoTitleUseCase: GenerateAutoTitleUseCaseProtocol, @unchecked Sendable {
-    private let titleService: any TitleServiceProtocol
     private let memoRepository: any MemoRepository
-    private let transcriptionRepository: any TranscriptionRepository
-    private let titleTracker: any TitleGenerationTracking
+    private let coordinator: TitleGenerationCoordinator
     private let logger: any LoggerProtocol
 
     init(
-        titleService: any TitleServiceProtocol,
         memoRepository: any MemoRepository,
-        transcriptionRepository: any TranscriptionRepository,
-        titleTracker: any TitleGenerationTracking,
+        coordinator: TitleGenerationCoordinator,
         logger: any LoggerProtocol = Logger.shared
     ) {
-        self.titleService = titleService
         self.memoRepository = memoRepository
-        self.transcriptionRepository = transcriptionRepository
-        self.titleTracker = titleTracker
+        self.coordinator = coordinator
         self.logger = logger
     }
 
     func execute(memoId: UUID, transcript: String) async {
-        // Check existing memo and title
         guard let memo = memoRepository.getMemo(by: memoId) else { return }
-        if let t = memo.customTitle, !t.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return }
-
-        // Build input slice: first ~1500 chars + last ~400 if long
-        let slice = Self.slice(transcript: transcript)
-        let languageHint = transcriptionRepository.getTranscriptionMetadata(for: memoId)?.detectedLanguage
-
-        print("🧠 AutoTitle: start memo=\(memoId) lang=\(languageHint ?? "auto") sliceLen=\(slice.count)")
-        // Show in-progress UI state
-        titleTracker.setInProgress(memoId)
-        do {
-            if let title = try await titleService.generateTitle(transcript: slice, languageHint: languageHint) {
-                memoRepository.renameMemo(memo, newTitle: title)
-                titleTracker.setSuccess(memoId, title: title)
-                logger.info("Auto title set for memo: \(memoId)", category: .system, context: LogContext(additionalInfo: ["title": title]))
-                print("🧠 AutoTitle: success memo=\(memoId) title=\(title)")
-            } else {
-                titleTracker.setFailed(memoId)
-                print("🧠 AutoTitle: validation returned nil memo=\(memoId)")
-            }
-        } catch {
-            titleTracker.setFailed(memoId)
-            logger.debug("Auto title generation failed: \(error.localizedDescription)", category: .system, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
-            print("🧠 AutoTitle: error memo=\(memoId) error=\(error.localizedDescription)")
+        if let title = memo.customTitle, !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return
         }
-    }
 
-    private static func slice(transcript: String) -> String {
-        let maxFirst = 1500
-        let maxLast = 400
-        if transcript.count <= maxFirst { return transcript }
-        let firstPart = String(transcript.prefix(maxFirst))
-        let lastPart = String(transcript.suffix(maxLast))
-        return firstPart + "\n\n" + lastPart
+        logger.debug(
+            "Queueing auto-title generation",
+            category: .system,
+            context: LogContext(additionalInfo: [
+                "memoId": memoId.uuidString,
+                "transcriptLength": "\(transcript.count)"
+            ])
+        )
+        coordinator.enqueue(memoId: memoId)
     }
 }

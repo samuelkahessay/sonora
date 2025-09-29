@@ -10,7 +10,8 @@ final class SwiftDataRepositoriesTests: XCTestCase {
         let schema = Schema([
             MemoModel.self,
             TranscriptionModel.self,
-            AnalysisResultModel.self
+            AnalysisResultModel.self,
+            AutoTitleJobModel.self
         ])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         container = try ModelContainer(for: schema, configurations: config)
@@ -48,12 +49,11 @@ final class SwiftDataRepositoriesTests: XCTestCase {
     @MainActor
     func testMemoCRUDAndSorting() throws {
         let trRepo = TranscriptionRepositoryImpl(context: context)
+        let jobRepo = AutoTitleJobRepositoryImpl(context: context)
         let memoRepo = MemoRepositoryImpl(
             context: context,
             transcriptionRepository: trRepo,
-            startTranscriptionUseCase: MockStartTranscription(),
-            getTranscriptionStateUseCase: MockGetTranscriptionState(repo: trRepo),
-            retryTranscriptionUseCase: MockRetryTranscription()
+            autoTitleJobRepository: jobRepo
         )
 
         let audio1 = try makeAudioTempFile(name: "a1")
@@ -80,12 +80,11 @@ final class SwiftDataRepositoriesTests: XCTestCase {
     func testDeleteCascadeRemovesTranscriptionAndAnalysis() async throws {
         let trRepo = TranscriptionRepositoryImpl(context: context)
         let anRepo = AnalysisRepositoryImpl(context: context)
+        let jobRepo = AutoTitleJobRepositoryImpl(context: context)
         let memoRepo = MemoRepositoryImpl(
             context: context,
             transcriptionRepository: trRepo,
-            startTranscriptionUseCase: MockStartTranscription(),
-            getTranscriptionStateUseCase: MockGetTranscriptionState(repo: trRepo),
-            retryTranscriptionUseCase: MockRetryTranscription()
+            autoTitleJobRepository: jobRepo
         )
 
         let audio = try makeAudioTempFile(name: "b1")
@@ -112,12 +111,11 @@ final class SwiftDataRepositoriesTests: XCTestCase {
     func testAnalysisLatestResultFetch() throws {
         let trRepo = TranscriptionRepositoryImpl(context: context)
         let anRepo = AnalysisRepositoryImpl(context: context)
+        let jobRepo = AutoTitleJobRepositoryImpl(context: context)
         let memoRepo = MemoRepositoryImpl(
             context: context,
             transcriptionRepository: trRepo,
-            startTranscriptionUseCase: MockStartTranscription(),
-            getTranscriptionStateUseCase: MockGetTranscriptionState(repo: trRepo),
-            retryTranscriptionUseCase: MockRetryTranscription()
+            autoTitleJobRepository: jobRepo
         )
 
         let audio = try makeAudioTempFile(name: "c1")
@@ -132,5 +130,44 @@ final class SwiftDataRepositoriesTests: XCTestCase {
 
         let latest: AnalyzeEnvelope<Dummy>? = anRepo.getAnalysisResult(for: memo.id, mode: .analysis, responseType: Dummy.self)
         XCTAssertEqual(latest?.data.n, 2, "Should fetch latest by timestamp")
+    }
+
+    @MainActor
+    func testAutoTitleJobFailurePersistence() throws {
+        let trRepo = TranscriptionRepositoryImpl(context: context)
+        let jobRepo = AutoTitleJobRepositoryImpl(context: context)
+        let memoRepo = MemoRepositoryImpl(
+            context: context,
+            transcriptionRepository: trRepo,
+            autoTitleJobRepository: jobRepo
+        )
+
+        let audio = try makeAudioTempFile(name: "failure")
+        let memo = Memo(id: UUID(), filename: "failure.m4a", fileURL: audio, creationDate: Date())
+        memoRepo.saveMemo(memo)
+
+        let job = AutoTitleJob(
+            memoId: memo.id,
+            status: .failed,
+            createdAt: Date().addingTimeInterval(-120),
+            updatedAt: Date(),
+            retryCount: 2,
+            lastError: "Network unreachable",
+            nextRetryAt: nil,
+            failureReason: .network
+        )
+        jobRepo.save(job)
+
+        let fetchedJob = jobRepo.job(for: memo.id)
+        XCTAssertEqual(fetchedJob?.failureReason, .network)
+        XCTAssertEqual(fetchedJob?.lastError, "Network unreachable")
+
+        memoRepo.loadMemos()
+        let storedMemo = memoRepo.getMemo(by: memo.id)
+        guard case .failed(let reason, let message) = storedMemo?.autoTitleState else {
+            return XCTFail("Expected memo autoTitleState to reflect failure")
+        }
+        XCTAssertEqual(reason, .network)
+        XCTAssertEqual(message, "Network unreachable")
     }
 }

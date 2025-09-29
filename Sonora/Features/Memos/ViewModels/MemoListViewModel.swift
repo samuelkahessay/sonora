@@ -20,12 +20,14 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     private let handleNewRecordingUseCase: any HandleNewRecordingUseCaseProtocol
     private let memoRepository: any MemoRepository // Still needed for state updates
     private let transcriptionRepository: any TranscriptionRepository // For transcription states
+    private let titleCoordinator: TitleGenerationCoordinator
     private var cancellables = Set<AnyCancellable>()
     
     // Event-driven updates (Swift 6 compliant - no more polling)
     private var eventSubscriptionId: UUID?
     private var transcriptionStateSubscription: AnyCancellable?
     private var unifiedStateSubscription: AnyCancellable?
+    private var titleStateSubscription: AnyCancellable?
     private let eventBus = EventBus.shared
     private let logger: any LoggerProtocol = Logger.shared
     
@@ -165,7 +167,8 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         renameMemoUseCase: RenameMemoUseCaseProtocol,
         handleNewRecordingUseCase: any HandleNewRecordingUseCaseProtocol,
         memoRepository: any MemoRepository,
-        transcriptionRepository: any TranscriptionRepository
+        transcriptionRepository: any TranscriptionRepository,
+        titleCoordinator: TitleGenerationCoordinator
     ) {
         self.loadMemosUseCase = loadMemosUseCase
         self.deleteMemoUseCase = deleteMemoUseCase
@@ -177,6 +180,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         self.handleNewRecordingUseCase = handleNewRecordingUseCase
         self.memoRepository = memoRepository
         self.transcriptionRepository = transcriptionRepository
+        self.titleCoordinator = titleCoordinator
         
         setupBindings()
         loadMemos()
@@ -220,6 +224,18 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         }
         
         unifiedStateSubscription?.store(in: &cancellables)
+
+        titleStateSubscription = titleCoordinator.$stateByMemo
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.updateUnifiedState(
+                    memos: self.memoRepository.memos,
+                    playingMemo: self.memoRepository.playingMemo,
+                    isPlaying: self.memoRepository.isPlaying
+                )
+            }
+        titleStateSubscription?.store(in: &cancellables)
         
         // Legacy repository observation for backward compatibility
         memoRepository.objectWillChange
@@ -324,10 +340,21 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         let newMemosWithState = memos.map { memo in
             let transcriptionState = getTranscriptionState(for: memo)
             let isThisMemoPlaying = playingMemo?.id == memo.id && isPlaying
-            
+            let coordinatorState = titleCoordinator.state(for: memo.id)
+            let persistedState = memo.autoTitleState
+            let titleState: TitleGenerationState
+
+            switch coordinatorState {
+            case .idle:
+                titleState = persistedState
+            default:
+                titleState = coordinatorState
+            }
+
             return MemoWithState(
                 memo: memo,
                 transcriptionState: transcriptionState,
+                titleState: titleState,
                 isPlaying: isThisMemoPlaying
             )
         }
@@ -845,6 +872,13 @@ extension MemoListViewModel {
         return MemoRowState(
             memo: memo,
             transcriptionState: getTranscriptionState(for: memo),
+            titleState: {
+                let coordinatorState = titleCoordinator.state(for: memo.id)
+                if case .idle = coordinatorState {
+                    return memo.autoTitleState
+                }
+                return coordinatorState
+            }(),
             isPlaying: isMemoPaying(memo),
             playButtonIcon: playButtonIcon(for: memo)
         )
@@ -989,17 +1023,18 @@ struct PlaybackState: Equatable {
 struct MemoWithState: Identifiable, Equatable, Sendable {
     let memo: Memo
     let transcriptionState: TranscriptionState
+    let titleState: TitleGenerationState
     let isPlaying: Bool
     let playButtonIcon: String
     
     var id: UUID { memo.id }
     
-    init(memo: Memo, transcriptionState: TranscriptionState, isPlaying: Bool = false) {
+    init(memo: Memo, transcriptionState: TranscriptionState, titleState: TitleGenerationState, isPlaying: Bool = false) {
         self.memo = memo
         self.transcriptionState = transcriptionState
+        self.titleState = titleState
         self.isPlaying = isPlaying
         
-        // Calculate play button icon based on playing state
         if isPlaying {
             self.playButtonIcon = "pause.circle.fill"
         } else {
@@ -1019,6 +1054,7 @@ struct MemoWithState: Identifiable, Equatable, Sendable {
 struct MemoRowState: Identifiable, Equatable {
     let memo: Memo
     let transcriptionState: TranscriptionState
+    let titleState: TitleGenerationState
     let isPlaying: Bool
     let playButtonIcon: String
 
@@ -1028,9 +1064,10 @@ struct MemoRowState: Identifiable, Equatable {
     var creationDate: Date { memo.creationDate }
     var fileURL: URL { memo.fileURL }
 
-    init(memo: Memo, transcriptionState: TranscriptionState, isPlaying: Bool, playButtonIcon: String) {
+    init(memo: Memo, transcriptionState: TranscriptionState, titleState: TitleGenerationState, isPlaying: Bool, playButtonIcon: String) {
         self.memo = memo
         self.transcriptionState = transcriptionState
+        self.titleState = titleState
         self.isPlaying = isPlaying
         self.playButtonIcon = playButtonIcon
     }
@@ -1038,6 +1075,7 @@ struct MemoRowState: Identifiable, Equatable {
     init(from unified: MemoWithState) {
         self.memo = unified.memo
         self.transcriptionState = unified.transcriptionState
+        self.titleState = unified.titleState
         self.isPlaying = unified.isPlaying
         self.playButtonIcon = unified.playButtonIcon
     }
