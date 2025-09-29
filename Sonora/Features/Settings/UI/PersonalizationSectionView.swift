@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Settings section to manage personalization such as the display name entered during onboarding.
 struct PersonalizationSectionView: View {
+    @AppStorage("settings.showGuidedPrompts") private var showGuidedPrompts: Bool = true
     @State private var name: String = OnboardingConfiguration.shared.getUserName()
     @FocusState private var focused: Bool
     @State private var savedBannerOpacity: Double = 0
@@ -44,6 +45,22 @@ struct PersonalizationSectionView: View {
                     .opacity(savedBannerOpacity)
                     .animation(.easeInOut(duration: 0.25), value: savedBannerOpacity)
                 }
+
+                Divider()
+                    .padding(.vertical, Spacing.sm)
+
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Toggle(isOn: $showGuidedPrompts) {
+                        Text("Show Guided Prompts")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.semantic(.textPrimary))
+                    }
+                    .accessibilityHint("Toggle to show or hide guided prompts and the Inspire Me button on the recording screen.")
+
+                    Text("Control whether guided prompts appear on recording screen.")
+                        .font(.caption)
+                        .foregroundColor(.semantic(.textSecondary))
+                }
             }
         }
     }
@@ -66,4 +83,3 @@ struct PersonalizationSectionView: View {
 #Preview {
     PersonalizationSectionView()
 }
-

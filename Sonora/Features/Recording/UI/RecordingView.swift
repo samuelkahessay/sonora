@@ -16,6 +16,7 @@ struct RecordingView: View {
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     @SwiftUI.Environment(\.accessibilityReduceMotion) private var reduceMotion: Bool
     @AppStorage("hasSeenInspireMe") private var hasSeenInspireMe: Bool = false
+    @AppStorage("settings.showGuidedPrompts") private var showGuidedPrompts: Bool = true
     @State private var idlePulseTask: Task<Void, Never>? = nil
     @State private var inspireButtonScale: CGFloat = 1.0
     @State private var inspireButtonOpacity: Double = 1.0
@@ -116,21 +117,23 @@ struct RecordingView: View {
                                 }
                             )
                         }
-                        Group {
-                            if let prompt = promptViewModel.currentPrompt {
-                                DynamicPromptCard(prompt: prompt) {
-                                    promptViewModel.refresh(excludingCurrent: true)
-                                }
-                            } else if promptViewModel.isLoading {
-                                // Initial load only: show placeholder to reduce perceived latency
-                                PromptPlaceholderCard()
-                            } else {
-                                FallbackPromptCard {
-                                    promptViewModel.refresh(excludingCurrent: true)
+                        if showGuidedPrompts {
+                            Group {
+                                if let prompt = promptViewModel.currentPrompt {
+                                    DynamicPromptCard(prompt: prompt) {
+                                        promptViewModel.refresh(excludingCurrent: true)
+                                    }
+                                } else if promptViewModel.isLoading {
+                                    // Initial load only: show placeholder to reduce perceived latency
+                                    PromptPlaceholderCard()
+                                } else {
+                                    FallbackPromptCard {
+                                        promptViewModel.refresh(excludingCurrent: true)
+                                    }
                                 }
                             }
+                            .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
                         }
-                        .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
 
                         // Recording cluster: button(s), timer overlay, inspire me (tighter spacing)
                         VStack(spacing: SonoraDesignSystem.Spacing.md) {
@@ -181,29 +184,31 @@ struct RecordingView: View {
                                 value: viewModel.recordingState.isActive
                             )
 
-                            Button(action: {
-                                HapticManager.shared.playSelection()
-                                promptViewModel.refresh(excludingCurrent: true)
-                                hasSeenInspireMe = true
-                                resetIdlePulse()
-                            }) {
-                                VStack(spacing: 4) {
-                                    Image(systemName: "lightbulb.fill")
-                                        .font(.system(size: 28, weight: .regular))
-                                        .foregroundColor(.yellow)
-                                        .scaleEffect(inspireButtonScale)
-                                        .opacity(inspireButtonOpacity)
-                                    Text("Inspire Me")
-                                        .font(SonoraDesignSystem.Typography.insightSerif)
-                                        .foregroundColor(colorScheme == .dark ? .white : .semantic(.textPrimary))
+                            if showGuidedPrompts {
+                                Button(action: {
+                                    HapticManager.shared.playSelection()
+                                    promptViewModel.refresh(excludingCurrent: true)
+                                    hasSeenInspireMe = true
+                                    resetIdlePulse()
+                                }) {
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "lightbulb.fill")
+                                            .font(.system(size: 28, weight: .regular))
+                                            .foregroundColor(.yellow)
+                                            .scaleEffect(inspireButtonScale)
+                                            .opacity(inspireButtonOpacity)
+                                        Text("Inspire Me")
+                                            .font(SonoraDesignSystem.Typography.insightSerif)
+                                            .foregroundColor(colorScheme == .dark ? .white : .semantic(.textPrimary))
+                                    }
+                                    .minTouchTarget()
                                 }
-                                .minTouchTarget()
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Inspire Me")
+                                .accessibilityHint(getInspireMeAccessibilityHint())
+                                .onAppear { setupInspireMeAnimation() }
+                                .onDisappear { cancelIdlePulse() }
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Inspire Me")
-                            .accessibilityHint(getInspireMeAccessibilityHint())
-                            .onAppear { setupInspireMeAnimation() }
-                            .onDisappear { cancelIdlePulse() }
                         }
                         .padding(.top, SonoraDesignSystem.Spacing.xl) // add extra separation from prompt card
                     }
@@ -221,7 +226,11 @@ struct RecordingView: View {
             
             .onAppear {
                 viewModel.onViewAppear()
-                promptViewModel.loadInitial()
+                if showGuidedPrompts {
+                    promptViewModel.loadInitial()
+                } else {
+                    promptViewModel.clear()
+                }
             }
             .initialFocus {
                 if viewModel.hasPermission {
@@ -263,6 +272,13 @@ struct RecordingView: View {
             .onChange(of: viewModel.isInCountdown) { _, isInCountdown in
                 if isInCountdown {
                     focusedElement = .statusText
+                }
+            }
+            .onChange(of: showGuidedPrompts) { _, isEnabled in
+                if isEnabled {
+                    promptViewModel.loadInitial()
+                } else {
+                    promptViewModel.clear()
                 }
             }
             .alert("Recording Stopped", isPresented: $viewModel.showAutoStopAlert) {

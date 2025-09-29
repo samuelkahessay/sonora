@@ -73,6 +73,14 @@ final class PromptViewModel: ObservableObject {
         }
     }
 
+    func clear() {
+        refreshTask?.cancel()
+        refreshTask = nil
+        currentPrompt = nil
+        isLoading = false
+        state = .idle(current: nil)
+    }
+
     func toggleFavorite() {
         guard let id = currentPrompt?.id else { return }
         // For now, toggle favorite blindly to true (idempotent); a full UI would reflect state
