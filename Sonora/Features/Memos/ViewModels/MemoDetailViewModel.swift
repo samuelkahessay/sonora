@@ -30,6 +30,10 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     
     // MARK: - Current Memo
     private var currentMemo: Memo?
+
+    // MARK: - Lazy Cleaning Cache
+    /// Cache for cleaned transcription text to avoid re-filtering on every access
+    private var cleanedTextCache: [UUID: String] = [:]
     
     // MARK: - Consolidated State
     
@@ -54,9 +58,45 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         state.transcription.isCompleted
     }
     
-    /// Text content from completed transcription
+    /// Text content from completed transcription (lazily cleaned for display)
     var transcriptionText: String? {
-        state.transcription.state.text
+        guard let memo = currentMemo else { return nil }
+
+        // Return cached cleaned text if available
+        if let cached = cleanedTextCache[memo.id] {
+            return cached
+        }
+
+        // Get original text from state
+        guard let originalText = state.transcription.state.text else {
+            return nil
+        }
+
+        // First check metadata for pre-cleaned text (from old transcriptions)
+        if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id),
+           let cleanedInMetadata = meta.text, !cleanedInMetadata.isEmpty,
+           cleanedInMetadata != originalText {
+            // Metadata has different cleaned version - use it
+            cleanedTextCache[memo.id] = cleanedInMetadata
+            return cleanedInMetadata
+        }
+
+        // Lazy clean on first access
+        let filter = DIContainer.shared.fillerWordFilter()
+        let cleaned = filter.removeFillerWords(from: originalText)
+
+        // Safety: never return empty if original had content (same logic as prepareTranscript)
+        let final: String
+        if cleaned.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+           !originalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            final = originalText
+        } else {
+            final = cleaned
+        }
+
+        // Cache for subsequent accesses
+        cleanedTextCache[memo.id] = final
+        return final
     }
 
     /// Current playback time (seconds)
@@ -259,13 +299,19 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     /// Configure the ViewModel with a memo
     func configure(with memo: Memo) {
         print("📝 MemoDetailViewModel: Configuring with memo: \(memo.filename)")
+
+        // Clear cache for previous memo to avoid stale data
+        if let prevMemo = currentMemo, prevMemo.id != memo.id {
+            cleanedTextCache.removeValue(forKey: prevMemo.id)
+        }
+
         self.currentMemo = memo
         self.currentMemoTitle = memo.displayName
         state.transcription.service = nil
         // Initialize audio duration/current for scrubber before playback starts
         state.audio.duration = memo.duration
         state.audio.currentTime = 0
-        
+
 
         // Initial state update
         updateTranscriptionState(for: memo)

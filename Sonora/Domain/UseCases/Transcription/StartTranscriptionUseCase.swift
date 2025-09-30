@@ -182,11 +182,12 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
                     let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang)
                     let eval = qualityEvaluator.evaluateQuality(resp, text: resp.text)
+                    // Save original text to state; prepareTranscript only for metadata
+                    let textToSave = resp.text
                     let (processedText, originalText) = prepareTranscript(from: resp.text)
 
                     // Save and complete
                     await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
-                    let textToSave = processedText
                     let langToSave = resp.detectedLanguage ?? lang
                     let qualityToSave = eval.overallScore
                     let textLen = processedText.count
@@ -232,8 +233,9 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: lang, stageLabel: "Transcribing...")
                 let aggregator = TranscriptionAggregator()
                 let agg = aggregator.aggregate(primary)
+                // Save original text to state; prepareTranscript only for metadata
+                let textToSave = agg.text
                 let (processedText, originalText) = prepareTranscript(from: agg.text)
-                let textToSave = processedText
                 let langToSave = lang
                 let qualityToSave = agg.confidence
                 let textLen = processedText.count
@@ -300,8 +302,9 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
                 // Save and complete
                 await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
+                // Save original text to state; prepareTranscript only for metadata
+                let textToSave = finalResp.text
                 let (processedText, originalText) = prepareTranscript(from: finalResp.text)
-                let textToSave = processedText
                 let langToSave = DefaultClientLanguageDetectionService.iso639_1(fromBCP47: finalResp.detectedLanguage) ?? finalResp.detectedLanguage ?? "und"
                 let qualityToSave = finalEval.overallScore
                 let textLen = processedText.count
@@ -385,8 +388,9 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
             // Phase 5: Save and complete
             await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
+            // Save original text to state; prepareTranscript only for metadata
+            let textToSave = finalText
             let (processedText, originalText) = prepareTranscript(from: finalText)
-            let textToSave = processedText
             let langToSave = finalLanguage
             let qualityToSave = finalEval.overallScore
             let textLen = processedText.count
