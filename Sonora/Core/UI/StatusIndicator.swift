@@ -312,10 +312,6 @@ extension StatusIndicator {
     }
 }
 
-// MARK: - Operation Status Support
-
-// removed unused OperationStatus convenience builder
-
 // MARK: - Previews
 
 #Preview("Status Indicators") {

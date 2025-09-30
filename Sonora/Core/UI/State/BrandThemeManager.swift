@@ -105,7 +105,7 @@ final class BrandThemeManager: ObservableObject {
         // Scale animation intensity
         return baseAnimation.speed(animationIntensity)
     }
-    
+
     // MARK: - Private Implementation
 
     /// Setup accessibility observers for motion preferences

@@ -270,7 +270,6 @@ public struct RemindersData: Codable, Sendable {
             self.memoId = memoId
         }
 
-
         // Convenience computed property for confidence level
         public var confidenceCategory: EventsData.DetectedEvent.ConfidenceLevel {
             switch confidence {

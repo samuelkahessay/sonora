@@ -63,4 +63,3 @@ internal struct DistillHandledDetectionsStore {
         entries(for: memoId).contains { $0.id == key }
     }
 }
-

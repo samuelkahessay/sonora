@@ -243,7 +243,6 @@ struct DistillResultView: View {
         }
     }
 
-
     private var shouldShowPermissionExplainer: Bool {
         // Show explainer if either permission not determined or denied/restricted
         let cal = permissionService.calendarPermissionState

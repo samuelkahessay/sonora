@@ -48,4 +48,3 @@ internal struct ReflectionQuestionsPlaceholderView: View {
         .frame(minHeight: 180)
     }
 }
-

@@ -143,32 +143,6 @@ struct ActionItemDetectionState {
         if value { processing.insert(id) } else { processing.remove(id) }
     }
 
-    
-
-    @MainActor
-    mutating func handleSingleAdd(_ item: ActionItemDetectionUI, permissionService: EventKitPermissionService) async {
-        update(item)
-        setProcessing(item.id, to: true)
-        defer { setProcessing(item.id, to: false) }
-
-        do {
-            let createdId: String
-            switch item.kind {
-            case .event:
-                createdId = try await addEvent(for: item, permissionService: permissionService)
-                createdArtifacts[item.id] = DistillCreatedArtifact(kind: .event, identifier: createdId)
-            case .reminder:
-                createdId = try await addReminder(for: item, permissionService: permissionService)
-                createdArtifacts[item.id] = DistillCreatedArtifact(kind: .reminder, identifier: createdId)
-            }
-            added.insert(item.id)
-            HapticManager.shared.playSuccess()
-            appendAddedMessage(for: item)
-        } catch {
-            HapticManager.shared.playError()
-        }
-    }
-
     @MainActor
     mutating func undoAdd(id: UUID) async {
         guard let artifact = createdArtifacts[id] else {
@@ -196,47 +170,6 @@ struct ActionItemDetectionState {
         }
     }
 
-    @MainActor
-    mutating func handleBatchAdd(selected: [ActionItemDetectionUI], calendar: CalendarDTO?, reminderList: CalendarDTO?, permissionService: EventKitPermissionService) async {
-        guard !selected.isEmpty else { return }
-
-        selected.forEach { update($0) }
-        let ids = selected.map { $0.id }
-        ids.forEach { setProcessing($0, to: true) }
-        defer { ids.forEach { setProcessing($0, to: false) } }
-
-        let eventItems = selected.filter { $0.kind == .event }
-        let reminderItems = selected.filter { $0.kind == .reminder }
-
-        do {
-            if !eventItems.isEmpty {
-                try await ensureCalendarPermission(permissionService: permissionService)
-                try await loadDestinationsIfNeeded(for: eventItems)
-                let destination = calendar ?? defaultCalendar ?? availableCalendars.first
-                guard let destination else { throw EventKitError.calendarNotFound(identifier: "default") }
-                let tuples = try eventItems.map { item -> (ActionItemDetectionUI, EventsData.DetectedEvent) in
-                    guard let base = eventSources[item.id] else { throw EventKitError.invalidEventData(field: "event source missing") }
-                    return (item, buildEventPayload(from: item, base: base))
-                }
-                _ = try await batchAddEvents(tuples, calendar: destination)
-            }
-
-            if !reminderItems.isEmpty {
-                try await ensureReminderPermission(permissionService: permissionService)
-                try await loadDestinationsIfNeeded(for: reminderItems)
-                let destination = reminderList ?? defaultReminderList ?? availableReminderLists.first
-                guard let destination else { throw EventKitError.reminderListNotFound(identifier: "default") }
-                let tuples = try reminderItems.map { item -> (ActionItemDetectionUI, RemindersData.DetectedReminder) in
-                    guard let base = reminderSources[item.id] else { throw EventKitError.invalidEventData(field: "reminder source missing") }
-                    return (item, buildReminderPayload(from: item, base: base))
-                }
-                _ = try await batchAddReminders(tuples, list: destination)
-            }
-        } catch {
-            HapticManager.shared.playError()
-        }
-    }
-
     // MARK: - EventKit operations
     struct DestinationsResult {
         let calendars: [CalendarDTO]
@@ -247,6 +180,7 @@ struct ActionItemDetectionState {
         let didLoadReminderLists: Bool
     }
 
+    @MainActor
     func fetchDestinationsIfNeeded(for items: [ActionItemDetectionUI]) async throws -> DestinationsResult {
         var calendarsOut = availableCalendars
         var defaultCalendarOut = defaultCalendar
@@ -309,7 +243,6 @@ struct ActionItemDetectionState {
                 successCount += 1
                 createdArtifacts[ui.id] = DistillCreatedArtifact(kind: .event, identifier: createdId)
                 added.insert(ui.id)
-                if let idx = self.items.firstIndex(where: { $0.id == ui.id }) { self.items[idx].isAdded = true }
                 appendAddedMessage(for: ui)
             case .failure(let error):
                 failures.append(error.localizedDescription)
@@ -335,7 +268,6 @@ struct ActionItemDetectionState {
                 successCount += 1
                 createdArtifacts[ui.id] = DistillCreatedArtifact(kind: .reminder, identifier: createdId)
                 added.insert(ui.id)
-                if let idx = self.items.firstIndex(where: { $0.id == ui.id }) { self.items[idx].isAdded = true }
                 appendAddedMessage(for: ui)
             case .failure(let error):
                 failures.append(error.localizedDescription)
@@ -346,6 +278,7 @@ struct ActionItemDetectionState {
         return (successCount, failures)
     }
 
+    @MainActor
     func createEvent(for item: ActionItemDetectionUI, in calendar: CalendarDTO?) async throws -> String {
         guard let base = eventSources[item.id] else { throw EventKitError.invalidEventData(field: "event source missing") }
         let event = buildEventPayload(from: item, base: base)
@@ -356,6 +289,7 @@ struct ActionItemDetectionState {
         return try await DIContainer.shared.createCalendarEventUseCase().execute(event: event, calendar: cal)
     }
 
+    @MainActor
     func createReminder(for item: ActionItemDetectionUI, in list: CalendarDTO?) async throws -> String {
         guard let base = reminderSources[item.id] else { throw EventKitError.invalidEventData(field: "reminder source missing") }
         let reminder = buildReminderPayload(from: item, base: base)

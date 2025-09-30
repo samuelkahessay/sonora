@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
-import UniformTypeIdentifiers
 import UIKit
+import UniformTypeIdentifiers
 
 // MARK: - Share Functionality Methods
 
@@ -142,4 +142,3 @@ extension MemoDetailViewModel {
         return header + text
     }
 }
-

@@ -1,5 +1,5 @@
-import XCTest
 @testable import Sonora
+import XCTest
 
 final class EnvironmentResolversTests: XCTestCase {
 
@@ -35,7 +35,7 @@ final class EnvironmentResolversTests: XCTestCase {
             "SONORA_MAX_LOG_FILE_SIZE": "1048576",
             "SONORA_LOG_INCLUDE_LOCATION": "true",
             "SONORA_LOG_INCLUDE_TIMESTAMP": "false",
-            "SONORA_LOG_USE_COLORS": "true",
+            "SONORA_LOG_USE_COLORS": "true"
         ]
         let s = LoggingSettings.resolved(env: env, isDebug: false, isRelease: true)
         XCTAssertTrue(s.logToConsole)
@@ -50,7 +50,7 @@ final class EnvironmentResolversTests: XCTestCase {
     func test_featureToggles_support_gating() {
         let env: [String: String] = [
             "SONORA_LIVE_ACTIVITIES_ENABLED": "true",
-            "SONORA_DYNAMIC_ISLAND_ENABLED": "true",
+            "SONORA_DYNAMIC_ISLAND_ENABLED": "true"
         ]
         let f = FeatureToggles.resolved(
             env: env,
@@ -68,7 +68,7 @@ final class EnvironmentResolversTests: XCTestCase {
     func test_featureToggles_analytics_crash_release_only() {
         let enable: [String: String] = [
             "SONORA_ANALYTICS_ENABLED": "true",
-            "SONORA_CRASH_REPORTING_ENABLED": "true",
+            "SONORA_CRASH_REPORTING_ENABLED": "true"
         ]
         let rel = FeatureToggles.resolved(env: enable, isDebug: false, isRelease: true, isTestFlight: false, isDevelopment: false, supportsLiveActivities: true, supportsDynamicIsland: true)
         XCTAssertTrue(rel.analyticsEnabled)
@@ -109,4 +109,3 @@ final class EnvironmentResolversTests: XCTestCase {
         XCTAssertEqual(tools.networkDelaySimulation, 0.1, accuracy: 0.0001)
     }
 }
-

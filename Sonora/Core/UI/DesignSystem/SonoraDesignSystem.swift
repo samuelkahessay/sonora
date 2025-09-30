@@ -146,7 +146,7 @@ enum SonoraDesignSystem {
             .repeatForever(autoreverses: true)
 
     }
-    
+
     // MARK: - Layout Constraints
 
     /// Layout specifications for consistent component sizing

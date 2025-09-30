@@ -11,7 +11,7 @@ struct LoggingSettings: Sendable {
     let logIncludeTimestamp: Bool
     let logUseColors: Bool
 
-    static func resolved(env: [String: String], isDebug: Bool, isRelease: Bool) -> LoggingSettings {
+    static func resolved(env: [String: String], isDebug: Bool, isRelease: Bool) -> Self {
         // Defaults mirror Environment property initializers + conditional defaults in loader
         var logToConsole = isDebug
         if let s = env["SONORA_LOG_TO_CONSOLE"], let v = Bool(s) { logToConsole = v }
@@ -34,7 +34,7 @@ struct LoggingSettings: Sendable {
         var logUseColors = isDebug
         if let s = env["SONORA_LOG_USE_COLORS"], let v = Bool(s) { logUseColors = v }
 
-        return LoggingSettings(
+        return Self(
             logToConsole: logToConsole,
             logToFile: logToFile,
             logToSystem: logToSystem,
@@ -64,7 +64,7 @@ struct FeatureToggles: Sendable {
         isDevelopment: Bool,
         supportsLiveActivities: Bool,
         supportsDynamicIsland: Bool
-    ) -> FeatureToggles {
+    ) -> Self {
         var liveActivitiesEnabled = supportsLiveActivities
         if let s = env["SONORA_LIVE_ACTIVITIES_ENABLED"], let v = Bool(s) { liveActivitiesEnabled = v && supportsLiveActivities }
 
@@ -89,7 +89,7 @@ struct FeatureToggles: Sendable {
         var experimentalFeaturesEnabled = isDebug
         if let s = env["SONORA_EXPERIMENTAL_FEATURES_ENABLED"], let v = Bool(s) { experimentalFeaturesEnabled = v }
 
-        return FeatureToggles(
+        return Self(
             liveActivitiesEnabled: liveActivitiesEnabled,
             dynamicIslandEnabled: dynamicIslandEnabled,
             backgroundRecordingEnabled: backgroundRecordingEnabled,
@@ -116,7 +116,7 @@ struct DevToolsOptions: Sendable {
         isDebug: Bool,
         isTesting: Bool,
         isDevelopment: Bool
-    ) -> DevToolsOptions {
+    ) -> Self {
         var showDebugUI = isDebug
         if let s = env["SONORA_SHOW_DEBUG_UI"], let v = Bool(s) { showDebugUI = v && (isDebug || isDevelopment) }
 
@@ -138,7 +138,7 @@ struct DevToolsOptions: Sendable {
         var networkDelaySimulation: TimeInterval = 2.0
         if let s = env["SONORA_NETWORK_DELAY"], let v = TimeInterval(s) { networkDelaySimulation = max(0.1, v) }
 
-        return DevToolsOptions(
+        return Self(
             showDebugUI: showDebugUI,
             useMockData: useMockData,
             bypassNetwork: bypassNetwork,
@@ -149,4 +149,3 @@ struct DevToolsOptions: Sendable {
         )
     }
 }
-

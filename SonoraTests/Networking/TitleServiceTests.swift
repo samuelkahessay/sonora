@@ -77,12 +77,12 @@ final class TitleServiceTests: XCTestCase {
         let title = try await service.generateTitle(
             transcript: "example transcript for testing",
             languageHint: nil
-        )            { update in
+        ) { update in
                 updates.append(update)
                 if update.isFinal {
                     finalExpectation.fulfill()
                 }
-            }
+        }
 
         await fulfillment(of: [finalExpectation], timeout: 1.0)
         XCTAssertEqual(title, "Weekly Recap Notes")
@@ -107,7 +107,7 @@ final class TitleServiceTests: XCTestCase {
         let title = try await service.generateTitle(
             transcript: "fallback transcript",
             languageHint: nil
-        )            { _ in }
+        ) { _ in }
 
         XCTAssertEqual(title, "Weekly Recap Notes")
         XCTAssertEqual(URLProtocolStub.recordedRequests.count, 2, "Expected fallback request after streaming unsupported")
@@ -207,13 +207,13 @@ private final class URLProtocolStub: URLProtocol {
     }
 
     override func startLoading() {
-        let stub: Response? = URLProtocolStub.queue.sync {
-            guard !URLProtocolStub.stubs.isEmpty else { return nil }
-            return URLProtocolStub.stubs.removeFirst()
+        let stub: Response? = Self.queue.sync {
+            guard !Self.stubs.isEmpty else { return nil }
+            return Self.stubs.removeFirst()
         }
 
-        URLProtocolStub.queue.sync {
-            URLProtocolStub.recordedRequests.append(request)
+        Self.queue.sync {
+            Self.recordedRequests.append(request)
         }
 
         guard let stub else {

@@ -61,7 +61,7 @@ struct SonoraTests {
         repository.loadMemos()
 
         // Verify the memo was saved and loaded
-        #expect(repository.memos.count >= 0) // At least no crash occurred
+        #expect(repository.memos.isEmpty) // At least no crash occurred
 
         // Clean up
         try? FileManager.default.removeItem(at: testURL)
@@ -85,7 +85,7 @@ struct SonoraTests {
         do {
             let memos = try await loadMemosUseCase.execute()
             print("✅ LoadMemosUseCase test: Loaded \(memos.count) memos")
-            #expect(memos.count >= 0) // Should not crash
+            #expect(memos.isEmpty) // Should not crash
         } catch {
             print("⚠️ LoadMemosUseCase test failed with expected error: \(error)")
             // This is acceptable as there might be no memos initially

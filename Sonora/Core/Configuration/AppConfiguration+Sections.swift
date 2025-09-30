@@ -3,7 +3,7 @@ import Foundation
 // MARK: - AppConfiguration Section Models and Loaders
 
 // Helper for local parsing in this file only.
-fileprivate enum _AppConfigParseHelper {
+private enum _AppConfigParseHelper {
     static func requireURL(_ s: String) -> URL {
         guard let url = URL(string: s) else { preconditionFailure("Invalid URL constant: \(s)") }
         return url
@@ -18,7 +18,7 @@ struct APIConfig: Sendable {
     let preferredTranscriptionLanguage: String?
     let healthTimeout: TimeInterval
 
-    static func defaults(build: BuildConfiguration) -> APIConfig {
+    static func defaults(build: BuildConfiguration) -> Self {
         // Build-specific defaults
         let base = _AppConfigParseHelper.requireURL("https://sonora.fly.dev")
         let analysis: TimeInterval
@@ -48,7 +48,7 @@ struct APIConfig: Sendable {
             health = 5.0
         }
 
-        return APIConfig(
+        return Self(
             baseURL: base,
             analysisTimeout: analysis,
             transcriptionTimeout: transcription,
@@ -57,10 +57,10 @@ struct APIConfig: Sendable {
         )
     }
 
-    func withOverrides(env: [String: String]) -> APIConfig {
+    func withOverrides(env: [String: String]) -> Self {
         var c = self
         if let apiURLString = env["SONORA_API_URL"], let url = URL(string: apiURLString) {
-            c = APIConfig(
+            c = Self(
                 baseURL: url,
                 analysisTimeout: c.analysisTimeout,
                 transcriptionTimeout: c.transcriptionTimeout,
@@ -70,7 +70,7 @@ struct APIConfig: Sendable {
             print("🔧 AppConfiguration: API URL overridden to \(url.absoluteString)")
         }
         if let timeoutString = env["SONORA_ANALYSIS_TIMEOUT"], let timeout = TimeInterval(timeoutString) {
-            c = APIConfig(
+            c = Self(
                 baseURL: c.baseURL,
                 analysisTimeout: timeout,
                 transcriptionTimeout: c.transcriptionTimeout,
@@ -80,7 +80,7 @@ struct APIConfig: Sendable {
             print("🔧 AppConfiguration: Analysis timeout overridden to \(timeout)s")
         }
         if let timeoutString = env["SONORA_TRANSCRIPTION_TIMEOUT"], let timeout = TimeInterval(timeoutString) {
-            c = APIConfig(
+            c = Self(
                 baseURL: c.baseURL,
                 analysisTimeout: c.analysisTimeout,
                 transcriptionTimeout: timeout,
@@ -90,7 +90,7 @@ struct APIConfig: Sendable {
             print("🔧 AppConfiguration: Transcription timeout overridden to \(timeout)s")
         }
         if let lang = env["SONORA_TRANSCRIPTION_LANGUAGE"], !lang.isEmpty {
-            c = APIConfig(
+            c = Self(
                 baseURL: c.baseURL,
                 analysisTimeout: c.analysisTimeout,
                 transcriptionTimeout: c.transcriptionTimeout,
@@ -100,7 +100,7 @@ struct APIConfig: Sendable {
             print("🔧 AppConfiguration: Preferred transcription language overridden to \(lang)")
         }
         if let timeoutString = env["SONORA_HEALTH_TIMEOUT"], let timeout = TimeInterval(timeoutString) {
-            c = APIConfig(
+            c = Self(
                 baseURL: c.baseURL,
                 analysisTimeout: c.analysisTimeout,
                 transcriptionTimeout: c.transcriptionTimeout,
@@ -124,7 +124,7 @@ struct RecordingConfig: Sendable {
     let voiceOptimizedQuality: Float
     let enableAdaptiveAudioQuality: Bool
 
-    static func defaults(build: BuildConfiguration) -> RecordingConfig {
+    static func defaults(build: BuildConfiguration) -> Self {
         let maxDuration: TimeInterval = 180.0
         let fileSize: Int64 = build.isDebug ? 100 * 1_024 * 1_024 : 50 * 1_024 * 1_024
         let quality: Float = build.isDebug ? 1.0 : 0.8
@@ -134,7 +134,7 @@ struct RecordingConfig: Sendable {
         let voiceQuality: Float = 0.7
         let adaptive: Bool = true
 
-        return RecordingConfig(
+        return Self(
             maxRecordingDuration: maxDuration,
             maxRecordingFileSize: fileSize,
             recordingQuality: quality,
@@ -146,7 +146,7 @@ struct RecordingConfig: Sendable {
         )
     }
 
-    func withOverrides(env: [String: String]) -> RecordingConfig {
+    func withOverrides(env: [String: String]) -> Self {
         var c = self
         if let s = env["SONORA_MAX_RECORDING_DURATION"], let v = TimeInterval(s) {
             c = c.copy(maxRecordingDuration: v)
@@ -196,8 +196,8 @@ struct RecordingConfig: Sendable {
         audioBitRate: Int? = nil,
         voiceOptimizedQuality: Float? = nil,
         enableAdaptiveAudioQuality: Bool? = nil
-    ) -> RecordingConfig {
-        RecordingConfig(
+    ) -> Self {
+        Self(
             maxRecordingDuration: maxRecordingDuration ?? self.maxRecordingDuration,
             maxRecordingFileSize: maxRecordingFileSize ?? self.maxRecordingFileSize,
             recordingQuality: recordingQuality ?? self.recordingQuality,
@@ -217,16 +217,16 @@ struct NetworkConfig: Sendable {
     let maxConcurrentNetworkOperations: Int
     let resourceTimeoutInterval: TimeInterval
 
-    static func defaults(build: BuildConfiguration) -> NetworkConfig {
+    static func defaults(build: BuildConfiguration) -> Self {
         if build.isDebug {
-            return NetworkConfig(
+            return Self(
                 maxNetworkRetries: 5,
                 retryBaseDelay: 2.0,
                 maxConcurrentNetworkOperations: 2,
                 resourceTimeoutInterval: 60.0
             )
         } else {
-            return NetworkConfig(
+            return Self(
                 maxNetworkRetries: 3,
                 retryBaseDelay: 1.0,
                 maxConcurrentNetworkOperations: 3,
@@ -235,7 +235,7 @@ struct NetworkConfig: Sendable {
         }
     }
 
-    func withOverrides(env: [String: String]) -> NetworkConfig {
+    func withOverrides(env: [String: String]) -> Self {
         var c = self
         if let s = env["SONORA_MAX_RETRIES"], let v = Int(s) { c = c.copy(maxNetworkRetries: max(0, v)); print("🔧 AppConfiguration: Max retries overridden to \(max(0, v))") }
         if let s = env["SONORA_RETRY_DELAY"], let v = TimeInterval(s) { c = c.copy(retryBaseDelay: max(0.1, v)); print("🔧 AppConfiguration: Retry delay overridden to \(max(0.1, v))s") }
@@ -249,8 +249,8 @@ struct NetworkConfig: Sendable {
         retryBaseDelay: TimeInterval? = nil,
         maxConcurrentNetworkOperations: Int? = nil,
         resourceTimeoutInterval: TimeInterval? = nil
-    ) -> NetworkConfig {
-        NetworkConfig(
+    ) -> Self {
+        Self(
             maxNetworkRetries: maxNetworkRetries ?? self.maxNetworkRetries,
             retryBaseDelay: retryBaseDelay ?? self.retryBaseDelay,
             maxConcurrentNetworkOperations: maxConcurrentNetworkOperations ?? self.maxConcurrentNetworkOperations,
@@ -268,9 +268,9 @@ struct AnalysisConfig: Sendable {
     let minimumTranscriptLength: Int
     let maximumTranscriptLength: Int
 
-    static func defaults(build: BuildConfiguration) -> AnalysisConfig {
+    static func defaults(build: BuildConfiguration) -> Self {
         if build.isDebug {
-            return AnalysisConfig(
+            return Self(
                 distillAnalysisTimeout: 35.0,
                 contentAnalysisTimeout: 35.0,
                 themesAnalysisTimeout: 30.0,
@@ -279,7 +279,7 @@ struct AnalysisConfig: Sendable {
                 maximumTranscriptLength: 50_000
             )
         } else {
-            return AnalysisConfig(
+            return Self(
                 distillAnalysisTimeout: 35.0,
                 contentAnalysisTimeout: 20.0,
                 themesAnalysisTimeout: 18.0,
@@ -290,7 +290,7 @@ struct AnalysisConfig: Sendable {
         }
     }
 
-    func withOverrides(env: [String: String]) -> AnalysisConfig {
+    func withOverrides(env: [String: String]) -> Self {
         var c = self
         if let s = env["SONORA_DISTILL_TIMEOUT"], let v = TimeInterval(s) { c = c.copy(distillAnalysisTimeout: v); print("🔧 AppConfiguration: Distill timeout overridden to \(v)s") }
         if let s = env["SONORA_CONTENT_TIMEOUT"], let v = TimeInterval(s) { c = c.copy(contentAnalysisTimeout: v); print("🔧 AppConfiguration: Content timeout overridden to \(v)s") }
@@ -308,8 +308,8 @@ struct AnalysisConfig: Sendable {
         todosAnalysisTimeout: TimeInterval? = nil,
         minimumTranscriptLength: Int? = nil,
         maximumTranscriptLength: Int? = nil
-    ) -> AnalysisConfig {
-        AnalysisConfig(
+    ) -> Self {
+        Self(
             distillAnalysisTimeout: distillAnalysisTimeout ?? self.distillAnalysisTimeout,
             contentAnalysisTimeout: contentAnalysisTimeout ?? self.contentAnalysisTimeout,
             themesAnalysisTimeout: themesAnalysisTimeout ?? self.themesAnalysisTimeout,
@@ -327,16 +327,16 @@ struct LiveActivityConfig: Sendable {
     let liveActivityShowDetailedProgress: Bool
     let backgroundRefreshRate: TimeInterval
 
-    static func defaults(build: BuildConfiguration) -> LiveActivityConfig {
+    static func defaults(build: BuildConfiguration) -> Self {
         if build.isDebug {
-            return LiveActivityConfig(
+            return Self(
                 liveActivityUpdateInterval: 1.0,
                 liveActivityGracePeriod: 60.0,
                 liveActivityShowDetailedProgress: true,
                 backgroundRefreshRate: 2.0
             )
         } else {
-            return LiveActivityConfig(
+            return Self(
                 liveActivityUpdateInterval: 2.0,
                 liveActivityGracePeriod: 30.0,
                 liveActivityShowDetailedProgress: true,
@@ -345,7 +345,7 @@ struct LiveActivityConfig: Sendable {
         }
     }
 
-    func withOverrides(env: [String: String]) -> LiveActivityConfig {
+    func withOverrides(env: [String: String]) -> Self {
         var c = self
         if let s = env["SONORA_LIVE_ACTIVITY_UPDATE_INTERVAL"], let v = TimeInterval(s) { c = c.copy(liveActivityUpdateInterval: max(0.5, v)); print("🔧 AppConfiguration: Live Activity update interval overridden to \(max(0.5, v))s") }
         if let s = env["SONORA_LIVE_ACTIVITY_GRACE_PERIOD"], let v = TimeInterval(s) { c = c.copy(liveActivityGracePeriod: max(0.0, v)); print("🔧 AppConfiguration: Live Activity grace period overridden to \(max(0.0, v))s") }
@@ -359,8 +359,8 @@ struct LiveActivityConfig: Sendable {
         liveActivityGracePeriod: TimeInterval? = nil,
         liveActivityShowDetailedProgress: Bool? = nil,
         backgroundRefreshRate: TimeInterval? = nil
-    ) -> LiveActivityConfig {
-        LiveActivityConfig(
+    ) -> Self {
+        Self(
             liveActivityUpdateInterval: liveActivityUpdateInterval ?? self.liveActivityUpdateInterval,
             liveActivityGracePeriod: liveActivityGracePeriod ?? self.liveActivityGracePeriod,
             liveActivityShowDetailedProgress: liveActivityShowDetailedProgress ?? self.liveActivityShowDetailedProgress,
@@ -375,15 +375,15 @@ struct CacheConfig: Sendable {
     let analysisCacheTTL: TimeInterval
     let diskCacheEnabled: Bool
 
-    static func defaults(build: BuildConfiguration) -> CacheConfig {
+    static func defaults(build: BuildConfiguration) -> Self {
         if build.isDebug {
-            return CacheConfig(
+            return Self(
                 memoryCacheMaxSize: 100,
                 analysisCacheTTL: 43_200.0, // 12h
                 diskCacheEnabled: true
             )
         } else {
-            return CacheConfig(
+            return Self(
                 memoryCacheMaxSize: 50,
                 analysisCacheTTL: 86_400.0, // 24h
                 diskCacheEnabled: true
@@ -391,7 +391,7 @@ struct CacheConfig: Sendable {
         }
     }
 
-    func withOverrides(env: [String: String]) -> CacheConfig {
+    func withOverrides(env: [String: String]) -> Self {
         var c = self
         if let s = env["SONORA_MEMORY_CACHE_SIZE"], let v = Int(s) { c = c.copy(memoryCacheMaxSize: max(1, v)); print("🔧 AppConfiguration: Memory cache size overridden to \(max(1, v))") }
         if let s = env["SONORA_CACHE_TTL"], let v = TimeInterval(s) { c = c.copy(analysisCacheTTL: max(60.0, v)); print("🔧 AppConfiguration: Cache TTL overridden to \(max(60.0, v))s") }
@@ -403,8 +403,8 @@ struct CacheConfig: Sendable {
         memoryCacheMaxSize: Int? = nil,
         analysisCacheTTL: TimeInterval? = nil,
         diskCacheEnabled: Bool? = nil
-    ) -> CacheConfig {
-        CacheConfig(
+    ) -> Self {
+        Self(
             memoryCacheMaxSize: memoryCacheMaxSize ?? self.memoryCacheMaxSize,
             analysisCacheTTL: analysisCacheTTL ?? self.analysisCacheTTL,
             diskCacheEnabled: diskCacheEnabled ?? self.diskCacheEnabled
@@ -417,22 +417,21 @@ struct PromptsConfig: Sendable {
     let promptCooldownMinutes: Int
     let promptMinVarietyTarget: Int
 
-    static func defaults() -> PromptsConfig {
-        PromptsConfig(promptCooldownMinutes: 3, promptMinVarietyTarget: 10)
+    static func defaults() -> Self {
+        Self(promptCooldownMinutes: 3, promptMinVarietyTarget: 10)
     }
 
-    func withOverrides(env: [String: String]) -> PromptsConfig {
+    func withOverrides(env: [String: String]) -> Self {
         var c = self
         if let s = env["SONORA_PROMPT_COOLDOWN_MINUTES"], let v = Int(s) { c = c.copy(promptCooldownMinutes: max(0, v)); print("🔧 AppConfiguration: Prompt cooldown overridden to \(max(0, v)) min") }
         if let s = env["SONORA_PROMPT_MIN_VARIETY"], let v = Int(s) { c = c.copy(promptMinVarietyTarget: max(1, v)); print("🔧 AppConfiguration: Prompt min variety target overridden to \(max(1, v))") }
         return c
     }
 
-    private func copy(promptCooldownMinutes: Int? = nil, promptMinVarietyTarget: Int? = nil) -> PromptsConfig {
-        PromptsConfig(
+    private func copy(promptCooldownMinutes: Int? = nil, promptMinVarietyTarget: Int? = nil) -> Self {
+        Self(
             promptCooldownMinutes: promptCooldownMinutes ?? self.promptCooldownMinutes,
             promptMinVarietyTarget: promptMinVarietyTarget ?? self.promptMinVarietyTarget
         )
     }
 }
-

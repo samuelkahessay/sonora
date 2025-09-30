@@ -23,4 +23,3 @@ internal struct DistillSummarySectionView: View {
         }
     }
 }
-

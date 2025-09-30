@@ -31,4 +31,3 @@ internal struct SummaryPlaceholderView: View {
         .frame(minHeight: 130)
     }
 }
-

@@ -178,15 +178,15 @@ final class DIContainer: ObservableObject, Resolver {
 
         // Register BackgroundAudioService with orchestrated services
         register(BackgroundAudioService.self) { resolver in
-            let sessionService = (resolver as? DIContainer)?.requireResolve(AudioSessionService.self, "AudioSessionService")
+            let sessionService = (resolver as? Self)?.requireResolve(AudioSessionService.self, "AudioSessionService")
                 ?? { fatalError("DIContainer: resolver not DIContainer") }()
-            let recordingService = (resolver as? DIContainer)?.requireResolve(AudioRecordingService.self, "AudioRecordingService")
+            let recordingService = (resolver as? Self)?.requireResolve(AudioRecordingService.self, "AudioRecordingService")
                 ?? { fatalError("DIContainer: resolver not DIContainer") }()
-            let backgroundTaskService = (resolver as? DIContainer)?.requireResolve(BackgroundTaskService.self, "BackgroundTaskService")
+            let backgroundTaskService = (resolver as? Self)?.requireResolve(BackgroundTaskService.self, "BackgroundTaskService")
                 ?? { fatalError("DIContainer: resolver not DIContainer") }()
-            let permissionService = (resolver as? DIContainer)?.requireResolve(AudioPermissionService.self, "AudioPermissionService")
+            let permissionService = (resolver as? Self)?.requireResolve(AudioPermissionService.self, "AudioPermissionService")
                 ?? { fatalError("DIContainer: resolver not DIContainer") }()
-            let timerService = (resolver as? DIContainer)?.requireResolve(RecordingTimerService.self, "RecordingTimerService")
+            let timerService = (resolver as? Self)?.requireResolve(RecordingTimerService.self, "RecordingTimerService")
                 ?? { fatalError("DIContainer: resolver not DIContainer") }()
             return BackgroundAudioService(
                 sessionService: sessionService,
@@ -204,7 +204,7 @@ final class DIContainer: ObservableObject, Resolver {
 
         // Register AudioRepository 
         register((any AudioRepository).self) { resolver in
-            let backgroundService = (resolver as? DIContainer)?.requireResolve(BackgroundAudioService.self, "BackgroundAudioService")
+            let backgroundService = (resolver as? Self)?.requireResolve(BackgroundAudioService.self, "BackgroundAudioService")
                 ?? { fatalError("DIContainer: resolver not DIContainer") }()
             return AudioRepositoryImpl(backgroundAudioService: backgroundService) as any AudioRepository
         }

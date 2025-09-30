@@ -33,4 +33,3 @@ extension MemoDetailViewModel {
         if let memo = currentMemo { languageBannerDismissedForMemo[memo.id] = true }
     }
 }
-

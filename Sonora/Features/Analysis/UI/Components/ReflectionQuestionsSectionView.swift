@@ -47,4 +47,3 @@ internal struct ReflectionQuestionsSectionView: View {
         }
     }
 }
-
