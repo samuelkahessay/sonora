@@ -50,14 +50,9 @@ extension MemoDetailViewModel {
         set { state.analysis.selectedMode = newValue }
     }
 
-    var analysisResult: Any? {
-        get { state.analysis.result }
-        set { state.analysis.result = newValue }
-    }
-
-    var analysisEnvelope: Any? {
-        get { state.analysis.envelope }
-        set { state.analysis.envelope = newValue }
+    var analysisPayload: AnalysisResultPayload? {
+        get { state.analysis.payload }
+        set { state.analysis.payload = newValue }
     }
 
     var isAnalyzing: Bool {
@@ -207,4 +202,3 @@ extension MemoDetailViewModel {
         set { state.ui.didDeleteMemo = newValue }
     }
 }
-

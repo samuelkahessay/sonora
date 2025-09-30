@@ -8,7 +8,7 @@ struct AnalysisSectionView: View {
     @State private var loaderMessageIndex = -1
 
     var body: some View {
-        let isDistillCompleted = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
+        let isDistillCompleted = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisPayload != nil)
         let showDebugBorders = LayoutDebug.distillButton
         VStack(alignment: .leading, spacing: 16) {
             // Analysis error banner at top with retry
@@ -39,7 +39,7 @@ struct AnalysisSectionView: View {
                 .padding(.bottom, 8)
             } else {
                 let hasCached = viewModel.hasCachedDistill
-                let hasShown = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
+                let hasShown = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisPayload != nil)
                 let isAnalyzing = viewModel.isAnalyzing
 
                 DistillCTAButton(
@@ -99,12 +99,9 @@ struct AnalysisSectionView: View {
                                 .transition(.opacity)
                                 .animation(.easeIn(duration: 0.3), value: progress.completedComponents)
                         }
-                    } else if let result = viewModel.analysisResult,
-                              let envelope = viewModel.analysisEnvelope {
+                    } else if let payload = viewModel.analysisPayload {
                         AnalysisResultsView(
-                            mode: mode,
-                            result: result,
-                            envelope: envelope,
+                            payload: payload,
                             memoId: viewModel.memoId
                         )
 

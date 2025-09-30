@@ -64,9 +64,8 @@ struct MemoDetailViewState: Equatable {
     /// Analysis processing state
     struct AnalysisState: Equatable {
         var selectedMode: AnalysisMode?
-        // Store analysis payloads that are not Hashable (e.g., DistillData, AnalyzeEnvelope<...>)
-        var result: Any?
-        var envelope: Any?
+        // Typed payload replacing Any-based result/envelope
+        var payload: AnalysisResultPayload?
         var isAnalyzing: Bool = false
         var error: String?
         var cacheStatus: String?
@@ -77,7 +76,7 @@ struct MemoDetailViewState: Equatable {
         var distillProgress: DistillProgressUpdate?
         var partialDistillData: PartialDistillData?
 
-        // Custom Equatable: intentionally ignore `result` and `envelope`
+        // Custom Equatable: intentionally ignore `payload`
         static func == (lhs: Self, rhs: Self) -> Bool {
             lhs.selectedMode == rhs.selectedMode
             && lhs.isAnalyzing == rhs.isAnalyzing
@@ -154,7 +153,7 @@ struct MemoDetailViewState: Equatable {
 
     /// Whether any analysis has been completed
     var hasAnalysisAvailable: Bool {
-        analysis.result != nil
+        analysis.payload != nil
     }
 
     /// Whether there are any active operations

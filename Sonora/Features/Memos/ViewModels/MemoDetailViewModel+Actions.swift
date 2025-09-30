@@ -103,8 +103,7 @@ extension MemoDetailViewModel {
         isAnalyzing = true
         analysisError = nil
         selectedAnalysisMode = mode
-        analysisResult = nil
-        analysisEnvelope = nil
+        analysisPayload = nil
         analysisCacheStatus = "Checking cache..."
         analysisPerformanceInfo = nil
 
@@ -124,8 +123,7 @@ extension MemoDetailViewModel {
                 case .analysis:
                     let envelope = try await analyzeContentUseCase.execute(transcript: transcript, memoId: memo.id)
                     await MainActor.run {
-                        analysisResult = envelope.data
-                        analysisEnvelope = envelope
+                        analysisPayload = .analysis(envelope.data, envelope)
                         isAnalyzing = false
                         print("📝 MemoDetailViewModel: Analysis completed (cached: \(envelope.latency_ms < 1_000))")
                     }
@@ -133,8 +131,7 @@ extension MemoDetailViewModel {
                 case .themes:
                     let envelope = try await analyzeThemesUseCase.execute(transcript: transcript, memoId: memo.id)
                     await MainActor.run {
-                        analysisResult = envelope.data
-                        analysisEnvelope = envelope
+                        analysisPayload = .themes(envelope.data, envelope)
                         isAnalyzing = false
                         print("📝 MemoDetailViewModel: Themes analysis completed (cached: \(envelope.latency_ms < 1_000))")
                     }
@@ -142,8 +139,7 @@ extension MemoDetailViewModel {
                 case .todos:
                     let envelope = try await analyzeTodosUseCase.execute(transcript: transcript, memoId: memo.id)
                     await MainActor.run {
-                        analysisResult = envelope.data
-                        analysisEnvelope = envelope
+                        analysisPayload = .todos(envelope.data, envelope)
                         isAnalyzing = false
                         print("📝 MemoDetailViewModel: Todos analysis completed (cached: \(envelope.latency_ms < 1_000))")
                     }
@@ -152,8 +148,7 @@ extension MemoDetailViewModel {
                     let detection = try await DIContainer.shared.detectEventsAndRemindersUseCase().execute(transcript: transcript, memoId: memo.id)
                     await MainActor.run {
                         let data = detection.events ?? EventsData(events: [])
-                        analysisResult = data
-                        analysisEnvelope = nil
+                        analysisPayload = .events(data)
                         isAnalyzing = false
                         print("📝 MemoDetailViewModel: Events detection completed")
                     }
@@ -162,8 +157,7 @@ extension MemoDetailViewModel {
                     let detection = try await DIContainer.shared.detectEventsAndRemindersUseCase().execute(transcript: transcript, memoId: memo.id)
                     await MainActor.run {
                         let data = detection.reminders ?? RemindersData(reminders: [])
-                        analysisResult = data
-                        analysisEnvelope = nil
+                        analysisPayload = .reminders(data)
                         isAnalyzing = false
                         print("📝 MemoDetailViewModel: Reminders detection completed")
                     }
@@ -197,4 +191,3 @@ extension MemoDetailViewModel {
         }
     }
 }
-

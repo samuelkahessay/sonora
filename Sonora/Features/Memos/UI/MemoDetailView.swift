@@ -163,7 +163,7 @@ struct MemoDetailView: View {
                 }
             }
         }
-        .onChange(of: viewModel.analysisResult != nil) { _, hasResult in
+        .onChange(of: viewModel.analysisPayload != nil) { _, hasResult in
             if hasResult {
                 HapticManager.shared.playProcessingComplete()
                 FocusManager.shared.announceAndFocus(

@@ -2,92 +2,56 @@
 import SwiftUI
 
 struct AnalysisResultsView: View {
-    let mode: AnalysisMode
-    let result: Any
-    let envelope: Any
+    let payload: AnalysisResultPayload
     let memoId: UUID?
 
     var body: some View {
         // Avoid nested ScrollViews; parent provides scrolling.
         VStack(alignment: .leading, spacing: 16) {
-                // Header with model info (suppressed for Distill mode)
-                if mode != .distill {
-                    if let env = envelope as? AnalyzeEnvelope<AnalysisData> {
-                        HeaderInfoView(envelope: env)
-                    } else if let env = envelope as? AnalyzeEnvelope<ThemesData> {
-                        HeaderInfoView(envelope: env)
-                    } else if let env = envelope as? AnalyzeEnvelope<TodosData> {
-                        HeaderInfoView(envelope: env)
-                    } else if envelope is AnalyzeEnvelope<DistillData> {
-                        // Keep header hidden for Distill; preserve envelope for performance info inside DistillResultView
-                        EmptyView()
-                    }
-                } else if let env = envelope as? AnalyzeEnvelope<AnalysisData> {
-                    HeaderInfoView(envelope: env)
-                } else if let env = envelope as? AnalyzeEnvelope<ThemesData> {
-                    HeaderInfoView(envelope: env)
-                } else if let env = envelope as? AnalyzeEnvelope<TodosData> {
-                    HeaderInfoView(envelope: env)
-                }
+            // Header with model info (suppressed for Distill and data-only detections)
+            switch payload {
+            case .analysis(_, let env):
+                HeaderInfoView(envelope: env)
+            case .themes(_, let env):
+                HeaderInfoView(envelope: env)
+            case .todos(_, let env):
+                HeaderInfoView(envelope: env)
+            case .distill, .events, .reminders:
+                EmptyView()
+            }
 
-                // Moderation warning if flagged
-                if isModerationFlagged(envelope) {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.semantic(.warning))
-                        Text("This AI-generated analysis may contain sensitive or harmful content.")
-                            .font(.caption)
-                            .foregroundColor(.semantic(.textSecondary))
-                    }
-                    .padding(8)
-                    .background(Color.semantic(.warning).opacity(0.08))
-                    .cornerRadius(8)
+            // Moderation warning if flagged
+            if payload.isModerationFlagged {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.semantic(.warning))
+                    Text("This AI-generated analysis may contain sensitive or harmful content.")
+                        .font(.caption)
+                        .foregroundColor(.semantic(.textSecondary))
                 }
+                .padding(8)
+                .background(Color.semantic(.warning).opacity(0.08))
+                .cornerRadius(8)
+            }
 
-                // Mode-specific content
-                switch mode {
-                case .distill:
-                    if let data = result as? DistillData,
-                       let env = envelope as? AnalyzeEnvelope<DistillData> {
-                        DistillResultView(data: data, envelope: env, memoId: memoId)
-                    }
-                // Distill component modes (used internally for parallel processing)
-                case .distillSummary, .distillActions, .distillThemes, .distillReflection:
-                    // These modes are handled internally and shouldn't appear in the UI
-                    EmptyView()
-                case .analysis:
-                    if let data = result as? AnalysisData {
-                        AnalysisResultView(data: data)
-                    }
-                case .themes:
-                    if let data = result as? ThemesData {
-                        ThemesResultView(data: data)
-                    }
-                case .todos:
-                    if let data = result as? TodosData {
-                        TodosResultView(data: data)
-                    }
-                case .events:
-                    if let data = result as? EventsData {
-                        EventsResultView(data: data)
-                    }
-                case .reminders:
-                    if let data = result as? RemindersData {
-                        RemindersResultView(data: data)
-                    }
-                }
+            // Mode-specific content
+            switch payload {
+            case .distill(let data, let env):
+                DistillResultView(data: data, envelope: env, memoId: memoId)
+            case .analysis(let data, _):
+                AnalysisResultView(data: data)
+            case .themes(let data, _):
+                ThemesResultView(data: data)
+            case .todos(let data, _):
+                TodosResultView(data: data)
+            case .events(let data):
+                EventsResultView(data: data)
+            case .reminders(let data):
+                RemindersResultView(data: data)
+            }
         }
         .padding()
     }
-
-    private func isModerationFlagged(_ anyEnvelope: Any) -> Bool {
-        if let e = anyEnvelope as? AnalyzeEnvelope<DistillData> { return e.moderation?.flagged ?? false }
-        if let e = anyEnvelope as? AnalyzeEnvelope<AnalysisData> { return e.moderation?.flagged ?? false }
-        if let e = anyEnvelope as? AnalyzeEnvelope<ThemesData> { return e.moderation?.flagged ?? false }
-        if let e = anyEnvelope as? AnalyzeEnvelope<TodosData> { return e.moderation?.flagged ?? false }
-        return false
-    }
-
 }
 
 struct HeaderInfoView<T: Codable & Sendable>: View {

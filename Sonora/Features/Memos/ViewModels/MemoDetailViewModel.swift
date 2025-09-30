@@ -300,8 +300,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                     let duration = CFAbsoluteTimeGetCurrent() - startTime
 
                     await MainActor.run {
-                        analysisResult = envelope.data
-                        analysisEnvelope = envelope
+                        analysisPayload = .distill(envelope.data, envelope)
                         isAnalyzing = false
 
                         let wasCached = duration < 1.0
@@ -357,8 +356,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             let duration = CFAbsoluteTimeGetCurrent() - startTime
 
             await MainActor.run {
-                analysisResult = envelope.data
-                analysisEnvelope = envelope
+                analysisPayload = .distill(envelope.data, envelope)
                 isAnalyzing = false
 
                 // Determine cache status based on response time and latency
@@ -426,12 +424,11 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         }
 
         // If we are (or defaulted to) Distill and no result is currently in memory, restore from cache if available
-        if selectedAnalysisMode == .distill, analysisResult == nil {
+        if selectedAnalysisMode == .distill, analysisPayload == nil {
             if let env: AnalyzeEnvelope<DistillData> = DIContainer.shared
                 .analysisRepository()
                 .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
-                analysisResult = env.data
-                analysisEnvelope = env
+                analysisPayload = .distill(env.data, env)
                 isAnalyzing = false
                 analysisCacheStatus = "✅ Restored from cache"
                 analysisPerformanceInfo = "Restored on appear"
@@ -442,12 +439,11 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         /// Restore analysis UI state when returning from background or view re-appear
     func restoreAnalysisStateIfNeeded() {
         guard let memo = currentMemo else { return }
-        if selectedAnalysisMode == .distill, analysisResult == nil {
+        if selectedAnalysisMode == .distill, analysisPayload == nil {
             if let env: AnalyzeEnvelope<DistillData> = DIContainer.shared
                 .analysisRepository()
                 .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
-                analysisResult = env.data
-                analysisEnvelope = env
+                analysisPayload = .distill(env.data, env)
                 isAnalyzing = false
                 analysisCacheStatus = "✅ Restored from cache"
                 analysisPerformanceInfo = "Restored on return"
@@ -672,8 +668,7 @@ extension MemoDetailViewModel {
             .analysisRepository()
             .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
             selectedAnalysisMode = .distill
-            analysisResult = env.data
-            analysisEnvelope = env
+            analysisPayload = .distill(env.data, env)
             isAnalyzing = false
             analysisCacheStatus = "✅ Restored from cache"
             analysisPerformanceInfo = "Restored on demand"
