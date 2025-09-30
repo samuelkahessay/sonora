@@ -41,7 +41,7 @@ final class AudioChunkManager: @unchecked Sendable {
         self.chunkRoot = documents.appendingPathComponent("temp/chunks", isDirectory: true)
     }
 
-    /// Create audio chunks for the given segments. Exports sequentially to limit resource usage.
+    /// Create audio chunks for the given segments. Exports in parallel to maximize throughput.
     @discardableResult
     func createChunks(from audioURL: URL, segments: [VoiceSegment]) async throws -> [ChunkFile] {
         guard !segments.isEmpty else { return [] }
@@ -56,8 +56,21 @@ final class AudioChunkManager: @unchecked Sendable {
         let assetDurationTime = try await asset.load(.duration)
         let assetDuration = CMTimeGetSeconds(assetDurationTime)
 
-        var out: [ChunkFile] = []
-        out.reserveCapacity(segments.count)
+        // Configuration for parallel export
+        let maxConcurrentExports = 4 // Balance between throughput and I/O contention
+
+        // Pre-validate all segments and prepare export tasks
+        struct ExportTask: Sendable {
+            let index: Int
+            let segment: VoiceSegment
+            let start: TimeInterval
+            let end: TimeInterval
+            let duration: TimeInterval
+            let target: URL
+        }
+
+        var exportTasks: [ExportTask] = []
+        exportTasks.reserveCapacity(segments.count)
 
         for (index, seg) in segments.enumerated() {
             // Clamp to asset duration and validate
@@ -73,18 +86,56 @@ final class AudioChunkManager: @unchecked Sendable {
             // Remove any existing file
             try? fileManager.removeItem(at: target)
 
-            // Export sequentially (await)
-            do {
-                let exported = try await export(asset: asset, start: start, end: end, to: target)
-                out.append(ChunkFile(url: exported, segment: seg, duration: duration))
-            } catch {
-                // On failure, stop and clean created chunks
-                await cleanupChunks(out)
-                throw error
-            }
+            exportTasks.append(ExportTask(index: index, segment: seg, start: start, end: end, duration: duration, target: target))
         }
 
-        return out
+        // Export chunks in parallel with concurrency limit
+        var resultsByIndex: [Int: ChunkFile] = [:]
+
+        do {
+            try await withThrowingTaskGroup(of: (Int, ChunkFile).self) { group in
+                var startIndex = 0
+
+                // Add initial batch of export tasks (up to maxConcurrent)
+                for task in exportTasks.prefix(maxConcurrentExports) {
+                    group.addTask { [asset] in
+                        let exported = try await self.export(asset: asset, start: task.start, end: task.end, to: task.target)
+                        return (task.index, ChunkFile(url: exported, segment: task.segment, duration: task.duration))
+                    }
+                    startIndex += 1
+                }
+
+                // As tasks complete, add new ones to maintain concurrency limit
+                while let (index, chunkFile) = try await group.next() {
+                    resultsByIndex[index] = chunkFile
+
+                    // Add next export task if any remain
+                    if startIndex < exportTasks.count {
+                        let nextTask = exportTasks[startIndex]
+                        group.addTask { [asset] in
+                            let exported = try await self.export(asset: asset, start: nextTask.start, end: nextTask.end, to: nextTask.target)
+                            return (nextTask.index, ChunkFile(url: exported, segment: nextTask.segment, duration: nextTask.duration))
+                        }
+                        startIndex += 1
+                    }
+                }
+            }
+        } catch {
+            // On failure, clean up any successfully created chunks
+            let createdChunks = resultsByIndex.values.map { $0 }
+            await cleanupChunks(createdChunks)
+            throw error
+        }
+
+        // Reconstruct results in original segment order
+        let orderedChunks = exportTasks.compactMap { resultsByIndex[$0.index] }
+        guard orderedChunks.count == exportTasks.count else {
+            // This should never happen, but safety check
+            await cleanupChunks(Array(resultsByIndex.values))
+            throw AudioChunkError.exportFailed("Failed to export all chunks")
+        }
+
+        return orderedChunks
     }
 
     /// Remove the given chunk files from disk; best-effort.
