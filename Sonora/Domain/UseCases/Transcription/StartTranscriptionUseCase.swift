@@ -4,7 +4,7 @@ import AVFoundation
 // Language fallback configuration
 struct LanguageFallbackConfig {
     let confidenceThreshold: Double
-    init(confidenceThreshold: Double = 0.7) {
+    init(confidenceThreshold: Double = 0.5) {
         self.confidenceThreshold = max(0.0, min(1.0, confidenceThreshold))
     }
 }
@@ -496,6 +496,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
         // Configuration for parallel transcription
         let maxConcurrentTranscriptions = 3 // Limit concurrent API requests to avoid overwhelming server
+        let transcriptionAPI = self.transcriptionAPI
+        let logger = self.logger
 
         // Use dictionary to preserve ordering (index -> result)
         var resultsByIndex: [Int: ChunkTranscriptionResult] = [:]
@@ -505,8 +507,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         // Create indexed chunks for proper ordering
         let indexedChunks = chunks.enumerated().map { ($0.offset, $0.element) }
 
-        // Helper to transcribe a single chunk (isolated to handle MainActor requirements)
-        @MainActor
+        // Helper to transcribe a single chunk with preserved ordering information
         func transcribeSingleChunk(chunk: ChunkFile, index: Int, language: String?) async -> (Int, ChunkTranscriptionResult) {
             do {
                 let response = try await transcriptionAPI.transcribe(url: chunk.url, language: language)

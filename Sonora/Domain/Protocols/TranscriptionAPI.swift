@@ -2,8 +2,7 @@ import Foundation
 
 /// Protocol for transcription services that handle audio-to-text conversion
 /// Provides a clean abstraction for the core transcription functionality
-@MainActor
-protocol TranscriptionAPI {
+protocol TranscriptionAPI: Sendable {
     /// Transcribes audio content from the given URL to text
     /// - Parameter url: The URL of the audio file to transcribe
     /// - Returns: The transcribed text as a string

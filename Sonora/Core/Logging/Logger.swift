@@ -111,7 +111,7 @@ public struct LogContext: @unchecked Sendable {
 }
 
 /// Protocol for dependency injection and testability
-public protocol LoggerProtocol {
+public protocol LoggerProtocol: Sendable {
     func log(
         level: LogLevel,
         category: LogCategory,

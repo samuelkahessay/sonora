@@ -5,8 +5,7 @@ struct CurrentTranscriptionContext {
     static var memoId: UUID?
 }
 
-@MainActor
-final class ReportingTranscriptionService: TranscriptionAPI {
+final class ReportingTranscriptionService: TranscriptionAPI, @unchecked Sendable {
     private let base: any TranscriptionAPI
     private let source: TranscriptionServiceType
     private let repo: any TranscriptionRepository
@@ -32,11 +31,14 @@ final class ReportingTranscriptionService: TranscriptionAPI {
     // Consolidated surface: callers perform chunking and call transcribe(url:language:) per chunk.
 
     private func saveSource() async {
-        guard let memoId = CurrentTranscriptionContext.memoId else { return }
-        
-        var meta = repo.getTranscriptionMetadata(for: memoId) ?? TranscriptionMetadata()
-        meta.transcriptionService = source
-        meta.timestamp = Date()
-        repo.saveTranscriptionMetadata(meta, for: memoId)
+        let memoId = await MainActor.run { CurrentTranscriptionContext.memoId }
+        guard let memoId else { return }
+
+        await MainActor.run {
+            var meta = repo.getTranscriptionMetadata(for: memoId) ?? TranscriptionMetadata()
+            meta.transcriptionService = source
+            meta.timestamp = Date()
+            repo.saveTranscriptionMetadata(meta, for: memoId)
+        }
     }
 }

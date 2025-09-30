@@ -1,8 +1,7 @@
 import Foundation
 import AVFoundation
 
-@MainActor
-final class TranscriptionService: TranscriptionAPI {
+final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
     private let config = AppConfiguration.shared
     private let logger: any LoggerProtocol = Logger.shared
     
@@ -73,26 +72,29 @@ final class TranscriptionService: TranscriptionAPI {
 
     private func sendTranscriptionRequest(url: URL, language: String?) async throws -> TranscriptionResponse {
         var form = MultipartForm()
-        try form.addFileField(name: "file", filename: url.lastPathComponent, mimeType: mimeType(for: url), fileURL: url)
         if let language, !language.isEmpty { form.addTextField(name: "language", value: language) }
         // Stabilize output; keep in-source language
         form.addTextField(name: "response_format", value: "verbose_json")
         form.addTextField(name: "temperature", value: "0")
         form.addTextField(name: "translate", value: "false")
-        let body = form.finalize()
+        try form.addFileField(name: "file", filename: url.lastPathComponent, mimeType: mimeType(for: url), fileURL: url)
+        let (bodyURL, contentLength) = try form.writeBodyToTemporaryFile()
+        defer { try? FileManager.default.removeItem(at: bodyURL) }
 
         let transcribeURL = config.apiBaseURL.appendingPathComponent("transcribe")
         var req = URLRequest(url: transcribeURL)
         req.httpMethod = "POST"
         req.setValue("multipart/form-data; boundary=\(form.boundary)", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
+        if let contentLength {
+            req.setValue(String(contentLength), forHTTPHeaderField: "Content-Length")
+        }
         req.timeoutInterval = config.transcriptionTimeoutInterval
 
         logger.debug("Using API URL: \(transcribeURL.absoluteString)", category: .network, context: nil)
         logger.debug("Timeout: \(req.timeoutInterval)s", category: .network, context: nil)
         logger.debug("Making request: \(req.url?.absoluteString ?? "unknown")", category: .network, context: nil)
 
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await URLSession.shared.upload(for: req, fromFile: bodyURL)
         guard let http = resp as? HTTPURLResponse else {
             throw APIError(message: "No HTTP response")
         }

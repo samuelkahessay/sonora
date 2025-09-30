@@ -44,7 +44,7 @@ private final class DataExporterStub: DataExporting {
     }
 }
 
-private final class LoggerStub: LoggerProtocol {
+private final class LoggerStub: LoggerProtocol, @unchecked Sendable {
     func log(level: LogLevel, category: LogCategory, message: String, context: LogContext?, error: Error?) {}
     func verbose(_ message: String, category: LogCategory, context: LogContext?) {}
     func debug(_ message: String, category: LogCategory, context: LogContext?) {}
