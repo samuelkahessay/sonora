@@ -127,18 +127,27 @@ struct DistillResultView: View {
             reminderLists: detection.availableReminderLists,
             defaultCalendar: detection.defaultCalendar,
             defaultReminderList: detection.defaultReminderList,
-            onOpenBatch: { selected in
-                let reviewItems = detection.visibleItems
-                detection.batchInclude = selected
-                Task { @MainActor in await openBatchReview(reviewItems) }
-            },
-            onEditToggle: { id in detection.toggleEdit(id) },
-            onAdd: { updated in Task { @MainActor in await addSingle(updated) } },
-            onDismissItem: { id in detection.dismiss(id) },
-            onAddSelected: { selected, calendar, reminderList in
-                Task { @MainActor in await handleBatchAdd(selected: selected, calendar: calendar, reminderList: reminderList) }
-            },
-            onDismissSheet: { }
+            onEvent: { event in
+                switch event {
+                case .item(let itemEvent):
+                    switch itemEvent {
+                    case .editToggle(let id):
+                        detection.toggleEdit(id)
+                    case .add(let item):
+                        Task { @MainActor in await addSingle(item) }
+                    case .dismiss(let id):
+                        detection.dismiss(id)
+                    }
+                case .openBatch(let selected):
+                    detection.batchInclude = selected
+                    let reviewItems = detection.visibleItems
+                    Task { @MainActor in await openBatchReview(reviewItems) }
+                case .addSelected(let items, let calendar, let reminderList):
+                    Task { @MainActor in await handleBatchAdd(selected: items, calendar: calendar, reminderList: reminderList) }
+                case .dismissSheet:
+                    break
+                }
+            }
         )
         .onAppear {
             detection.mergeFrom(events: eventsForUI, reminders: remindersForUI, memoId: memoId)

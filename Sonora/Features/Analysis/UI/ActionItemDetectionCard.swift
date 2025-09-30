@@ -4,23 +4,17 @@ struct ActionItemDetectionCard: View {
     let inputModel: ActionItemDetectionUI
     @State private var model: ActionItemDetectionUI
     let isPro: Bool
-    let onAdd: (ActionItemDetectionUI) -> Void
-    let onEditToggle: (UUID) -> Void
-    let onDismiss: (UUID) -> Void
+    let onEvent: (ActionItemEvent) -> Void
 
     init(
         model: ActionItemDetectionUI,
         isPro: Bool,
-        onAdd: @escaping (ActionItemDetectionUI) -> Void,
-        onEditToggle: @escaping (UUID) -> Void,
-        onDismiss: @escaping (UUID) -> Void
+        onEvent: @escaping (ActionItemEvent) -> Void
     ) {
         self.inputModel = model
         self._model = State(initialValue: model)
         self.isPro = isPro
-        self.onAdd = onAdd
-        self.onEditToggle = onEditToggle
-        self.onDismiss = onDismiss
+        self.onEvent = onEvent
     }
 
     var body: some View {
@@ -38,7 +32,7 @@ struct ActionItemDetectionCard: View {
                 .stroke(model.isEditing ? Color.semantic(.brandPrimary) : Color.clear, lineWidth: 1.5)
         )
         .overlay(alignment: .topTrailing) {
-            Button(action: { onDismiss(model.id) }) {
+            Button(action: { onEvent(.dismiss(id: model.id)) }) {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundColor(.semantic(.textTertiary))
                     .font(.system(size: 16, weight: .semibold))
@@ -86,7 +80,7 @@ struct ActionItemDetectionCard: View {
                 primaryAddButton
             }
 
-            Button(action: { onEditToggle(model.id) }) {
+            Button(action: { onEvent(.editToggle(id: model.id)) }) {
                 Image(systemName: model.isEditing ? "xmark.circle" : "pencil")
             }
             .buttonStyle(.bordered)
@@ -191,7 +185,7 @@ struct ActionItemDetectionCard: View {
 
     @ViewBuilder private var primaryAddButton: some View {
         Button(action: {
-            onAdd(model)
+            onEvent(.add(item: model))
         }, label: {
             if model.isProcessing {
                 HStack(spacing: 8) {

@@ -18,12 +18,8 @@ internal struct ActionItemsHostSectionView: View {
     let defaultCalendar: CalendarDTO?
     let defaultReminderList: CalendarDTO?
 
-    let onOpenBatch: (Set<UUID>) -> Void
-    let onEditToggle: (UUID) -> Void
-    let onAdd: (ActionItemDetectionUI) -> Void
-    let onDismissItem: (UUID) -> Void
-    let onAddSelected: ([ActionItemDetectionUI], CalendarDTO?, CalendarDTO?) -> Void
-    let onDismissSheet: () -> Void
+    // Unified event handler
+    let onEvent: (ActionItemHostEvent) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -69,9 +65,7 @@ internal struct ActionItemsHostSectionView: View {
                         ActionItemDetectionCard(
                             model: m,
                             isPro: isPro,
-                            onAdd: { updated in onAdd(updated) },
-                            onEditToggle: { id in onEditToggle(id) },
-                            onDismiss: { id in onDismissItem(id) }
+                            onEvent: { itemEvent in onEvent(.item(itemEvent)) }
                         )
                     }
                 }
@@ -98,12 +92,12 @@ internal struct ActionItemsHostSectionView: View {
                 reminderLists: reminderLists,
                 defaultCalendar: defaultCalendar,
                 defaultReminderList: defaultReminderList,
-                onEdit: { id in onEditToggle(id) },
+                onEdit: { id in onEvent(.item(.editToggle(id: id))) },
                 onAddSelected: { selected, calendar, reminderList in
                     showBatchSheet = false
-                    onAddSelected(selected, calendar, reminderList)
+                    onEvent(.addSelected(items: selected, calendar: calendar, reminderList: reminderList))
                 },
-                onDismiss: { showBatchSheet = false; onDismissSheet() }
+                onDismiss: { showBatchSheet = false; onEvent(.dismissSheet) }
             )
         }
     }
@@ -119,6 +113,6 @@ internal struct ActionItemsHostSectionView: View {
     private func openBatchReview() {
         let selected = Set(visibleItems.map { $0.id })
         batchInclude = selected
-        onOpenBatch(selected)
+        onEvent(.openBatch(selected: selected))
     }
 }
