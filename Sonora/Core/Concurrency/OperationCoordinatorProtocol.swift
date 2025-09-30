@@ -2,7 +2,8 @@ import Foundation
 
 public protocol OperationCoordinatorProtocol: AnyObject, Sendable {
     // Delegate (set from MainActor only)
-    @MainActor func setStatusDelegate(_ delegate: (any OperationStatusDelegate)?)
+    @MainActor
+    func setStatusDelegate(_ delegate: (any OperationStatusDelegate)?)
 
     // Registration & lifecycle
     func registerOperation(_ operationType: OperationType) async -> UUID?

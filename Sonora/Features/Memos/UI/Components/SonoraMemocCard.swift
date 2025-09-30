@@ -34,7 +34,8 @@ struct SonoraMemocCard: View {
     /// Stacked group corner treatment
     var isFirstInSection: Bool = false
     var isLastInSection: Bool = false
-    @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
+    @SwiftUI.Environment(\.colorScheme)
+    private var colorScheme: ColorScheme
     @State private var insightHintOpacity: Double = 0
     @ObservedObject private var titleCoordinator = DIContainer.shared.titleGenerationCoordinator()
 

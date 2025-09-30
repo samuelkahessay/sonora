@@ -14,7 +14,8 @@ struct DistillResultView: View {
     // Pro gating (Action Items: detection visible to all; adds gated later)
     private var isPro: Bool { DIContainer.shared.storeKitService().isPro }
     @State private var showPaywall: Bool = false
-    @SwiftUI.Environment(\.diContainer) private var container: DIContainer
+    @SwiftUI.Environment(\.diContainer)
+    private var container: DIContainer
 
     // Convenience initializers for backward compatibility
     init(data: DistillData, envelope: AnalyzeEnvelope<DistillData>, memoId: UUID? = nil) {

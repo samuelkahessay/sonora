@@ -372,7 +372,9 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
                 self?.sampleLevel()
             }
         }
-        RunLoop.main.add(levelTimer!, forMode: .common)
+        if let timer = levelTimer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
     }
 
     private func stopLevelMetering() {

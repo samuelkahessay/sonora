@@ -309,9 +309,9 @@ final class TitleGenerationCoordinator: ObservableObject {
 
         if let serviceError = error as? TitleServiceError {
             switch serviceError {
-            case .networking(let urlError):
+            case let .networking(urlError):
                 return urlError.code == .timedOut ? .timeout : .network
-            case .unexpectedStatus(let status, _):
+            case let .unexpectedStatus(status, _):
                 switch status {
                 case 408:
                     return .timeout
@@ -345,7 +345,7 @@ final class TitleGenerationCoordinator: ObservableObject {
     private func failureMessage(from error: Error) -> String {
         if let serviceError = error as? TitleServiceError {
             switch serviceError {
-            case .unexpectedStatus(_, let data):
+            case let .unexpectedStatus(_, data):
                 if let body = String(data: data, encoding: .utf8), !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     return body.trimmingCharacters(in: .whitespacesAndNewlines)
                 }

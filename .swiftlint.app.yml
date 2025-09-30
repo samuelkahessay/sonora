@@ -1,4 +1,13 @@
-disabled_rules: []
+included:
+  - Sonora
+  - SonoraLiveActivity
+
+excluded:
+  - DerivedData
+  - .tmp
+  - server
+  - SonoraTests
+  - SonoraUITests
 
 opt_in_rules:
   # Safety & clarity
@@ -34,7 +43,6 @@ opt_in_rules:
   - type_contents_order
   - file_types_order
   - file_name
-  - force_unwrapping
   - sorted_imports
   - strict_fileprivate
   - switch_case_on_newline
@@ -42,7 +50,6 @@ opt_in_rules:
   - unneeded_parentheses_in_closure_argument
   - indentation_width
   - yoda_condition
-  # explicit_self is analyzer-only in this SwiftLint; configured below
 
 analyzer_rules:
   - unused_import
@@ -117,23 +124,8 @@ nesting:
     warning: 3
     error: 5
 
-reporter: "markdown"
-
 indentation_width:
   indentation_width: 4
   include_comments: false
 
-### Use default behavior for the following to avoid invalid config warnings
-# explicit_acl: default
-# file_types_order: default
-# type_contents_order: default
-
-file_name:
-  excluded:
-    - main.swift
-
-excluded:
-  - DerivedData
-  - .tmp
-  - server
-  - Sonora/Generated
+reporter: "markdown"

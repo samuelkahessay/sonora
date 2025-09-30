@@ -124,7 +124,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
 
     /// Creates a copy with a custom title
     public func withCustomTitle(_ title: String?) -> Self {
-        let newShareableFileName = title != nil ? FileNameSanitizer.sanitize(title!) : nil
+        let newShareableFileName = title.flatMap { FileNameSanitizer.sanitize($0) }
         return Self(
             id: id,
             filename: filename,

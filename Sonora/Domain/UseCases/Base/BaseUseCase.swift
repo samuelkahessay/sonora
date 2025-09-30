@@ -116,11 +116,11 @@ public enum ValidationError: LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .emptyField(let field):
+        case let .emptyField(field):
             return "Field '\(field)' cannot be empty"
-        case .invalidUUID(let field):
+        case let .invalidUUID(field):
             return "Field '\(field)' must be a valid UUID"
-        case .fieldTooShort(let field, let minimum, let actual):
+        case let .fieldTooShort(field, minimum: minimum, actual: actual):
             return "Field '\(field)' is too short (minimum: \(minimum), actual: \(actual))"
         }
     }
@@ -132,7 +132,7 @@ public enum UseCaseError: LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .executionFailed(let operation, let underlyingError):
+        case let .executionFailed(operation: operation, underlyingError: underlyingError):
             return "Operation '\(operation)' failed: \(underlyingError.localizedDescription)"
         }
     }

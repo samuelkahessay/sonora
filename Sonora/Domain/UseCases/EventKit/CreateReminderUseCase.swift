@@ -196,14 +196,14 @@ final class CreateReminderUseCase: CreateReminderUseCaseProtocol, @unchecked Sen
         // Validate due date if provided
         if let dueDate = reminder.dueDate {
             // Check if due date is too far in the past
-            let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date())!
-            guard dueDate >= oneWeekAgo else {
+            guard let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()),
+                  dueDate >= oneWeekAgo else {
                 throw EventKitError.invalidEventData(field: "due date is too far in the past")
             }
 
             // Check if due date is too far in the future
-            let fiveYearsFromNow = Calendar.current.date(byAdding: .year, value: 5, to: Date())!
-            guard dueDate <= fiveYearsFromNow else {
+            guard let fiveYearsFromNow = Calendar.current.date(byAdding: .year, value: 5, to: Date()),
+                  dueDate <= fiveYearsFromNow else {
                 throw EventKitError.invalidEventData(field: "due date is too far in the future")
             }
         }

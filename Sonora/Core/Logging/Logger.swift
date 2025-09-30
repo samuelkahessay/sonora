@@ -394,10 +394,10 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
             case .osLog:
                 os_log("%{public}@", log: osLog, type: level.osLogType, message)
 
-            case .file(let url):
+            case let .file(url):
                 writeToFile(message, url: url)
 
-            case .remote(let url):
+            case let .remote(url):
                 sendToRemoteService(message, url: url, level: level, category: category)
             }
         }

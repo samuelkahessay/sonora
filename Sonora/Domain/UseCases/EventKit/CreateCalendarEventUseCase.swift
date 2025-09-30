@@ -227,14 +227,14 @@ final class CreateCalendarEventUseCase: CreateCalendarEventUseCaseProtocol, @unc
             }
 
             // Check if dates are too far in the past
-            let oneYearAgo = Calendar.current.date(byAdding: .year, value: -1, to: Date())!
-            guard startDate >= oneYearAgo else {
+            guard let oneYearAgo = Calendar.current.date(byAdding: .year, value: -1, to: Date()),
+                  startDate >= oneYearAgo else {
                 throw EventKitError.invalidEventData(field: "start date is too far in the past")
             }
 
             // Check if dates are too far in the future (EventKit has limits)
-            let tenYearsFromNow = Calendar.current.date(byAdding: .year, value: 10, to: Date())!
-            guard startDate <= tenYearsFromNow else {
+            guard let tenYearsFromNow = Calendar.current.date(byAdding: .year, value: 10, to: Date()),
+                  startDate <= tenYearsFromNow else {
                 throw EventKitError.invalidEventData(field: "start date is too far in the future")
             }
         }

@@ -29,8 +29,8 @@ final class PromptViewModel: ObservableObject {
         // Preserve current prompt across tab switches; only load if empty
         if currentPrompt == nil {
             refresh()
-        } else {
-            state = .ready(current: currentPrompt!)
+        } else if let prompt = currentPrompt {
+            state = .ready(current: prompt)
         }
     }
 

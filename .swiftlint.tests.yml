@@ -1,13 +1,13 @@
-disabled_rules: []
+included:
+  - SonoraTests
+  - SonoraUITests
+
+excluded:
+  - DerivedData
+  - .tmp
+  - server
 
 opt_in_rules:
-  # Safety & clarity
-  - explicit_acl
-  - explicit_top_level_acl
-  - implicit_optional_initialization
-  - weak_delegate
-  - fatal_error_message
-  # Styles that reduce diff noise and aid reviews
   - attributes
   - closure_end_indentation
   - closure_spacing
@@ -34,7 +34,6 @@ opt_in_rules:
   - type_contents_order
   - file_types_order
   - file_name
-  - force_unwrapping
   - sorted_imports
   - strict_fileprivate
   - switch_case_on_newline
@@ -42,13 +41,13 @@ opt_in_rules:
   - unneeded_parentheses_in_closure_argument
   - indentation_width
   - yoda_condition
-  # explicit_self is analyzer-only in this SwiftLint; configured below
+
+# Tests: relax ACL pressure
+disabled_rules:
+  - explicit_top_level_acl
 
 analyzer_rules:
   - unused_import
-  - explicit_self
-  - unused_declaration
-  - capture_variable
 
 force_cast:
   severity: error
@@ -57,83 +56,34 @@ force_try:
   severity: error
 
 force_unwrapping:
-  severity: error
-
-identifier_name:
-  allowed_symbols: "_"
-  min_length:
-    warning: 2
-    error: 1
-  excluded:
-    - id
-    - URL
-    - url
-    - x
-    - y
-    - dx
-    - dy
-    - i
-    - j
-    - k
-    - v
-    - d
-    - p
-    - r
-    - e
-    - h
-    - m
-    - s
-    - t
-    - to
-    - up
-    - on
+  severity: warning
 
 type_body_length:
-  warning: 350
-  error: 800
+  warning: 600
+  error: 1200
 
 file_length:
-  warning: 800
-  error: 1300
+  warning: 1200
+  error: 2000
 
 line_length:
-  warning: 120
-  error: 200
+  warning: 140
+  error: 240
   ignores_comments: true
   ignores_function_declarations: true
   ignores_interpolated_strings: true
   ignores_urls: true
 
 cyclomatic_complexity:
-  warning: 10
-  error: 20
+  warning: 14
+  error: 28
 
 function_body_length:
-  warning: 60
-  error: 160
-
-nesting:
-  type_level:
-    warning: 3
-    error: 5
-
-reporter: "markdown"
+  warning: 120
+  error: 240
 
 indentation_width:
   indentation_width: 4
   include_comments: false
 
-### Use default behavior for the following to avoid invalid config warnings
-# explicit_acl: default
-# file_types_order: default
-# type_contents_order: default
-
-file_name:
-  excluded:
-    - main.swift
-
-excluded:
-  - DerivedData
-  - .tmp
-  - server
-  - Sonora/Generated
+reporter: "markdown"

@@ -74,6 +74,12 @@ final class DIContainer: ObservableObject, Resolver {
     private let serviceCleanupInterval: TimeInterval = 300 // 5 minutes
     private var lastCleanupTime = Date()
 
+    // MARK: - Helpers
+    private func requireResolve<T>(_ type: T.Type, _ name: String) -> T {
+        guard let value = resolve(type) else { fatalError("DIContainer resolve failed: \(name)") }
+        return value
+    }
+
     // MARK: - Initialization
     private init() {
         // Services will be injected after initialization
@@ -172,11 +178,16 @@ final class DIContainer: ObservableObject, Resolver {
 
         // Register BackgroundAudioService with orchestrated services
         register(BackgroundAudioService.self) { resolver in
-            let sessionService = resolver.resolve(AudioSessionService.self)!
-            let recordingService = resolver.resolve(AudioRecordingService.self)!
-            let backgroundTaskService = resolver.resolve(BackgroundTaskService.self)!
-            let permissionService = resolver.resolve(AudioPermissionService.self)!
-            let timerService = resolver.resolve(RecordingTimerService.self)!
+            let sessionService = (resolver as? DIContainer)?.requireResolve(AudioSessionService.self, "AudioSessionService")
+                ?? { fatalError("DIContainer: resolver not DIContainer") }()
+            let recordingService = (resolver as? DIContainer)?.requireResolve(AudioRecordingService.self, "AudioRecordingService")
+                ?? { fatalError("DIContainer: resolver not DIContainer") }()
+            let backgroundTaskService = (resolver as? DIContainer)?.requireResolve(BackgroundTaskService.self, "BackgroundTaskService")
+                ?? { fatalError("DIContainer: resolver not DIContainer") }()
+            let permissionService = (resolver as? DIContainer)?.requireResolve(AudioPermissionService.self, "AudioPermissionService")
+                ?? { fatalError("DIContainer: resolver not DIContainer") }()
+            let timerService = (resolver as? DIContainer)?.requireResolve(RecordingTimerService.self, "RecordingTimerService")
+                ?? { fatalError("DIContainer: resolver not DIContainer") }()
             return BackgroundAudioService(
                 sessionService: sessionService,
                 recordingService: recordingService,
@@ -193,7 +204,8 @@ final class DIContainer: ObservableObject, Resolver {
 
         // Register AudioRepository 
         register((any AudioRepository).self) { resolver in
-            let backgroundService = resolver.resolve(BackgroundAudioService.self)!
+            let backgroundService = (resolver as? DIContainer)?.requireResolve(BackgroundAudioService.self, "BackgroundAudioService")
+                ?? { fatalError("DIContainer: resolver not DIContainer") }()
             return AudioRepositoryImpl(backgroundAudioService: backgroundService) as any AudioRepository
         }
 
@@ -254,9 +266,15 @@ final class DIContainer: ObservableObject, Resolver {
 
         // Initialize services from registrations
         // initialize DI-managed services
-        self._audioRepository = resolve((any AudioRepository).self)!
-        self._systemNavigator = resolve((any SystemNavigator).self)!
-        self._liveActivityService = resolve((any LiveActivityServiceProtocol).self)!
+        if let repo = resolve((any AudioRepository).self) as (any AudioRepository)? {
+            self._audioRepository = repo
+        } else { fatalError("DIContainer not configured: AudioRepository") }
+        if let nav = resolve((any SystemNavigator).self) as (any SystemNavigator)? {
+            self._systemNavigator = nav
+        } else { fatalError("DIContainer not configured: SystemNavigator") }
+        if let las = resolve((any LiveActivityServiceProtocol).self) as (any LiveActivityServiceProtocol)? {
+            self._liveActivityService = las
+        } else { fatalError("DIContainer not configured: LiveActivityService") }
 
         // Phase 2: Instantiate optimization services (strong references for app lifetime)
         if self._audioQualityManager == nil {
@@ -373,7 +391,8 @@ final class DIContainer: ObservableObject, Resolver {
         if _transcriptExporter == nil {
             _transcriptExporter = TranscriptExportService()
         }
-        return _transcriptExporter!
+        guard let exporter = _transcriptExporter else { fatalError("Failed to init transcriptExporter") }
+        return exporter
     }
 
     /// Get analysis exporter service
@@ -383,7 +402,8 @@ final class DIContainer: ObservableObject, Resolver {
         if _analysisExporter == nil {
             _analysisExporter = AnalysisExportService()
         }
-        return _analysisExporter!
+        guard let exporter = _analysisExporter else { fatalError("Failed to init analysisExporter") }
+        return exporter
     }
 
     // MARK: - Title Service & Use Case
@@ -391,7 +411,8 @@ final class DIContainer: ObservableObject, Resolver {
     func titleService() -> any TitleServiceProtocol {
         ensureConfigured()
         if _titleService == nil { _titleService = TitleService() }
-        return _titleService!
+        guard let svc = _titleService else { fatalError("Failed to init titleService") }
+        return svc
     }
 
     @MainActor
@@ -438,7 +459,8 @@ final class DIContainer: ObservableObject, Resolver {
         if _dataExporter == nil {
             _dataExporter = ZipDataExportService()
         }
-        return _dataExporter!
+        guard let de = _dataExporter else { fatalError("Failed to init dataExporter") }
+        return de
     }
 
     @MainActor
@@ -449,7 +471,8 @@ final class DIContainer: ObservableObject, Resolver {
             let logger = logger()
             _buildExportBundleUseCase = BuildExportBundleUseCase(exporter: exporter, logger: logger)
         }
-        return _buildExportBundleUseCase!
+        guard let useCase = _buildExportBundleUseCase else { fatalError("Failed to init buildExportBundleUseCase") }
+        return useCase
     }
 
     /// Get operation coordinator service
@@ -500,7 +523,8 @@ final class DIContainer: ObservableObject, Resolver {
         if _eventKitRepository == nil {
             _eventKitRepository = EventKitRepositoryImpl(logger: logger())
         }
-        return _eventKitRepository!
+        guard let repo = _eventKitRepository else { fatalError("Failed to init eventKitRepository") }
+        return repo
     }
 
     /// Get EventKit permission service
@@ -510,7 +534,8 @@ final class DIContainer: ObservableObject, Resolver {
         if _eventKitPermissionService == nil {
             _eventKitPermissionService = EventKitPermissionService(logger: logger())
         }
-        return _eventKitPermissionService!
+        guard let svc = _eventKitPermissionService else { fatalError("Failed to init eventKitPermissionService") }
+        return svc
     }
 
     /// Factory: CreateCalendarEventUseCase
@@ -525,7 +550,8 @@ final class DIContainer: ObservableObject, Resolver {
                 eventBus: eventBus()
             )
         }
-        return _createCalendarEventUseCase!
+        guard let uc = _createCalendarEventUseCase else { fatalError("Failed to init createCalendarEventUseCase") }
+        return uc
     }
 
     /// Factory: CreateReminderUseCase
@@ -540,7 +566,8 @@ final class DIContainer: ObservableObject, Resolver {
                 eventBus: eventBus()
             )
         }
-        return _createReminderUseCase!
+        guard let uc = _createReminderUseCase else { fatalError("Failed to init createReminderUseCase") }
+        return uc
     }
 
     /// Factory: DetectEventsAndRemindersUseCase
@@ -556,7 +583,8 @@ final class DIContainer: ObservableObject, Resolver {
                 operationCoordinator: operationCoordinator()
             )
         }
-        return _detectEventsAndRemindersUseCase!
+        guard let uc = _detectEventsAndRemindersUseCase else { fatalError("Failed to init detectEventsAndRemindersUseCase") }
+        return uc
     }
 
     /// Factory: CreateTranscriptShareFileUseCase
@@ -593,21 +621,24 @@ final class DIContainer: ObservableObject, Resolver {
     func dateProvider() -> any DateProvider {
         ensureConfigured()
         if _dateProvider == nil { _dateProvider = resolve((any DateProvider).self) }
-        return _dateProvider!
+        guard let dp = _dateProvider else { fatalError("Failed to resolve dateProvider") }
+        return dp
     }
 
     @MainActor
     func localizationProvider() -> any LocalizationProvider {
         ensureConfigured()
         if _localizationProvider == nil { _localizationProvider = resolve((any LocalizationProvider).self) }
-        return _localizationProvider!
+        guard let lp = _localizationProvider else { fatalError("Failed to resolve localizationProvider") }
+        return lp
     }
 
     @MainActor
     func promptCatalog() -> any PromptCatalog {
         ensureConfigured()
         if _promptCatalog == nil { _promptCatalog = resolve((any PromptCatalog).self) }
-        return _promptCatalog!
+        guard let pc = _promptCatalog else { fatalError("Failed to resolve promptCatalog") }
+        return pc
     }
 
     @MainActor

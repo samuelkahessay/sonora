@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct PrivacyLegalSectionView: View {
-    private let privacyURL = URL(string: "https://samuelkahessay.github.io/sonora/privacy-policy.html")!
-    private let termsURL = URL(string: "https://samuelkahessay.github.io/sonora/terms-of-service.html")!
+    @SwiftUI.Environment(\.openURL) private var openURL
+    private let privacyURLString = "https://samuelkahessay.github.io/sonora/privacy-policy.html"
+    private let termsURLString = "https://samuelkahessay.github.io/sonora/terms-of-service.html"
 
     var body: some View {
         SettingsCard {
@@ -12,14 +13,18 @@ struct PrivacyLegalSectionView: View {
                     .accessibilityAddTraits(.isHeader)
 
                 VStack(spacing: 0) {
-                    Link(destination: privacyURL) {
+                    Button {
+                        if let url = URL(string: privacyURLString) { openURL(url) }
+                    } label: {
                         SettingsRowLink(icon: "hand.raised", title: "Privacy Policy", subtitle: "How we protect your data")
                     }
                     .buttonStyle(.plain)
 
                     Divider().padding(.vertical, 8)
 
-                    Link(destination: termsURL) {
+                    Button {
+                        if let url = URL(string: termsURLString) { openURL(url) }
+                    } label: {
                         SettingsRowLink(icon: "doc.text", title: "Terms of Service", subtitle: "Terms and conditions")
                     }
                     .buttonStyle(.plain)

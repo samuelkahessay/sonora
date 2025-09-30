@@ -76,7 +76,8 @@ final class PaywallViewModel: ObservableObject {
 }
 
 struct PaywallView: View {
-    @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.dismiss)
+    private var dismiss
     @StateObject var viewModel = PaywallViewModel()
 
     var body: some View {

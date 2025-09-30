@@ -2,7 +2,8 @@ import SwiftUI
 
 struct DebugSectionView: View {
     init() {}
-    @SwiftUI.Environment(\.diContainer) private var container: DIContainer
+    @SwiftUI.Environment(\.diContainer)
+    private var container: DIContainer
     @State private var showEventsSheet = false
     @State private var showRemindersSheet = false
     @State private var sampleEvents: [EventsData.DetectedEvent] = []

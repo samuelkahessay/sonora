@@ -9,7 +9,8 @@ import SwiftUI
 
 struct MemosView: View {
     @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createMemoListViewModel()
-    @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
+    @SwiftUI.Environment(\.colorScheme)
+    private var colorScheme: ColorScheme
     let popToRoot: (() -> Void)?
     @Binding var navigationPath: NavigationPath
     @State private var showSettings: Bool = false
@@ -127,7 +128,7 @@ struct MemosView: View {
             // Subscribe to deep link navigation events
             eventSubscriptionId = EventBus.shared.subscribe(to: AppEvent.self) { event in
                 switch event {
-                case .navigateOpenMemoByID(let id):
+                case let .navigateOpenMemoByID(id):
                     if let memo = DIContainer.shared.memoRepository().getMemo(by: id) {
                         navigationPath.append(memo)
                     }
@@ -388,7 +389,8 @@ struct MemoSection {
 struct ContextualSectionHeader: View {
     let period: TimePeriod
     let memoCount: Int
-    @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
+    @SwiftUI.Environment(\.colorScheme)
+    private var colorScheme: ColorScheme
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {

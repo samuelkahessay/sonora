@@ -16,8 +16,10 @@ struct ReminderConfirmationView: View {
         _selectedIds = State(initialValue: initialSelection)
     }
 
-    @SwiftUI.Environment(\.diContainer) private var container: DIContainer
-    @SwiftUI.Environment(\.dismiss) private var dismiss: DismissAction
+    @SwiftUI.Environment(\.diContainer)
+    private var container: DIContainer
+    @SwiftUI.Environment(\.dismiss)
+    private var dismiss: DismissAction
 
     @State private var lists: [CalendarDTO] = []
     @State private var selectedList: CalendarDTO?
@@ -139,7 +141,8 @@ struct ReminderConfirmationView: View {
 
     private func bindingForEditable(id: String) -> Binding<EditableReminder>? {
         guard editable[id] != nil else { return nil }
-        return Binding(get: { editable[id]! }, set: { editable[id] = $0 })
+        return Binding(get: { editable[id] ?? { fatalError("Missing editable reminder for id: \(id)") }() },
+                       set: { editable[id] = $0 })
     }
 
     private func formatDate(_ date: Date) -> String {
@@ -149,7 +152,8 @@ struct ReminderConfirmationView: View {
 
 struct ReminderEditView: View {
     @Binding var reminder: EditableReminder
-    @SwiftUI.Environment(\.dismiss) private var dismiss: DismissAction
+    @SwiftUI.Environment(\.dismiss)
+    private var dismiss: DismissAction
 
     var body: some View {
         NavigationView {

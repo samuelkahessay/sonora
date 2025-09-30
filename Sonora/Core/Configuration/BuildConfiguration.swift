@@ -176,14 +176,12 @@ public final class BuildConfiguration {
     }
 
     /// Device name (user-defined)
-    @MainActor
-    public var deviceName: String {
+    @MainActor public var deviceName: String {
         UIDevice.current.name
     }
 
     /// Device system name
-    @MainActor
-    public var systemName: String {
+    @MainActor public var systemName: String {
         UIDevice.current.systemName
     }
 
@@ -212,7 +210,7 @@ public final class BuildConfiguration {
     /// Code signing identity
     public var codeSigningIdentity: String? {
         // Attempt to read from embedded provisioning profile
-        getProvisioningProfileInfo()!["TeamIdentifier"] as? String
+        getProvisioningProfileInfo()? ["TeamIdentifier"] as? String
     }
 
     /// Whether app is code signed with development certificate

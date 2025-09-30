@@ -27,12 +27,12 @@ enum TranscriptionState: Codable, Equatable, Sendable {
     }
 
     var text: String? {
-        if case .completed(let text) = self { return text }
+        if case let .completed(text) = self { return text }
         return nil
     }
 
     var errorMessage: String? {
-        if case .failed(let error) = self { return error }
+        if case let .failed(error) = self { return error }
         return nil
     }
 

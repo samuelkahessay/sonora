@@ -258,7 +258,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             switch event {
             case .navigatePopToRootMemos:
                 self.popToRoot()
-            case .transcriptionCompleted(let memoId, _):
+            case let .transcriptionCompleted(memoId, _):
                 Task { @MainActor in
                     // Force refresh the specific memo's transcription state
                     self.refreshTranscriptionState(for: memoId)

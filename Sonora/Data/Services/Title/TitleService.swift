@@ -30,13 +30,13 @@ extension TitleServiceError: LocalizedError {
         switch self {
         case .invalidResponse:
             return "Title service returned an invalid response."
-        case .unexpectedStatus(let status, _):
+        case let .unexpectedStatus(status, _):
             return "Title service returned status code \(status)."
         case .decodingFailed:
             return "Title service response could not be decoded."
         case .validationFailed:
             return "Generated title failed validation."
-        case .networking(let urlError):
+        case let .networking(urlError):
             return urlError.localizedDescription
         case .encodingFailed:
             return "Unable to encode title request payload."
@@ -49,7 +49,7 @@ extension TitleServiceError: LocalizedError {
         switch self {
         case .validationFailed:
             return false
-        case .unexpectedStatus(let status, _):
+        case let .unexpectedStatus(status, _):
             return status == 429 || (500...599).contains(status)
         default:
             return true

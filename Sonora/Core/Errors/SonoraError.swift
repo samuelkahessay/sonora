@@ -137,7 +137,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Storage permission is required to save recordings."
         case .storageSpaceInsufficient:
             return "Insufficient storage space available."
-        case .storageFileNotFound(let filename):
+        case let .storageFileNotFound(filename):
             return "File not found: \(filename)"
         case .storageCorruptedData(let details):
             return "Corrupted data detected: \(details)"
@@ -153,8 +153,8 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Network connection unavailable. Please check your internet connection."
         case .networkTimeout:
             return "Network request timed out. Please try again."
-        case .networkServerError(let code, let message):
-            return "Server error (\(code))" + (message != nil ? ": \(message!)" : "")
+        case let .networkServerError(code, message):
+            return "Server error (\(code))" + (message.map { ": \($0)" } ?? "")
         case .networkInvalidResponse:
             return "Received invalid response from server."
         case .networkBadRequest(let reason):
@@ -203,13 +203,13 @@ public enum SonoraError: LocalizedError, Equatable {
             return "System memory is low. Please close other apps and try again."
         case .systemDiskFull:
             return "Device storage is full. Please free up space and try again."
-        case .systemResourceUnavailable(let resource):
+        case let .systemResourceUnavailable(resource):
             return "System resource unavailable: \(resource)"
-        case .systemVersionUnsupported(let version):
+        case let .systemVersionUnsupported(version):
             return "Unsupported system version: \(version)"
 
         // Unknown Errors
-        case .unknown(let reason):
+        case let .unknown(reason):
             return "An unknown error occurred: \(reason)"
         }
     }

@@ -188,7 +188,7 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
 
         let elapsed = timeProvider()
         let cap = recordingCapSeconds
-        let remaining = cap != nil ? max(0, cap! - elapsed) : .infinity
+        let remaining = cap.map { max(0, $0 - elapsed) } ?? .infinity
 
         // Track previous countdown state for frequency transition logging
         let wasInCountdown = isInCountdown

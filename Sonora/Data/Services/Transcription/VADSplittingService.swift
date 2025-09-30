@@ -99,7 +99,9 @@ final class DefaultVADSplittingService: VADSplittingService, @unchecked Sendable
 
         // Source read buffer and output (window-sized) buffer
         let srcReadCapacity: AVAudioFrameCount = 4_096
-        let srcBuffer = AVAudioPCMBuffer(pcmFormat: srcFormat, frameCapacity: srcReadCapacity)!
+        guard let srcBuffer = AVAudioPCMBuffer(pcmFormat: srcFormat, frameCapacity: srcReadCapacity) else {
+            throw VADError.conversionFailed("Cannot allocate source buffer")
+        }
 
         let windowFrames = AVAudioFrameCount(config.windowSize)
         let finished = ManagedCriticalState(false)

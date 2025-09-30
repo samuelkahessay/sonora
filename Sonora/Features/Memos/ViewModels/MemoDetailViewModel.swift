@@ -149,7 +149,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
 
     /// Whether retry should be offered in UI
     var canRetryTranscription: Bool {
-        if case .failed(let message) = transcriptionState {
+        if case let .failed(message) = transcriptionState {
             let lower = message.lowercased()
             if lower.contains("no speech detected") { return false }
             return message != TranscriptionError.noSpeechDetected.errorDescription

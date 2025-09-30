@@ -13,7 +13,8 @@ struct ContentView: View {
     @State private var memosPath = NavigationPath()
     @StateObject private var onboardingConfiguration = OnboardingConfiguration.shared
     @StateObject private var titleCoordinator = DIContainer.shared.titleGenerationCoordinator()
-    @SwiftUI.Environment(\.scenePhase) private var scenePhase
+    @SwiftUI.Environment(\.scenePhase)
+    private var scenePhase
 
     // Debug toggles removed
 

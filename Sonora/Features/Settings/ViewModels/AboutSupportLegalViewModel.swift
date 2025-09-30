@@ -8,9 +8,9 @@ final class AboutSupportLegalViewModel: ObservableObject {
     let appVersion: String
     let buildNumber: String
 
-    private let supportURL = URL(string: "https://samuelkahessay.github.io/sonora/support.html")!
-    private let privacyURL = URL(string: "https://samuelkahessay.github.io/sonora/privacy-policy.html")!
-    private let termsURL = URL(string: "https://samuelkahessay.github.io/sonora/terms-of-service.html")!
+    private let supportURLString = "https://samuelkahessay.github.io/sonora/support.html"
+    private let privacyURLString = "https://samuelkahessay.github.io/sonora/privacy-policy.html"
+    private let termsURLString = "https://samuelkahessay.github.io/sonora/terms-of-service.html"
 
     init(resolver: Resolver? = nil) {
         let resolved = resolver ?? DIContainer.shared
@@ -23,16 +23,28 @@ final class AboutSupportLegalViewModel: ObservableObject {
 
     func openSupport() {
         logger.debug("Settings: open support", category: .viewModel, context: nil)
-        systemNavigator.open(supportURL, completion: nil)
+        guard let url = URL(string: supportURLString) else {
+            logger.warning("Invalid support URL", category: .viewModel, context: nil, error: nil)
+            return
+        }
+        systemNavigator.open(url, completion: nil)
     }
 
     func openPrivacyPolicy() {
         logger.debug("Settings: open privacy policy", category: .viewModel, context: nil)
-        systemNavigator.open(privacyURL, completion: nil)
+        guard let url = URL(string: privacyURLString) else {
+            logger.warning("Invalid privacy URL", category: .viewModel, context: nil, error: nil)
+            return
+        }
+        systemNavigator.open(url, completion: nil)
     }
 
     func openTerms() {
         logger.debug("Settings: open terms of service", category: .viewModel, context: nil)
-        systemNavigator.open(termsURL, completion: nil)
+        guard let url = URL(string: termsURLString) else {
+            logger.warning("Invalid terms URL", category: .viewModel, context: nil, error: nil)
+            return
+        }
+        systemNavigator.open(url, completion: nil)
     }
 }

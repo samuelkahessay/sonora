@@ -11,8 +11,7 @@ import SwiftUI
 // Minimal animations utility retained for current usage
 enum SonoraAnimations {
     /// Check if user prefers reduced motion
-    @MainActor
-    static var prefersReducedMotion: Bool {
+    @MainActor static var prefersReducedMotion: Bool {
         UIAccessibility.isReduceMotionEnabled
     }
 }

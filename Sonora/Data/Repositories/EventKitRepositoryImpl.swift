@@ -253,7 +253,7 @@ final class EventKitRepositoryImpl: EventKitRepository {
                     context: LogContext(),
                     error: lastError)
 
-        throw EventKitError.eventCreationError(title: event.title, underlying: lastError!)
+        throw EventKitError.eventCreationError(title: event.title, underlying: lastError ?? NSError(domain: "EventKit", code: -1))
     }
 
     // MARK: - Reminder Creation  
@@ -338,7 +338,7 @@ final class EventKitRepositoryImpl: EventKitRepository {
                     context: LogContext(),
                     error: lastError)
 
-        throw EventKitError.reminderCreationError(title: reminder.title, underlying: lastError!)
+        throw EventKitError.reminderCreationError(title: reminder.title, underlying: lastError ?? NSError(domain: "EventKit", code: -1))
     }
 
     // MARK: - Batch Operations

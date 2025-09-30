@@ -1,12 +1,13 @@
 import SwiftUI
 
 struct SupportAboutSectionView: View {
-    @SwiftUI.Environment(\.openURL) var openURL
+    @SwiftUI.Environment(\.openURL)
+    var openURL
 
     private var appVersion: String { BuildConfiguration.shared.appVersion }
     private var buildNumber: String { BuildConfiguration.shared.buildNumber }
 
-    private let supportURL = URL(string: "https://samuelkahessay.github.io/sonora/support.html")!
+    private let supportURLString = "https://samuelkahessay.github.io/sonora/support.html"
 
     var body: some View {
         SettingsCard {
@@ -15,7 +16,7 @@ struct SupportAboutSectionView: View {
                     .font(SonoraDesignSystem.Typography.headingSmall)
                     .accessibilityAddTraits(.isHeader)
 
-                Button(action: { openURL(supportURL) }) {
+                Button(action: { if let url = URL(string: supportURLString) { openURL(url) } }) {
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "bubble.left.and.bubble.right")
                             .foregroundColor(.semantic(.brandPrimary))

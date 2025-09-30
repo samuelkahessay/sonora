@@ -2,7 +2,8 @@ import SwiftUI
 
 struct SettingsView: View {
 
-    @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.dismiss)
+    private var dismiss
 
     var body: some View {
         VStack(spacing: 0) {

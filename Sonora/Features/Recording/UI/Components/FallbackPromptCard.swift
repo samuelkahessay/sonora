@@ -3,8 +3,10 @@ import SwiftUI
 struct FallbackPromptCard: View {
     let onRefresh: () -> Void
 
-    @SwiftUI.Environment(\.accessibilityReduceMotion) private var reduceMotion: Bool
-    @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
+    @SwiftUI.Environment(\.accessibilityReduceMotion)
+    private var reduceMotion: Bool
+    @SwiftUI.Environment(\.colorScheme)
+    private var colorScheme: ColorScheme
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {

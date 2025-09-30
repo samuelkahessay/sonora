@@ -96,7 +96,7 @@ public enum AppEvent: Equatable {
     /// The memo ID associated with this event (if applicable)
     public var memoId: UUID? {
         switch self {
-        case .memoCreated(let memo):
+        case let .memoCreated(memo):
             return memo.id
         case .recordingStarted(let memoId),
              .recordingCompleted(let memoId),
@@ -128,51 +128,51 @@ public enum AppEvent: Equatable {
         switch self {
         case .memoCreated(let memo):
             return "Memo created: \(memo.filename)"
-        case .recordingStarted(let memoId):
+        case let .recordingStarted(memoId):
             return "Recording started for memo: \(memoId)"
-        case .recordingCompleted(let memoId):
+        case let .recordingCompleted(memoId):
             return "Recording completed for memo: \(memoId)"
-        case .transcriptionCompleted(let memoId, _):
+        case let .transcriptionCompleted(memoId, _):
             return "Transcription completed for memo: \(memoId)"
-        case .transcriptionRouteDecided(let memoId, let route, let reason):
+        case let .transcriptionRouteDecided(memoId, route, reason):
             if let reason, !reason.isEmpty {
                 return "Transcription route decided for memo: \(memoId) — \(route.uppercased()) (\(reason))"
             } else {
                 return "Transcription route decided for memo: \(memoId) — \(route.uppercased())"
             }
-        case .transcriptionProgress(let memoId, let fraction, let step):
+        case let .transcriptionProgress(memoId, fraction, step):
             if let step = step, !step.isEmpty {
                 return String(format: "Transcription progress for memo: %@ — %.0f%% (%@)", memoId.uuidString, fraction * 100, step)
             } else {
                 return String(format: "Transcription progress for memo: %@ — %.0f%%", memoId.uuidString, fraction * 100)
             }
-        case .analysisCompleted(let memoId, let type, _):
+        case let .analysisCompleted(memoId, type, _):
             return "\(type.displayName) analysis completed for memo: \(memoId)"
         case .navigatePopToRootMemos:
             return "Navigate: Pop to root memos"
-        case .navigateOpenMemoByID(let memoId):
+        case let .navigateOpenMemoByID(memoId):
             return "Navigate: Open memo: \(memoId.uuidString)"
-        case .microphonePermissionStatusChanged(let status):
+        case let .microphonePermissionStatusChanged(status):
             return "Microphone permission status changed: \(status.displayName)"
-        case .calendarEventCreated(_, let eventId):
+        case let .calendarEventCreated(_, eventId):
             return "Calendar event created: \(eventId)"
-        case .eventCreationFailed(let title, let message):
+        case let .eventCreationFailed(title, message):
             return "Calendar event creation failed: \(title) — \(message)"
-        case .batchEventCreationCompleted(let total, let success, let failure):
+        case let .batchEventCreationCompleted(total, success, failure):
             return "Calendar batch: total=\(total), success=\(success), failure=\(failure)"
-        case .eventConflictDetected(let title, let conflicts):
+        case let .eventConflictDetected(title, conflicts):
             return "Conflicts for event '\(title)': \(conflicts.joined(separator: ", "))"
-        case .reminderCreated(_, let reminderId):
+        case let .reminderCreated(_, reminderId):
             return "Reminder created: \(reminderId)"
-        case .reminderCreationFailed(let title, let message):
+        case let .reminderCreationFailed(title, message):
             return "Reminder creation failed: \(title) — \(message)"
-        case .batchReminderCreationCompleted(let total, let success, let failure):
+        case let .batchReminderCreationCompleted(total, success, failure):
             return "Reminders batch: total=\(total), success=\(success), failure=\(failure)"
-        case .promptShown(let id, let category, let dayPart, let weekPart, let source):
+        case let .promptShown(id, category, dayPart, weekPart, source):
             return "Prompt shown: id=\(id), cat=\(category), day=\(dayPart), week=\(weekPart), src=\(source)"
-        case .promptUsed(let id, let category, let dayPart, let weekPart, let action):
+        case let .promptUsed(id, category, dayPart, weekPart, action):
             return "Prompt used: id=\(id), cat=\(category), day=\(dayPart), week=\(weekPart), action=\(action)"
-        case .promptFavoritedToggled(let id, let isFav):
+        case let .promptFavoritedToggled(id, isFav):
             return "Prompt favorite toggled: id=\(id), isFavorite=\(isFav)"
         }
     }

@@ -59,7 +59,8 @@ struct ExportDataSectionView: View {
 
 private struct ExportDataSheetView: View {
     @ObservedObject var controller: PrivacyController
-    @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.dismiss)
+    private var dismiss
 
     var body: some View {
         NavigationStack {

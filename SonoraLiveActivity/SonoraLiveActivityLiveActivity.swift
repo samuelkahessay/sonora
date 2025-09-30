@@ -40,7 +40,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 12) {
                         Text(context.state.isCountdown && context.state.remainingTime != nil ?
-                             countdownString(context.state.remainingTime!) :
+                             countdownString(context.state.remainingTime ?? 0) :
                              elapsedString(from: context.state.startTime))
                         .font(.system(.body, design: .serif).weight(.semibold))
                         .monospacedDigit()

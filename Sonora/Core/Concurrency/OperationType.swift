@@ -10,7 +10,7 @@ public enum OperationType: Hashable, CustomStringConvertible, Sendable {
     /// The memo ID this operation targets
     public var memoId: UUID {
         switch self {
-        case .recording(let memoId), .transcription(let memoId), .analysis(let memoId, _):
+        case let .recording(memoId), let .transcription(memoId), let .analysis(memoId, _):
             return memoId
         }
     }

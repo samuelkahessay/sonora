@@ -191,7 +191,9 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 self.publishProgress()
             }
         }
-        RunLoop.main.add(playbackTimer!, forMode: .common)
+        if let timer = playbackTimer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
     }
 
     private func stopPlaybackTimer() {
@@ -369,7 +371,10 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 model.duration = duration.isFinite ? duration : nil
                 model.creationDate = memo.creationDate
             } else {
-                let shareName = memo.customTitle != nil ? FileNameSanitizer.sanitize(memo.customTitle!) : nil
+                let shareName: String? = {
+                    if let title = memo.customTitle { return FileNameSanitizer.sanitize(title) }
+                    return nil
+                }()
                 let model = MemoModel(
                     id: memo.id,
                     creationDate: memo.creationDate,
@@ -518,7 +523,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         let sanitizedTitle = newTitle.isEmpty ? nil : newTitle
         if let model = fetchMemoModel(id: memo.id) {
             model.customTitle = sanitizedTitle
-            model.shareableFileName = sanitizedTitle != nil ? FileNameSanitizer.sanitize(sanitizedTitle!) : nil
+            model.shareableFileName = sanitizedTitle.flatMap { FileNameSanitizer.sanitize($0) }
             do { try context.save() } catch { print("❌ MemoRepository: Failed to rename memo in SwiftData: \(error)") }
         }
         // Update in-memory memo as well
@@ -527,7 +532,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             memos[index] = updatedMemo
             objectWillChange.send()
             let displayText = sanitizedTitle ?? "default"
-            let shareableText = sanitizedTitle != nil ? FileNameSanitizer.sanitize(sanitizedTitle!) : "default filename"
+            let shareableText = sanitizedTitle.flatMap { FileNameSanitizer.sanitize($0) } ?? "default filename"
             print("✅ MemoRepository: Successfully renamed memo to '\(displayText)' with shareable filename '\(shareableText)'")
         }
         // Invalidate list cache

@@ -23,7 +23,8 @@ struct SonicBloomRecordButton: View {
     let action: () -> Void
 
     // Animation state
-    @SwiftUI.Environment(\.accessibilityReduceMotion) private var reduceMotion: Bool
+    @SwiftUI.Environment(\.accessibilityReduceMotion)
+    private var reduceMotion: Bool
     @State private var isAnimating: Bool = false
     @State private var bloomScale: CGFloat = 1.0
     @State private var pulseOpacity: Double = 0.0

@@ -3,7 +3,8 @@ import SwiftUI
 /// Placeholder card shown while the dynamic prompt is loading.
 /// Matches the prompt card’s shape, alignment, and background to avoid flicker.
 struct PromptPlaceholderCard: View {
-    @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
+    @SwiftUI.Environment(\.colorScheme)
+    private var colorScheme: ColorScheme
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {

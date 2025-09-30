@@ -120,7 +120,7 @@ final class PromptFileLoader {
         let locKey: String = {
             let parts = fp.id.split(separator: "_")
             guard parts.count >= 2 else { return fp.text }
-            let category = parts.first!.lowercased()
+            let category = parts.first.map { String($0).lowercased() } ?? "general"
             let slug = parts.dropFirst().joined(separator: "-").lowercased()
             return "prompt.\(category).\(slug)"
         }()

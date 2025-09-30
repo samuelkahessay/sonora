@@ -15,9 +15,9 @@ struct UnifiedStateView: View {
 
         var icon: String {
             switch self {
-            case .empty(let icon, _, _, _):
+            case let .empty(icon, _, _, _):
                 return icon
-            case .error(let error, _):
+            case let .error(error, _):
                 return error.severity.iconName
             case .offline:
                 return "wifi.slash"
@@ -28,9 +28,9 @@ struct UnifiedStateView: View {
 
         var title: String {
             switch self {
-            case .empty(_, let title, _, _):
+            case let .empty(_, title, _, _):
                 return title
-            case .error(let error, _):
+            case let .error(error, _):
                 return error.category.displayName + " Error"
             case .offline:
                 return "No Internet Connection"
@@ -41,9 +41,9 @@ struct UnifiedStateView: View {
 
         var subtitle: String? {
             switch self {
-            case .empty(_, _, let subtitle, _):
+            case let .empty(_, _, subtitle, _):
                 return subtitle
-            case .error(let error, _):
+            case let .error(error, _):
                 return error.errorDescription
             case .offline:
                 return "Check your internet connection and try again"
@@ -54,11 +54,11 @@ struct UnifiedStateView: View {
 
         var primaryActionTitle: String? {
             switch self {
-            case .empty(_, _, _, let actionTitle):
+            case let .empty(_, _, _, actionTitle):
                 return actionTitle
-            case .error(_, let retryable):
+            case let .error(_, retryable):
                 return retryable ? "Try Again" : nil
-            case .offline(let retryable):
+            case let .offline(retryable):
                 return retryable ? "Retry" : nil
             case .loading:
                 return nil
@@ -78,7 +78,7 @@ struct UnifiedStateView: View {
             switch self {
             case .empty:
                 return .semantic(.textSecondary)
-            case .error(let error, _):
+            case let .error(error, _):
                 return severityColor(for: error.severity)
             case .offline:
                 return .semantic(.warning)

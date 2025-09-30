@@ -7,7 +7,8 @@ struct OnboardingView: View {
     @StateObject private var onboardingConfiguration = OnboardingConfiguration.shared
 
     // MARK: - State
-    @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.dismiss)
+    private var dismiss
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
 
     enum AccessibleElement { case pageContent }

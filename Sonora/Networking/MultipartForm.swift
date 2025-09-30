@@ -31,9 +31,9 @@ struct MultipartForm {
         var body = Data()
         for part in parts {
             switch part {
-            case .data(let data):
+            case let .data(data):
                 body.append(data)
-            case .file(let header, let url):
+            case let .file(header: header, url: url):
                 body.append(header)
                 body.append(try Data(contentsOf: url))
                 body.append("\r\n")
@@ -55,9 +55,9 @@ struct MultipartForm {
 
         for part in parts {
             switch part {
-            case .data(let data):
+            case let .data(data):
                 handle.write(data)
-            case .file(let header, let url):
+            case let .file(header: header, url: url):
                 handle.write(header)
                 try writeFileContents(of: url, to: handle, bufferSize: bufferSize)
                 handle.write(Data("\r\n".utf8))

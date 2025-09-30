@@ -17,8 +17,10 @@ struct EventConfirmationView: View {
         _selectedEventIds = State(initialValue: initialSelection)
     }
 
-    @SwiftUI.Environment(\.diContainer) private var container: DIContainer
-    @SwiftUI.Environment(\.dismiss) private var dismiss: DismissAction
+    @SwiftUI.Environment(\.diContainer)
+    private var container: DIContainer
+    @SwiftUI.Environment(\.dismiss)
+    private var dismiss: DismissAction
 
     @State private var calendars: [CalendarDTO] = []
     @State private var selectedCalendar: CalendarDTO?
@@ -179,7 +181,7 @@ struct EventConfirmationView: View {
     private func bindingForEditableEvent(id: String) -> Binding<EditableEvent>? {
         guard editableEvents[id] != nil else { return nil }
         return Binding<EditableEvent>(
-            get: { editableEvents[id]! },
+            get: { editableEvents[id] ?? { fatalError("Missing editable event for id: \(id)") }() },
             set: { editableEvents[id] = $0 }
         )
     }

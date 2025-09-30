@@ -20,11 +20,21 @@ public final class AppConfiguration: ObservableObject {
         BuildConfiguration.shared
     }
 
+    private static func requireURL(_ s: String) -> URL {
+        guard let url = URL(string: s) else { preconditionFailure("Invalid URL constant: \(s)") }
+        return url
+    }
+
     // MARK: - API Configuration
 
     /// Base URL for the Sonora API
     /// Can be overridden with SONORA_API_URL environment variable
-    public private(set) var apiBaseURL = URL(string: "https://sonora.fly.dev")!
+    public private(set) var apiBaseURL: URL = {
+        guard let url = URL(string: "https://sonora.fly.dev") else {
+            preconditionFailure("Invalid default API base URL")
+        }
+        return url
+    }()
 
     /// API request timeout for analysis operations (in seconds)
     /// Can be overridden with SONORA_ANALYSIS_TIMEOUT environment variable
@@ -273,32 +283,32 @@ public final class AppConfiguration: ObservableObject {
         // API Configuration - Build-specific URLs
         switch (buildConfig.buildType, buildConfig.distributionType) {
         case (.debug, .development):
-            apiBaseURL = URL(string: "https://sonora.fly.dev")!
+            apiBaseURL = Self.requireURL("https://sonora.fly.dev")
             analysisTimeoutInterval = 30.0 // Longer timeouts for development
             transcriptionTimeoutInterval = 180.0
             healthCheckTimeoutInterval = 10.0
 
         case (.testing, _):
-            apiBaseURL = URL(string: "https://sonora.fly.dev")!
+            apiBaseURL = Self.requireURL("https://sonora.fly.dev")
             analysisTimeoutInterval = 15.0
             transcriptionTimeoutInterval = 120.0
             healthCheckTimeoutInterval = 8.0
 
         case (.release, .testFlight):
-            apiBaseURL = URL(string: "https://sonora.fly.dev")!
+            apiBaseURL = Self.requireURL("https://sonora.fly.dev")
             analysisTimeoutInterval = 15.0
             transcriptionTimeoutInterval = 120.0
             healthCheckTimeoutInterval = 6.0
 
         case (.release, .appStore):
-            apiBaseURL = URL(string: "https://sonora.fly.dev")!
+            apiBaseURL = Self.requireURL("https://sonora.fly.dev")
             analysisTimeoutInterval = 12.0
             transcriptionTimeoutInterval = 120.0
             healthCheckTimeoutInterval = 5.0
 
         default:
             // Default to production for unknown configurations
-            apiBaseURL = URL(string: "https://sonora.fly.dev")!
+            apiBaseURL = Self.requireURL("https://sonora.fly.dev")
             analysisTimeoutInterval = 12.0
             transcriptionTimeoutInterval = 120.0
             healthCheckTimeoutInterval = 5.0

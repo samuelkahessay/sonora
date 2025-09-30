@@ -12,9 +12,12 @@ struct RecordingView: View {
     @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createRecordingViewModel()
     @StateObject private var promptViewModel = DIContainer.shared.viewModelFactory().createPromptViewModel()
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
-    @SwiftUI.Environment(\.scenePhase) private var scenePhase: ScenePhase
-    @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
-    @SwiftUI.Environment(\.accessibilityReduceMotion) private var reduceMotion: Bool
+    @SwiftUI.Environment(\.scenePhase)
+    private var scenePhase: ScenePhase
+    @SwiftUI.Environment(\.colorScheme)
+    private var colorScheme: ColorScheme
+    @SwiftUI.Environment(\.accessibilityReduceMotion)
+    private var reduceMotion: Bool
     @AppStorage("hasSeenInspireMe") private var hasSeenInspireMe: Bool = false
     @AppStorage("settings.showGuidedPrompts") private var showGuidedPrompts: Bool = true
     @State private var idlePulseTask: Task<Void, Never>?
