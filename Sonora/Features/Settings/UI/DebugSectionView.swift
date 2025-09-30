@@ -28,7 +28,13 @@ struct DebugSectionView: View {
                     prepareSampleEvents()
                     showEventsSheet = true
                 } label: {
-                    HStack { Label("Open Event Confirmation (Sample)", systemImage: "calendar.badge.plus"); Spacer(); Image(systemName: "chevron.right").foregroundColor(.semantic(.textTertiary)).font(.caption.weight(.semibold)) }
+                    HStack {
+                        Label("Open Event Confirmation (Sample)", systemImage: "calendar.badge.plus")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.semantic(.textTertiary))
+                            .font(.caption.weight(.semibold))
+                    }
                 }
                 .buttonStyle(.plain)
 
@@ -36,7 +42,13 @@ struct DebugSectionView: View {
                     prepareSampleReminders()
                     showRemindersSheet = true
                 } label: {
-                    HStack { Label("Open Reminder Confirmation (Sample)", systemImage: "bell.badge"); Spacer(); Image(systemName: "chevron.right").foregroundColor(.semantic(.textTertiary)).font(.caption.weight(.semibold)) }
+                    HStack {
+                        Label("Open Reminder Confirmation (Sample)", systemImage: "bell.badge")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.semantic(.textTertiary))
+                            .font(.caption.weight(.semibold))
+                    }
                 }
                 .buttonStyle(.plain)
 

@@ -91,33 +91,33 @@ extension ActionItemDetectionUI {
 }
 
 extension ActionItemDetectionUI {
-    static func fromEvent(_ e: EventsData.DetectedEvent) -> ActionItemDetectionUI {
+    static func fromEvent(_ event: EventsData.DetectedEvent) -> ActionItemDetectionUI {
         ActionItemDetectionUI(
-            sourceId: e.id,
+            sourceId: event.id,
             kind: .event,
-            confidence: .from(e.confidence),
-            sourceQuote: e.sourceText,
-            title: e.title,
-            suggestedDate: e.startDate,
+            confidence: .from(event.confidence),
+            sourceQuote: event.sourceText,
+            title: event.title,
+            suggestedDate: event.startDate,
             isAllDay: false,
-            location: e.location,
+            location: event.location,
             priorityLabel: nil,
-            memoId: e.memoId
+            memoId: event.memoId
         )
     }
 
-    static func fromReminder(_ r: RemindersData.DetectedReminder) -> ActionItemDetectionUI {
+    static func fromReminder(_ reminder: RemindersData.DetectedReminder) -> ActionItemDetectionUI {
         ActionItemDetectionUI(
-            sourceId: r.id,
+            sourceId: reminder.id,
             kind: .reminder,
-            confidence: .from(r.confidence),
-            sourceQuote: r.sourceText,
-            title: r.title,
-            suggestedDate: r.dueDate,
+            confidence: .from(reminder.confidence),
+            sourceQuote: reminder.sourceText,
+            title: reminder.title,
+            suggestedDate: reminder.dueDate,
             isAllDay: false,
             location: nil,
-            priorityLabel: r.priority.rawValue,
-            memoId: r.memoId
+            priorityLabel: reminder.priority.rawValue,
+            memoId: reminder.memoId
         )
     }
 }

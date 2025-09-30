@@ -23,7 +23,7 @@ struct RecordingControlsView: View {
             } else if recordingState == .paused {
                 onResume()
             }
-        }) {
+        }, label: {
             ZStack {
                 Circle()
                     .fill(buttonBackgroundColor)
@@ -41,7 +41,7 @@ struct RecordingControlsView: View {
                     .font(.system(size: 48, weight: .medium))
                     .foregroundColor(.white)
             }
-        }
+        })
         .buttonStyle(.plain)
         .accessibilityLabel(buttonAccessibilityLabel)
     }
@@ -50,7 +50,7 @@ struct RecordingControlsView: View {
         Button(action: {
             HapticManager.shared.playRecordingFeedback(isStarting: false)
             onStop()
-        }) {
+        }, label: {
             ZStack {
                 Circle()
                     .fill(Color.semantic(.error))
@@ -59,7 +59,7 @@ struct RecordingControlsView: View {
                     .font(.system(size: 32, weight: .medium))
                     .foregroundColor(.white)
             }
-        }
+        })
         .buttonStyle(.plain)
         .accessibilityLabel("Stop and finalize recording")
     }

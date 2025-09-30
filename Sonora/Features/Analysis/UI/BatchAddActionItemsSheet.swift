@@ -124,8 +124,8 @@ struct BatchAddActionItemsSheet: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(item.title)
                                     .font(.body.weight(.semibold))
-                                if let d = item.suggestedDate {
-                                    Text(DateFormatter.ai_short.string(from: d))
+                                if let date = item.suggestedDate {
+                                    Text(DateFormatter.ai_short.string(from: date))
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -196,16 +196,16 @@ private extension Color {
         Scanner(string: cleaned).scanHexInt64(&rgba)
         switch cleaned.count {
         case 6: // RRGGBB
-            let r = Double((rgba & 0xFF0000) >> 16) / 255.0
-            let g = Double((rgba & 0x00FF00) >> 8) / 255.0
-            let b = Double(rgba & 0x0000FF) / 255.0
-            self = Color(red: r, green: g, blue: b)
+            let red = Double((rgba & 0xFF0000) >> 16) / 255.0
+            let green = Double((rgba & 0x00FF00) >> 8) / 255.0
+            let blue = Double(rgba & 0x0000FF) / 255.0
+            self = Color(red: red, green: green, blue: blue)
         case 8: // RRGGBBAA
-            let r = Double((rgba & 0xFF000000) >> 24) / 255.0
-            let g = Double((rgba & 0x00FF0000) >> 16) / 255.0
-            let b = Double((rgba & 0x0000FF00) >> 8) / 255.0
-            let a = Double(rgba & 0x000000FF) / 255.0
-            self = Color(red: r, green: g, blue: b).opacity(a)
+            let red = Double((rgba & 0xFF000000) >> 24) / 255.0
+            let green = Double((rgba & 0x00FF0000) >> 16) / 255.0
+            let blue = Double((rgba & 0x0000FF00) >> 8) / 255.0
+            let alpha = Double(rgba & 0x000000FF) / 255.0
+            self = Color(red: red, green: green, blue: blue).opacity(alpha)
         default:
             self = .gray
         }

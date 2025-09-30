@@ -102,10 +102,10 @@ struct ActionItemDetectionCard: View {
                 Picker("Type", selection: Binding(
                     get: { model.kind },
                     set: { newKind in model.kind = newKind }
-                )) {
+                ), content: {
                     Text("Event").tag(ActionItemDetectionKind.event)
                     Text("Reminder").tag(ActionItemDetectionKind.reminder)
-                }
+                })
                 .pickerStyle(.segmented)
 
                 TextField("Title", text: Binding(
@@ -192,7 +192,7 @@ struct ActionItemDetectionCard: View {
     @ViewBuilder private var primaryAddButton: some View {
         Button(action: {
             onAdd(model)
-        }) {
+        }, label: {
             if model.isProcessing {
                 HStack(spacing: 8) {
                     ProgressView()
@@ -206,7 +206,7 @@ struct ActionItemDetectionCard: View {
                     .padding(.vertical, 10)
                     .frame(maxWidth: .infinity)
             }
-        }
+        })
         .buttonStyle(.borderedProminent)
         .disabled(model.isProcessing || (model.kind == .event && model.suggestedDate == nil))
     }

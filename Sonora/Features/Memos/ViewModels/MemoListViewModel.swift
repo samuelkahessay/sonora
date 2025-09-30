@@ -445,14 +445,12 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     func deleteMemos(at offsets: IndexSet) {
         print("📱 MemoListViewModel: Deleting \(offsets.count) memos")
         Task {
-            for index in offsets {
-                if index < memos.count {
-                    do {
-                        try await deleteMemoUseCase.execute(memo: memos[index])
-                    } catch {
-                        await MainActor.run {
-                            self.error = ErrorMapping.mapError(error)
-                        }
+            for index in offsets where index < memos.count {
+                do {
+                    try await deleteMemoUseCase.execute(memo: memos[index])
+                } catch {
+                    await MainActor.run {
+                        self.error = ErrorMapping.mapError(error)
                     }
                 }
             }

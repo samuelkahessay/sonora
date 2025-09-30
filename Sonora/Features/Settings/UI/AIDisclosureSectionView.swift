@@ -26,7 +26,13 @@ struct AIDisclosureSectionView: View {
                     .accessibilityAddTraits(.isStaticText)
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("AI Features disclosure. Sonora uses artificial intelligence to transcribe recordings and generate summaries, themes, and to-do lists. AI-generated content may be inaccurate or incomplete. We clearly label AI outputs and apply content safeguards to reduce harmful content. Important warning: Do not rely on AI outputs for medical, legal, or safety-critical decisions.")
+            .accessibilityLabel(
+                "AI Features disclosure. " +
+                "Sonora uses artificial intelligence to transcribe recordings and generate summaries, themes, and to-do lists. " +
+                "AI-generated content may be inaccurate or incomplete. " +
+                "We clearly label AI outputs and apply content safeguards to reduce harmful content. " +
+                "Important warning: Do not rely on AI outputs for medical, legal, or safety-critical decisions."
+            )
         }
     }
 }
