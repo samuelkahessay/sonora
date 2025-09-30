@@ -179,7 +179,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             if let lang = preferredLang {
                 if !forceChunk && totalDurationSec < 90.0 {
                     // Single-shot for short recordings
-                    await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (\(lang.uppercased()))...")
+                    await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
                     let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang)
                     let eval = qualityEvaluator.evaluateQuality(resp, text: resp.text)
                     let (processedText, originalText) = prepareTranscript(from: resp.text)
@@ -228,8 +228,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                 let chunks = try await chunkManager.createChunks(from: audioURL, segments: segments)
                 defer { Task { await chunkManager.cleanupChunks(chunks) } }
 
-                await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (\(lang.uppercased()))...")
-                let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: lang, stageLabel: "Transcribing (\(lang.uppercased()))...")
+                await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
+                let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: lang, stageLabel: "Transcribing...")
                 let aggregator = TranscriptionAggregator()
                 let agg = aggregator.aggregate(primary)
                 let (processedText, originalText) = prepareTranscript(from: agg.text)
@@ -274,7 +274,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             // Branch: Auto-detect mode
             if !forceChunk && totalDurationSec < 60.0 {
                 // Single-shot auto with fallback if needed
-                await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing (cloud)...")
+                await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
                 let primaryResp = try await transcriptionAPI.transcribe(url: audioURL, language: nil)
                 let primaryEval = qualityEvaluator.evaluateQuality(primaryResp, text: primaryResp.text)
 
@@ -343,8 +343,8 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             let chunks = try await chunkManager.createChunks(from: audioURL, segments: segments)
             defer { Task { await chunkManager.cleanupChunks(chunks) } }
 
-            await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing with language detection...")
-            let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: nil, stageLabel: "Transcribing (cloud)...")
+            await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
+            let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: nil, stageLabel: "Transcribing...")
             let aggregator = TranscriptionAggregator()
             let primaryAgg = aggregator.aggregate(primary)
             let primaryText = primaryAgg.text
@@ -362,7 +362,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             if preferredLang == nil && qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
                 await updateProgress(operationId: operationId, fraction: 0.82, step: "Low confidence. Retrying with English...")
                 do {
-                    let fallback = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.82, fractionBudget: 0.12, language: "en", stageLabel: "Transcribing (EN)...")
+                    let fallback = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.82, fractionBudget: 0.12, language: "en", stageLabel: "Transcribing...")
                     let fallbackAgg = aggregator.aggregate(fallback)
                     let fallbackText = fallbackAgg.text
                     let fallbackSummary = summarizeResponse(from: fallback, aggregatedText: fallbackText, overrideLanguage: "en")
