@@ -107,12 +107,12 @@ struct RecordingQuotaUseCasesTests {
         let monthlyUC = GetRemainingMonthlyQuotaUseCase(quotaPolicy: DefaultRecordingQuotaPolicy(), usageRepository: repo)
         let canStart = CanStartRecordingUseCase(getRemainingMonthlyQuotaUseCase: monthlyUC)
 
-        // Fresh month: remaining=3600
+        // Fresh month: remaining=3_600
         let allowed1 = try await canStart.execute(service: .cloudAPI)
-        #expect(allowed1 == 3600)
+        #expect(allowed1 == 3_600)
 
-        // Consume 3590s
-        await repo.addUsage(3590, for: Date())
+        // Consume 3_590s
+        await repo.addUsage(3_590, for: Date())
         let allowed2 = try await canStart.execute(service: .cloudAPI)
         #expect(allowed2 == 10)
 
@@ -133,11 +133,11 @@ struct RecordingQuotaUseCasesTests {
 
         // Start with 0 used for cloud
         var rem = try await monthly.execute()
-        #expect(rem == 3600)
+        #expect(rem == 3_600)
 
         // Consume 125s (adds to month via addUsage inside consume)
         await consume.execute(elapsed: 125, service: .cloudAPI)
         rem = try await monthly.execute()
-        #expect(rem == 3600 - 125)
+        #expect(rem == 3_600 - 125)
     }
 }

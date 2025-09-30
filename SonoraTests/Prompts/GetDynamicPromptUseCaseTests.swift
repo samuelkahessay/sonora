@@ -121,7 +121,7 @@ final class GetDynamicPromptUseCaseTests: XCTestCase {
     @MainActor
     func test_NoRepeatWithinSevenDays_SelectsAlternatePrompt() async throws {
         // Given a Monday morning context
-        let date = components(year: 2025, month: 1, day: 6, hour: 9) // Monday 9am
+        let date = components(year: 2_025, month: 1, day: 6, hour: 9) // Monday 9am
         let provider = FixedDateProvider(date)
         let usage = FakePromptUsageRepository()
         let loc = StubLocalizationProvider()
@@ -164,7 +164,7 @@ final class GetDynamicPromptUseCaseTests: XCTestCase {
 
     @MainActor
     func test_TokenInterpolation_UsesNameDayPartWeekPart() async throws {
-        let date = components(year: 2025, month: 1, day: 6, hour: 9) // Monday morning
+        let date = components(year: 2_025, month: 1, day: 6, hour: 9) // Monday morning
         let provider = FixedDateProvider(date)
         let usage = FakePromptUsageRepository()
         let loc = StubLocalizationProvider()

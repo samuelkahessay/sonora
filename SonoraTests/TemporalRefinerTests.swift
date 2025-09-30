@@ -9,7 +9,7 @@ final class TemporalRefinerTests: XCTestCase {
 
         // Use a fixed reference date for determinism
         var comps = DateComponents()
-        comps.year = 2025
+        comps.year = 2_025
         comps.month = 9
         comps.day = 28
         comps.hour = 9
@@ -41,7 +41,7 @@ final class TemporalRefinerTests: XCTestCase {
             return
         }
         let dc = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: due)
-        XCTAssertEqual(dc.year, 2025)
+        XCTAssertEqual(dc.year, 2_025)
         XCTAssertEqual(dc.month, 9)
         XCTAssertEqual(dc.day, 28)
         XCTAssertEqual(dc.hour, 18)
@@ -53,7 +53,7 @@ final class TemporalRefinerTests: XCTestCase {
         let calendar = Calendar.current
 
         var comps = DateComponents()
-        comps.year = 2025
+        comps.year = 2_025
         comps.month = 9
         comps.day = 28
         comps.hour = 9
@@ -84,7 +84,7 @@ final class TemporalRefinerTests: XCTestCase {
             return
         }
         let startComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: start)
-        XCTAssertEqual(startComponents.year, 2025)
+        XCTAssertEqual(startComponents.year, 2_025)
         XCTAssertEqual(startComponents.month, 9)
         XCTAssertEqual(startComponents.day, 28)
         XCTAssertEqual(startComponents.hour, 18)
@@ -92,7 +92,7 @@ final class TemporalRefinerTests: XCTestCase {
 
         if let end = e.endDate {
             let duration = end.timeIntervalSince(start)
-            XCTAssertEqual(duration, 3600, accuracy: 0.5)
+            XCTAssertEqual(duration, 3_600, accuracy: 0.5)
         } else {
             XCTFail("Expected event end date")
         }
@@ -103,7 +103,7 @@ final class TemporalRefinerTests: XCTestCase {
         let calendar = Calendar.current
 
         var comps = DateComponents()
-        comps.year = 2025
+        comps.year = 2_025
         comps.month = 9
         comps.day = 29 // Monday
         comps.hour = 10
@@ -135,7 +135,7 @@ final class TemporalRefinerTests: XCTestCase {
         let calendar = Calendar.current
 
         var comps = DateComponents()
-        comps.year = 2025
+        comps.year = 2_025
         comps.month = 9
         comps.day = 24 // Wednesday
         comps.hour = 11

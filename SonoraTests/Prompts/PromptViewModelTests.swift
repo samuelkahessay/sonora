@@ -15,7 +15,7 @@ final class PromptViewModelTests: XCTestCase {
     final class FakeGetCategory: GetPromptCategoryUseCaseProtocol {
         var setFavArgs: (id: String, isFav: Bool)?
         var used: String?
-        func execute(category: PromptCategory, userName: String?) async throws -> [InterpolatedPrompt] { return [] }
+        func execute(category: PromptCategory, userName: String?) async throws -> [InterpolatedPrompt] { [] }
         func setFavorite(promptId: String, isFavorite: Bool) throws { setFavArgs = (promptId, isFavorite) }
         func markUsed(promptId: String) throws { used = promptId }
     }

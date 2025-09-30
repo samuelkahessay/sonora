@@ -341,7 +341,7 @@ final class EventBusTests: XCTestCase {
         // Trigger cleanup
         EventBus.shared.publish(.navigateOpenMemoByID(memoId: UUID()))
 
-        let cleanupTime = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+        let cleanupTime = (CFAbsoluteTimeGetCurrent() - startTime) * 1_000
 
         XCTAssertLessThan(cleanupTime, 50.0, "Cleanup should complete within 50ms")
 
@@ -364,7 +364,7 @@ final class EventBusTests: XCTestCase {
         }
 
         if kerr == KERN_SUCCESS {
-            return Double(info.resident_size) / 1024.0 / 1024.0 // Convert to MB
+            return Double(info.resident_size) / 1_024.0 / 1_024.0 // Convert to MB
         } else {
             return 0.0
         }

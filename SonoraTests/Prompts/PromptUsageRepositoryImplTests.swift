@@ -50,7 +50,7 @@ enum ModelConfigurationInit {
     static func inMemory() -> ModelConfiguration? {
         // Attempt to call a potential initializer; adjust if API differs at runtime.
         // If this fails to compile in a given Xcode, fallback path above uses default container.
-        return ModelConfiguration(isStoredInMemoryOnly: true)
+        ModelConfiguration(isStoredInMemoryOnly: true)
     }
 }
 #endif

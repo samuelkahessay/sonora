@@ -92,23 +92,23 @@ struct GetRemainingMonthlyQuotaUseCaseTests {
         let repo = InMemoryMonthlyUsageRepo()
         let uc = GetRemainingMonthlyQuotaUseCase(quotaPolicy: policy, usageRepository: repo)
         let remaining = try await uc.execute()
-        #expect(remaining == 3600)
+        #expect(remaining == 3_600)
     }
 
     @Test @MainActor func testFreeUser_1800Used_Returns1800() async throws {
         let policy = DefaultRecordingQuotaPolicy(isProProvider: { false })
         let repo = InMemoryMonthlyUsageRepo()
-        // Add 1800s this month
-        await repo.addUsage(1800, for: Date())
+        // Add 1_800s this month
+        await repo.addUsage(1_800, for: Date())
         let uc = GetRemainingMonthlyQuotaUseCase(quotaPolicy: policy, usageRepository: repo)
         let remaining = try await uc.execute()
-        #expect(remaining == 1800)
+        #expect(remaining == 1_800)
     }
 
     @Test @MainActor func testFreeUser_OverCap_ReturnsZero() async throws {
         let policy = DefaultRecordingQuotaPolicy(isProProvider: { false })
         let repo = InMemoryMonthlyUsageRepo()
-        await repo.addUsage(4000, for: Date())
+        await repo.addUsage(4_000, for: Date())
         let uc = GetRemainingMonthlyQuotaUseCase(quotaPolicy: policy, usageRepository: repo)
         let remaining = try await uc.execute()
         #expect(remaining == 0)
