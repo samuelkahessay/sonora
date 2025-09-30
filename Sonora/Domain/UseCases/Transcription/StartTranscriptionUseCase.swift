@@ -493,26 +493,72 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
     private func transcribeChunksWithLanguage(operationId: UUID, chunks: [ChunkFile], baseFraction: Double, fractionBudget: Double, language: String?, stageLabel: String) async throws -> [ChunkTranscriptionResult] {
         guard !chunks.isEmpty else { return [] }
-        var results: [ChunkTranscriptionResult] = []
-        results.reserveCapacity(chunks.count)
 
-        for (i, chunk) in chunks.enumerated() {
-            let stepFraction = Double(i) / Double(chunks.count)
-            let current = baseFraction + fractionBudget * stepFraction
-            await updateProgress(operationId: operationId, fraction: current, step: stageLabel, index: i+1, total: chunks.count)
+        // Configuration for parallel transcription
+        let maxConcurrentTranscriptions = 3 // Limit concurrent API requests to avoid overwhelming server
 
+        // Use dictionary to preserve ordering (index -> result)
+        var resultsByIndex: [Int: ChunkTranscriptionResult] = [:]
+        var completedCount = 0
+        let totalCount = chunks.count
+
+        // Create indexed chunks for proper ordering
+        let indexedChunks = chunks.enumerated().map { ($0.offset, $0.element) }
+
+        // Helper to transcribe a single chunk (isolated to handle MainActor requirements)
+        @MainActor
+        func transcribeSingleChunk(chunk: ChunkFile, index: Int, language: String?) async -> (Int, ChunkTranscriptionResult) {
             do {
                 let response = try await transcriptionAPI.transcribe(url: chunk.url, language: language)
-                results.append(ChunkTranscriptionResult(segment: chunk.segment, response: response))
+                return (index, ChunkTranscriptionResult(segment: chunk.segment, response: response))
             } catch {
-                logger.warning("Chunk transcription failed; continuing", category: .transcription, context: LogContext(additionalInfo: ["index": i, "lang": language ?? "auto-detect"]), error: error)
-                results.append(ChunkTranscriptionResult(segment: chunk.segment, response: TranscriptionResponse(text: "", detectedLanguage: nil, confidence: nil, avgLogProb: nil, duration: nil)))
+                logger.warning("Chunk transcription failed; continuing", category: .transcription, context: LogContext(additionalInfo: ["index": index, "lang": language ?? "auto-detect"]), error: error)
+                return (index, ChunkTranscriptionResult(segment: chunk.segment, response: TranscriptionResponse(text: "", detectedLanguage: nil, confidence: nil, avgLogProb: nil, duration: nil)))
             }
+        }
+
+        // Process chunks in parallel with concurrency limit
+        try await withThrowingTaskGroup(of: (Int, ChunkTranscriptionResult).self) { group in
+            var startIndex = 0
+
+            // Add initial batch of tasks (up to maxConcurrent)
+            for (index, chunk) in indexedChunks.prefix(maxConcurrentTranscriptions) {
+                group.addTask {
+                    await transcribeSingleChunk(chunk: chunk, index: index, language: language)
+                }
+                startIndex += 1
+            }
+
+            // As tasks complete, add new ones to maintain concurrency limit
+            while let (index, result) = try await group.next() {
+                resultsByIndex[index] = result
+                completedCount += 1
+
+                // Update progress based on completion ratio
+                let progressFraction = Double(completedCount) / Double(totalCount)
+                let current = baseFraction + fractionBudget * progressFraction
+                await updateProgress(operationId: operationId, fraction: current, step: stageLabel, index: completedCount, total: totalCount)
+
+                // Add next chunk to process if any remain
+                if startIndex < indexedChunks.count {
+                    let (nextIndex, nextChunk) = indexedChunks[startIndex]
+                    group.addTask {
+                        await transcribeSingleChunk(chunk: nextChunk, index: nextIndex, language: language)
+                    }
+                    startIndex += 1
+                }
+            }
+        }
+
+        // Reconstruct results in original order
+        let orderedResults = (0..<chunks.count).compactMap { resultsByIndex[$0] }
+        guard orderedResults.count == chunks.count else {
+            throw TranscriptionError.transcriptionFailed("Failed to process all chunks")
         }
 
         // Final progress at end of chunking
         await updateProgress(operationId: operationId, fraction: baseFraction + fractionBudget, step: "Transcription stage complete")
-        return results
+        return orderedResults
     }
 
     private func summarizeResponse(from results: [ChunkTranscriptionResult], aggregatedText: String, overrideLanguage: String? = nil) -> TranscriptionResponse {
