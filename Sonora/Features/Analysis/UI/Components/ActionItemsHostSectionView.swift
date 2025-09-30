@@ -3,9 +3,8 @@ import SwiftUI
 internal struct ActionItemsHostSectionView: View {
     @ObservedObject var permissionService: EventKitPermissionService
 
-    @Binding var detectionItems: [ActionItemDetectionUI]
-    @Binding var dismissedDetections: Set<UUID>
-    @Binding var addedDetections: Set<UUID>
+    // Visible items after filtering/sorting (provided by parent state)
+    let visibleItems: [ActionItemDetectionUI]
 
     let addedRecords: [DistillAddedRecord]
     let isPro: Bool
@@ -64,9 +63,9 @@ internal struct ActionItemsHostSectionView: View {
                 .cornerRadius(8)
             }
 
-            if !detectionItemsFiltered.isEmpty {
+            if !visibleItems.isEmpty {
                 VStack(spacing: 12) {
-                    ForEach(detectionItemsFiltered) { m in
+                    ForEach(visibleItems) { m in
                         ActionItemDetectionCard(
                             model: m,
                             isPro: isPro,
@@ -92,7 +91,7 @@ internal struct ActionItemsHostSectionView: View {
         }
         .sheet(isPresented: $showBatchSheet) {
             BatchAddActionItemsSheet(
-                items: $detectionItems,
+                items: .constant(visibleItems),
                 include: $batchInclude,
                 isPro: isPro,
                 calendars: calendars,
@@ -115,25 +114,10 @@ internal struct ActionItemsHostSectionView: View {
         return !(cal.isAuthorized && rem.isAuthorized)
     }
 
-    private var detectionItemsFiltered: [ActionItemDetectionUI] {
-        detectionItems
-            .filter { !dismissedDetections.contains($0.id) && !addedDetections.contains($0.id) }
-            .sorted { lhs, rhs in
-                if lhs.confidence != rhs.confidence {
-                    return order(lhs.confidence) < order(rhs.confidence)
-                }
-                if let ld = lhs.suggestedDate, let rd = rhs.suggestedDate {
-                    return ld < rd
-                }
-                return false
-            }
-    }
-
-    private func order(_ c: ActionItemConfidence) -> Int { c == .high ? 0 : (c == .medium ? 1 : 2) }
-    private var reviewCount: Int { detectionItemsFiltered.count }
+    private var reviewCount: Int { visibleItems.count }
 
     private func openBatchReview() {
-        let selected = Set(detectionItemsFiltered.map { $0.id })
+        let selected = Set(visibleItems.map { $0.id })
         batchInclude = selected
         onOpenBatch(selected)
     }

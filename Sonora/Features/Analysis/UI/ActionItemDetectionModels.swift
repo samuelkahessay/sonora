@@ -1,25 +1,6 @@
 import Foundation
 import SwiftUI
 
-enum ActionItemDetectionKind: String, Sendable, Equatable {
-    case event
-    case reminder
-}
-
-enum ActionItemConfidence: String, Sendable, Equatable {
-    case high
-    case medium
-    case low
-
-    static func from(_ value: Float) -> Self {
-        switch value {
-        case 0.8...1.0: return .high
-        case 0.6..<0.8: return .medium
-        default: return .low
-        }
-    }
-}
-
 struct ActionItemDetectionUI: Identifiable, Equatable {
     let id: UUID
     let sourceId: String
@@ -78,36 +59,25 @@ struct ActionItemDetectionUI: Identifiable, Equatable {
     }
 }
 
-// Removed unused UI helper properties (typeBadgeText, canQuickChip, confidenceText)
-
+// Presentation adapter
 extension ActionItemDetectionUI {
-    static func fromEvent(_ event: EventsData.DetectedEvent) -> ActionItemDetectionUI {
+    static func fromDomain(_ d: ActionItemDetection, id: UUID, flags: (isEditing: Bool, isAdded: Bool, isDismissed: Bool, isProcessing: Bool) = (false, false, false, false)) -> ActionItemDetectionUI {
         ActionItemDetectionUI(
-            sourceId: event.id,
-            kind: .event,
-            confidence: .from(event.confidence),
-            sourceQuote: event.sourceText,
-            title: event.title,
-            suggestedDate: event.startDate,
-            isAllDay: false,
-            location: event.location,
-            priorityLabel: nil,
-            memoId: event.memoId
-        )
-    }
-
-    static func fromReminder(_ reminder: RemindersData.DetectedReminder) -> ActionItemDetectionUI {
-        ActionItemDetectionUI(
-            sourceId: reminder.id,
-            kind: .reminder,
-            confidence: .from(reminder.confidence),
-            sourceQuote: reminder.sourceText,
-            title: reminder.title,
-            suggestedDate: reminder.dueDate,
-            isAllDay: false,
-            location: nil,
-            priorityLabel: reminder.priority.rawValue,
-            memoId: reminder.memoId
+            id: id,
+            sourceId: d.sourceId,
+            kind: d.kind,
+            confidence: d.confidence,
+            sourceQuote: d.sourceQuote,
+            title: d.title,
+            suggestedDate: d.suggestedDate,
+            isAllDay: d.isAllDay,
+            location: d.location,
+            priorityLabel: d.priorityLabel,
+            memoId: d.memoId,
+            isEditing: flags.isEditing,
+            isAdded: flags.isAdded,
+            isDismissed: flags.isDismissed,
+            isProcessing: flags.isProcessing
         )
     }
 }

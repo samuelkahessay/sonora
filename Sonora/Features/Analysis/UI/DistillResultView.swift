@@ -111,24 +111,7 @@ struct DistillResultView: View {
     var remindersForUI: [RemindersData.DetectedReminder] { dedupedDetectionResults.1 }
 
     // MARK: - Detections (Events + Reminders)
-    @State internal var detectionItems: [ActionItemDetectionUI] = []
-    @State internal var dismissedDetections: Set<UUID> = []
-    @State internal var editingDetections: Set<UUID> = []
-    @State internal var addedDetections: Set<UUID> = []
-    @State internal var showBatchSheet: Bool = false
-    @State internal var batchInclude: Set<UUID> = []
-    @State internal var addedRecords: [DistillAddedRecord] = []
-    @State internal var restoredAddedRecords = false
-    @State internal var handledStore = DistillHandledDetectionsStore()
-    @State internal var eventSources: [UUID: EventsData.DetectedEvent] = [:]
-    @State internal var reminderSources: [UUID: RemindersData.DetectedReminder] = [:]
-    @State internal var createdArtifacts: [UUID: DistillCreatedArtifact] = [:]
-    @State internal var availableCalendars: [CalendarDTO] = []
-    @State internal var availableReminderLists: [CalendarDTO] = []
-    @State internal var defaultCalendar: CalendarDTO?
-    @State internal var defaultReminderList: CalendarDTO?
-    @State internal var calendarsLoaded = false
-    @State internal var reminderListsLoaded = false
+    @State private var detection = ActionItemDetectionState()
     @StateObject internal var permissionService: EventKitPermissionService = {
         if let concrete = DIContainer.shared.eventKitPermissionService() as? EventKitPermissionService {
             return concrete
@@ -152,36 +135,36 @@ struct DistillResultView: View {
     private var actionItemsHostSection: some View {
         ActionItemsHostSectionView(
             permissionService: permissionService,
-            detectionItems: $detectionItems,
-            dismissedDetections: $dismissedDetections,
-            addedDetections: $addedDetections,
-            addedRecords: addedRecords,
+            visibleItems: detection.visibleItems,
+            addedRecords: detection.addedRecords,
             isPro: isPro,
             isDetectionPending: isDetectionPending,
-            showBatchSheet: $showBatchSheet,
-            batchInclude: $batchInclude,
-            calendars: availableCalendars,
-            reminderLists: availableReminderLists,
-            defaultCalendar: defaultCalendar,
-            defaultReminderList: defaultReminderList,
+            showBatchSheet: $detection.showBatchSheet,
+            batchInclude: $detection.batchInclude,
+            calendars: detection.availableCalendars,
+            reminderLists: detection.availableReminderLists,
+            defaultCalendar: detection.defaultCalendar,
+            defaultReminderList: detection.defaultReminderList,
             onOpenBatch: { selected in
-                let reviewItems = detectionItemsFiltered
-                batchInclude = selected
+                let reviewItems = detection.visibleItems
+                detection.batchInclude = selected
                 Task { @MainActor in
-                    do { try await loadDestinationsIfNeeded(for: reviewItems); showBatchSheet = true } catch { }
+                    do { try await detection.loadDestinationsIfNeeded(for: reviewItems); detection.showBatchSheet = true } catch { }
                 }
             },
-            onEditToggle: { id in toggleEdit(id) },
-            onAdd: { updated in onAddSingle(updated) },
-            onDismissItem: { id in dismiss(id) },
+            onEditToggle: { id in detection.toggleEdit(id) },
+            onAdd: { updated in Task { @MainActor in await detection.handleSingleAdd(updated, permissionService: permissionService) } },
+            onDismissItem: { id in detection.dismiss(id) },
             onAddSelected: { selected, calendar, reminderList in
-                Task { @MainActor in await handleBatchAdd(selected: selected, calendar: calendar, reminderList: reminderList) }
+                Task { @MainActor in await detection.handleBatchAdd(selected: selected, calendar: calendar, reminderList: reminderList, permissionService: permissionService) }
             },
             onDismissSheet: { }
         )
-        .onAppear(perform: prepareDetectionsIfNeeded)
+        .onAppear {
+            detection.mergeFrom(events: eventsForUI, reminders: remindersForUI, memoId: memoId)
+        }
         .onChange(of: eventsForUI.count + remindersForUI.count) { _, _ in
-            prepareDetectionsIfNeeded()
+            detection.mergeFrom(events: eventsForUI, reminders: remindersForUI, memoId: memoId)
         }
     }
 
@@ -190,29 +173,7 @@ struct DistillResultView: View {
     // Reflection section extracted into component ReflectionQuestionsSectionView
 
     // MARK: - Detection helpers
-    private var detectionItemsFiltered: [ActionItemDetectionUI] {
-        detectionItems
-            .filter { !dismissedDetections.contains($0.id) && !addedDetections.contains($0.id) }
-            .sorted { lhs, rhs in
-                if lhs.confidence != rhs.confidence {
-                    return order(lhs.confidence) < order(rhs.confidence)
-                }
-                // Earlier dates first if both present
-                if let ld = lhs.suggestedDate, let rd = rhs.suggestedDate {
-                    return ld < rd
-                }
-                return false
-            }
-    }
-    private func order(_ c: ActionItemConfidence) -> Int { c == .high ? 0 : (c == .medium ? 1 : 2) }
-    private var reviewCount: Int { detectionItemsFiltered.count }
-    private func openBatchReview() {
-        let reviewItems = detectionItemsFiltered
-        batchInclude = Set(reviewItems.map { $0.id })
-        Task { @MainActor in
-            do { try await loadDestinationsIfNeeded(for: reviewItems); showBatchSheet = true } catch { }
-        }
-    }
+    // Filtering and batch helpers consolidated in ActionItemDetectionState
     // prepareDetectionsIfNeeded moved to DistillResultView+Detections.swift
     // toggleEdit moved to DistillResultView+Detections.swift
     // dismiss moved to DistillResultView+Detections.swift
