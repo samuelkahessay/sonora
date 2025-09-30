@@ -1,7 +1,7 @@
-import Testing
-import Foundation
 import Combine
+import Foundation
 @testable import Sonora
+import Testing
 
 // In-memory RecordingUsageRepository mock
 final class InMemoryRecordingUsageRepository: RecordingUsageRepository {
@@ -101,7 +101,9 @@ final class InMemoryRecordingUsageRepository: RecordingUsageRepository {
 }
 
 struct RecordingQuotaUseCasesTests {
-    @Test @MainActor func testCanStartRecordingUseCase_AllowsAndClamps_Monthly() async throws {
+    @Test
+    @MainActor
+    func testCanStartRecordingUseCase_AllowsAndClamps_Monthly() async throws {
         let repo = InMemoryRecordingUsageRepository()
         // Compose monthly UC over the in-memory repo and default policy (free)
         let monthlyUC = GetRemainingMonthlyQuotaUseCase(quotaPolicy: DefaultRecordingQuotaPolicy(), usageRepository: repo)
@@ -126,7 +128,9 @@ struct RecordingQuotaUseCasesTests {
         }
     }
 
-    @Test @MainActor func testConsumeAndRemainingMonthlyUseCases() async throws {
+    @Test
+    @MainActor
+    func testConsumeAndRemainingMonthlyUseCases() async throws {
         let repo = InMemoryRecordingUsageRepository()
         let consume = ConsumeRecordingUsageUseCase(usageRepository: repo)
         let monthly = GetRemainingMonthlyQuotaUseCase(quotaPolicy: DefaultRecordingQuotaPolicy(), usageRepository: repo)

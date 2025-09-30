@@ -1,5 +1,5 @@
-import XCTest
 @testable import Sonora
+import XCTest
 
 final class PromptLocalizationGenerationTests: XCTestCase {
     func testCatalogLocalizationStringsAreGenerated() throws {
@@ -21,7 +21,7 @@ final class PromptLocalizationGenerationTests: XCTestCase {
 
         // Build expected (key, text) pairs by mirroring PromptFileLoader's mapping
         let expected: [(key: String, text: String)] = fileContents
-            .split(whereSeparator: { $0.isNewline })
+            .split { $0.isNewline }
             .compactMap { rawLine -> (String, String)? in
                 let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !line.isEmpty, !line.hasPrefix("#"), !line.hasPrefix("//") else { return nil }

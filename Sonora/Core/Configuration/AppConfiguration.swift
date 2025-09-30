@@ -714,9 +714,9 @@ public final class AppConfiguration: ObservableObject {
 
 /// Defines the type of audio content being recorded for optimization
 public enum AudioContentType: String, CaseIterable, Sendable {
-    case voice = "voice"
-    case music = "music"
-    case mixed = "mixed"
+    case voice
+    case music
+    case mixed
 
     /// Human-readable display name
     public var displayName: String {

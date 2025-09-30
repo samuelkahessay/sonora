@@ -205,7 +205,7 @@ struct CalendarSelectionView: View {
                 .fontWeight(.semibold)
             Picker("Calendar", selection: Binding(
                 get: { selectedCalendar?.id ?? "" },
-                set: { newId in selectedCalendar = calendars.first { $0.id == newId }}
+                set: { newId in selectedCalendar = calendars.first { $0.id == newId } }
             )) {
                 ForEach(calendars, id: \.id) { cal in
                     HStack(spacing: 8) {

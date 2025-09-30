@@ -38,9 +38,9 @@ public enum OperationType: Hashable, CustomStringConvertible, Sendable {
 
 /// Broad categories of operations for conflict detection
 public enum OperationCategory: String, CaseIterable, Sendable {
-    case recording = "recording"
-    case transcription = "transcription"
-    case analysis = "analysis"
+    case recording
+    case transcription
+    case analysis
 
     /// Operations that cannot run simultaneously with this category
     public var conflictsWith: Set<Self> {
@@ -94,11 +94,11 @@ public enum OperationPriority: Int, Comparable, CaseIterable, Sendable {
 
 /// Current status of an operation
 public enum OperationStatus: String, CaseIterable, Sendable {
-    case pending = "pending"        // Queued but not started
-    case active = "active"          // Currently running
-    case completed = "completed"    // Successfully finished
-    case failed = "failed"          // Failed with error
-    case cancelled = "cancelled"    // Cancelled before completion
+    case pending        // Queued but not started
+    case active          // Currently running
+    case completed    // Successfully finished
+    case failed          // Failed with error
+    case cancelled    // Cancelled before completion
 
     /// Whether this status indicates the operation is still in progress
     public var isInProgress: Bool {

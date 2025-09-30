@@ -303,10 +303,10 @@ public struct DomainActionItem: Codable, Equatable, Identifiable, Hashable, Send
 
 /// Priority levels for action items
 public enum DomainPriority: String, Codable, CaseIterable, Hashable, Sendable {
-    case low = "low"
-    case medium = "medium"
-    case high = "high"
-    case urgent = "urgent"
+    case low
+    case medium
+    case high
+    case urgent
 
     public var displayName: String {
         rawValue.capitalized

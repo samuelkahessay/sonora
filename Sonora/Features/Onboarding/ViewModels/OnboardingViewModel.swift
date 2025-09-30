@@ -3,9 +3,9 @@ import SwiftUI
 
 /// Onboarding page types
 enum OnboardingPage: String, CaseIterable {
-    case nameEntry = "nameEntry"
-    case howItWorks = "howItWorks"
-    case firstRecording = "firstRecording"
+    case nameEntry
+    case howItWorks
+    case firstRecording
 
     var title: String {
         switch self {

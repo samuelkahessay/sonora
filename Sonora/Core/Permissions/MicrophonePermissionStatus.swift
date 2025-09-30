@@ -6,9 +6,9 @@ import Foundation
 /// Provides clear differentiation between all possible permission states
 public enum MicrophonePermissionStatus: String, CaseIterable, Equatable, Sendable {
     case notDetermined = "not_determined"
-    case granted = "granted"
-    case denied = "denied"
-    case restricted = "restricted"
+    case granted
+    case denied
+    case restricted
 
     /// Human-readable display name for UI
     public var displayName: String {

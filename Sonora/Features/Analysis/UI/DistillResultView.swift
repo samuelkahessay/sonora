@@ -262,7 +262,7 @@ struct DistillResultView: View {
             if shouldShowPermissionExplainer {
                 PermissionExplainerCard(
                     permissions: permissionService
-                )                    { DIContainer.shared.systemNavigator().openSettings(completion: nil) }
+                ) { DIContainer.shared.systemNavigator().openSettings(completion: nil) }
             }
             HStack(spacing: 10) {
                 Image(systemName: "calendar.badge.clock")

@@ -5,10 +5,10 @@
 //  Created by Samuel Kahessay on 2025-08-23.
 //
 
-import Testing
 import Foundation
-import SwiftData
 @testable import Sonora
+import SwiftData
+import Testing
 struct SonoraTests {
 
     @MainActor
@@ -35,7 +35,9 @@ struct SonoraTests {
         // Write your test here and use APIs like `#expect(...)` to check expected conditions.
     }
 
-    @Test @MainActor func testMemoRepositoryAtomicOperations() async throws {
+    @Test
+    @MainActor
+    func testMemoRepositoryAtomicOperations() async throws {
         // Create a test repository
         let repository = try makeTestMemoRepository()
 
@@ -67,7 +69,9 @@ struct SonoraTests {
         print("✅ MemoRepository atomic operations test completed successfully")
     }
 
-    @Test @MainActor func testUpdatedMemoUseCases() async throws {
+    @Test
+    @MainActor
+    func testUpdatedMemoUseCases() async throws {
         // Create test repository
         let repository = try makeTestMemoRepository()
 

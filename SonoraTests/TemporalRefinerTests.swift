@@ -1,5 +1,5 @@
-import XCTest
 @testable import Sonora
+import XCTest
 
 final class TemporalRefinerTests: XCTestCase {
     func testRefinesTodayAtSixPMFromSourceText() {

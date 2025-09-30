@@ -13,7 +13,7 @@ import SwiftUI
 /// Eliminates magic strings and provides compile-time safety for SF Symbols
 enum MemoSystemIcons: String {
     /// Clock icon for duration display
-    case clock = "clock"
+    case clock
 
     /// Transcription action icon
     case transcribe = "text.quote"
@@ -33,16 +33,16 @@ enum MemoSystemIcons: String {
 /// Ensures consistent key generation for SwiftUI view identity and animation
 enum TranscriptionStateKey: String {
     /// State key for memos that haven't started transcription
-    case notStarted = "notStarted"
+    case notStarted
 
     /// State key for memos currently being transcribed
-    case inProgress = "inProgress"
+    case inProgress
 
     /// State key for successfully transcribed memos
-    case completed = "completed"
+    case completed
 
     /// State key for failed transcription attempts
-    case failed = "failed"
+    case failed
 
     /// Generate appropriate key for transcription state
     /// - Parameter state: Current transcription state

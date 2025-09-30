@@ -59,7 +59,7 @@ struct MemoDetailView: View {
                             type: .warning,
                             message: err,
                             onPrimaryAction: viewModel.canRetryTranscription ? { viewModel.retryTranscription() } : nil
-                        )                            { dismissTranscriptionErrorBanner = true }
+                        ) { dismissTranscriptionErrorBanner = true }
                         .padding(.horizontal)
                     }
 
@@ -334,10 +334,10 @@ struct MemoDetailView: View {
                         set: { scrubValue = $0 }
                     ),
                     in: 0...(max(viewModel.totalDuration, 0.001))
-                )                    { editing in
+                ) { editing in
                         isScrubbing = editing
                         if !editing { viewModel.seek(to: scrubValue) }
-                    }
+                }
                 .tint(.semantic(.brandPrimary))
                 .accessibilityLabel("Playback position")
                 .accessibilityValue("\(Int((isScrubbing ? scrubValue : viewModel.currentTime) / max(viewModel.totalDuration, 1) * 100)) percent")

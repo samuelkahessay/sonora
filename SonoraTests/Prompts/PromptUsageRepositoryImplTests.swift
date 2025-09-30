@@ -1,7 +1,7 @@
 #if canImport(SwiftData)
-import XCTest
-import SwiftData
 @testable import Sonora
+import SwiftData
+import XCTest
 
 @MainActor
 final class PromptUsageRepositoryImplTests: XCTestCase {
@@ -24,9 +24,9 @@ final class PromptUsageRepositoryImplTests: XCTestCase {
 
         let now = Date()
         try repo.markUsed(promptId: "a", at: now)
-        try repo.markUsed(promptId: "b", at: now.addingTimeInterval(-60*60*24*8)) // 8 days ago
+        try repo.markUsed(promptId: "b", at: now.addingTimeInterval(-60 * 60 * 24 * 8)) // 8 days ago
 
-        let recent = try repo.recentlyUsedPromptIds(since: now.addingTimeInterval(-60*60*24*7))
+        let recent = try repo.recentlyUsedPromptIds(since: now.addingTimeInterval(-60 * 60 * 24 * 7))
         XCTAssertTrue(recent.contains("a"))
         XCTAssertFalse(recent.contains("b"))
     }

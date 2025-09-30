@@ -205,10 +205,10 @@ public enum AppEvent: Equatable {
 
 /// Categories for organizing and filtering events
 public enum EventCategory: String, CaseIterable {
-    case memo = "memo"
-    case recording = "recording"
-    case transcription = "transcription"
-    case analysis = "analysis"
+    case memo
+    case recording
+    case transcription
+    case analysis
 
     public var displayName: String {
         switch self {

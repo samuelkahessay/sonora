@@ -1,5 +1,5 @@
-import XCTest
 @testable import Sonora
+import XCTest
 
 // MARK: - Test Doubles
 
@@ -11,6 +11,7 @@ final class FakePromptUsageRepository: PromptUsageRepository {
         var useCount: Int
         var isFavorite: Bool
     }
+    
     private var map: [String: UsageEntry] = [:]
 
     func markShown(promptId: String, at date: Date) throws {

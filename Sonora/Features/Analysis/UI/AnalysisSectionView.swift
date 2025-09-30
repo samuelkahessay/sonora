@@ -46,7 +46,7 @@ struct AnalysisSectionView: View {
                     isAnalyzing: isAnalyzing,
                     hasCachedResult: hasCached,
                     hasShownCachedResult: hasShown
-                )                    {
+                ) {
                         HapticManager.shared.playSelection()
                         if hasCached {
                             if !hasShown {
@@ -55,7 +55,7 @@ struct AnalysisSectionView: View {
                         } else {
                             viewModel.performAnalysis(mode: .distill, transcript: transcript)
                         }
-                    }
+                }
                 .buttonStyle(PressableCardButtonStyle())
                 .contentShape(RoundedRectangle(cornerRadius: DistillLayout.buttonCornerRadius, style: .continuous))
                 .disabled(isAnalyzing || (hasCached && hasShown))

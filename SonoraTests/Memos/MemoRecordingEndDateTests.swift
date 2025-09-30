@@ -1,5 +1,5 @@
-import XCTest
 @testable import Sonora
+import XCTest
 
 final class MemoRecordingEndDateTests: XCTestCase {
     func testRecordingEndDateUsesStoredDuration() {

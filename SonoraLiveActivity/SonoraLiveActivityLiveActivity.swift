@@ -1,7 +1,7 @@
 import ActivityKit
-import WidgetKit
-import SwiftUI
 import AppIntents
+import SwiftUI
+import WidgetKit
 
 struct SonoraLiveActivityLiveActivity: Widget {
     var body: some WidgetConfiguration {
@@ -175,12 +175,12 @@ struct PremiumLiveActivityView: View {
 // Helper functions remain the same
 private func elapsedString(from start: Date) -> String {
     let interval = max(0, Int(Date().timeIntervalSince(start)))
-    return String(format: "%d:%02d", interval/60, interval%60)
+    return String(format: "%d:%02d", interval / 60, interval % 60)
 }
 private func shortElapsed(from start: Date) -> String { elapsedString(from: start) }
 private func countdownString(_ remaining: TimeInterval) -> String {
     let t = max(0, Int(remaining))
-    return String(format: "%d:%02d", t/60, t%60)
+    return String(format: "%d:%02d", t / 60, t % 60)
 }
 // removed unused helpers shortCountdown and timerString
 

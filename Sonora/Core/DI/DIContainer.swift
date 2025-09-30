@@ -210,7 +210,7 @@ final class DIContainer: ObservableObject, Resolver {
         // Register RecordingQuotaPolicy (protocol-first)
         register((any RecordingQuotaPolicyProtocol).self) { resolver in
             let sk = resolver.resolve((any StoreKitServiceProtocol).self) ?? (StoreKitService() as any StoreKitServiceProtocol)
-            return DefaultRecordingQuotaPolicy { sk.isPro }as any RecordingQuotaPolicyProtocol
+            return DefaultRecordingQuotaPolicy { sk.isPro } as any RecordingQuotaPolicyProtocol
         }
 
         // Register LiveActivityService

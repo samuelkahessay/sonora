@@ -41,16 +41,16 @@ struct OnboardingView: View {
     private func pageView(for page: OnboardingPage) -> some View {
         switch page {
         case .nameEntry:
-            NameEntryView                { name in
+            NameEntryView { name in
                     viewModel.saveUserName(name)
                     viewModel.goToNextPage()
-                }
+            }
         case .howItWorks:
-            HowItWorksView                { viewModel.goToNextPage() }
+            HowItWorksView { viewModel.goToNextPage() }
         case .firstRecording:
             FirstRecordingPromptView(
                 userName: viewModel.userName
-            )                { viewModel.startFirstRecording() }
+            ) { viewModel.startFirstRecording() }
         }
     }
 }

@@ -66,10 +66,10 @@ final class ZipDataExportService: DataExporting {
                     type: .file,
                     uncompressedSize: fileSize,
                     compressionMethod: .deflate
-                )                    { position, size in
+                ) { position, size in
                         handle.seek(toFileOffset: UInt64(position))
                         return handle.readData(ofLength: size)
-                    }
+                }
             }
         }
     }
@@ -111,11 +111,11 @@ final class ZipDataExportService: DataExporting {
             type: .file,
             uncompressedSize: size,
             compressionMethod: .deflate
-        )            { position, size in
+        ) { position, size in
                 let start = Int(position)
                 let end = min(start + size, data.count)
                 return data.subdata(in: start..<end)
-            }
+        }
     }
 
     enum ExportError: LocalizedError {

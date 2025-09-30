@@ -249,7 +249,7 @@ final class TitleGenerationCoordinator: ObservableObject {
             let title = try await titleService.generateTitle(
                 transcript: slice,
                 languageHint: languageHint
-            )                { [weak self] update in
+            ) { [weak self] update in
                     guard let self, !update.isFinal else { return }
                     Task { @MainActor in
                         guard !update.text.isEmpty else { return }
@@ -258,7 +258,7 @@ final class TitleGenerationCoordinator: ObservableObject {
                         self.streamingTasks[memoId] = nil
                         self.stateByMemo[memoId] = .streaming(update.text)
                     }
-                }
+            }
 
             if let title {
                 let didReceiveStreamingUpdate = await streamingFlag.isMarked()

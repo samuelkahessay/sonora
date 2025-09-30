@@ -1,5 +1,5 @@
-import XCTest
 @testable import Sonora
+import XCTest
 
 @MainActor
 final class DefaultFillerWordFilterTests: XCTestCase {

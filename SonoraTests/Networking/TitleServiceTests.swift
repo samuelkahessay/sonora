@@ -1,5 +1,5 @@
-import XCTest
 @testable import Sonora
+import XCTest
 
 final class TitleServiceTests: XCTestCase {
     override func tearDown() {
@@ -76,18 +76,17 @@ final class TitleServiceTests: XCTestCase {
 
         let title = try await service.generateTitle(
             transcript: "example transcript for testing",
-            languageHint: nil,
-            progress: { update in
+            languageHint: nil
+        )            { update in
                 updates.append(update)
                 if update.isFinal {
                     finalExpectation.fulfill()
                 }
             }
-        )
 
         await fulfillment(of: [finalExpectation], timeout: 1.0)
         XCTAssertEqual(title, "Weekly Recap Notes")
-        XCTAssertTrue(updates.contains(where: { !$0.isFinal }), "Expected at least one interim update")
+        XCTAssertTrue(updates.contains { !$0.isFinal }, "Expected at least one interim update")
         XCTAssertEqual(updates.last?.text, "Weekly Recap Notes")
     }
 
@@ -107,9 +106,8 @@ final class TitleServiceTests: XCTestCase {
 
         let title = try await service.generateTitle(
             transcript: "fallback transcript",
-            languageHint: nil,
-            progress: { _ in }
-        )
+            languageHint: nil
+        )            { _ in }
 
         XCTAssertEqual(title, "Weekly Recap Notes")
         XCTAssertEqual(URLProtocolStub.recordedRequests.count, 2, "Expected fallback request after streaming unsupported")

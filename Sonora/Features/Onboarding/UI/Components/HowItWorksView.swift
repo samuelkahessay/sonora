@@ -290,9 +290,9 @@ enum HowItWorksStep: CaseIterable {
 // MARK: - Previews
 
 #Preview("How It Works - Step 1") {
-    HowItWorksView        {
+    HowItWorksView {
             print("Continue tapped")
-        }
+    }
 }
 
 #Preview("How It Works - Interactive") {
@@ -301,10 +301,10 @@ enum HowItWorksStep: CaseIterable {
 
         var body: some View {
             if isPresented {
-                HowItWorksView                    {
+                HowItWorksView {
                         print("Continue tapped")
                         isPresented = false
-                    }
+                }
             } else {
                 Text("Demo completed")
                     .font(.title)

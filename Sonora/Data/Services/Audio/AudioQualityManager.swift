@@ -232,10 +232,10 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
 /// Predefined audio quality profiles
 public enum AudioQualityProfile: String, CaseIterable, Sendable {
     case voiceOptimized = "voice_optimized"
-    case balanced = "balanced"
+    case balanced
     case highQuality = "high_quality"
     case batterySaver = "battery_saver"
-    case custom = "custom"
+    case custom
 
     /// Human-readable display name
     public var displayName: String {

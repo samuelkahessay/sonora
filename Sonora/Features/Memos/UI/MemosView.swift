@@ -114,7 +114,7 @@ struct MemosView: View {
                     MemoListTopBarView(
                         isEmpty: viewModel.isEmpty,
                         isEditMode: viewModel.isEditMode
-                    )                        { viewModel.toggleEditMode() }
+                    ) { viewModel.toggleEditMode() }
             }
         }
         // Present Settings without affecting the memos navigation stack
@@ -349,11 +349,11 @@ enum TimePeriod: String, CaseIterable {
     case thisMorning = "this_morning"
     case thisAfternoon = "this_afternoon"
     case thisEvening = "this_evening"
-    case today = "today"
-    case yesterday = "yesterday"
+    case today
+    case yesterday
     case thisWeek = "this_week"
     case thisMonth = "this_month"
-    case older = "older"
+    case older
 
     /// Brand voice header text with contextual messaging
     var headerText: String {

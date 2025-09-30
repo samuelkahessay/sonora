@@ -5,8 +5,8 @@
 //  Created by Samuel Kahessay on 2025-08-27.
 //
 
-import WidgetKit
 import SwiftUI
+import WidgetKit
 
 @main
 struct SonoraLiveActivityBundle: WidgetBundle {

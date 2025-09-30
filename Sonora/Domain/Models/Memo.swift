@@ -240,9 +240,9 @@ public enum DomainTranscriptionStatus: Codable, Equatable, Hashable, Sendable {
 
 /// Domain model for analysis types
 public enum DomainAnalysisType: String, CaseIterable, Codable, Hashable, Sendable {
-    case distill = "distill"
-    case summary = "summary"
-    case themes = "themes"
+    case distill
+    case summary
+    case themes
     case actionItems = "action_items"
     case keyPoints = "key_points"
 

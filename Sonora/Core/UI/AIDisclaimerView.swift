@@ -9,10 +9,10 @@ struct AIDisclaimerView: View {
 
     // MARK: - Content Types
     enum AIContentType: String, CaseIterable {
-        case transcription = "transcription"
-        case analysis = "analysis"
-        case summary = "summary"
-        case generic = "generic"
+        case transcription
+        case analysis
+        case summary
+        case generic
 
         var displayName: String {
             switch self {

@@ -1,7 +1,7 @@
-import Testing
-import Foundation
 import Combine
+import Foundation
 @testable import Sonora
+import Testing
 
 // Reuse the in-memory repo used in RecordingQuotaUseCasesTests but ensure month API is available.
 final class InMemoryMonthlyUsageRepo: RecordingUsageRepository {
@@ -79,24 +79,30 @@ final class InMemoryMonthlyUsageRepo: RecordingUsageRepository {
 }
 
 struct GetRemainingMonthlyQuotaUseCaseTests {
-    @Test @MainActor func testProUser_ReturnsInfinity() async throws {
-        let policy = DefaultRecordingQuotaPolicy(isProProvider: { true })
+    @Test
+    @MainActor
+    func testProUser_ReturnsInfinity() async throws {
+        let policy = DefaultRecordingQuotaPolicy { true }
         let repo = InMemoryMonthlyUsageRepo()
         let uc = GetRemainingMonthlyQuotaUseCase(quotaPolicy: policy, usageRepository: repo)
         let remaining = try await uc.execute()
         #expect(remaining == .infinity)
     }
 
-    @Test @MainActor func testFreeUser_ZeroUsage_Returns3600() async throws {
-        let policy = DefaultRecordingQuotaPolicy(isProProvider: { false })
+    @Test
+    @MainActor
+    func testFreeUser_ZeroUsage_Returns3600() async throws {
+        let policy = DefaultRecordingQuotaPolicy { false }
         let repo = InMemoryMonthlyUsageRepo()
         let uc = GetRemainingMonthlyQuotaUseCase(quotaPolicy: policy, usageRepository: repo)
         let remaining = try await uc.execute()
         #expect(remaining == 3_600)
     }
 
-    @Test @MainActor func testFreeUser_1800Used_Returns1800() async throws {
-        let policy = DefaultRecordingQuotaPolicy(isProProvider: { false })
+    @Test
+    @MainActor
+    func testFreeUser_1800Used_Returns1800() async throws {
+        let policy = DefaultRecordingQuotaPolicy { false }
         let repo = InMemoryMonthlyUsageRepo()
         // Add 1_800s this month
         await repo.addUsage(1_800, for: Date())
@@ -105,8 +111,10 @@ struct GetRemainingMonthlyQuotaUseCaseTests {
         #expect(remaining == 1_800)
     }
 
-    @Test @MainActor func testFreeUser_OverCap_ReturnsZero() async throws {
-        let policy = DefaultRecordingQuotaPolicy(isProProvider: { false })
+    @Test
+    @MainActor
+    func testFreeUser_OverCap_ReturnsZero() async throws {
+        let policy = DefaultRecordingQuotaPolicy { false }
         let repo = InMemoryMonthlyUsageRepo()
         await repo.addUsage(4_000, for: Date())
         let uc = GetRemainingMonthlyQuotaUseCase(quotaPolicy: policy, usageRepository: repo)
