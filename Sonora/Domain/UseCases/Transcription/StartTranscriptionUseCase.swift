@@ -1,23 +1,8 @@
 import AVFoundation
 import Foundation
 
-// Language fallback configuration
-struct LanguageFallbackConfig {
-    let confidenceThreshold: Double
-    init(confidenceThreshold: Double = 0.5) {
-        self.confidenceThreshold = max(0.0, min(1.0, confidenceThreshold))
-    }
-}
-
-/// Use case for starting transcription of a memo
-/// Encapsulates the business logic for initiating transcription
 @MainActor
-protocol StartTranscriptionUseCaseProtocol {
-    func execute(memo: Memo) async throws
-}
-
-@MainActor
-final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
+internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
     // MARK: - Dependencies
     private let transcriptionRepository: any TranscriptionRepository
@@ -36,7 +21,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     private let languageFallbackConfig: LanguageFallbackConfig
 
     // MARK: - Initialization
-    init(
+    internal init(
         transcriptionRepository: any TranscriptionRepository,
         transcriptionAPI: any TranscriptionAPI,
         eventBus: any EventBusProtocol,
@@ -66,7 +51,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
     // MARK: - Use Case Execution
     @MainActor
-    func execute(memo: Memo) async throws {
+    internal func execute(memo: Memo) async throws {
         let context = LogContext(additionalInfo: [
             "memoId": memo.id.uuidString,
             "filename": memo.filename
@@ -74,34 +59,14 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
         logger.info("Starting transcription for memo: \(memo.filename)", category: .transcription, context: context)
 
-        // Idempotency guard: do not proceed if already completed or in progress, or previously skipped for silence
-        let preState = transcriptionRepository.getTranscriptionState(for: memo.id)
-        if preState.isInProgress {
-            throw TranscriptionError.alreadyInProgress
-        }
-        if case .completed = preState {
-            throw TranscriptionError.alreadyCompleted
-        }
-        if case .failed(let msg) = preState, msg.lowercased().contains("no speech detected") || msg.localizedCaseInsensitiveContains("didn't quite catch") {
-            // Treat silence as non-actionable; skip quietly
-            logger.info("Skipping transcription: previous attempt reported no speech", category: .transcription, context: context)
-            return
-        }
+        // Preconditions and historical skip check
+        try guardIdempotencyAndSilenceHistory(memo: memo, context: context)
 
         // Check for operation conflicts (e.g., can't transcribe while recording same memo)
-        guard await operationCoordinator.canStartTranscription(for: memo.id) else {
-            logger.warning("Cannot start transcription - conflicting operation (recording) active",
-                          category: .transcription, context: context, error: nil)
-            throw TranscriptionError.conflictingOperation
-        }
+        try await guardNoConflictingOperation(memo: memo, context: context)
 
         // Register transcription operation
-        guard let operationId = await operationCoordinator.registerOperation(.transcription(memoId: memo.id)) else {
-            logger.warning("Transcription rejected by operation coordinator", category: .transcription, context: context, error: nil)
-            throw TranscriptionError.systemBusy
-        }
-
-        logger.debug("Transcription operation registered with ID: \(operationId)", category: .transcription, context: context)
+        let operationId = try await registerTranscriptionOperation(memo: memo, context: context)
 
         do {
             await MainActor.run { CurrentTranscriptionContext.memoId = memo.id }
@@ -109,316 +74,29 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             // Check if transcription is already in progress
             // State is checked pre-registration; proceed
 
-            // Check file exists and is ready for AVFoundation
-            let audioURL = memo.fileURL
-            guard FileManager.default.fileExists(atPath: audioURL.path) else {
-                await operationCoordinator.failOperation(operationId, errorDescription: TranscriptionError.fileNotFound.errorDescription ?? "Audio file not found")
-                throw TranscriptionError.fileNotFound
-            }
-            // Bounded readiness barrier
-            _ = await AudioReadiness.ensureReady(url: audioURL, maxWait: 0.8)
-
-            // Early skip for tiny clips (avoid noisy IO + VAD)
-            do {
-                let asset = AVURLAsset(url: audioURL)
-                let durationTime = try await asset.load(.duration)
-                let totalDurationSec = CMTimeGetSeconds(durationTime)
-                if totalDurationSec < 0.8 {
-                    await MainActor.run {
-                        transcriptionRepository.saveTranscriptionState(.failed("Clip too short"), for: memo.id)
-                    }
-                    await operationCoordinator.completeOperation(operationId)
-                    logger.info("Transcription skipped (clip too short)", category: .transcription, context: context)
-                    return
-                }
-            } catch {
-                // If duration probing fails, continue; VAD will handle silence/invalid format
+            // Check file exists and early tiny-clip skip
+            let audioURL = try await ensureFileReady(memo: memo, operationId: operationId)
+            if try await skipIfTooShort(audioURL: audioURL, memo: memo, operationId: operationId, context: context) {
+                return
             }
 
             // Set state to in-progress
-            await MainActor.run {
-                transcriptionRepository.saveTranscriptionState(.inProgress, for: memo.id)
-            }
+            await markInProgress(memo: memo)
 
-            // Phase 1: VAD Analysis (10%)
-            await updateProgress(operationId: operationId, fraction: 0.0, step: "Analyzing speech patterns...")
-            // Heuristic: force chunking for imported/mismatched audio (stereo, high SR, or non-m4a)
-            let forceChunk = await shouldForceChunking(audioURL: audioURL)
-            let vadToUse: any VADSplittingService = {
-                if forceChunk, let _ = vadService as? DefaultVADSplittingService {
-                    // Use a slightly more sensitive VAD for imported audio (lower threshold)
-                    return DefaultVADSplittingService(config: VADConfig(silenceThreshold: -50.0,
-                                                                        minSpeechDuration: 0.4,
-                                                                        minSilenceGap: 0.25,
-                                                                        windowSize: 1_024))
-                }
-                return vadService
-            }()
-            let segments = try await vadToUse.detectVoiceSegments(audioURL: audioURL)
-
-            // If VAD found nothing, skip server call and report no speech
-            if segments.isEmpty {
-                await updateProgress(operationId: operationId, fraction: 0.9, step: "Sonora didn't quite catch that")
-                await MainActor.run {
-                    let failedState = TranscriptionState.failed("Sonora didn't quite catch that")
-                    transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
-                }
-                // Treat as completed/skipped to avoid warning-level noise in coordinator
-                await operationCoordinator.completeOperation(operationId)
-                logger.info("Transcription skipped (no speech)", category: .transcription, context: context)
+            // Phase 1: Analyze audio (VAD + duration) and route
+            let analysis = try await analyzeAudioAndSegments(audioURL: audioURL, memo: memo, operationId: operationId, context: context)
+            if analysis.segments.isEmpty {
+                await handleNoSpeech(memo: memo, operationId: operationId, context: context)
                 return
             }
 
-            // Assess duration for gating (use async loader for iOS 16+)
-            let asset = AVURLAsset(url: audioURL)
-            let durationTime = try await asset.load(.duration)
-            let totalDurationSec = CMTimeGetSeconds(durationTime)
-
-            // Branch: Preferred language set
-            let preferredLang = AppConfiguration.shared.preferredTranscriptionLanguage
-            if let lang = preferredLang {
-                if !forceChunk && totalDurationSec < 90.0 {
-                    // Single-shot for short recordings
-                    await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
-                    let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang)
-                    let eval = qualityEvaluator.evaluateQuality(resp, text: resp.text)
-                    // Save original text to state; prepareTranscript only for metadata
-                    let textToSave = resp.text
-                    let (processedText, originalText) = prepareTranscript(from: resp.text)
-
-                    // Save and complete
-                    await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
-                    let langToSave = resp.detectedLanguage ?? lang
-                    let qualityToSave = eval.overallScore
-                    let textLen = processedText.count
-                    await MainActor.run {
-                        // Save final text (also sets state to completed)
-                        transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                        transcriptionRepository.saveTranscriptionMetadata(
-                            TranscriptionMetadata(
-                                text: processedText,
-                                originalText: originalText, detectedLanguage: langToSave,
-                            ),
-                            for: memo.id
-                        )
-                    }
-                    await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
-                    // Include service used in log context
-                    let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
-                    let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
-                    let serviceLabel: String = serviceKey == "cloud_api" ? "Cloud API" : "unknown"
-                    let info: [String: Any] = [
-                        "memoId": memo.id.uuidString,
-                        "textLength": textLen,
-                        "language": langToSave,
-                        "quality": qualityToSave,
-                        "service": serviceLabel,
-                        "serviceKey": serviceKey
-                    ]
-                    // Lower to debug; MemoEventHandler will emit the single info-level summary
-                    logger.debug("Transcription completed (single, preferred language)", category: .transcription, context: LogContext(additionalInfo: info))
-                    await MainActor.run { [textToSave] in
-                        EventBus.shared.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
-                    }
-                    await operationCoordinator.completeOperation(operationId)
-                    return
-                }
-
-                // Long recording with preferred language: chunk with language hint per chunk
-                await updateProgress(operationId: operationId, fraction: 0.1, step: "Preparing audio segments...")
-                let chunks = try await chunkManager.createChunks(from: audioURL, segments: segments)
-                defer { Task { await chunkManager.cleanupChunks(chunks) } }
-
-                await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
-                let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: lang, stageLabel: "Transcribing...")
-                let aggregator = TranscriptionAggregator()
-                let agg = aggregator.aggregate(primary)
-                // Save original text to state; prepareTranscript only for metadata
-                let textToSave = agg.text
-                let (processedText, originalText) = prepareTranscript(from: agg.text)
-                let langToSave = lang
-                let qualityToSave = agg.confidence
-                let textLen = processedText.count
-                await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
-                await MainActor.run {
-                    // Save final text (also sets state to completed)
-                    transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                    transcriptionRepository.saveTranscriptionMetadata(
-                        TranscriptionMetadata(
-                            text: processedText,
-                            originalText: originalText, detectedLanguage: langToSave,
-                            qualityScore: qualityToSave
-                        ),
-                        for: memo.id
-                    )
-                }
-                await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
-                // Include service used in log context
-                let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
-                let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
-                let serviceLabel: String = serviceKey == "cloud_api" ? "Cloud API" : "unknown"
-                let info: [String: Any] = [
-                    "memoId": memo.id.uuidString,
-                    "textLength": textLen,
-                    "language": langToSave,
-                    "quality": qualityToSave,
-                    "service": serviceLabel,
-                    "serviceKey": serviceKey
-                ]
-                logger.debug("Transcription completed (chunked, preferred language)", category: .transcription, context: LogContext(additionalInfo: info))
-                await MainActor.run { [eventBus, textToSave] in
-                    eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
-                }
-                await operationCoordinator.completeOperation(operationId)
+            if let lang = AppConfiguration.shared.preferredTranscriptionLanguage {
+                try await processPreferredLanguagePath(audioURL: audioURL, lang: lang, analysis: analysis, memo: memo, operationId: operationId, context: context)
+                return
+            } else {
+                try await processAutoDetectPath(audioURL: audioURL, analysis: analysis, memo: memo, operationId: operationId, context: context)
                 return
             }
-
-            // Branch: Auto-detect mode
-            if !forceChunk && totalDurationSec < 60.0 {
-                // Single-shot auto with fallback if needed
-                await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
-                let primaryResp = try await transcriptionAPI.transcribe(url: audioURL, language: nil)
-                let primaryEval = qualityEvaluator.evaluateQuality(primaryResp, text: primaryResp.text)
-
-                var finalResp = primaryResp
-                var finalEval = primaryEval
-                if qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
-                    await updateProgress(operationId: operationId, fraction: 0.82, step: "Low confidence. Retrying with English...")
-                    do {
-                        let fallbackResp = try await transcriptionAPI.transcribe(url: audioURL, language: "en")
-                        let fallbackEval = qualityEvaluator.evaluateQuality(fallbackResp, text: fallbackResp.text)
-                        let comparison = qualityEvaluator.compareTwoResults(primaryEval, fallbackEval)
-                        switch comparison {
-                        case .useFallback:
-                            finalResp = fallbackResp
-                            finalEval = fallbackEval
-                        case .usePrimary:
-                            break
-                        }
-                    } catch {
-                        logger.warning("Fallback transcription failed; using primary result", category: .transcription, context: context, error: error)
-                    }
-                }
-
-                // Save and complete
-                await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
-                // Save original text to state; prepareTranscript only for metadata
-                let textToSave = finalResp.text
-                let (processedText, originalText) = prepareTranscript(from: finalResp.text)
-                let langToSave = DefaultClientLanguageDetectionService.iso639_1(fromBCP47: finalResp.detectedLanguage) ?? finalResp.detectedLanguage ?? "und"
-                let qualityToSave = finalEval.overallScore
-                let textLen = processedText.count
-                await MainActor.run {
-                    // Save final text (also sets state to completed)
-                    transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                    transcriptionRepository.saveTranscriptionMetadata(
-                        TranscriptionMetadata(
-                            text: processedText,
-                            originalText: originalText, detectedLanguage: langToSave,
-                            qualityScore: qualityToSave
-                        ),
-                        for: memo.id
-                    )
-                }
-                await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
-                // Include service used in log context
-                let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memo.id) }
-                let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
-                let serviceLabel: String = serviceKey == "cloud_api" ? "Cloud API" : "unknown"
-                let info: [String: Any] = [
-                    "memoId": memo.id.uuidString,
-                    "textLength": textLen,
-                    "language": langToSave,
-                    "quality": qualityToSave,
-                    "service": serviceLabel,
-                    "serviceKey": serviceKey
-                ]
-                logger.debug("Transcription completed (single, cloud)", category: .transcription, context: LogContext(additionalInfo: info))
-                await MainActor.run { [eventBus, textToSave] in
-                    eventBus.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
-                }
-                await operationCoordinator.completeOperation(operationId)
-                return
-            }
-
-            // For longer Auto mode: proceed with chunking and fallback logic
-            await updateProgress(operationId: operationId, fraction: 0.1, step: "Preparing audio segments...")
-            let chunks = try await chunkManager.createChunks(from: audioURL, segments: segments)
-            defer { Task { await chunkManager.cleanupChunks(chunks) } }
-
-            await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
-            let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: nil, stageLabel: "Transcribing...")
-            let aggregator = TranscriptionAggregator()
-            let primaryAgg = aggregator.aggregate(primary)
-            let primaryText = primaryAgg.text
-
-            // Phase 4: Evaluate quality and decide on fallback
-            await updateProgress(operationId: operationId, fraction: 0.8, step: "Evaluating transcription quality...")
-            let primarySummary = summarizeResponse(from: primary, aggregatedText: primaryText)
-            let primaryEval = qualityEvaluator.evaluateQuality(primarySummary, text: primaryText)
-
-            var finalText = primaryText
-            var finalEval = primaryEval
-            var finalLanguage = primaryEval.language
-
-            // Only trigger English fallback when using auto-detect; skip when user prefers a specific language
-            if preferredLang == nil && qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
-                await updateProgress(operationId: operationId, fraction: 0.82, step: "Low confidence. Retrying with English...")
-                do {
-                    let fallback = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.82, fractionBudget: 0.12, language: "en", stageLabel: "Transcribing...")
-                    let fallbackAgg = aggregator.aggregate(fallback)
-                    let fallbackText = fallbackAgg.text
-                    let fallbackSummary = summarizeResponse(from: fallback, aggregatedText: fallbackText, overrideLanguage: "en")
-                    let fallbackEval = qualityEvaluator.evaluateQuality(fallbackSummary, text: fallbackText)
-
-                    await updateProgress(operationId: operationId, fraction: 0.95, step: "Selecting best transcription...")
-                    let comparison = qualityEvaluator.compareTwoResults(primaryEval, fallbackEval)
-                    switch comparison {
-                    case .useFallback:
-                        finalText = fallbackText
-                        finalEval = fallbackEval
-                        finalLanguage = "en"
-                    case .usePrimary:
-                        break
-                    }
-                } catch {
-                    logger.warning("Fallback transcription failed; using primary result", category: .transcription, context: context, error: error)
-                }
-            }
-
-            // Phase 5: Save and complete
-            await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
-            // Save original text to state; prepareTranscript only for metadata
-            let textToSave = finalText
-            let (processedText, originalText) = prepareTranscript(from: finalText)
-            let langToSave = finalLanguage
-            let qualityToSave = finalEval.overallScore
-            let textLen = processedText.count
-            await MainActor.run {
-                transcriptionRepository.saveTranscriptionText(textToSave, for: memo.id)
-                transcriptionRepository.saveTranscriptionMetadata(
-                    TranscriptionMetadata(
-                        text: processedText,
-                        originalText: originalText, detectedLanguage: langToSave,
-                        qualityScore: qualityToSave
-                    ),
-                    for: memo.id
-                )
-            }
-            await annotateAIMetadataAndModerate(memoId: memo.id, text: textToSave)
-
-            logger.info("Transcription completed successfully (chunked)", category: .transcription, context: LogContext(
-                additionalInfo: ["memoId": memo.id.uuidString, "textLength": textLen, "language": langToSave, "quality": qualityToSave]
-            ))
-
-            // Publish transcriptionCompleted event
-            await MainActor.run { [textToSave] in
-                EventBus.shared.publish(.transcriptionCompleted(memoId: memo.id, text: textToSave))
-            }
-
-            // Complete op
-            await operationCoordinator.completeOperation(operationId)
-            logger.debug("Transcription operation completed: \(operationId)", category: .transcription, context: context)
 
         } catch {
             logger.error("Transcription failed", category: .transcription, context: context, error: error)
@@ -574,11 +252,11 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         var totalDuration: TimeInterval = 0
 
         for r in results {
-            if let dur = (r.response.duration) { totalDuration += dur }
-            if let c = r.response.confidence { confs.append(c) }
-            if let lp = r.response.avgLogProb { logProbs.append(lp) }
-            if let l = r.response.detectedLanguage {
-                let iso = DefaultClientLanguageDetectionService.iso639_1(fromBCP47: l) ?? l
+            if let duration = r.response.duration { totalDuration += duration }
+            if let confidence = r.response.confidence { confs.append(confidence) }
+            if let avgLP = r.response.avgLogProb { logProbs.append(avgLP) }
+            if let lang = r.response.detectedLanguage {
+                let iso = DefaultClientLanguageDetectionService.iso639_1(fromBCP47: lang) ?? lang
                 let weight = r.response.confidence ?? 1.0
                 langWeights[iso, default: 0.0] += weight
             }
@@ -632,25 +310,17 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     }
 }
 
-// MARK: - Imported Audio Heuristics
-extension StartTranscriptionUseCase {
-    /// Decide whether to force chunked transcription based on audio characteristics typical of imported files
-    fileprivate func shouldForceChunking(audioURL: URL) async -> Bool {
-        let ext = audioURL.pathExtension.lowercased()
-        if ext != "m4a" { return true }
-        // Inspect basic format; if stereo or not voice-optimized sample rate, prefer chunking
-        do {
-            let audioFile = try AudioReadiness.openIfReady(url: audioURL, maxWait: 0.4)
-            let sr = audioFile.processingFormat.sampleRate
-            let ch = Int(audioFile.processingFormat.channelCount)
-            let voiceSR = AppConfiguration.shared.voiceOptimizedSampleRate
-            if ch != 1 { return true }
-            if abs(sr - voiceSR) > 200 { return true }
-        } catch {
-            // If we cannot inspect, err on the safe side (no force)
-        }
-        return false
+// Supporting types for StartTranscriptionUseCase
+internal struct LanguageFallbackConfig {
+    let confidenceThreshold: Double
+    init(confidenceThreshold: Double = 0.5) {
+        self.confidenceThreshold = max(0.0, min(1.0, confidenceThreshold))
     }
+}
+
+@MainActor
+internal protocol StartTranscriptionUseCaseProtocol {
+    func execute(memo: Memo) async throws
 }
 
 // MARK: - Transcription Errors
@@ -692,5 +362,314 @@ public enum TranscriptionError: LocalizedError {
         case .noSpeechDetected:
             return "Sonora didn't quite catch that"
         }
+    }
+}
+
+// MARK: - Imported Audio Heuristics and Orchestration
+extension StartTranscriptionUseCase {
+    private func enrichedServiceInfo(for memoId: UUID, base: [String: Any]) async -> [String: Any] {
+        var info = base
+        let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memoId) }
+        let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
+        let serviceLabel: String = serviceKey == "cloud_api" ? "Cloud API" : "unknown"
+        info["serviceKey"] = serviceKey
+        info["service"] = serviceLabel
+        return info
+    }
+
+    private struct FinalizationPayload {
+        let operationId: UUID
+        let memo: Memo
+        let textToSave: String
+        let processedText: String
+        let originalText: String
+        let langToSave: String
+        let qualityToSave: Double?
+        let info: [String: Any]
+        let logMessage: String
+        let logLevel: LogLevel
+    }
+
+    private func finalize(using payload: FinalizationPayload) async {
+        await MainActor.run {
+            transcriptionRepository.saveTranscriptionText(payload.textToSave, for: payload.memo.id)
+            transcriptionRepository.saveTranscriptionMetadata(
+                TranscriptionMetadata(
+                    text: payload.processedText,
+                    originalText: payload.originalText,
+                    detectedLanguage: payload.langToSave,
+                    qualityScore: payload.qualityToSave
+                ),
+                for: payload.memo.id
+            )
+        }
+        await annotateAIMetadataAndModerate(memoId: payload.memo.id, text: payload.textToSave)
+        switch payload.logLevel {
+        case .info:
+            logger.info(payload.logMessage, category: .transcription, context: LogContext(additionalInfo: payload.info))
+        case .debug:
+            logger.debug(payload.logMessage, category: .transcription, context: LogContext(additionalInfo: payload.info))
+        default:
+            logger.log(level: payload.logLevel, category: .transcription, message: payload.logMessage, context: LogContext(additionalInfo: payload.info), error: nil)
+        }
+        await MainActor.run { [text = payload.textToSave] in
+            EventBus.shared.publish(.transcriptionCompleted(memoId: payload.memo.id, text: text))
+        }
+        await operationCoordinator.completeOperation(payload.operationId)
+    }
+    private struct AudioAnalysis { let segments: [VoiceSegment]; let forceChunk: Bool; let totalDurationSec: Double }
+
+    private func analyzeAudioAndSegments(audioURL: URL, memo: Memo, operationId: UUID, context: LogContext) async throws -> AudioAnalysis {
+        await updateProgress(operationId: operationId, fraction: 0.0, step: "Analyzing speech patterns...")
+        let forceChunk = await shouldForceChunking(audioURL: audioURL)
+        let vadToUse: any VADSplittingService = {
+            if forceChunk, let _ = vadService as? DefaultVADSplittingService {
+                return DefaultVADSplittingService(config: VADConfig(silenceThreshold: -50.0, minSpeechDuration: 0.4, minSilenceGap: 0.25, windowSize: 1_024))
+            }
+            return vadService
+        }()
+        let segments = try await vadToUse.detectVoiceSegments(audioURL: audioURL)
+        let asset = AVURLAsset(url: audioURL)
+        let durationTime = try await asset.load(.duration)
+        let totalDurationSec = CMTimeGetSeconds(durationTime)
+        return AudioAnalysis(segments: segments, forceChunk: forceChunk, totalDurationSec: totalDurationSec)
+    }
+
+    private func handleNoSpeech(memo: Memo, operationId: UUID, context: LogContext) async {
+        await updateProgress(operationId: operationId, fraction: 0.9, step: "Sonora didn't quite catch that")
+        await MainActor.run {
+            let failedState = TranscriptionState.failed("Sonora didn't quite catch that")
+            transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
+        }
+        await operationCoordinator.completeOperation(operationId)
+        logger.info("Transcription skipped (no speech)", category: .transcription, context: context)
+    }
+
+    private func processPreferredLanguagePath(audioURL: URL, lang: String, analysis: AudioAnalysis, memo: Memo, operationId: UUID, context: LogContext) async throws {
+        if !analysis.forceChunk && analysis.totalDurationSec < 90.0 {
+            await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
+            let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang)
+            let eval = qualityEvaluator.evaluateQuality(resp, text: resp.text)
+            let textToSave = resp.text
+            let (processedText, originalText) = prepareTranscript(from: resp.text)
+            await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
+            let langToSave = resp.detectedLanguage ?? lang
+            let qualityToSave = eval.overallScore
+            let textLen = processedText.count
+        var baseInfo: [String: Any] = [
+            "memoId": memo.id.uuidString,
+            "textLength": textLen,
+            "language": langToSave,
+            "quality": qualityToSave
+        ]
+        baseInfo = await enrichedServiceInfo(for: memo.id, base: baseInfo)
+        let payload = FinalizationPayload(operationId: operationId, memo: memo, textToSave: textToSave, processedText: processedText, originalText: originalText, langToSave: langToSave, qualityToSave: qualityToSave, info: baseInfo, logMessage: "Transcription completed (single, preferred language)", logLevel: .debug)
+        await finalize(using: payload)
+            return
+        }
+
+        await updateProgress(operationId: operationId, fraction: 0.1, step: "Preparing audio segments...")
+        let chunks = try await chunkManager.createChunks(from: audioURL, segments: analysis.segments)
+        defer { Task { await chunkManager.cleanupChunks(chunks) } }
+        await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
+        let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: lang, stageLabel: "Transcribing...")
+        let aggregator = TranscriptionAggregator()
+        let agg = aggregator.aggregate(primary)
+        let textToSave = agg.text
+        let (processedText, originalText) = prepareTranscript(from: agg.text)
+        let langToSave = lang
+        let qualityToSave = agg.confidence
+        let textLen = processedText.count
+        await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
+        var baseInfo: [String: Any] = [
+            "memoId": memo.id.uuidString,
+            "textLength": textLen,
+            "language": langToSave,
+            "quality": qualityToSave
+        ]
+        baseInfo = await enrichedServiceInfo(for: memo.id, base: baseInfo)
+        let payload = FinalizationPayload(operationId: operationId, memo: memo, textToSave: textToSave, processedText: processedText, originalText: originalText, langToSave: langToSave, qualityToSave: qualityToSave, info: baseInfo, logMessage: "Transcription completed (chunked, preferred language)", logLevel: .debug)
+        await finalize(using: payload)
+    }
+
+    private func processAutoDetectPath(audioURL: URL, analysis: AudioAnalysis, memo: Memo, operationId: UUID, context: LogContext) async throws {
+        if !analysis.forceChunk && analysis.totalDurationSec < 60.0 {
+            await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
+            let primaryResp = try await transcriptionAPI.transcribe(url: audioURL, language: nil)
+            let primaryEval = qualityEvaluator.evaluateQuality(primaryResp, text: primaryResp.text)
+            var finalResp = primaryResp
+            var finalEval = primaryEval
+            if qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
+                await updateProgress(operationId: operationId, fraction: 0.82, step: "Low confidence. Retrying with English...")
+                do {
+                    let fallbackResp = try await transcriptionAPI.transcribe(url: audioURL, language: "en")
+                    let fallbackEval = qualityEvaluator.evaluateQuality(fallbackResp, text: fallbackResp.text)
+                    let comparison = qualityEvaluator.compareTwoResults(primaryEval, fallbackEval)
+                    switch comparison {
+                    case .useFallback:
+                        finalResp = fallbackResp
+                        finalEval = fallbackEval
+                    case .usePrimary:
+                        break
+                    }
+                } catch {
+                    logger.warning("Fallback transcription failed; using primary result", category: .transcription, context: context, error: error)
+                }
+            }
+            await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
+            let textToSave = finalResp.text
+            let (processedText, originalText) = prepareTranscript(from: finalResp.text)
+            let langToSave = DefaultClientLanguageDetectionService.iso639_1(fromBCP47: finalResp.detectedLanguage) ?? finalResp.detectedLanguage ?? "und"
+            let qualityToSave = finalEval.overallScore
+            let textLen = processedText.count
+            var baseInfo: [String: Any] = [
+                "memoId": memo.id.uuidString,
+                "textLength": textLen,
+                "language": langToSave,
+                "quality": qualityToSave
+            ]
+            baseInfo = await enrichedServiceInfo(for: memo.id, base: baseInfo)
+            let payload = FinalizationPayload(operationId: operationId, memo: memo, textToSave: textToSave, processedText: processedText, originalText: originalText, langToSave: langToSave, qualityToSave: qualityToSave, info: baseInfo, logMessage: "Transcription completed (single, cloud)", logLevel: .debug)
+            await finalize(using: payload)
+            return
+        }
+
+        let result = try await performAutoChunked(audioURL: audioURL, analysis: analysis, operationId: operationId, context: context)
+        let finalText = result.text
+        let finalLanguage = result.lang
+        await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
+        let textToSave = finalText
+        let (processedText, originalText) = prepareTranscript(from: finalText)
+        let langToSave = finalLanguage
+        let qualityToSave = result.qualityScore
+        let textLen = processedText.count
+        var baseInfo: [String: Any] = [
+            "memoId": memo.id.uuidString,
+            "textLength": textLen,
+            "language": langToSave,
+            "quality": qualityToSave
+        ]
+        baseInfo = await enrichedServiceInfo(for: memo.id, base: baseInfo)
+        let payload = FinalizationPayload(operationId: operationId, memo: memo, textToSave: textToSave, processedText: processedText, originalText: originalText, langToSave: langToSave, qualityToSave: qualityToSave, info: baseInfo, logMessage: "Transcription completed successfully (chunked)", logLevel: .info)
+        await finalize(using: payload)
+    }
+
+    private func performAutoChunked(audioURL: URL, analysis: AudioAnalysis, operationId: UUID, context: LogContext) async throws -> (text: String, lang: String, qualityScore: Double?) {
+        await updateProgress(operationId: operationId, fraction: 0.1, step: "Preparing audio segments...")
+        let chunks = try await chunkManager.createChunks(from: audioURL, segments: analysis.segments)
+        defer { Task { await chunkManager.cleanupChunks(chunks) } }
+        await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
+        let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: nil, stageLabel: "Transcribing...")
+        let aggregator = TranscriptionAggregator()
+        let primaryAgg = aggregator.aggregate(primary)
+        let primaryText = primaryAgg.text
+        await updateProgress(operationId: operationId, fraction: 0.8, step: "Evaluating transcription quality...")
+        let primarySummary = summarizeResponse(from: primary, aggregatedText: primaryText)
+        let primaryEval = qualityEvaluator.evaluateQuality(primarySummary, text: primaryText)
+        var finalText = primaryText
+        var finalEval = primaryEval
+        var finalLanguage = primaryEval.language
+        if qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
+            await updateProgress(operationId: operationId, fraction: 0.82, step: "Low confidence. Retrying with English...")
+            do {
+                let fallback = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.82, fractionBudget: 0.12, language: "en", stageLabel: "Transcribing...")
+                let fallbackAgg = aggregator.aggregate(fallback)
+                let fallbackText = fallbackAgg.text
+                let fallbackSummary = summarizeResponse(from: fallback, aggregatedText: fallbackText, overrideLanguage: "en")
+                let fallbackEval = qualityEvaluator.evaluateQuality(fallbackSummary, text: fallbackText)
+                await updateProgress(operationId: operationId, fraction: 0.95, step: "Selecting best transcription...")
+                let comparison = qualityEvaluator.compareTwoResults(primaryEval, fallbackEval)
+                switch comparison {
+                case .useFallback:
+                    finalText = fallbackText
+                    finalEval = fallbackEval
+                    finalLanguage = "en"
+                case .usePrimary:
+                    break
+                }
+            } catch {
+                logger.warning("Fallback chunked transcription failed; using primary result", category: .transcription, context: context, error: error)
+            }
+        }
+        return (finalText, finalLanguage, finalEval.overallScore)
+    }
+    // Extracted guards and setup
+    private func guardIdempotencyAndSilenceHistory(memo: Memo, context: LogContext) throws {
+        let preState = transcriptionRepository.getTranscriptionState(for: memo.id)
+        if preState.isInProgress { throw TranscriptionError.alreadyInProgress }
+        if case .completed = preState { throw TranscriptionError.alreadyCompleted }
+        if case .failed(let msg) = preState,
+           msg.lowercased().contains("no speech detected") || msg.localizedCaseInsensitiveContains("didn't quite catch") {
+            logger.info("Skipping transcription: previous attempt reported no speech", category: .transcription, context: context)
+            throw TranscriptionError.noSpeechDetected
+        }
+    }
+
+    private func guardNoConflictingOperation(memo: Memo, context: LogContext) async throws {
+        guard await operationCoordinator.canStartTranscription(for: memo.id) else {
+            logger.warning("Cannot start transcription - conflicting operation (recording) active", category: .transcription, context: context, error: nil)
+            throw TranscriptionError.conflictingOperation
+        }
+    }
+
+    private func registerTranscriptionOperation(memo: Memo, context: LogContext) async throws -> UUID {
+        guard let operationId = await operationCoordinator.registerOperation(.transcription(memoId: memo.id)) else {
+            logger.warning("Transcription rejected by operation coordinator", category: .transcription, context: context, error: nil)
+            throw TranscriptionError.systemBusy
+        }
+        logger.debug("Transcription operation registered with ID: \(operationId)", category: .transcription, context: context)
+        return operationId
+    }
+
+    private func ensureFileReady(memo: Memo, operationId: UUID) async throws -> URL {
+        let audioURL = memo.fileURL
+        guard FileManager.default.fileExists(atPath: audioURL.path) else {
+            await operationCoordinator.failOperation(operationId, errorDescription: TranscriptionError.fileNotFound.errorDescription ?? "Audio file not found")
+            throw TranscriptionError.fileNotFound
+        }
+        _ = await AudioReadiness.ensureReady(url: audioURL, maxWait: 0.8)
+        return audioURL
+    }
+
+    private func skipIfTooShort(audioURL: URL, memo: Memo, operationId: UUID, context: LogContext) async throws -> Bool {
+        do {
+            let asset = AVURLAsset(url: audioURL)
+            let durationTime = try await asset.load(.duration)
+            let totalDurationSec = CMTimeGetSeconds(durationTime)
+            if totalDurationSec < 0.8 {
+                await MainActor.run {
+                    transcriptionRepository.saveTranscriptionState(.failed("Clip too short"), for: memo.id)
+                }
+                await operationCoordinator.completeOperation(operationId)
+                logger.info("Transcription skipped (clip too short)", category: .transcription, context: context)
+                return true
+            }
+        } catch {
+            // If duration probing fails, continue; VAD will handle silence/invalid format
+        }
+        return false
+    }
+
+    private func markInProgress(memo: Memo) async {
+        await MainActor.run {
+            transcriptionRepository.saveTranscriptionState(.inProgress, for: memo.id)
+        }
+    }
+    /// Decide whether to force chunked transcription based on audio characteristics typical of imported files
+    private func shouldForceChunking(audioURL: URL) async -> Bool {
+        let ext = audioURL.pathExtension.lowercased()
+        if ext != "m4a" { return true }
+        // Inspect basic format; if stereo or not voice-optimized sample rate, prefer chunking
+        do {
+            let audioFile = try AudioReadiness.openIfReady(url: audioURL, maxWait: 0.4)
+            let sr = audioFile.processingFormat.sampleRate
+            let ch = Int(audioFile.processingFormat.channelCount)
+            let voiceSR = AppConfiguration.shared.voiceOptimizedSampleRate
+            if ch != 1 { return true }
+            if abs(sr - voiceSR) > 200 { return true }
+        } catch {
+            // If we cannot inspect, err on the safe side (no force)
+        }
+        return false
     }
 }

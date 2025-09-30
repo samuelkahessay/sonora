@@ -239,157 +239,47 @@ public final class Environment: @unchecked Sendable {
         #endif
 
         // Override from environment if specified
-        if let configString = ProcessInfo.processInfo.environment["SONORA_BUILD_CONFIG"],
-           let config = BuildConfiguration(rawValue: configString) {
+        let env = ProcessInfo.processInfo.environment
+        if let configString = env["SONORA_BUILD_CONFIG"], let config = BuildConfiguration(rawValue: configString) {
             buildConfiguration = config
         }
 
-        // Logging Configuration
-        if let consoleString = ProcessInfo.processInfo.environment["SONORA_LOG_TO_CONSOLE"],
-           let console = Bool(consoleString) {
-            logToConsole = console
-        } else {
-            // Default behavior: always log to console in debug, optional in release
-            logToConsole = isDebug
-        }
+        // Resolve sections via pure helpers
+        let logging = LoggingSettings.resolved(env: env, isDebug: isDebug, isRelease: isRelease)
+        logToConsole = logging.logToConsole
+        logToFile = logging.logToFile
+        logToSystem = logging.logToSystem
+        maxLogFileSize = logging.maxLogFileSize
+        logIncludeLocation = logging.logIncludeLocation
+        logIncludeTimestamp = logging.logIncludeTimestamp
+        logUseColors = logging.logUseColors
 
-        if let fileString = ProcessInfo.processInfo.environment["SONORA_LOG_TO_FILE"],
-           let file = Bool(fileString) {
-            logToFile = file
-        } else {
-            // Default behavior: log to file in release builds
-            logToFile = isRelease
-        }
+        let features = FeatureToggles.resolved(
+            env: env,
+            isDebug: isDebug,
+            isRelease: isRelease,
+            isTestFlight: isTestFlight,
+            isDevelopment: isDevelopment,
+            supportsLiveActivities: supportsLiveActivities,
+            supportsDynamicIsland: supportsDynamicIsland
+        )
+        liveActivitiesEnabled = features.liveActivitiesEnabled
+        dynamicIslandEnabled = features.dynamicIslandEnabled
+        backgroundRecordingEnabled = features.backgroundRecordingEnabled
+        pushNotificationsEnabled = features.pushNotificationsEnabled
+        analyticsEnabled = features.analyticsEnabled
+        crashReportingEnabled = features.crashReportingEnabled
+        betaFeaturesEnabled = features.betaFeaturesEnabled
+        experimentalFeaturesEnabled = features.experimentalFeaturesEnabled
 
-        if let systemString = ProcessInfo.processInfo.environment["SONORA_LOG_TO_SYSTEM"],
-           let system = Bool(systemString) {
-            logToSystem = system
-        }
-
-        if let sizeString = ProcessInfo.processInfo.environment["SONORA_MAX_LOG_FILE_SIZE"],
-           let size = Int64(sizeString) {
-            maxLogFileSize = max(1_024 * 1_024, size) // Minimum 1MB
-        }
-
-        if let locationString = ProcessInfo.processInfo.environment["SONORA_LOG_INCLUDE_LOCATION"],
-           let location = Bool(locationString) {
-            logIncludeLocation = location
-        } else {
-            logIncludeLocation = isDebug
-        }
-
-        if let timestampString = ProcessInfo.processInfo.environment["SONORA_LOG_INCLUDE_TIMESTAMP"],
-           let timestamp = Bool(timestampString) {
-            logIncludeTimestamp = timestamp
-        }
-
-        if let colorsString = ProcessInfo.processInfo.environment["SONORA_LOG_USE_COLORS"],
-           let colors = Bool(colorsString) {
-            logUseColors = colors
-        } else {
-            logUseColors = isDebug
-        }
-
-        // Feature Toggles
-        if let liveActivitiesString = ProcessInfo.processInfo.environment["SONORA_LIVE_ACTIVITIES_ENABLED"],
-           let liveActivities = Bool(liveActivitiesString) {
-            liveActivitiesEnabled = liveActivities && supportsLiveActivities
-        } else {
-            liveActivitiesEnabled = supportsLiveActivities
-        }
-
-        if let dynamicIslandString = ProcessInfo.processInfo.environment["SONORA_DYNAMIC_ISLAND_ENABLED"],
-           let dynamicIsland = Bool(dynamicIslandString) {
-            dynamicIslandEnabled = dynamicIsland && supportsDynamicIsland
-        } else {
-            dynamicIslandEnabled = supportsDynamicIsland
-        }
-
-        if let backgroundString = ProcessInfo.processInfo.environment["SONORA_BACKGROUND_RECORDING_ENABLED"],
-           let background = Bool(backgroundString) {
-            backgroundRecordingEnabled = background
-        }
-
-        if let pushString = ProcessInfo.processInfo.environment["SONORA_PUSH_NOTIFICATIONS_ENABLED"],
-           let push = Bool(pushString) {
-            pushNotificationsEnabled = push
-        }
-
-        if let analyticsString = ProcessInfo.processInfo.environment["SONORA_ANALYTICS_ENABLED"],
-           let analytics = Bool(analyticsString) {
-            // Never enable analytics in debug builds
-            analyticsEnabled = analytics && isRelease
-        } else {
-            analyticsEnabled = isRelease && !isDevelopment
-        }
-
-        if let crashString = ProcessInfo.processInfo.environment["SONORA_CRASH_REPORTING_ENABLED"],
-           let crash = Bool(crashString) {
-            // Never enable crash reporting in debug builds
-            crashReportingEnabled = crash && isRelease
-        } else {
-            crashReportingEnabled = isRelease && !isDevelopment
-        }
-
-        if let betaString = ProcessInfo.processInfo.environment["SONORA_BETA_FEATURES_ENABLED"],
-           let beta = Bool(betaString) {
-            betaFeaturesEnabled = beta
-        } else {
-            betaFeaturesEnabled = isTestFlight || isDevelopment
-        }
-
-        if let experimentalString = ProcessInfo.processInfo.environment["SONORA_EXPERIMENTAL_FEATURES_ENABLED"],
-           let experimental = Bool(experimentalString) {
-            experimentalFeaturesEnabled = experimental
-        } else {
-            experimentalFeaturesEnabled = isDebug
-        }
-
-        // Development Tools (debug only by default)
-        if let debugUIString = ProcessInfo.processInfo.environment["SONORA_SHOW_DEBUG_UI"],
-           let debugUI = Bool(debugUIString) {
-            showDebugUI = debugUI && (isDebug || isDevelopment)
-        } else {
-            showDebugUI = isDebug
-        }
-
-        if let mockDataString = ProcessInfo.processInfo.environment["SONORA_USE_MOCK_DATA"],
-           let mockData = Bool(mockDataString) {
-            useMockData = mockData && (isDebug || isTesting)
-        } else {
-            useMockData = isTesting
-        }
-
-        if let bypassString = ProcessInfo.processInfo.environment["SONORA_BYPASS_NETWORK"],
-           let bypass = Bool(bypassString) {
-            bypassNetwork = bypass && (isDebug || isTesting)
-        } else {
-            bypassNetwork = isTesting
-        }
-
-        if let metricsString = ProcessInfo.processInfo.environment["SONORA_SHOW_PERFORMANCE_METRICS"],
-           let metrics = Bool(metricsString) {
-            showPerformanceMetrics = metrics && (isDebug || isDevelopment)
-        } else {
-            showPerformanceMetrics = isDebug
-        }
-
-        if let logNetworkString = ProcessInfo.processInfo.environment["SONORA_LOG_NETWORK_REQUESTS"],
-           let logNetwork = Bool(logNetworkString) {
-            logNetworkRequests = logNetwork
-        } else {
-            logNetworkRequests = isDebug
-        }
-
-        if let slowNetworkString = ProcessInfo.processInfo.environment["SONORA_SIMULATE_SLOW_NETWORK"],
-           let slowNetwork = Bool(slowNetworkString) {
-            simulateSlowNetwork = slowNetwork && isDebug
-        }
-
-        if let delayString = ProcessInfo.processInfo.environment["SONORA_NETWORK_DELAY"],
-           let delay = TimeInterval(delayString) {
-            networkDelaySimulation = max(0.1, delay)
-        }
+        let tools = DevToolsOptions.resolved(env: env, isDebug: isDebug, isTesting: isTesting, isDevelopment: isDevelopment)
+        showDebugUI = tools.showDebugUI
+        useMockData = tools.useMockData
+        bypassNetwork = tools.bypassNetwork
+        showPerformanceMetrics = tools.showPerformanceMetrics
+        logNetworkRequests = tools.logNetworkRequests
+        simulateSlowNetwork = tools.simulateSlowNetwork
+        networkDelaySimulation = tools.networkDelaySimulation
     }
 
     // MARK: - Public Methods

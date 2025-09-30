@@ -280,103 +280,54 @@ public final class AppConfiguration: ObservableObject {
     }
 
     private func loadBuildSpecificDefaults() {
-        // API Configuration - Build-specific URLs
-        switch (buildConfig.buildType, buildConfig.distributionType) {
-        case (.debug, .development):
-            apiBaseURL = Self.requireURL("https://sonora.fly.dev")
-            analysisTimeoutInterval = 30.0 // Longer timeouts for development
-            transcriptionTimeoutInterval = 180.0
-            healthCheckTimeoutInterval = 10.0
+        // Compose per-section defaults
+        let api = APIConfig.defaults(build: buildConfig)
+        let rec = RecordingConfig.defaults(build: buildConfig)
+        let net = NetworkConfig.defaults(build: buildConfig)
+        let ana = AnalysisConfig.defaults(build: buildConfig)
+        let liv = LiveActivityConfig.defaults(build: buildConfig)
+        let cache = CacheConfig.defaults(build: buildConfig)
+        let prompts = PromptsConfig.defaults()
 
-        case (.testing, _):
-            apiBaseURL = Self.requireURL("https://sonora.fly.dev")
-            analysisTimeoutInterval = 15.0
-            transcriptionTimeoutInterval = 120.0
-            healthCheckTimeoutInterval = 8.0
+        // Apply to current aggregate
+        apiBaseURL = api.baseURL
+        analysisTimeoutInterval = api.analysisTimeout
+        transcriptionTimeoutInterval = api.transcriptionTimeout
+        preferredTranscriptionLanguage = api.preferredTranscriptionLanguage
+        healthCheckTimeoutInterval = api.healthTimeout
 
-        case (.release, .testFlight):
-            apiBaseURL = Self.requireURL("https://sonora.fly.dev")
-            analysisTimeoutInterval = 15.0
-            transcriptionTimeoutInterval = 120.0
-            healthCheckTimeoutInterval = 6.0
+        maxRecordingDuration = rec.maxRecordingDuration
+        maxRecordingFileSize = rec.maxRecordingFileSize
+        recordingQuality = rec.recordingQuality
+        audioSampleRate = rec.audioSampleRate
+        audioChannels = rec.audioChannels
+        audioBitRate = rec.audioBitRate
+        voiceOptimizedQuality = rec.voiceOptimizedQuality
+        enableAdaptiveAudioQuality = rec.enableAdaptiveAudioQuality
 
-        case (.release, .appStore):
-            apiBaseURL = Self.requireURL("https://sonora.fly.dev")
-            analysisTimeoutInterval = 12.0
-            transcriptionTimeoutInterval = 120.0
-            healthCheckTimeoutInterval = 5.0
+        maxNetworkRetries = net.maxNetworkRetries
+        retryBaseDelay = net.retryBaseDelay
+        maxConcurrentNetworkOperations = net.maxConcurrentNetworkOperations
+        resourceTimeoutInterval = net.resourceTimeoutInterval
 
-        default:
-            // Default to production for unknown configurations
-            apiBaseURL = Self.requireURL("https://sonora.fly.dev")
-            analysisTimeoutInterval = 12.0
-            transcriptionTimeoutInterval = 120.0
-            healthCheckTimeoutInterval = 5.0
-        }
+        distillAnalysisTimeout = ana.distillAnalysisTimeout
+        contentAnalysisTimeout = ana.contentAnalysisTimeout
+        themesAnalysisTimeout = ana.themesAnalysisTimeout
+        todosAnalysisTimeout = ana.todosAnalysisTimeout
+        minimumTranscriptLength = ana.minimumTranscriptLength
+        maximumTranscriptLength = ana.maximumTranscriptLength
 
-        // Recording Configuration - Legacy parameter (no per-session cap enforced)
-        maxRecordingDuration = 180.0
-        if buildConfig.isDebug {
-            maxRecordingFileSize = 100 * 1_024 * 1_024 // 100MB
-            recordingQuality = 1.0 // Highest quality for development
-        } else {
-            maxRecordingFileSize = 50 * 1_024 * 1_024 // 50MB
-            recordingQuality = 0.8 // Balanced quality
-        }
+        liveActivityUpdateInterval = liv.liveActivityUpdateInterval
+        liveActivityGracePeriod = liv.liveActivityGracePeriod
+        liveActivityShowDetailedProgress = liv.liveActivityShowDetailedProgress
+        backgroundRefreshRate = liv.backgroundRefreshRate
 
-        // Network Configuration - Build-specific retry behavior
-        if buildConfig.isDebug {
-            maxNetworkRetries = 5 // More retries for debugging
-            retryBaseDelay = 2.0 // Longer delays for debugging
-            maxConcurrentNetworkOperations = 2 // Fewer concurrent operations for debugging
-            resourceTimeoutInterval = 60.0 // Longer resource timeouts
-        } else {
-            maxNetworkRetries = 3 // Standard retries for production
-            retryBaseDelay = 1.0 // Quick retries for production
-            maxConcurrentNetworkOperations = 3 // More concurrent operations for performance
-            resourceTimeoutInterval = 30.0 // Standard resource timeouts
-        }
+        memoryCacheMaxSize = cache.memoryCacheMaxSize
+        analysisCacheTTL = cache.analysisCacheTTL
+        diskCacheEnabled = cache.diskCacheEnabled
 
-        // Analysis Configuration - Build-specific timeouts
-        if buildConfig.isDebug {
-            // Debug builds get longer timeouts for easier debugging
-            distillAnalysisTimeout = 35.0
-            contentAnalysisTimeout = 35.0
-            themesAnalysisTimeout = 30.0
-            todosAnalysisTimeout = 28.0
-        } else {
-            // Release builds use optimized timeouts
-            distillAnalysisTimeout = 35.0
-            contentAnalysisTimeout = 20.0
-            themesAnalysisTimeout = 18.0
-            todosAnalysisTimeout = 16.0
-        }
-
-        // Live Activity Configuration - Build-specific behavior
-        if buildConfig.isDebug {
-            liveActivityUpdateInterval = 1.0 // More frequent updates for debugging
-            liveActivityGracePeriod = 60.0 // Longer grace period for debugging
-            backgroundRefreshRate = 2.0 // More frequent background refresh
-        } else {
-            liveActivityUpdateInterval = 2.0 // Standard update interval
-            liveActivityGracePeriod = 30.0 // Standard grace period
-            backgroundRefreshRate = 5.0 // Standard background refresh
-        }
-
-        // Cache Configuration - Build-specific caching
-        if buildConfig.isDebug {
-            memoryCacheMaxSize = 100 // Larger cache for development
-            analysisCacheTTL = 43_200.0 // 12 hours for debugging
-        } else {
-            memoryCacheMaxSize = 50 // Standard cache size
-            analysisCacheTTL = 86_400.0 // 24 hours for production
-        }
-
-        diskCacheEnabled = true // Always enable disk cache
-
-        // Prompts Configuration - Defaults
-        promptCooldownMinutes = 3
-        promptMinVarietyTarget = 10
+        promptCooldownMinutes = prompts.promptCooldownMinutes
+        promptMinVarietyTarget = prompts.promptMinVarietyTarget
 
         // Log the loaded configuration
         logLoadedConfiguration()
@@ -388,203 +339,95 @@ public final class AppConfiguration: ObservableObject {
     }
 
     private func loadEnvironmentOverrides() {
-        // API Configuration
-        if let apiURLString = ProcessInfo.processInfo.environment["SONORA_API_URL"],
-           let url = URL(string: apiURLString) {
-            apiBaseURL = url
-            print("🔧 AppConfiguration: API URL overridden to \(apiBaseURL.absoluteString)")
-        }
+        let env = ProcessInfo.processInfo.environment
 
-        if let timeoutString = ProcessInfo.processInfo.environment["SONORA_ANALYSIS_TIMEOUT"],
-           let timeout = TimeInterval(timeoutString) {
-            analysisTimeoutInterval = timeout
-            print("🔧 AppConfiguration: Analysis timeout overridden to \(timeout)s")
-        }
+        // Compose per-section overrides starting from current state
+        let api = APIConfig(
+            baseURL: apiBaseURL,
+            analysisTimeout: analysisTimeoutInterval,
+            transcriptionTimeout: transcriptionTimeoutInterval,
+            preferredTranscriptionLanguage: preferredTranscriptionLanguage,
+            healthTimeout: healthCheckTimeoutInterval
+        ).withOverrides(env: env)
+        let rec = RecordingConfig(
+            maxRecordingDuration: maxRecordingDuration,
+            maxRecordingFileSize: maxRecordingFileSize,
+            recordingQuality: recordingQuality,
+            audioSampleRate: audioSampleRate,
+            audioChannels: audioChannels,
+            audioBitRate: audioBitRate,
+            voiceOptimizedQuality: voiceOptimizedQuality,
+            enableAdaptiveAudioQuality: enableAdaptiveAudioQuality
+        ).withOverrides(env: env)
+        let net = NetworkConfig(
+            maxNetworkRetries: maxNetworkRetries,
+            retryBaseDelay: retryBaseDelay,
+            maxConcurrentNetworkOperations: maxConcurrentNetworkOperations,
+            resourceTimeoutInterval: resourceTimeoutInterval
+        ).withOverrides(env: env)
+        let ana = AnalysisConfig(
+            distillAnalysisTimeout: distillAnalysisTimeout,
+            contentAnalysisTimeout: contentAnalysisTimeout,
+            themesAnalysisTimeout: themesAnalysisTimeout,
+            todosAnalysisTimeout: todosAnalysisTimeout,
+            minimumTranscriptLength: minimumTranscriptLength,
+            maximumTranscriptLength: maximumTranscriptLength
+        ).withOverrides(env: env)
+        let liv = LiveActivityConfig(
+            liveActivityUpdateInterval: liveActivityUpdateInterval,
+            liveActivityGracePeriod: liveActivityGracePeriod,
+            liveActivityShowDetailedProgress: liveActivityShowDetailedProgress,
+            backgroundRefreshRate: backgroundRefreshRate
+        ).withOverrides(env: env)
+        let cache = CacheConfig(
+            memoryCacheMaxSize: memoryCacheMaxSize,
+            analysisCacheTTL: analysisCacheTTL,
+            diskCacheEnabled: diskCacheEnabled
+        ).withOverrides(env: env)
+        let prompts = PromptsConfig(
+            promptCooldownMinutes: promptCooldownMinutes,
+            promptMinVarietyTarget: promptMinVarietyTarget
+        ).withOverrides(env: env)
 
-        if let timeoutString = ProcessInfo.processInfo.environment["SONORA_TRANSCRIPTION_TIMEOUT"],
-           let timeout = TimeInterval(timeoutString) {
-            transcriptionTimeoutInterval = timeout
-            print("🔧 AppConfiguration: Transcription timeout overridden to \(timeout)s")
-        }
+        // Apply back to aggregate
+        apiBaseURL = api.baseURL
+        analysisTimeoutInterval = api.analysisTimeout
+        transcriptionTimeoutInterval = api.transcriptionTimeout
+        preferredTranscriptionLanguage = api.preferredTranscriptionLanguage
+        healthCheckTimeoutInterval = api.healthTimeout
 
-        if let lang = ProcessInfo.processInfo.environment["SONORA_TRANSCRIPTION_LANGUAGE"], !lang.isEmpty {
-            preferredTranscriptionLanguage = lang.lowercased()
-            print("🔧 AppConfiguration: Preferred transcription language overridden to \(lang)")
-        }
+        maxRecordingDuration = rec.maxRecordingDuration
+        maxRecordingFileSize = rec.maxRecordingFileSize
+        recordingQuality = rec.recordingQuality
+        audioSampleRate = rec.audioSampleRate
+        audioChannels = rec.audioChannels
+        audioBitRate = rec.audioBitRate
+        voiceOptimizedQuality = rec.voiceOptimizedQuality
+        enableAdaptiveAudioQuality = rec.enableAdaptiveAudioQuality
 
-        if let timeoutString = ProcessInfo.processInfo.environment["SONORA_HEALTH_TIMEOUT"],
-           let timeout = TimeInterval(timeoutString) {
-            healthCheckTimeoutInterval = timeout
-            print("🔧 AppConfiguration: Health check timeout overridden to \(timeout)s")
-        }
+        maxNetworkRetries = net.maxNetworkRetries
+        retryBaseDelay = net.retryBaseDelay
+        maxConcurrentNetworkOperations = net.maxConcurrentNetworkOperations
+        resourceTimeoutInterval = net.resourceTimeoutInterval
 
-        // Recording Configuration
-        if let durationString = ProcessInfo.processInfo.environment["SONORA_MAX_RECORDING_DURATION"],
-           let duration = TimeInterval(durationString) {
-            maxRecordingDuration = duration
-            print("🔧 AppConfiguration: Max recording duration overridden to \(duration)s")
-        }
+        distillAnalysisTimeout = ana.distillAnalysisTimeout
+        contentAnalysisTimeout = ana.contentAnalysisTimeout
+        themesAnalysisTimeout = ana.themesAnalysisTimeout
+        todosAnalysisTimeout = ana.todosAnalysisTimeout
+        minimumTranscriptLength = ana.minimumTranscriptLength
+        maximumTranscriptLength = ana.maximumTranscriptLength
 
-        // Prompts configuration — no blocklist; use file-backed catalog for edits
+        liveActivityUpdateInterval = liv.liveActivityUpdateInterval
+        liveActivityGracePeriod = liv.liveActivityGracePeriod
+        liveActivityShowDetailedProgress = liv.liveActivityShowDetailedProgress
+        backgroundRefreshRate = liv.backgroundRefreshRate
 
-        if let sizeString = ProcessInfo.processInfo.environment["SONORA_MAX_FILE_SIZE"],
-           let size = Int64(sizeString) {
-            maxRecordingFileSize = size
-            print("🔧 AppConfiguration: Max file size overridden to \(size) bytes")
-        }
+        memoryCacheMaxSize = cache.memoryCacheMaxSize
+        analysisCacheTTL = cache.analysisCacheTTL
+        diskCacheEnabled = cache.diskCacheEnabled
 
-        if let qualityString = ProcessInfo.processInfo.environment["SONORA_RECORDING_QUALITY"],
-           let quality = Float(qualityString) {
-            recordingQuality = max(0.0, min(1.0, quality))
-            print("🔧 AppConfiguration: Recording quality overridden to \(recordingQuality)")
-        }
-
-        if let sampleRateString = ProcessInfo.processInfo.environment["SONORA_SAMPLE_RATE"],
-           let sampleRate = Double(sampleRateString) {
-            audioSampleRate = sampleRate
-            print("🔧 AppConfiguration: Audio sample rate overridden to \(sampleRate)")
-        }
-
-        if let channelsString = ProcessInfo.processInfo.environment["SONORA_AUDIO_CHANNELS"],
-           let channels = Int(channelsString) {
-            audioChannels = max(1, min(2, channels))
-            print("🔧 AppConfiguration: Audio channels overridden to \(audioChannels)")
-        }
-
-        if let bitRateString = ProcessInfo.processInfo.environment["SONORA_AUDIO_BITRATE"],
-           let bitRate = Int(bitRateString) {
-            audioBitRate = max(32_000, min(320_000, bitRate))
-            print("🔧 AppConfiguration: Audio bit rate overridden to \(audioBitRate)")
-        }
-
-        if let voiceQualityString = ProcessInfo.processInfo.environment["SONORA_VOICE_QUALITY"],
-           let voiceQuality = Float(voiceQualityString) {
-            voiceOptimizedQuality = max(0.0, min(1.0, voiceQuality))
-            print("🔧 AppConfiguration: Voice quality overridden to \(voiceOptimizedQuality)")
-        }
-
-        if let adaptiveString = ProcessInfo.processInfo.environment["SONORA_ADAPTIVE_QUALITY"],
-           let adaptive = Bool(adaptiveString) {
-            enableAdaptiveAudioQuality = adaptive
-            print("🔧 AppConfiguration: Adaptive quality overridden to \(enableAdaptiveAudioQuality)")
-        }
-        // Network Configuration
-        if let retriesString = ProcessInfo.processInfo.environment["SONORA_MAX_RETRIES"],
-           let retries = Int(retriesString) {
-            maxNetworkRetries = max(0, retries)
-            print("🔧 AppConfiguration: Max retries overridden to \(maxNetworkRetries)")
-        }
-
-        if let delayString = ProcessInfo.processInfo.environment["SONORA_RETRY_DELAY"],
-           let delay = TimeInterval(delayString) {
-            retryBaseDelay = max(0.1, delay)
-            print("🔧 AppConfiguration: Retry delay overridden to \(retryBaseDelay)s")
-        }
-
-        if let concurrentString = ProcessInfo.processInfo.environment["SONORA_MAX_CONCURRENT_OPERATIONS"],
-           let concurrent = Int(concurrentString) {
-            maxConcurrentNetworkOperations = max(1, concurrent)
-            print("🔧 AppConfiguration: Max concurrent operations overridden to \(maxConcurrentNetworkOperations)")
-        }
-
-        if let timeoutString = ProcessInfo.processInfo.environment["SONORA_RESOURCE_TIMEOUT"],
-           let timeout = TimeInterval(timeoutString) {
-            resourceTimeoutInterval = timeout
-            print("🔧 AppConfiguration: Resource timeout overridden to \(timeout)s")
-        }
-
-        // Analysis Configuration
-        if let timeoutString = ProcessInfo.processInfo.environment["SONORA_DISTILL_TIMEOUT"],
-           let timeout = TimeInterval(timeoutString) {
-            distillAnalysisTimeout = timeout
-            print("🔧 AppConfiguration: Distill timeout overridden to \(timeout)s")
-        }
-
-        if let timeoutString = ProcessInfo.processInfo.environment["SONORA_CONTENT_TIMEOUT"],
-           let timeout = TimeInterval(timeoutString) {
-            contentAnalysisTimeout = timeout
-            print("🔧 AppConfiguration: Content timeout overridden to \(timeout)s")
-        }
-
-        if let timeoutString = ProcessInfo.processInfo.environment["SONORA_THEMES_TIMEOUT"],
-           let timeout = TimeInterval(timeoutString) {
-            themesAnalysisTimeout = timeout
-            print("🔧 AppConfiguration: Themes timeout overridden to \(timeout)s")
-        }
-
-        if let timeoutString = ProcessInfo.processInfo.environment["SONORA_TODOS_TIMEOUT"],
-           let timeout = TimeInterval(timeoutString) {
-            todosAnalysisTimeout = timeout
-            print("🔧 AppConfiguration: Todos timeout overridden to \(timeout)s")
-        }
-
-        if let lengthString = ProcessInfo.processInfo.environment["SONORA_MIN_TRANSCRIPT_LENGTH"],
-           let length = Int(lengthString) {
-            minimumTranscriptLength = max(1, length)
-            print("🔧 AppConfiguration: Min transcript length overridden to \(minimumTranscriptLength)")
-        }
-
-        if let lengthString = ProcessInfo.processInfo.environment["SONORA_MAX_TRANSCRIPT_LENGTH"],
-           let length = Int(lengthString) {
-            maximumTranscriptLength = max(minimumTranscriptLength, length)
-            print("🔧 AppConfiguration: Max transcript length overridden to \(maximumTranscriptLength)")
-        }
-
-        // Live Activity Configuration
-        if let intervalString = ProcessInfo.processInfo.environment["SONORA_LIVE_ACTIVITY_UPDATE_INTERVAL"],
-           let interval = TimeInterval(intervalString) {
-            liveActivityUpdateInterval = max(0.5, interval)
-            print("🔧 AppConfiguration: Live Activity update interval overridden to \(liveActivityUpdateInterval)s")
-        }
-
-        if let gracePeriodString = ProcessInfo.processInfo.environment["SONORA_LIVE_ACTIVITY_GRACE_PERIOD"],
-           let gracePeriod = TimeInterval(gracePeriodString) {
-            liveActivityGracePeriod = max(0.0, gracePeriod)
-            print("🔧 AppConfiguration: Live Activity grace period overridden to \(liveActivityGracePeriod)s")
-        }
-
-        if let detailedProgressString = ProcessInfo.processInfo.environment["SONORA_LIVE_ACTIVITY_DETAILED_PROGRESS"],
-           let detailedProgress = Bool(detailedProgressString) {
-            liveActivityShowDetailedProgress = detailedProgress
-            print("🔧 AppConfiguration: Live Activity detailed progress overridden to \(liveActivityShowDetailedProgress)")
-        }
-
-        if let refreshRateString = ProcessInfo.processInfo.environment["SONORA_BACKGROUND_REFRESH_RATE"],
-           let refreshRate = TimeInterval(refreshRateString) {
-            backgroundRefreshRate = max(1.0, refreshRate)
-            print("🔧 AppConfiguration: Background refresh rate overridden to \(backgroundRefreshRate)s")
-        }
-
-        // Cache Configuration
-        if let cacheSizeString = ProcessInfo.processInfo.environment["SONORA_MEMORY_CACHE_SIZE"],
-           let cacheSize = Int(cacheSizeString) {
-            memoryCacheMaxSize = max(1, cacheSize)
-            print("🔧 AppConfiguration: Memory cache size overridden to \(memoryCacheMaxSize)")
-        }
-
-        if let ttlString = ProcessInfo.processInfo.environment["SONORA_CACHE_TTL"],
-           let ttl = TimeInterval(ttlString) {
-            analysisCacheTTL = max(60.0, ttl) // Minimum 1 minute
-            print("🔧 AppConfiguration: Cache TTL overridden to \(analysisCacheTTL)s")
-        }
-
-        if let diskCacheString = ProcessInfo.processInfo.environment["SONORA_DISK_CACHE_ENABLED"],
-           let diskCache = Bool(diskCacheString) {
-            diskCacheEnabled = diskCache
-            print("🔧 AppConfiguration: Disk cache overridden to \(diskCacheEnabled)")
-        }
-
-        // Prompts configuration
-        if let cooldownStr = ProcessInfo.processInfo.environment["SONORA_PROMPT_COOLDOWN_MINUTES"],
-           let mins = Int(cooldownStr) {
-            promptCooldownMinutes = max(0, mins)
-            print("🔧 AppConfiguration: Prompt cooldown overridden to \(promptCooldownMinutes) min")
-        }
-        if let varietyStr = ProcessInfo.processInfo.environment["SONORA_PROMPT_MIN_VARIETY"],
-           let count = Int(varietyStr) {
-            promptMinVarietyTarget = max(1, count)
-            print("🔧 AppConfiguration: Prompt min variety target overridden to \(promptMinVarietyTarget)")
-        }
+        promptCooldownMinutes = prompts.promptCooldownMinutes
+        promptMinVarietyTarget = prompts.promptMinVarietyTarget
     }
 
     private func logLoadedConfiguration() {

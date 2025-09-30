@@ -173,16 +173,16 @@ public struct Operation: Hashable, CustomStringConvertible, Sendable {
 
 /// Conflict detection and resolution strategies
 public struct OperationConflict: Sendable {
-    public let conflictingOperation: Operation
-    public let requestedOperation: OperationType
-    public let resolutionStrategy: ConflictResolutionStrategy
-
     public enum ConflictResolutionStrategy: Sendable {
         case queue          // Queue the new operation until conflict resolves
         case cancel         // Cancel the new operation
         case replace        // Cancel existing operation and start new one
         case allow          // Allow both (no actual conflict)
     }
+
+    public let conflictingOperation: Operation
+    public let requestedOperation: OperationType
+    public let resolutionStrategy: ConflictResolutionStrategy
 
     /// Determine if two operations conflict on the same memo
     public static func detectConflict(

@@ -77,9 +77,6 @@ public struct DistillData: Codable, Sendable {
     public let reminders: [RemindersData.DetectedReminder]?
 
     public struct ActionItem: Codable, Sendable, Equatable {
-        public let text: String
-        public let priority: Priority
-
         public enum Priority: String, Codable, Sendable, Equatable {
             case high, medium, low
 
@@ -91,6 +88,8 @@ public struct DistillData: Codable, Sendable {
                 }
             }
         }
+        public let text: String
+        public let priority: Priority
     }
     public init(summary: String, action_items: [ActionItem]?, reflection_questions: [String], events: [EventsData.DetectedEvent]? = nil, reminders: [RemindersData.DetectedReminder]? = nil) {
         self.summary = summary
@@ -159,6 +158,19 @@ public struct TodosData: Codable, Sendable {
 
 public struct EventsData: Codable, Sendable {
     public struct DetectedEvent: Codable, Sendable, Identifiable {
+        public enum ConfidenceLevel: String, CaseIterable {
+            case high = "High"
+            case medium = "Medium"
+            case low = "Low"
+
+            var color: String {
+                switch self {
+                case .high: return "green"
+                case .medium: return "orange"
+                case .low: return "red"
+                }
+            }
+        }
         public let id: String
         public let title: String
         public let startDate: Date?
@@ -200,19 +212,6 @@ public struct EventsData: Codable, Sendable {
             }
         }
 
-        public enum ConfidenceLevel: String, CaseIterable {
-            case high = "High"
-            case medium = "Medium"
-            case low = "Low"
-
-            var color: String {
-                switch self {
-                case .high: return "green"
-                case .medium: return "orange"
-                case .low: return "red"
-                }
-            }
-        }
     }
 
     public let events: [DetectedEvent]
@@ -224,6 +223,27 @@ public struct EventsData: Codable, Sendable {
 
 public struct RemindersData: Codable, Sendable {
     public struct DetectedReminder: Codable, Sendable, Identifiable {
+        public enum Priority: String, Codable, Sendable, CaseIterable {
+            case high = "High"
+            case medium = "Medium"
+            case low = "Low"
+
+            var color: String {
+                switch self {
+                case .high: return "red"
+                case .medium: return "orange"
+                case .low: return "green"
+                }
+            }
+
+            var sortOrder: Int {
+                switch self {
+                case .high: return 0
+                case .medium: return 1
+                case .low: return 2
+                }
+            }
+        }
         public let id: String
         public let title: String
         public let dueDate: Date?
@@ -250,27 +270,6 @@ public struct RemindersData: Codable, Sendable {
             self.memoId = memoId
         }
 
-        public enum Priority: String, Codable, Sendable, CaseIterable {
-            case high = "High"
-            case medium = "Medium"
-            case low = "Low"
-
-            var color: String {
-                switch self {
-                case .high: return "red"
-                case .medium: return "orange"
-                case .low: return "green"
-                }
-            }
-
-            var sortOrder: Int {
-                switch self {
-                case .high: return 0
-                case .medium: return 1
-                case .low: return 2
-                }
-            }
-        }
 
         // Convenience computed property for confidence level
         public var confidenceCategory: EventsData.DetectedEvent.ConfidenceLevel {

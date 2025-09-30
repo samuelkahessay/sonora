@@ -5,11 +5,6 @@ import UIKit
 @MainActor
 final class FocusManager {
 
-    // MARK: - Shared Instance
-    static let shared = FocusManager()
-
-    private init() {}
-
     // MARK: - Focus Timing Constants
 
     /// Focus timing constants (kept nonisolated to avoid Swift 6 isolation issues)
@@ -19,10 +14,15 @@ final class FocusManager {
         static let quick: TimeInterval = 0.2
     }
 
+    // MARK: - Shared Instance
+    static let shared = FocusManager()
+
     // Public, nonisolated accessors to delays for use from nonisolated contexts (e.g., SwiftUI modifiers)
     nonisolated static var standardDelay: TimeInterval { FocusDelays.standard }
     nonisolated static var contentDelay: TimeInterval { FocusDelays.content }
     nonisolated static var quickDelay: TimeInterval { FocusDelays.quick }
+
+    private init() {}
 
     // MARK: - Focus Management Methods
 
