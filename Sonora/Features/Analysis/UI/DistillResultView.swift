@@ -59,21 +59,7 @@ struct DistillResultView: View {
             }
 
             // Copy results action (also triggers smart transcript expand via notification)
-            HStack {
-                Spacer()
-                Button(action: {
-                    let text = buildCopyText()
-                    UIPasteboard.general.string = text
-                    HapticManager.shared.playLightImpact()
-                    NotificationCenter.default.post(name: Notification.Name("AnalysisCopyTriggered"), object: nil)
-                }) {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 16, weight: .medium))
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .accessibilityLabel("Copy analysis results")
-            }
+            copyAction
         }
         .textSelection(.enabled)
         .sheet(isPresented: $showPaywall) { PaywallView() }
@@ -88,6 +74,25 @@ struct DistillResultView: View {
     private var isProgressComplete: Bool {
         guard let p = progress else { return false }
         return p.completedComponents >= p.totalComponents
+    }
+
+    @ViewBuilder
+    private var copyAction: some View {
+        HStack {
+            Spacer()
+            Button(action: {
+                let text = buildCopyText()
+                UIPasteboard.general.string = text
+                HapticManager.shared.playLightImpact()
+                NotificationCenter.default.post(name: Notification.Name("AnalysisCopyTriggered"), object: nil)
+            }) {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 16, weight: .medium))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .accessibilityLabel("Copy analysis results")
+        }
     }
 
     private var effectiveSummary: String? {
@@ -118,7 +123,7 @@ struct DistillResultView: View {
         ActionItemsHostSectionView(
             permissionService: coordinator.permissionService,
             visibleItems: detection.visibleItems,
-            addedRecords: detection.addedRecords,
+            addedRecords: coordinator.addedRecords,
             isPro: isPro,
             isDetectionPending: isDetectionPending,
             showBatchSheet: $detection.showBatchSheet,
@@ -151,6 +156,7 @@ struct DistillResultView: View {
         )
         .onAppear {
             detection.mergeFrom(events: eventsForUI, reminders: remindersForUI, memoId: memoId)
+            coordinator.restoreHandled(for: memoId)
         }
         .onChange(of: eventsForUI.count + remindersForUI.count) { _, _ in
             detection.mergeFrom(events: eventsForUI, reminders: remindersForUI, memoId: memoId)
@@ -206,9 +212,7 @@ struct DistillResultView: View {
                 }
             }()
             let rec = coordinator.makeAddedRecord(for: item, date: date)
-            detection.addedRecords.removeAll { $0.id == rec.id }
-            detection.addedRecords.append(rec)
-            coordinator.recordHandled(rec, for: item.memoId ?? memoId)
+            coordinator.upsertAndPersist(record: rec, memoId: item.memoId ?? memoId)
             HapticManager.shared.playSuccess()
         } catch {
             HapticManager.shared.playError()
@@ -239,9 +243,7 @@ struct DistillResultView: View {
                     detection.added.insert(item.id)
                     let date = item.suggestedDate ?? base.startDate
                     let rec = coordinator.makeAddedRecord(for: item, date: date)
-                    detection.addedRecords.removeAll { $0.id == rec.id }
-                    detection.addedRecords.append(rec)
-                    coordinator.recordHandled(rec, for: item.memoId ?? memoId)
+                    coordinator.upsertAndPersist(record: rec, memoId: item.memoId ?? memoId)
                 }
             }
             if !reminderItems.isEmpty {
@@ -257,9 +259,7 @@ struct DistillResultView: View {
                     detection.added.insert(item.id)
                     let date = item.suggestedDate ?? base.dueDate
                     let rec = coordinator.makeAddedRecord(for: item, date: date)
-                    detection.addedRecords.removeAll { $0.id == rec.id }
-                    detection.addedRecords.append(rec)
-                    coordinator.recordHandled(rec, for: item.memoId ?? memoId)
+                    coordinator.upsertAndPersist(record: rec, memoId: item.memoId ?? memoId)
                 }
             }
             HapticManager.shared.playSuccess()

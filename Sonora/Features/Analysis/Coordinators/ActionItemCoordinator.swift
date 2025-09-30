@@ -11,6 +11,8 @@ final class ActionItemCoordinator: ObservableObject {
     @Published var defaultCalendar: CalendarDTO?
     @Published var availableReminderLists: [CalendarDTO] = []
     @Published var defaultReminderList: CalendarDTO?
+    // UI records for "Added" confirmations
+    @Published var addedRecords: [DistillAddedRecord] = []
 
     // Handled persistence
     private var handledStore = DistillHandledDetectionsStore()
@@ -95,5 +97,21 @@ final class ActionItemCoordinator: ObservableObject {
         guard let memoId else { return }
         handledStore.remove(item.sourceId, for: memoId)
     }
-}
 
+    func restoreHandled(for memoId: UUID?) {
+        guard let memoId else { addedRecords = []; return }
+        let entries = handledStore.messages(for: memoId)
+        addedRecords = entries.map { DistillAddedRecord(id: $0.id, text: $0.message) }
+    }
+
+    func upsertAndPersist(record: DistillAddedRecord, memoId: UUID?) {
+        addedRecords.removeAll { $0.id == record.id }
+        addedRecords.append(record)
+        recordHandled(record, for: memoId)
+    }
+
+    func removeRecord(for item: ActionItemDetectionUI, memoId: UUID?) {
+        addedRecords.removeAll { $0.id == item.sourceId }
+        removeHandled(for: item, memoId: memoId)
+    }
+}

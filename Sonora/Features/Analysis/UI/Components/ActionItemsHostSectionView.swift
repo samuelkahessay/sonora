@@ -57,18 +57,21 @@ internal struct ActionItemsHostSectionView: View {
                 .padding(10)
                 .background(Color.semantic(.fillSecondary))
                 .cornerRadius(8)
+                .animation(.easeInOut(duration: 0.25), value: addedRecords.count)
             }
 
             if !visibleItems.isEmpty {
-                VStack(spacing: 12) {
+                LazyVStack(spacing: 12) {
                     ForEach(visibleItems) { m in
                         ActionItemDetectionCard(
                             model: m,
                             isPro: isPro,
                             onEvent: { itemEvent in onEvent(.item(itemEvent)) }
                         )
+                        .id(m.id)
                     }
                 }
+                .animation(.easeInOut(duration: 0.25), value: visibleItems.count)
             } else if isDetectionPending {
                 HStack(spacing: 8) {
                     LoadingIndicator(size: .small)
