@@ -128,7 +128,13 @@ struct DistillResultView: View {
     @State private var defaultReminderList: CalendarDTO?
     @State private var calendarsLoaded = false
     @State private var reminderListsLoaded = false
-    @StateObject private var permissionService = DIContainer.shared.eventKitPermissionService() as! EventKitPermissionService
+    @StateObject private var permissionService: EventKitPermissionService = {
+        if let concrete = DIContainer.shared.eventKitPermissionService() as? EventKitPermissionService {
+            return concrete
+        } else {
+            return EventKitPermissionService()
+        }
+    }()
 
     private struct CreatedArtifact: Equatable {
         let kind: ActionItemDetectionKind

@@ -1,0 +1,53 @@
+disabled_rules:
+  - trailing_whitespace
+  - todo
+
+opt_in_rules: []
+
+identifier_name:
+  allowed_symbols: "_"
+  min_length:
+    warning: 2
+    error: 1
+  excluded:
+    - id
+    - URL
+    - url
+    - x
+    - y
+    - dx
+    - dy
+    - to
+    - up
+    - on
+
+type_body_length:
+  warning: 600
+  error: 1200
+
+file_length:
+  warning: 1200
+  error: 2000
+
+line_length:
+  warning: 140
+  error: 420
+  ignores_comments: true
+  ignores_function_declarations: true
+  ignores_interpolated_strings: true
+  ignores_urls: true
+
+cyclomatic_complexity:
+  warning: 12
+  error: 40
+
+function_body_length:
+  warning: 80
+  error: 320
+
+nesting:
+  type_level:
+    warning: 3
+    error: 5
+
+reporter: "markdown"

@@ -172,7 +172,10 @@ private final class URLProtocolStub: URLProtocol {
         var allHeaders = headers
         allHeaders["Content-Type"] = allHeaders["Content-Type"] ?? "application/json"
         let response = HTTPURLResponse(url: url, statusCode: statusCode, httpVersion: nil, headerFields: allHeaders)!
-        let data = try! JSONSerialization.data(withJSONObject: json, options: [])
+        guard let data = try? JSONSerialization.data(withJSONObject: json, options: []) else {
+            XCTFail("Failed to encode JSON stub for TitleServiceTests")
+            return
+        }
         enqueue(Response(response: response, payload: .data(data), error: nil))
     }
 

@@ -115,9 +115,9 @@ struct ActionItemDetectionCard: View {
                 .textFieldStyle(.roundedBorder)
 
                 if model.kind == .event {
-                    EventDateControls
+                    eventDateControls
                 } else {
-                    ReminderDateControls
+                    reminderDateControls
                 }
 
                 primaryAddButton
@@ -128,7 +128,7 @@ struct ActionItemDetectionCard: View {
         }
     }
 
-    @ViewBuilder private var EventDateControls: some View {
+    @ViewBuilder private var eventDateControls: some View {
         VStack(alignment: .leading, spacing: 6) {
             DatePicker(
                 "Event Date",
@@ -152,7 +152,7 @@ struct ActionItemDetectionCard: View {
         }
     }
 
-    @ViewBuilder private var ReminderDateControls: some View {
+    @ViewBuilder private var reminderDateControls: some View {
         VStack(alignment: .leading, spacing: 6) {
             Toggle("Include date", isOn: Binding(
                 get: { model.suggestedDate != nil },

@@ -59,14 +59,21 @@ private extension ThemeManager {
         let accentColorHex: String
     }
 
-    static func loadSettings() -> (mode: ThemeMode, useGlassEffects: Bool, reducedMotion: Bool, accentColor: Color) {
+    struct LoadedSettings {
+        let mode: ThemeMode
+        let useGlassEffects: Bool
+        let reducedMotion: Bool
+        let accentColor: Color
+    }
+
+    static func loadSettings() -> LoadedSettings {
         guard let data = UserDefaults.standard.data(forKey: "app.theme.settings"),
               let settings = try? JSONDecoder().decode(StoredSettings.self, from: data) else {
-            return (.system, false, false, .blue)
+            return LoadedSettings(mode: .system, useGlassEffects: false, reducedMotion: false, accentColor: .blue)
         }
 
         let accentColor = Color(hexString: settings.accentColorHex)
-        return (settings.mode, settings.useGlassEffects, settings.reducedMotion, accentColor)
+        return LoadedSettings(mode: settings.mode, useGlassEffects: settings.useGlassEffects, reducedMotion: settings.reducedMotion, accentColor: accentColor)
     }
 
     func persist() {

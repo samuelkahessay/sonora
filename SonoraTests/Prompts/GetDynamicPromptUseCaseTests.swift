@@ -5,23 +5,29 @@ import XCTest
 
 @MainActor
 final class FakePromptUsageRepository: PromptUsageRepository {
-    private var map: [String: (lastShownAt: Date?, lastUsedAt: Date?, useCount: Int, isFavorite: Bool)] = [:]
+    private struct UsageEntry {
+        var lastShownAt: Date?
+        var lastUsedAt: Date?
+        var useCount: Int
+        var isFavorite: Bool
+    }
+    private var map: [String: UsageEntry] = [:]
 
     func markShown(promptId: String, at date: Date) throws {
-        var entry = map[promptId] ?? (nil, nil, 0, false)
+        var entry = map[promptId] ?? UsageEntry(lastShownAt: nil, lastUsedAt: nil, useCount: 0, isFavorite: false)
         entry.lastShownAt = date
         map[promptId] = entry
     }
 
     func markUsed(promptId: String, at date: Date) throws {
-        var entry = map[promptId] ?? (nil, nil, 0, false)
+        var entry = map[promptId] ?? UsageEntry(lastShownAt: nil, lastUsedAt: nil, useCount: 0, isFavorite: false)
         entry.lastUsedAt = date
         entry.useCount += 1
         map[promptId] = entry
     }
 
     func setFavorite(promptId: String, isFavorite: Bool, at date: Date) throws {
-        var entry = map[promptId] ?? (nil, nil, 0, false)
+        var entry = map[promptId] ?? UsageEntry(lastShownAt: nil, lastUsedAt: nil, useCount: 0, isFavorite: false)
         entry.isFavorite = isFavorite
         map[promptId] = entry
     }
