@@ -282,13 +282,6 @@ public final class MemoEventHandler {
             }
         }
 
-        // Kick off Auto Title generation (non-blocking)
-        // Use original text (with filler words) for better context
-        Task { @MainActor in
-            let originalText = transcriptionRepository.getTranscriptionMetadata(for: memoId)?.originalText ?? text
-            await DIContainer.shared.generateAutoTitleUseCase().execute(memoId: memoId, transcript: originalText)
-        }
-
         // Auto-detection disabled: Events/Reminders run when Distill is invoked
         // If needed in the future, gate via explicit setting keys below (default false)
         // let autoEvents = UserDefaults.standard.object(forKey: "autoDetectEvents") as? Bool ?? false
