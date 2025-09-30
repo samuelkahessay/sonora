@@ -1,5 +1,7 @@
 import Foundation
 import AVFoundation
+import UIKit
+import UserNotifications
 
 /// Primary event handler for memo-related events
 /// Handles cross-cutting concerns like logging, analytics, and audit trail
@@ -255,6 +257,7 @@ public final class MemoEventHandler {
         logger.info("Transcription completed via \(serviceMeta.serviceLabel) for memo: \(memoId)",
                    category: .transcription,
                    context: context)
+        await scheduleTranscriptionCompletionNotificationIfNeeded(memoId: memoId, wordsCount: wordsCount)
         
         // Log transcription performance metrics
         if let duration = duration {
@@ -280,8 +283,10 @@ public final class MemoEventHandler {
         }
 
         // Kick off Auto Title generation (non-blocking)
+        // Use original text (with filler words) for better context
         Task { @MainActor in
-            await DIContainer.shared.generateAutoTitleUseCase().execute(memoId: memoId, transcript: text)
+            let originalText = transcriptionRepository.getTranscriptionMetadata(for: memoId)?.originalText ?? text
+            await DIContainer.shared.generateAutoTitleUseCase().execute(memoId: memoId, transcript: originalText)
         }
 
         // Auto-detection disabled: Events/Reminders run when Distill is invoked
@@ -397,5 +402,87 @@ public final class MemoEventHandler {
     deinit {
         subscriptionManager.cleanup()
         // Avoid actor-hopping or logging from deinit to prevent isolation issues.
+    }
+}
+
+private extension MemoEventHandler {
+    func scheduleTranscriptionCompletionNotificationIfNeeded(memoId: UUID, wordsCount: Int) async {
+        let appState = await MainActor.run { UIApplication.shared.applicationState }
+        guard appState != .active else { return }
+
+        let center = UNUserNotificationCenter.current()
+        guard await ensureNotificationAuthorization(center: center) else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Transcription Complete"
+        if wordsCount > 0 {
+            content.body = "Your memo is ready to review (\(wordsCount) words)."
+        } else {
+            content.body = "Your memo transcription is ready to review."
+        }
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "transcription.\(memoId.uuidString)",
+            content: content,
+            trigger: nil
+        )
+
+        do {
+            try await addNotificationRequest(request, center: center)
+        } catch {
+            logger.warning("Failed to schedule transcription completion notification", category: .transcription, context: nil, error: error)
+        }
+    }
+
+    func ensureNotificationAuthorization(center: UNUserNotificationCenter) async -> Bool {
+        let status = await fetchNotificationAuthorizationStatus(center: center)
+        switch status {
+        case .authorized, .provisional, .ephemeral:
+            return true
+        case .denied:
+            return false
+        case .notDetermined:
+            do {
+                return try await requestNotificationAuthorization(center: center)
+            } catch {
+                logger.warning("Notification authorization request failed", category: .transcription, context: nil, error: error)
+                return false
+            }
+        @unknown default:
+            return false
+        }
+    }
+
+    func fetchNotificationAuthorizationStatus(center: UNUserNotificationCenter) async -> UNAuthorizationStatus {
+        await withCheckedContinuation { (continuation: CheckedContinuation<UNAuthorizationStatus, Never>) in
+            center.getNotificationSettings { settings in
+                continuation.resume(returning: settings.authorizationStatus)
+            }
+        }
+    }
+
+    func requestNotificationAuthorization(center: UNUserNotificationCenter) async throws -> Bool {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Bool, Error>) in
+            center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: granted)
+                }
+            }
+        }
+    }
+
+    func addNotificationRequest(_ request: UNNotificationRequest, center: UNUserNotificationCenter) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            center.add(request) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: ())
+                }
+            }
+        }
     }
 }

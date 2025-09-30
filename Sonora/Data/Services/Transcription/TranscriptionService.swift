@@ -4,10 +4,35 @@ import AVFoundation
 final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
     private let config = AppConfiguration.shared
     private let logger: any LoggerProtocol = Logger.shared
+    private let uploadTracker: UploadTracker
+    private lazy var backgroundDelegate: BackgroundSessionDelegate = {
+        BackgroundSessionDelegate(tracker: uploadTracker, logger: logger)
+    }()
+    private lazy var backgroundSession: URLSession = {
+        let identifier: String
+        if let bundleId = Bundle.main.bundleIdentifier {
+            identifier = "\(bundleId).transcription.background"
+        } else {
+            identifier = "com.sonora.transcription.background"
+        }
+        let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
+        configuration.isDiscretionary = false
+        configuration.sessionSendsLaunchEvents = true
+        configuration.allowsCellularAccess = true
+        configuration.shouldUseExtendedBackgroundIdleMode = true
+        configuration.timeoutIntervalForRequest = config.transcriptionTimeoutInterval
+        configuration.timeoutIntervalForResource = config.transcriptionTimeoutInterval
+        configuration.networkServiceType = .responsiveData
+        return URLSession(configuration: configuration, delegate: backgroundDelegate, delegateQueue: nil)
+    }()
     
     struct APIError: LocalizedError { 
         let message: String
         var errorDescription: String? { message }
+    }
+
+    init() {
+        self.uploadTracker = UploadTracker(logger: logger)
     }
 
     // MARK: - Single-file Transcription
@@ -94,7 +119,18 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
         logger.debug("Timeout: \(req.timeoutInterval)s", category: .network, context: nil)
         logger.debug("Making request: \(req.url?.absoluteString ?? "unknown")", category: .network, context: nil)
 
-        let (data, resp) = try await URLSession.shared.upload(for: req, fromFile: bodyURL)
+        let uploadTask = backgroundSession.uploadTask(with: req, fromFile: bodyURL)
+        let (data, resp): (Data, URLResponse)
+        do {
+            (data, resp) = try await withCheckedThrowingContinuation { continuation in
+                Task {
+                    await uploadTracker.register(task: uploadTask, continuation: continuation)
+                    uploadTask.resume()
+                }
+            }
+        } catch {
+            throw APIError(message: error.localizedDescription)
+        }
         guard let http = resp as? HTTPURLResponse else {
             throw APIError(message: "No HTTP response")
         }
@@ -157,6 +193,99 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
             let text = String(data: data, encoding: .utf8) ?? ""
             logger.info("Cloud transcription completed (raw text)", category: .transcription, context: LogContext(additionalInfo: ["preview": String(text.prefix(50))]))
             return TranscriptionResponse(text: text, detectedLanguage: nil, confidence: nil, avgLogProb: nil, duration: nil)
+        }
+    }
+}
+
+private actor UploadTracker {
+    enum UploadTrackerError: Error {
+        case missingResponse
+    }
+
+    private var continuations: [Int: CheckedContinuation<(Data, URLResponse), Error>] = [:]
+    private var buffers: [Int: Data] = [:]
+    private let logger: any LoggerProtocol
+
+    init(logger: any LoggerProtocol) {
+        self.logger = logger
+    }
+
+    func register(task: URLSessionTask, continuation: CheckedContinuation<(Data, URLResponse), Error>) {
+        continuations[task.taskIdentifier] = continuation
+        buffers[task.taskIdentifier] = Data()
+    }
+
+    func appendData(taskIdentifier: Int, data: Data) {
+        if buffers[taskIdentifier] != nil {
+            buffers[taskIdentifier]?.append(data)
+        } else {
+            buffers[taskIdentifier] = data
+        }
+    }
+
+    func complete(task: URLSessionTask, error: Error?) {
+        let identifier = task.taskIdentifier
+        let continuation = continuations.removeValue(forKey: identifier)
+        let collectedData = buffers.removeValue(forKey: identifier) ?? Data()
+
+        guard let continuation else {
+            logger.debug("UploadTracker: No continuation for task \(identifier)", category: .network, context: nil)
+            return
+        }
+
+        if let error {
+            continuation.resume(throwing: error)
+            return
+        }
+
+        guard let response = task.response else {
+            continuation.resume(throwing: UploadTrackerError.missingResponse)
+            return
+        }
+
+        continuation.resume(returning: (collectedData, response))
+    }
+}
+
+extension UploadTracker.UploadTrackerError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .missingResponse:
+            return "Upload finished without a server response"
+        }
+    }
+}
+
+private final class BackgroundSessionDelegate: NSObject, URLSessionDataDelegate, URLSessionTaskDelegate, @unchecked Sendable {
+    private let tracker: UploadTracker
+    private let logger: any LoggerProtocol
+
+    init(tracker: UploadTracker, logger: any LoggerProtocol) {
+        self.tracker = tracker
+        self.logger = logger
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        Task {
+            await tracker.appendData(taskIdentifier: dataTask.taskIdentifier, data: data)
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        Task {
+            await tracker.complete(task: task, error: error)
+        }
+    }
+
+    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        logger.debug("BackgroundSessionDelegate: finished events for background session", category: .network, context: nil)
+    }
+
+    func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
+        if let error {
+            logger.error("BackgroundSessionDelegate: session invalidated", category: .network, context: nil, error: error)
+        } else {
+            logger.debug("BackgroundSessionDelegate: session invalidated without error", category: .network, context: nil)
         }
     }
 }
