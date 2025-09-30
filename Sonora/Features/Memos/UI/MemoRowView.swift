@@ -41,21 +41,7 @@ struct MemoRowView: View {
 
     // MARK: - Design Constants
 
-    /// **Typography Configuration**
-    /// Adjust these values to fine-tune text appearance and hierarchy
-    private enum Typography {
-        /// Primary title font - prominent but not overwhelming
-        /// 1.75x size: .title3 with semibold weight for strong hierarchy
-        static let titleFont: Font = .system(.title3, design: .default, weight: .semibold)
-
-        /// Metadata font for duration and date information
-        /// 1.75x size: .subheadline for better readability
-        static let metadataFont: Font = .system(.subheadline, design: .default, weight: .regular)
-
-        /// Clock icon font size - should complement metadata text
-        /// 1.75x size: .footnote with medium weight for better visibility
-        static let iconFont: Font = .system(.footnote, design: .default, weight: .medium)
-    }
+    // Removed unused Typography constants (using SonoraDesignSystem instead)
 
     /// **Color Configuration**
     /// Semantic colors ensure proper light/dark mode adaptation
@@ -85,36 +71,8 @@ struct MemoRowView: View {
         }
     }
 
-    /// **Layout Configuration**
-    /// These follow iOS Human Interface Guidelines spacing standards
+    /// Layout constants (retain only those in use)
     private enum Layout {
-        /// Vertical padding for generous card appearance
-        static let verticalPadding: CGFloat = 14
-
-        /// Spacing between title and metadata sections
-        static let titleToMetadataSpacing: CGFloat = 7
-
-        /// Horizontal spacing between metadata elements
-        static let metadataElementSpacing: CGFloat = 21
-
-        /// Spacing between icons and their associated text
-        static let iconToTextSpacing: CGFloat = 5
-
-        /// Line limit stays the same
-        static let titleLineLimit: Int = 2
-
-        /// **Accent Line Configuration - Proportional to 1.75x Design**
-        /// Color-coded status indicators following iOS design principles
-
-        /// Accent line width - prominent but not overwhelming
-        static let accentLineWidth: CGFloat = 4
-
-        /// Accent line corner radius - subtle rounding for modern appearance
-        static let accentLineCornerRadius: CGFloat = 2
-
-        /// Accent line spacing - proportional to iconToTextSpacing for visual balance
-        static let accentLineSpacing: CGFloat = 8
-
         /// Reserved gutter width when in edit mode for selection control
         static let editGutterWidth: CGFloat = 44
     }
@@ -267,11 +225,7 @@ struct MemoRowView: View {
 
     // MARK: - Constants
 
-    /// **System Icon Names**
-    /// Type-safe SF Symbols names for consistency
-    private enum SystemIconNames {
-        static let clock = MemoSystemIcons.clock.rawValue
-    }
+    // Removed unused SystemIconNames alias; use MemoSystemIcons directly where needed.
 
     /// **Accessibility Strings**
     /// Localization-ready accessibility strings

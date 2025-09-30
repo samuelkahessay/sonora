@@ -214,38 +214,7 @@ extension UnifiedStateView {
         )
     }
 
-    /// Empty state for transcription
-    static func noTranscription() -> UnifiedStateView {
-        UnifiedStateView(
-            state: .empty(
-                icon: "text.quote",
-                title: "No Transcription",
-                subtitle: "Tap 'Transcribe' to convert your audio to text using AI"
-            )
-        )
-    }
-
-    /// Empty state for analysis results
-    static func noAnalysis() -> UnifiedStateView {
-        UnifiedStateView(
-            state: .empty(
-                icon: "magnifyingglass",
-                title: "No Analysis Available",
-                subtitle: "Transcribe your memo first to unlock AI-powered insights and analysis"
-            )
-        )
-    }
-
-    /// Empty state for search results
-    static func noSearchResults(query: String) -> UnifiedStateView {
-        UnifiedStateView(
-            state: .empty(
-                icon: "magnifyingglass",
-                title: "No Results Found",
-                subtitle: "No memos match '\(query)'. Try adjusting your search terms."
-            )
-        )
-    }
+    // Removed unused convenience builders: noTranscription, noAnalysis, noSearchResults.
 
     /// Error state with retry
     static func error(

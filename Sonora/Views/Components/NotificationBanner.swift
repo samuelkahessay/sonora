@@ -179,21 +179,7 @@ extension NotificationBanner {
         )
     }
 
-    /// Network error banner
-    static func networkError(
-        compact: Bool = false,
-        onRetry: @escaping () -> Void,
-        onDismiss: @escaping () -> Void
-    ) -> NotificationBanner {
-        NotificationBanner(
-            type: .warning,
-            message: "Check your internet connection and try again",
-            compact: compact,
-            onPrimaryAction: onRetry,
-            primaryTitle: "Retry",
-            onDismiss: onDismiss
-        )
-    }
+    // Removed unused networkError convenience
 
     /// Success banner
     static func success(

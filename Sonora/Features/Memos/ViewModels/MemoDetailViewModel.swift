@@ -11,25 +11,25 @@ import UniformTypeIdentifiers
 final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, ErrorHandling {
 
     // MARK: - Dependencies
-    private let playMemoUseCase: PlayMemoUseCaseProtocol
-    private let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
-    private let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
-    private let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
-    private let analyzeDistillUseCase: AnalyzeDistillUseCaseProtocol
-    private let analyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
-    private let analyzeContentUseCase: AnalyzeContentUseCaseProtocol
-    private let analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol
-    private let analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol
-    private let renameMemoUseCase: RenameMemoUseCaseProtocol
-    private let createTranscriptShareFileUseCase: CreateTranscriptShareFileUseCaseProtocol
-    private let createAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtocol
-    private let deleteMemoUseCase: DeleteMemoUseCaseProtocol
-    private let memoRepository: any MemoRepository // Still needed for state updates
-    private let operationCoordinator: any OperationCoordinatorProtocol
+    internal let playMemoUseCase: PlayMemoUseCaseProtocol
+    internal let startTranscriptionUseCase: StartTranscriptionUseCaseProtocol
+    internal let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
+    internal let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
+    internal let analyzeDistillUseCase: AnalyzeDistillUseCaseProtocol
+    internal let analyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
+    internal let analyzeContentUseCase: AnalyzeContentUseCaseProtocol
+    internal let analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol
+    internal let analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol
+    internal let renameMemoUseCase: RenameMemoUseCaseProtocol
+    internal let createTranscriptShareFileUseCase: CreateTranscriptShareFileUseCaseProtocol
+    internal let createAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtocol
+    internal let deleteMemoUseCase: DeleteMemoUseCaseProtocol
+    internal let memoRepository: any MemoRepository // Still needed for state updates
+    internal let operationCoordinator: any OperationCoordinatorProtocol
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Current Memo
-    private var currentMemo: Memo?
+    internal var currentMemo: Memo?
 
     // MARK: - Lazy Cleaning Cache
     /// Cache for cleaned transcription text to avoid re-filtering on every access
@@ -43,8 +43,8 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     // MARK: - Non-UI State
 
     // Track temp files created for sharing so we can clean them up afterward
-    private var lastShareTempURLs: [URL] = []
-    private var pendingShareItems: [Any] = []
+    internal var lastShareTempURLs: [URL] = []
+    internal var pendingShareItems: [Any] = []
 
     // MARK: - Computed Properties
 
@@ -104,6 +104,11 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     /// Current memo duration (seconds)
     var totalDuration: TimeInterval { state.audio.duration }
 
+    // Internal debug helper for cross-file extensions
+    internal var debugCurrentMemoFilename: String {
+        currentMemo?.filename ?? "none"
+    }
+
     /// Count of available analysis categories. With the simplified model,
     /// only Distill is considered.
     var analysisAvailableCount: Int {
@@ -126,26 +131,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         return history.map { $0.timestamp }.max()
     }
 
-    /// Whether a cached Distill result exists in the repository for the current memo
-    var hasCachedDistill: Bool {
-        guard let memo = currentMemo else { return false }
-        return DIContainer.shared.analysisRepository().hasAnalysisResult(for: memo.id, mode: .distill)
-    }
-
-    /// Restore cached Distill result into the UI if present
-    func restoreCachedDistill() {
-        guard let memo = currentMemo else { return }
-        if let env: AnalyzeEnvelope<DistillData> = DIContainer.shared
-            .analysisRepository()
-            .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
-            selectedAnalysisMode = .distill
-            analysisResult = env.data
-            analysisEnvelope = env
-            isAnalyzing = false
-            analysisCacheStatus = "✅ Restored from cache"
-            analysisPerformanceInfo = "Restored on demand"
-        }
-    }
+    // Cached Distill accessors moved to extension below
 
     /// Whether retry should be offered in UI
     var canRetryTranscription: Bool {
@@ -198,348 +184,37 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         print("📝 MemoDetailViewModel: Initialized with dependency injection")
     }
 
-    // MARK: - Setup Methods
-
-    private func setupBindings() {
-        // React to repository changes instead of polling
-        memoRepository.objectWillChange
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.updateFromRepository()
-            }
-            .store(in: &cancellables)
-
-        // Playback progress updates (throttled by repository timer)
-        memoRepository.playbackProgressPublisher
-            .receive(on: RunLoop.main)
-            .sink { [weak self] progress in
-                guard let self = self, let memo = self.currentMemo, progress.memoId == memo.id else { return }
-                self.state.audio.currentTime = progress.currentTime
-                let dur = progress.duration.isFinite && progress.duration > 0 ? progress.duration : memo.duration
-                self.state.audio.duration = dur
-                if self.isPlaying != progress.isPlaying {
-                    self.isPlaying = progress.isPlaying
-                }
-            }
-            .store(in: &cancellables)
-    }
-
-    private func setupOperationMonitoring() {
-        // Register as delegate immediately to avoid missing early updates
-        operationCoordinator.setStatusDelegate(self)
-
-        // Update operation summaries every 2 seconds (fallback/debug)
-        Timer.publish(every: 2.0, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                Task { @MainActor in
-                    await self?.updateOperationStatus()
-                }
-            }
-            .store(in: &cancellables)
-    }
-
-    private func updateOperationStatus() async {
-        guard let currentMemo = currentMemo else { return }
-
-        // Get operation summaries for current memo and extract IDs
-        let memoSummaries = await operationCoordinator.getOperationSummaries(
-            group: .all,
-            filter: .active,
-            for: currentMemo.id
-        )
-        memoOperationSummaries = memoSummaries.map { $0.operation.id }
-
-        // Get all active operations system-wide (for debugging/monitoring)
-        let allSummaries = await operationCoordinator.getOperationSummaries(
-            group: .all,
-            filter: .active,
-            for: nil
-        )
-        activeOperations = allSummaries.map { $0.operation.id }
-    }
-
-    private func updateFromRepository() {
-        guard let memo = currentMemo else { return }
-
-        // Update transcription state
-        let newTranscriptionState = getTranscriptionStateUseCase.execute(memo: memo)
-        if !transcriptionState.isEqual(to: newTranscriptionState) {
-            transcriptionState = newTranscriptionState
-        }
-
-        // Update playing state
-        let newIsPlaying = memoRepository.playingMemo?.id == memo.id && memoRepository.isPlaying
-        if isPlaying != newIsPlaying {
-            isPlaying = newIsPlaying
-        }
-        // Update duration baseline from memo if not set yet
-        if state.audio.duration == 0 {
-            state.audio.duration = memo.duration
-        }
-
-        // Update language detection + moderation from metadata if available
-        if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
-            if let lang = meta.detectedLanguage, let score = meta.qualityScore {
-                updateLanguageDetection(language: lang, qualityScore: score)
-            }
-            if let flagged = meta.moderationFlagged { transcriptionModerationFlagged = flagged }
-            if let cats = meta.moderationCategories { transcriptionModerationCategories = cats }
-            if let service = meta.transcriptionService {
-                state.transcription.service = service
-            }
-        }
-
-        // Legacy auto-detection banners removed. Distill/Action Items surface detections inline.
-    }
+    // MARK: - Setup Methods moved to extension at bottom
 
     // MARK: - Public Methods
 
-    /// Configure the ViewModel with a memo
-    func configure(with memo: Memo) {
-        print("📝 MemoDetailViewModel: Configuring with memo: \(memo.filename)")
+    // Public methods moved to extension at bottom
 
-        // Clear cache for previous memo to avoid stale data
-        if let prevMemo = currentMemo, prevMemo.id != memo.id {
-            cleanedTextCache.removeValue(forKey: prevMemo.id)
-        }
-
-        self.currentMemo = memo
-        self.currentMemoTitle = memo.displayName
-        state.transcription.service = nil
-        // Initialize audio duration/current for scrubber before playback starts
-        state.audio.duration = memo.duration
-        state.audio.currentTime = 0
-
-        // Initial state update
-        updateTranscriptionState(for: memo)
-        setupPlayingState(for: memo)
-
-        // Subscribe to transcription state changes for this memo to avoid race conditions
-        DIContainer.shared.transcriptionRepository()
-            .stateChangesPublisher(for: memo.id)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] change in
-                guard let self else { return }
-                // Only update if the change pertains to current memo
-                if self.currentMemo?.id == change.memoId {
-                    self.transcriptionState = change.currentState
-                }
-            }
-            .store(in: &cancellables)
-
-        // Start monitoring operations for this memo
-        Task {
-            await updateOperationStatus()
-        }
-    }
-
-    /// Start transcription for the current memo
-    func startTranscription() {
-        guard let memo = currentMemo else { return }
-        print("📝 MemoDetailViewModel: Starting transcription for: \(memo.filename)")
-        Task {
-            do {
-                try await startTranscriptionUseCase.execute(memo: memo)
-            } catch {
-                await MainActor.run {
-                    self.error = ErrorMapping.mapError(error)
-                }
-            }
-        }
-    }
+    
 
     /// Current memo identifier (nil until configured)
     var memoId: UUID? {
         currentMemo?.id
     }
 
-    /// Retry transcription for the current memo
-    func retryTranscription() {
-        guard let memo = currentMemo else { return }
-        print("📝 MemoDetailViewModel: Retrying transcription for: \(memo.filename)")
-        Task {
-            do {
-                try await retryTranscriptionUseCase.execute(memo: memo)
-            } catch {
-                await MainActor.run {
-                    self.error = ErrorMapping.mapError(error)
-                }
-            }
-        }
-    }
+    
 
-    /// Play or pause the current memo
-    func playMemo() {
-        guard let memo = currentMemo else { return }
-        print("📝 MemoDetailViewModel: Playing memo: \(memo.filename)")
-        Task {
-            do {
-                try await playMemoUseCase.execute(memo: memo)
-            } catch {
-                await MainActor.run {
-                    self.error = ErrorMapping.mapError(error)
-                }
-            }
-        }
-    }
+    
 
-    /// Seek within current memo playback
-    func seek(to time: TimeInterval) {
-        guard let memo = currentMemo else { return }
-        memoRepository.seek(to: time, for: memo)
-    }
+    
 
-    /// Skip forward/backward by delta seconds
-    func skip(by delta: TimeInterval) {
-        let cur = currentTime
-        let dur = max(totalDuration, 0)
-        guard dur > 0 else { return }
-        let target = min(max(cur + delta, 0), dur)
-        // If target equals current (already at boundary), no-op
-        if abs(target - cur) < 0.01 {
-            HapticManager.shared.playLightImpact()
-            return
-        }
-        seek(to: target)
-    }
+    
 
-    /// Delete the current memo with cascading cleanup
-    func deleteCurrentMemo() {
-        guard let memo = currentMemo else { return }
-        print("🗑️ MemoDetailViewModel: Deleting memo: \(memo.filename)")
-        isLoading = true
-        Task {
-            do {
-                try await deleteMemoUseCase.execute(memo: memo)
-                await MainActor.run {
-                    self.isLoading = false
-                    self.state.ui.didDeleteMemo = true
-                    HapticManager.shared.playDeletionFeedback()
-                }
-            } catch {
-                await MainActor.run {
-                    self.isLoading = false
-                    self.error = ErrorMapping.mapError(error)
-                }
-            }
-        }
-    }
+    
 
     /// Perform analysis with the specified mode
-    func performAnalysis(mode: AnalysisMode, transcript: String) {
-        guard let memo = currentMemo else {
-            analysisError = "No memo selected for analysis"
-            self.error = .analysisInvalidInput("No memo selected for analysis")
-            return
-        }
-
-        print("📝 MemoDetailViewModel: Starting \(mode.displayName) analysis for memo \(memo.id)")
-
-        isAnalyzing = true
-        analysisError = nil
-        selectedAnalysisMode = mode
-        analysisResult = nil
-        analysisEnvelope = nil
-        analysisCacheStatus = "Checking cache..."
-        analysisPerformanceInfo = nil
-
-        Task {
-            do {
-                switch mode {
-                case .distill:
-                    if isParallelDistillEnabled {
-                        await performParallelDistill(transcript: transcript, memoId: memo.id)
-                    } else {
-                        await performRegularDistill(transcript: transcript, memoId: memo.id)
-                    }
-
-                // Distill component modes (not directly called from UI, but needed for switch exhaustiveness)
-                case .distillSummary, .distillActions, .distillThemes, .distillReflection:
-                    // These are handled internally by the parallel processing system
-                    // For now, fall back to regular distill analysis
-                    await performRegularDistill(transcript: transcript, memoId: memo.id)
-
-                case .analysis:
-                    let envelope = try await analyzeContentUseCase.execute(transcript: transcript, memoId: memo.id)
-                    await MainActor.run {
-                        analysisResult = envelope.data
-                        analysisEnvelope = envelope
-                        isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Analysis completed (cached: \(envelope.latency_ms < 1_000))")
-                    }
-
-                case .themes:
-                    let envelope = try await analyzeThemesUseCase.execute(transcript: transcript, memoId: memo.id)
-                    await MainActor.run {
-                        analysisResult = envelope.data
-                        analysisEnvelope = envelope
-                        isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Themes analysis completed (cached: \(envelope.latency_ms < 1_000))")
-                    }
-
-                case .todos:
-                    let envelope = try await analyzeTodosUseCase.execute(transcript: transcript, memoId: memo.id)
-                    await MainActor.run {
-                        analysisResult = envelope.data
-                        analysisEnvelope = envelope
-                        isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Todos analysis completed (cached: \(envelope.latency_ms < 1_000))")
-                    }
-
-                case .events:
-                    // Use combined detection use case and surface events
-                    let detection = try await DIContainer.shared.detectEventsAndRemindersUseCase().execute(transcript: transcript, memoId: memo.id)
-                    await MainActor.run {
-                        // Prefer detected events; fallback to empty to render a friendly state
-                        let data = detection.events ?? EventsData(events: [])
-                        analysisResult = data
-                        // No standard envelope for events/reminders; header is omitted by design
-                        analysisEnvelope = nil
-                        isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Events detection completed")
-                    }
-
-                case .reminders:
-                    // Use combined detection use case and surface reminders
-                    let detection = try await DIContainer.shared.detectEventsAndRemindersUseCase().execute(transcript: transcript, memoId: memo.id)
-                    await MainActor.run {
-                        // Prefer detected reminders; fallback to empty to render a friendly state
-                        let data = detection.reminders ?? RemindersData(reminders: [])
-                        analysisResult = data
-                        analysisEnvelope = nil
-                        isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Reminders detection completed")
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    analysisError = error.localizedDescription
-                    self.error = ErrorMapping.mapError(error)
-                    isAnalyzing = false
-                }
-            }
-        }
-    }
+    
 
     /// Cancel specific operation by ID
-    func cancelOperation(_ operationId: UUID) {
-        Task {
-            await operationCoordinator.cancelOperation(operationId)
-            await updateOperationStatus() // Refresh status after cancellation
-        }
-    }
+    
 
     /// Cancel all operations for current memo
-    func cancelAllOperations() {
-        guard let memo = currentMemo else { return }
-
-        Task {
-            let cancelledCount = await operationCoordinator.cancelAllOperations(for: memo.id)
-            print("🚫 MemoDetailViewModel: Cancelled \(cancelledCount) operations for memo: \(memo.filename)")
-            await updateOperationStatus()
-        }
-    }
+    
 
     // MARK: - Title Renaming Methods
 
@@ -602,7 +277,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
 
     // MARK: - Parallel Distill Methods
 
-    private func performParallelDistill(transcript: String, memoId: UUID) async {
+    func performParallelDistill(transcript: String, memoId: UUID) async {
         print("📝 MemoDetailViewModel: Starting parallel Distill analysis")
 
         // Reset distill-specific state
@@ -673,7 +348,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         }
     }
 
-    private func performRegularDistill(transcript: String, memoId: UUID) async {
+    func performRegularDistill(transcript: String, memoId: UUID) async {
         print("📝 MemoDetailViewModel: Starting regular Distill analysis")
 
         do {
@@ -844,467 +519,167 @@ private extension TranscriptionState {
 
 // MARK: - Debug Helpers
 
+// Debug Helpers moved to MemoDetailViewModel+Debug.swift
+
+// Language banner APIs moved to MemoDetailViewModel+Language.swift
+// Sharing helpers moved to MemoDetailViewModel+Sharing.swift
+
+// MARK: - Setup & Repository Wiring
 extension MemoDetailViewModel {
-
-    /// Get debug information about the current state
-    var debugInfo: String {
-        """
-        MemoDetailViewModel State:
-        - currentMemo: \(currentMemo?.filename ?? "none")
-        - transcriptionState: \(state.transcription.state.statusText)
-        - isPlaying: \(state.audio.isPlaying)
-        - isAnalyzing: \(state.analysis.isAnalyzing)
-        - selectedAnalysisMode: \(state.analysis.selectedMode?.displayName ?? "none")
-        - analysisError: \(state.analysis.error ?? "none")
-        - error: \(state.ui.error?.localizedDescription ?? "none")
-        - isLoading: \(state.ui.isLoading)
-        """
-    }
-
-    // MARK: - ErrorHandling Protocol
-
-    func retryLastOperation() {
-        clearError()
-        guard currentMemo != nil else { return }
-
-        // Determine what operation to retry based on current state
-        if state.transcription.state.isFailed {
-            retryTranscription()
-        } else if !state.transcription.state.isCompleted {
-            startTranscription()
-        }
-    }
-}
-
-// MARK: - Language Banner API
-extension MemoDetailViewModel {
-    func updateLanguageDetection(language: String?, qualityScore: Double) {
-        detectedLanguage = language
-        guard let memo = currentMemo else { return }
-        if languageBannerDismissedForMemo[memo.id] == true {
-            showNonEnglishBanner = false
-            return
-        }
-
-        // If user explicitly set a preferred language, don't warn when it matches
-        if let pref = AppConfiguration.shared.preferredTranscriptionLanguage, let lang = language?.lowercased() {
-            if pref == lang { showNonEnglishBanner = false; return }
-        }
-
-        if let lang = language, lang.lowercased() != "en", qualityScore > 0.6, AppConfiguration.shared.preferredTranscriptionLanguage == nil {
-            showNonEnglishBanner = true
-            languageBannerMessage = formatLanguageBannerMessage(for: lang)
-        } else {
-            showNonEnglishBanner = false
-        }
-    }
-
-    private func formatLanguageBannerMessage(for languageCode: String) -> String {
-        let languageName = WhisperLanguages.localizedDisplayName(for: languageCode)
-        return "Detected language: \(languageName). Result may be less accurate."
-    }
-
-    func dismissLanguageBanner() {
-        showNonEnglishBanner = false
-        if let memo = currentMemo { languageBannerDismissedForMemo[memo.id] = true }
-    }
-
-    // MARK: - Share Functionality Methods
-
-    /// Prepare share content based on selected options
-    /// Build share items asynchronously, creating files as needed.
-    private func buildShareItems() async -> [Any] {
-        guard let memo = currentMemo else { return [] }
-        var shareItems: [Any] = []
-        lastShareTempURLs.removeAll()
-
-        // Add audio file if selected (copy to temp with friendly name and wrap as provider)
-        if shareAudioEnabled {
-            let ext = memo.fileExtension
-            let filename = memo.preferredShareableFileName + ".\(ext)"
-            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-            do {
-                let fm = FileManager.default
-                if fm.fileExists(atPath: tempURL.path) { try fm.removeItem(at: tempURL) }
-                try fm.copyItem(at: memo.fileURL, to: tempURL)
-                lastShareTempURLs.append(tempURL)
-                if #available(iOS 14.0, *) {
-                    let provider = NSItemProvider(item: tempURL as NSSecureCoding, typeIdentifier: UTType.mpeg4Audio.identifier)
-                    provider.suggestedName = filename
-                    shareItems.append(provider)
-                } else {
-                    shareItems.append(tempURL)
-                }
-            } catch {
-                print("❌ MemoDetailViewModel: Failed creating temp audio share file: \(error.localizedDescription)")
-                // Fallback to original URL if copy fails
-                shareItems.append(memo.fileURL)
+    fileprivate func setupBindings() {
+        // React to repository changes instead of polling
+        memoRepository.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.updateFromRepository()
             }
-        }
+            .store(in: &cancellables)
 
-        // Add transcription as a .txt file if selected and available
-        if shareTranscriptionEnabled, let transcriptText = transcriptionText {
-            let formatted = formatTranscriptionForSharing(text: transcriptText)
-            do {
-                let url = try await createTranscriptShareFileUseCase.execute(memo: memo, text: formatted)
-                lastShareTempURLs.append(url)
-                if #available(iOS 14.0, *) {
-                    let provider = NSItemProvider(item: url as NSSecureCoding, typeIdentifier: UTType.plainText.identifier)
-                    provider.suggestedName = memo.preferredShareableFileName + ".txt"
-                    shareItems.append(provider)
-                } else {
-                    shareItems.append(url)
+        // Playback progress updates (throttled by repository timer)
+        memoRepository.playbackProgressPublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] progress in
+                guard let self = self, let memo = self.currentMemo, progress.memoId == memo.id else { return }
+                self.state.audio.currentTime = progress.currentTime
+                let dur = progress.duration.isFinite && progress.duration > 0 ? progress.duration : memo.duration
+                self.state.audio.duration = dur
+                if self.isPlaying != progress.isPlaying {
+                    self.isPlaying = progress.isPlaying
                 }
-            } catch {
-                print("❌ MemoDetailViewModel: Failed creating transcript file: \(error.localizedDescription)")
             }
-        }
+            .store(in: &cancellables)
+    }
 
-        // Add AI analysis as a consolidated .txt file if enabled and available
-        if shareAnalysisEnabled {
-            do {
-                // With Distill-only analysis, restrict export to Distill content
-                let url = try await createAnalysisShareFileUseCase.execute(memo: memo, includeTypes: [.distill])
-                lastShareTempURLs.append(url)
-                if #available(iOS 14.0, *) {
-                    let provider = NSItemProvider(item: url as NSSecureCoding, typeIdentifier: UTType.plainText.identifier)
-                    provider.suggestedName = memo.preferredShareableFileName + "_analysis.txt"
-                    shareItems.append(provider)
-                } else {
-                    shareItems.append(url)
+    fileprivate func setupOperationMonitoring() {
+        // Register as delegate immediately to avoid missing early updates
+        operationCoordinator.setStatusDelegate(self)
+
+        // Update operation summaries every 2 seconds (fallback/debug)
+        Timer.publish(every: 2.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    await self?.updateOperationStatus()
                 }
-            } catch {
-                print("❌ MemoDetailViewModel: Failed creating analysis share file: \(error.localizedDescription)")
             }
-        }
-
-        return shareItems
+            .store(in: &cancellables)
     }
 
-    /// Prepare share items asynchronously; presentation occurs after sheet dismiss.
-    func shareSelectedContent() async {
-        isPreparingShare = true
-        let items = await buildShareItems()
-        await MainActor.run {
-            self.isPreparingShare = false
-            self.pendingShareItems = items
-            print("📤 MemoDetailViewModel: Prepared \(items.count) share item(s)")
-        }
-    }
+    func updateOperationStatus() async {
+        guard let currentMemo = currentMemo else { return }
 
-    /// Called after Share sheet (SwiftUI) dismisses, to present the system share UI
-    func presentPendingShareIfReady() {
-        let items = pendingShareItems
-        pendingShareItems.removeAll()
-        guard !items.isEmpty else {
-            print("📤 MemoDetailViewModel: No items to present after dismiss")
-            return
-        }
-        presentShareSheet(with: items)
-    }
-
-    /// Present the native iOS share sheet with items
-    private func presentShareSheet(with items: [Any]) {
-        let activityController = UIActivityViewController(
-            activityItems: items,
-            applicationActivities: nil
+        // Get operation summaries for current memo and extract IDs
+        let memoSummaries = await operationCoordinator.getOperationSummaries(
+            group: .all,
+            filter: .active,
+            for: currentMemo.id
         )
+        memoOperationSummaries = memoSummaries.map { $0.operation.id }
 
-        // Clean up any temporary transcript files regardless of completion result
-        activityController.completionWithItemsHandler = { [weak self] _, _, _, _ in
-            guard let self = self else { return }
-            let fm = FileManager.default
-            for url in self.lastShareTempURLs {
-                do { if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) } } catch { print("⚠️ MemoDetailViewModel: Failed to remove temp share file: \(error)") }
-            }
-            self.lastShareTempURLs.removeAll()
-        }
-
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            window.rootViewController?.present(activityController, animated: true) {
-                print("📤 MemoDetailViewModel: Share sheet presented successfully")
-            }
-        }
+        // Get all active operations system-wide (for debugging/monitoring)
+        let allSummaries = await operationCoordinator.getOperationSummaries(
+            group: .all,
+            filter: .active,
+            for: nil
+        )
+        activeOperations = allSummaries.map { $0.operation.id }
     }
 
-    // Removed semaphore-based helper to avoid main-thread deadlocks
+    fileprivate func updateFromRepository() {
+        guard let memo = currentMemo else { return }
 
-    /// Get formatted analysis text for sharing
-    private func getShareableAnalysisText() -> String? {
-        guard let memo = currentMemo else { return nil }
-
-        let completedAnalyses = memo.analysisResults.filter { $0.isCompleted }
-        guard !completedAnalyses.isEmpty else { return nil }
-
-        var analysisText = "--- AI ANALYSIS ---\n\n"
-
-        for analysis in completedAnalyses {
-            switch analysis.type {
-            case .distill:
-                if let content = analysis.content, let summary = content.summary {
-                    analysisText += "📝 DISTILL\n\(summary)\n\n"
-                }
-            case .summary:
-                if let content = analysis.content, let summary = content.summary {
-                    analysisText += "📝 SUMMARY\n\(summary)\n\n"
-                }
-            case .themes:
-                if let content = analysis.content, !content.themes.isEmpty {
-                    analysisText += "🏷️ THEMES\n"
-                    for theme in content.themes {
-                        analysisText += "• \(theme.name)\n"
-                    }
-                    analysisText += "\n"
-                }
-            case .actionItems:
-                if let content = analysis.content, !content.actionItems.isEmpty {
-                    analysisText += "✅ TO-DO\n"
-                    for item in content.actionItems {
-                        let status = item.isCompleted ? "✓" : "•"
-                        analysisText += "\(status) \(item.text)\n"
-                    }
-                    analysisText += "\n"
-                }
-            case .keyPoints:
-                if let content = analysis.content, !content.keyPoints.isEmpty {
-                    analysisText += "🔍 KEY POINTS\n"
-                    for point in content.keyPoints {
-                        analysisText += "• \(point)\n"
-                    }
-                    analysisText += "\n"
-                }
-            }
+        // Update transcription state
+        let newTranscriptionState = getTranscriptionStateUseCase.execute(memo: memo)
+        if !transcriptionState.isEqual(to: newTranscriptionState) {
+            transcriptionState = newTranscriptionState
         }
 
-        return analysisText.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
+        // Update playing state
+        let newIsPlaying = memoRepository.playingMemo?.id == memo.id && memoRepository.isPlaying
+        if isPlaying != newIsPlaying {
+            isPlaying = newIsPlaying
+        }
+        // Update duration baseline from memo if not set yet
+        if state.audio.duration == 0 {
+            state.audio.duration = memo.duration
+        }
 
-    /// Format transcription text for sharing
-    private func formatTranscriptionForSharing(text: String) -> String {
-        guard let memo = currentMemo else { return text }
-
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.timeStyle = .short
-
-        let header = """
-        \(currentMemoTitle)
-        Recorded: \(dateFormatter.string(from: memo.creationDate))
-
-        --- TRANSCRIPTION ---
-
-        """
-
-        return header + text
+        // Update language detection + moderation from metadata if available
+        if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
+            if let lang = meta.detectedLanguage, let score = meta.qualityScore {
+                updateLanguageDetection(language: lang, qualityScore: score)
+            }
+            if let flagged = meta.moderationFlagged { transcriptionModerationFlagged = flagged }
+            if let cats = meta.moderationCategories { transcriptionModerationCategories = cats }
+            if let service = meta.transcriptionService {
+                state.transcription.service = service
+            }
+        }
     }
 }
 
-// MARK: - Backward Compatibility Properties
-
+// MARK: - User Actions & Operations
 extension MemoDetailViewModel {
+    /// Configure the ViewModel with a memo
+    func configure(with memo: Memo) {
+        print("📝 MemoDetailViewModel: Configuring with memo: \(memo.filename)")
 
-    // MARK: - Transcription Properties
-    var transcriptionState: TranscriptionState {
-        get { state.transcription.state }
-        set { state.transcription.state = newValue }
-    }
-
-    var transcriptionProgressPercent: Double? {
-        get { state.transcription.progressPercent }
-        set { state.transcription.progressPercent = newValue }
-    }
-
-    var transcriptionProgressStep: String? {
-        get { state.transcription.progressStep }
-        set { state.transcription.progressStep = newValue }
-    }
-
-    var transcriptionModerationFlagged: Bool {
-        get { state.transcription.moderationFlagged }
-        set { state.transcription.moderationFlagged = newValue }
-    }
-
-    var transcriptionModerationCategories: [String: Bool] {
-        get { state.transcription.moderationCategories }
-        set { state.transcription.moderationCategories = newValue }
-    }
-
-    var transcriptionServiceBadge: String? {
-        state.transcription.serviceDisplayName
-    }
-
-    var transcriptionServiceIcon: String? {
-        state.transcription.serviceIconName
-    }
-
-    // MARK: - Audio Properties  
-    var isPlaying: Bool {
-        get { state.audio.isPlaying }
-        set { state.audio.isPlaying = newValue }
-    }
-
-    // MARK: - Analysis Properties
-    var selectedAnalysisMode: AnalysisMode? {
-        get { state.analysis.selectedMode }
-        set { state.analysis.selectedMode = newValue }
-    }
-
-    var analysisResult: Any? {
-        get { state.analysis.result }
-        set { state.analysis.result = newValue }
-    }
-
-    var analysisEnvelope: Any? {
-        get { state.analysis.envelope }
-        set { state.analysis.envelope = newValue }
-    }
-
-    var isAnalyzing: Bool {
-        get { state.analysis.isAnalyzing }
-        set { state.analysis.isAnalyzing = newValue }
-    }
-
-    var analysisError: String? {
-        get { state.analysis.error }
-        set { state.analysis.error = newValue }
-    }
-
-    var analysisCacheStatus: String? {
-        get { state.analysis.cacheStatus }
-        set { state.analysis.cacheStatus = newValue }
-    }
-
-    var analysisPerformanceInfo: String? {
-        get { state.analysis.performanceInfo }
-        set { state.analysis.performanceInfo = newValue }
-    }
-
-    var isParallelDistillEnabled: Bool {
-        get { state.analysis.isParallelDistillEnabled }
-        set { state.analysis.isParallelDistillEnabled = newValue }
-    }
-
-    var distillProgress: DistillProgressUpdate? {
-        get { state.analysis.distillProgress }
-        set { state.analysis.distillProgress = newValue }
-    }
-
-    var partialDistillData: PartialDistillData? {
-        get { state.analysis.partialDistillData }
-        set { state.analysis.partialDistillData = newValue }
-    }
-
-    // MARK: - Language Properties
-    var detectedLanguage: String? {
-        get { state.language.detectedLanguage }
-        set { state.language.detectedLanguage = newValue }
-    }
-
-    var showNonEnglishBanner: Bool {
-        get { state.language.showNonEnglishBanner }
-        set { state.language.showNonEnglishBanner = newValue }
-    }
-
-    var languageBannerMessage: String {
-        get { state.language.bannerMessage }
-        set { state.language.bannerMessage = newValue }
-    }
-
-    // Event/reminder detection banners removed; detections are shown via Action Items.
-
-    func latestDetectedEvents() -> [EventsData.DetectedEvent] {
-        guard let memo = currentMemo else { return [] }
-        if let env: AnalyzeEnvelope<EventsData> = DIContainer.shared.analysisRepository().getAnalysisResult(for: memo.id, mode: .events, responseType: EventsData.self) {
-            return env.data.events
+        // Clear cache for previous memo to avoid stale data
+        if let prevMemo = currentMemo, prevMemo.id != memo.id {
+            cleanedTextCache.removeValue(forKey: prevMemo.id)
         }
-        return []
-    }
-    func latestDetectedReminders() -> [RemindersData.DetectedReminder] {
-        guard let memo = currentMemo else { return [] }
-        if let env: AnalyzeEnvelope<RemindersData> = DIContainer.shared.analysisRepository().getAnalysisResult(for: memo.id, mode: .reminders, responseType: RemindersData.self) {
-            return env.data.reminders
+
+        self.currentMemo = memo
+        self.currentMemoTitle = memo.displayName
+        state.transcription.service = nil
+        // Initialize audio duration/current for scrubber before playback starts
+        state.audio.duration = memo.duration
+        state.audio.currentTime = 0
+
+        // Initial state update
+        updateTranscriptionState(for: memo)
+        setupPlayingState(for: memo)
+
+        // Subscribe to transcription state changes for this memo to avoid race conditions
+        DIContainer.shared.transcriptionRepository()
+            .stateChangesPublisher(for: memo.id)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] change in
+                guard let self else { return }
+                // Only update if the change pertains to current memo
+                if self.currentMemo?.id == change.memoId {
+                    self.transcriptionState = change.currentState
+                }
+            }
+            .store(in: &cancellables)
+
+        // Start monitoring operations for this memo
+        Task {
+            await updateOperationStatus()
         }
-        return []
     }
 
-    var languageBannerDismissedForMemo: [UUID: Bool] {
-        get { state.language.bannerDismissedForMemo }
-        set { state.language.bannerDismissedForMemo = newValue }
+    /// Whether a cached Distill result exists in the repository for the current memo
+    var hasCachedDistill: Bool {
+        guard let memo = currentMemo else { return false }
+        return DIContainer.shared.analysisRepository().hasAnalysisResult(for: memo.id, mode: .distill)
     }
 
-    // MARK: - Title Editing Properties
-    var isRenamingTitle: Bool {
-        get { state.titleEditing.isRenaming }
-        set { state.titleEditing.isRenaming = newValue }
-    }
-
-    var editedTitle: String {
-        get { state.titleEditing.editedTitle }
-        set { state.titleEditing.editedTitle = newValue }
-    }
-
-    var currentMemoTitle: String {
-        get { state.titleEditing.currentMemoTitle }
-        set { state.titleEditing.currentMemoTitle = newValue }
-    }
-
-    // MARK: - Share Properties
-    var showShareSheet: Bool {
-        get { state.share.showShareSheet }
-        set { state.share.showShareSheet = newValue }
-    }
-
-    var shareAudioEnabled: Bool {
-        get { state.share.audioEnabled }
-        set { state.share.audioEnabled = newValue }
-    }
-
-    var shareTranscriptionEnabled: Bool {
-        get { state.share.transcriptionEnabled }
-        set { state.share.transcriptionEnabled = newValue }
-    }
-
-    var shareAnalysisEnabled: Bool {
-        get { state.share.analysisEnabled }
-        set { state.share.analysisEnabled = newValue }
-    }
-
-    var shareAnalysisSelectedTypes: Set<DomainAnalysisType> {
-        get { state.share.analysisSelectedTypes }
-        set { state.share.analysisSelectedTypes = newValue }
-    }
-
-    var isPreparingShare: Bool {
-        get { state.share.isPreparingShare }
-        set { state.share.isPreparingShare = newValue }
-    }
-
-    // MARK: - UI Properties
-    var error: SonoraError? {
-        get { state.ui.error }
-        set { state.ui.error = newValue }
-    }
-
-    var isLoading: Bool {
-        get { state.ui.isLoading }
-        set { state.ui.isLoading = newValue }
-    }
-
-    // MARK: - Operation Properties (simplified access)
-    var activeOperations: [UUID] {
-        get { state.operations.activeOperations }
-        set { state.operations.activeOperations = newValue }
-    }
-
-    var memoOperationSummaries: [UUID] {
-        get { state.operations.memoOperationSummaries }
-        set { state.operations.memoOperationSummaries = newValue }
-    }
-
-    // MARK: - Deletion/UI flags
-    var didDeleteMemo: Bool {
-        get { state.ui.didDeleteMemo }
-        set { state.ui.didDeleteMemo = newValue }
+    /// Restore cached Distill result into the UI if present
+    func restoreCachedDistill() {
+        guard let memo = currentMemo else { return }
+        if let env: AnalyzeEnvelope<DistillData> = DIContainer.shared
+            .analysisRepository()
+            .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
+            selectedAnalysisMode = .distill
+            analysisResult = env.data
+            analysisEnvelope = env
+            isAnalyzing = false
+            analysisCacheStatus = "✅ Restored from cache"
+            analysisPerformanceInfo = "Restored on demand"
+        }
     }
 }
+
+
+// Backward compatibility accessors moved to MemoDetailViewModel+StateAccessors.swift

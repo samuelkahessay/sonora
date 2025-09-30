@@ -290,10 +290,4 @@ struct SonoraMemocCard: View {
 
 // MARK: - Date Formatter Extension
 
-extension DateFormatter {
-    static let timeOnly: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter
-    }()
-}
+// Removed unused DateFormatter.timeOnly

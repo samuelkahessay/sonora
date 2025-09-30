@@ -1,0 +1,73 @@
+High ROI: 95 findings
+- [9.38] Domain | class open | BaseUseCase @ Sonora/Domain/UseCases/Base/BaseUseCase.swift:5:12
+- [9.1] Core | struct public | AsyncTimeoutError @ Sonora/Core/Concurrency/AsyncTimeout.swift:4:15
+- [9.1] Core | protocol public | OperationCoordinatorProtocol @ Sonora/Core/Concurrency/OperationCoordinatorProtocol.swift:3:17
+- [9.1] Core | enum public | StatusColor @ Sonora/Core/Concurrency/OperationStatus.swift:168:13
+- [9.1] Core | struct public | OperationConflict @ Sonora/Core/Concurrency/OperationType.swift:175:15
+- [9.1] Core | enum public | ConflictResolutionStrategy @ Sonora/Core/Concurrency/OperationType.swift:176:17
+- [9.1] Core | class public | Environment @ Sonora/Core/Configuration/Environment.swift:6:20
+- [9.1] Core | class public | ErrorMapping @ Sonora/Core/Errors/ErrorMapping.swift:6:20
+- [9.1] Core | enum public | RepositoryOperationType @ Sonora/Core/Errors/RepositoryError.swift:301:13
+- [9.1] Core | enum public | RepositoryRecoveryStrategy @ Sonora/Core/Errors/RepositoryError.swift:338:13
+- [9.1] Core | enum public | RepositoryError @ Sonora/Core/Errors/RepositoryError.swift:4:13
+- [9.1] Core | enum public | ServiceType @ Sonora/Core/Errors/ServiceError.swift:441:13
+- [9.1] Core | enum public | ServiceErrorSeverity @ Sonora/Core/Errors/ServiceError.swift:485:13
+- [9.1] Core | enum public | ServiceError @ Sonora/Core/Errors/ServiceError.swift:5:13
+- [9.1] Core | protocol public | AppEventType @ Sonora/Core/Events/AppEvent.swift:226:17
+- [9.1] Core | protocol public | AppEventType @ Sonora/Core/Events/AppEvent.swift:226:17
+- [9.1] Core | class public | EventSubscriptionManager @ Sonora/Core/Events/EventBus.swift:334:20
+- [9.1] Core | protocol public | EventHandlerRegistryProtocol @ Sonora/Core/Events/EventHandlerRegistry.swift:300:17
+- [9.1] Core | class public | MemoEventHandler @ Sonora/Core/Events/MemoEventHandler.swift:9:20
+- [9.1] Core | class public | PerformanceTimer @ Sonora/Core/Logging/Logger.swift:437:20
+
+Medium ROI: 130 findings
+- [5.46] Core | function.method.static public | detectConflict(existing:proposed:) @ Sonora/Core/Concurrency/OperationType.swift:188:24
+- [5.46] Core | function.method.static public | mapError(_:) @ Sonora/Core/Errors/ErrorMapping.swift:11:24
+- [5.46] Core | function.method.static public | mapHTTPStatusCode(_:data:) @ Sonora/Core/Errors/ErrorMapping.swift:315:24
+- [5.46] Core | function.method.static public | mapAVFoundationError(_:) @ Sonora/Core/Errors/ErrorMapping.swift:347:24
+- [5.46] Core | function.method.static public | mapNetworkError(_:) @ Sonora/Core/Errors/ErrorMapping.swift:395:24
+- [5.46] Core | function.method.static public | mapCoreDataError(_:) @ Sonora/Core/Errors/ErrorMapping.swift:403:24
+- [5.25] Domain | function.method.static public | fromAuthorizationStatus(_:type:) @ Sonora/Domain/Models/EventKitError.swift:171:24
+- [5.0] Other | struct internal | MemoRowState @ Sonora/Features/Memos/ViewModels/MemoListViewModel.swift:1051:8
+- [4.8] Data | function.free internal | combineDetectionResults(serverResponse:clientDetection:) @ Sonora/Data/Services/Transcription/ClientLanguageDetectionService.swift:131:6
+- [4.5] Presentation | enum internal | ListStyling @ Sonora/Features/Memos/UI/MemoListConstants.swift:43:10
+- [4.5] Presentation | enum internal | TranscriptionStateKey @ Sonora/Features/Memos/UI/MemoUIConstants.swift:34:6
+- [4.5] Presentation | struct internal | AboutSupportLegalSectionView_Previews @ Sonora/Features/Settings/UI/AboutSupportLegalSectionView.swift:98:8
+- [4.5] Presentation | struct internal | SupportAboutSectionView @ Sonora/Features/Settings/UI/SupportAboutSectionView.swift:3:8
+- [3.64] Core | function.method.instance public | cancelAllOperations(for:) @ Sonora/Core/Concurrency/OperationCoordinator.swift:190:17
+- [3.64] Core | function.method.instance public | cancelOperations(ofType:) @ Sonora/Core/Concurrency/OperationCoordinator.swift:208:17
+- [3.64] Core | function.method.instance public | cancelAllOperations() @ Sonora/Core/Concurrency/OperationCoordinator.swift:227:17
+- [3.64] Core | function.method.instance public | getAllOperations(for:) @ Sonora/Core/Concurrency/OperationCoordinator.swift:331:17
+- [3.64] Core | function.method.instance public | getAllActiveOperations() @ Sonora/Core/Concurrency/OperationCoordinator.swift:336:17
+- [3.64] Core | function.method.instance public | getOperationsByStatus(_:) @ Sonora/Core/Concurrency/OperationCoordinator.swift:341:17
+- [3.64] Core | function.method.instance public | getOperations(ofType:withStatus:) @ Sonora/Core/Concurrency/OperationCoordinator.swift:346:17
+
+Low ROI: 637 findings
+- [2.8] Other | function.constructor public | init(memoTitle:startTime:duration:isCountdown:remainingTime:emoji:level:) @ Sonora/LiveActivity/SonoraLiveActivityAttributes.swift:21:16
+- [2.8] Other | function.constructor public | init(memoId:) @ Sonora/LiveActivity/SonoraLiveActivityAttributes.swift:42:12
+- [2.8] Other | var.static public | uiVisibleCases @ Sonora/Models/AnalysisModels.swift:13:23
+- [2.8] Other | function.constructor public | init(id:title:colorHex:entityType:allowsModifications:isDefault:) @ Sonora/Models/EventKitDTOs.swift:16:12
+- [2.8] Other | function.constructor public | init(identifier:title:startDate:endDate:isAllDay:) @ Sonora/Models/EventKitDTOs.swift:40:12
+- [2.7] Presentation | function.method.static internal | announceSelectionStart() @ Sonora/Features/Memos/UI/Components/DragSelectionAccessibility.swift:37:17
+- [2.7] Presentation | function.method.static internal | announceSelectionProgress(count:total:) @ Sonora/Features/Memos/UI/Components/DragSelectionAccessibility.swift:48:17
+- [2.7] Presentation | function.method.static internal | announceSelectionCancelled() @ Sonora/Features/Memos/UI/Components/DragSelectionAccessibility.swift:71:17
+- [2.7] Presentation | function.method.static internal | selectRange(from:to:viewModel:) @ Sonora/Features/Memos/UI/Components/DragSelectionAccessibility.swift:87:17
+- [2.7] Presentation | function.method.static internal | networkError(compact:onRetry:onDismiss:) @ Sonora/Views/Components/NotificationBanner.swift:183:17
+- [2.7] Presentation | function.method.static internal | noTranscription() @ Sonora/Views/Components/UnifiedStateView.swift:218:17
+- [2.7] Presentation | function.method.static internal | noAnalysis() @ Sonora/Views/Components/UnifiedStateView.swift:229:17
+- [2.7] Presentation | function.method.static internal | noSearchResults(query:) @ Sonora/Views/Components/UnifiedStateView.swift:240:17
+- [2.6] Core | function.method.instance internal | snapshotActiveByMemo() @ Sonora/Core/Concurrency/OperationCoordinator.swift:129:19
+- [2.6] Core | var.static internal | default @ Sonora/Core/Configuration/TranscriptionServicePreference.swift:20:16
+- [2.6] Core | function.method.instance internal | isSelectedTranscriptionServiceAvailable() @ Sonora/Core/Configuration/TranscriptionServicePreference.swift:44:10
+- [2.6] Core | function.method.instance internal | getEffectiveTranscriptionService() @ Sonora/Core/Configuration/TranscriptionServicePreference.swift:50:10
+- [2.6] Core | function.method.instance internal | getRemainingDailyQuotaUseCase() @ Sonora/Core/DI/DIContainer+Quota.swift:7:10
+- [2.6] Core | function.method.instance internal | generateAutoTitleUseCase() @ Sonora/Core/DI/DIContainer.swift:444:10
+- [2.6] Core | function.method.instance internal | forceMemoryPressureCheck() @ Sonora/Core/Memory/MemoryPressureDetector.swift:15:10
+
+By Layer:
+- Core: 221
+- Domain: 240
+- Data: 136
+- Presentation: 86
+- LiveActivity: 1
+- Other: 178

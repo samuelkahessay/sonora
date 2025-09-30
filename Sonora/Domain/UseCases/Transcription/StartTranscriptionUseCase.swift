@@ -69,8 +69,6 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
         let operationId = try await registerTranscriptionOperation(memo: memo, context: context)
 
         do {
-            await MainActor.run { CurrentTranscriptionContext.memoId = memo.id }
-            defer { Task { await MainActor.run { CurrentTranscriptionContext.memoId = nil } } }
             // Check if transcription is already in progress
             // State is checked pre-registration; proceed
 

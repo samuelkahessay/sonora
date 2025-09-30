@@ -38,17 +38,7 @@ enum MemoListColors {
 /// All values are documented for easy customization
 enum MemoListConstants {
 
-    /// **List Styling Configuration**
-    /// Controls overall list appearance and behavior
-    enum ListStyling {
-        /// List style - affects visual presentation and grouping
-        /// Options: .insetGrouped (modern cards), .grouped (traditional), .plain (minimal)
-        static var preferredStyle: some ListStyle { InsetGroupedListStyle() }
-
-        /// Background color for the list container
-        /// Uses semantic color for automatic light/dark adaptation
-        static let backgroundColor: Color = .semantic(.bgSecondary)
-    }
+    // Removed unused ListStyling nested enum.
 
     /// **Row Configuration**
     /// Fine-tune individual row appearance

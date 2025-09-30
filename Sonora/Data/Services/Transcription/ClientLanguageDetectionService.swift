@@ -16,11 +16,7 @@ enum LanguageSource: String {
     case client
 }
 
-struct CombinedLanguageResult {
-    let language: String
-    let confidence: Double
-    let source: LanguageSource
-}
+// Removed unused CombinedLanguageResult.
 
 // MARK: - Protocol
 
@@ -128,18 +124,4 @@ final class DefaultClientLanguageDetectionService: ClientLanguageDetectionServic
 
 // MARK: - Integration Utility
 
-func combineDetectionResults(
-    serverResponse: TranscriptionResponse,
-    clientDetection: LanguageDetectionResult
-) -> CombinedLanguageResult {
-    // Prefer server data when available and reasonably reliable
-    if let serverLang = serverResponse.detectedLanguage,
-       let serverConf = serverResponse.confidence,
-       serverConf > 0.5 {
-        let code = DefaultClientLanguageDetectionService.iso639_1(fromBCP47: serverLang) ?? serverLang
-        return CombinedLanguageResult(language: code, confidence: serverConf, source: .server)
-    }
-
-    // Fall back to client detection
-    return CombinedLanguageResult(language: clientDetection.language, confidence: clientDetection.confidence, source: .client)
-}
+// Removed unused combineDetectionResults helper.

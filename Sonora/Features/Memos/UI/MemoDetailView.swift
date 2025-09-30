@@ -684,17 +684,7 @@ struct MemoDetailView: View {
 
     // MARK: - UI Helper Methods
 
-    private func shareText(_ text: String) {
-        let activityController = UIActivityViewController(
-            activityItems: [text],
-            applicationActivities: nil
-        )
-
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            window.rootViewController?.present(activityController, animated: true)
-        }
-    }
+    // Removed unused shareText helper (sharing handled via share file use cases)
 
     private func copyText(_ text: String) {
         UIPasteboard.general.string = text

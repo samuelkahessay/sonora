@@ -527,8 +527,4 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
 
 // Removed custom OperationType extension. We use `.analysis(memoId:analysisType:)` with `.analysis`.
 
-enum EventReminderAnalysisType: String, CaseIterable {
-    case eventReminder = "event_reminder"
-    case eventOnly = "event_only"
-    case reminderOnly = "reminder_only"
-}
+// Removed unused EventReminderAnalysisType enum.

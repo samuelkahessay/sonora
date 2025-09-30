@@ -33,70 +33,7 @@ struct DragSelectionAccessibility {
 
     // MARK: - VoiceOver Announcements
 
-    /// Announce the start of drag selection
-    static func announceSelectionStart() {
-        guard isVoiceOverRunning else { return }
-
-        let announcement = NSAttributedString(
-            string: "Drag selection started. Move your finger to select multiple memos.",
-            attributes: [.accessibilitySpeechQueueAnnouncement: true]
-        )
-        UIAccessibility.post(notification: .announcement, argument: announcement)
-    }
-
-    /// Announce selection progress (throttled to avoid overwhelming)
-    static func announceSelectionProgress(count: Int, total: Int) {
-        guard isVoiceOverRunning && count % 5 == 0 else { return }
-
-        let announcement = NSAttributedString(
-            string: "\(count) of \(total) memos selected",
-            attributes: [.accessibilitySpeechQueueAnnouncement: true]
-        )
-        UIAccessibility.post(notification: .announcement, argument: announcement)
-    }
-
-    /// Announce completion of drag selection
-    static func announceSelectionComplete(count: Int) {
-        guard isVoiceOverRunning else { return }
-
-        let message = count == 1 ? "1 memo selected" : "\(count) memos selected"
-        let announcement = NSAttributedString(
-            string: "Selection complete. \(message)",
-            attributes: [.accessibilitySpeechQueueAnnouncement: true]
-        )
-        UIAccessibility.post(notification: .announcement, argument: announcement)
-    }
-
-    /// Announce selection cancellation
-    static func announceSelectionCancelled() {
-        guard isVoiceOverRunning else { return }
-
-        let announcement = NSAttributedString(
-            string: "Drag selection cancelled",
-            attributes: [.accessibilitySpeechQueueAnnouncement: true]
-        )
-        UIAccessibility.post(notification: .announcement, argument: announcement)
-    }
-
-    // MARK: - Alternative Selection Methods
-
-    // Intentionally removed array-based accessibility actions to avoid ViewBuilder issues.
-
-    /// Select a range of memos (accessibility helper)
-    @MainActor
-    static func selectRange(from startIndex: Int, to endIndex: Int, viewModel: MemoListViewModel) {
-        let range = min(startIndex, endIndex)...max(startIndex, endIndex)
-        let memosInRange = Array(viewModel.memos[range])
-
-        withAnimation(.easeOut(duration: isReducedMotionEnabled ? 0.0 : 0.2)) {
-            for memo in memosInRange {
-                viewModel.selectMemo(memo)
-            }
-        }
-
-        HapticManager.shared.playSelection()
-        announceSelectionComplete(count: range.count)
-    }
+    // Removed unused VoiceOver announcement and selection helper methods.
 }
 
 // MARK: - Accessibility View Modifiers
@@ -198,13 +135,11 @@ struct AlternativeSelectionControls: View {
                 HStack {
                     Button("Select All") {
                         viewModel.selectAll()
-                        DragSelectionAccessibility.announceSelectionComplete(count: viewModel.memos.count)
                     }
                     .buttonStyle(.bordered)
 
                     Button("Deselect All") {
                         viewModel.deselectAll()
-                        DragSelectionAccessibility.announceSelectionComplete(count: 0)
                     }
                     .buttonStyle(.bordered)
 

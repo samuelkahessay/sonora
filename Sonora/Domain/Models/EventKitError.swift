@@ -167,13 +167,6 @@ public enum EventKitError: LocalizedError, Sendable {
 // MARK: - Convenience Error Creation
 
 extension EventKitError {
-    /// Create a permission error based on EventKit authorization status
-    public static func fromAuthorizationStatus(_ status: Any, type: EventKitType) -> EventKitError? {
-        // This will be implemented when we add EventKit import
-        // For now, return nil to avoid import issues during compilation
-        nil
-    }
-
     /// Create an event creation error with context
     public static func eventCreationError(title: String, underlying: Error) -> EventKitError {
         .eventCreationFailed(underlying: NSError(

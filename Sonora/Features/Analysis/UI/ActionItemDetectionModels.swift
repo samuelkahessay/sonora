@@ -78,17 +78,7 @@ struct ActionItemDetectionUI: Identifiable, Equatable {
     }
 }
 
-extension ActionItemDetectionUI {
-    var typeBadgeText: String { kind == .reminder ? "REMINDER" : "CALENDAR" }
-    var canQuickChip: Bool { true }
-    var confidenceText: String {
-        switch confidence {
-        case .high: return "High confidence"
-        case .medium: return "Medium confidence"
-        case .low: return "Low confidence"
-        }
-    }
-}
+// Removed unused UI helper properties (typeBadgeText, canQuickChip, confidenceText)
 
 extension ActionItemDetectionUI {
     static func fromEvent(_ event: EventsData.DetectedEvent) -> ActionItemDetectionUI {

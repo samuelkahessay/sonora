@@ -220,15 +220,4 @@ public enum EventCategory: String, CaseIterable {
     }
 }
 
-// MARK: - Event Type Identifiers
-
-/// Protocol for type-safe event subscription
-public protocol AppEventType {
-    static var eventTypeIdentifier: ObjectIdentifier { get }
-}
-
-extension AppEvent: AppEventType {
-    public static var eventTypeIdentifier: ObjectIdentifier {
-        ObjectIdentifier(AppEvent.self)
-    }
-}
+// (Removed unused AppEventType protocol and conformance)
