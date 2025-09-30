@@ -119,11 +119,6 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol, @unche
         )
     }
 
-    // Audio integrity validation moved to Data layer.
-
-    /// Creates a memo object from the validated recording
-    // Creation moved to repository to ensure consistent ID and path
-
     /// Verifies that the recording was processed successfully by the repository
     @MainActor
     private func verifyRecordingProcessed(_ memo: Memo) throws {

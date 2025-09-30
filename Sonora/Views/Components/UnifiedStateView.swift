@@ -214,8 +214,6 @@ extension UnifiedStateView {
         )
     }
 
-    // Removed unused convenience builders: noTranscription, noAnalysis, noSearchResults.
-
     /// Error state with retry
     static func error(
         _ error: SonoraError,

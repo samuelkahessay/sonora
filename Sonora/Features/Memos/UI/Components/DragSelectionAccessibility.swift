@@ -30,10 +30,6 @@ struct DragSelectionAccessibility {
     static var prefersAlternativeSelection: Bool {
         isVoiceOverRunning || UIAccessibility.isSwitchControlRunning
     }
-
-    // MARK: - VoiceOver Announcements
-
-    // Removed unused VoiceOver announcement and selection helper methods.
 }
 
 // MARK: - Accessibility View Modifiers
@@ -161,8 +157,6 @@ struct AlternativeSelectionControls: View {
 }
 
 // MARK: - Accessibility Action View (Helper)
-
-// Removed custom AccessibilityActionView in favor of direct AccessibilityAction calls
 
 #if DEBUG
 // MARK: - Preview Helpers for Accessibility Testing

@@ -1,4 +1,3 @@
-// Moved to Features/Memos/ViewModels
 import Combine
 import Foundation
 import SwiftUI
@@ -131,8 +130,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         return history.map { $0.timestamp }.max()
     }
 
-    // Cached Distill accessors moved to extension below
-
     /// Whether retry should be offered in UI
     var canRetryTranscription: Bool {
         if case let .failed(message) = transcriptionState {
@@ -184,37 +181,12 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         print("📝 MemoDetailViewModel: Initialized with dependency injection")
     }
 
-    // MARK: - Setup Methods moved to extension at bottom
-
     // MARK: - Public Methods
-
-    // Public methods moved to extension at bottom
-
-    
 
     /// Current memo identifier (nil until configured)
     var memoId: UUID? {
         currentMemo?.id
     }
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    /// Perform analysis with the specified mode
-    
-
-    /// Cancel specific operation by ID
-    
-
-    /// Cancel all operations for current memo
-    
 
     // MARK: - Title Renaming Methods
 
@@ -514,12 +486,6 @@ private extension TranscriptionState {
 }
 
 // MARK: - Debug Helpers
-
-// Debug Helpers moved to MemoDetailViewModel+Debug.swift
-
-// Language banner APIs moved to MemoDetailViewModel+Language.swift
-// Sharing helpers moved to MemoDetailViewModel+Sharing.swift
-
 // MARK: - Setup & Repository Wiring
 extension MemoDetailViewModel {
     fileprivate func setupBindings() {
@@ -675,6 +641,3 @@ extension MemoDetailViewModel {
         }
     }
 }
-
-
-// Backward compatibility accessors moved to MemoDetailViewModel+StateAccessors.swift

@@ -1,4 +1,3 @@
-// Moved to Features/Memos/UI
 import AVFoundation
 import SwiftUI
 import UIKit
@@ -41,8 +40,6 @@ struct MemoDetailView: View {
                 languageBannerView
                     .padding(.horizontal)
                     .padding(.bottom, 20)
-
-                // Banners for events/reminders were removed; Action Items now handles review/adding.
 
                 headerInfoView
                     .padding(.bottom, 20)
@@ -209,7 +206,6 @@ struct MemoDetailView: View {
     }
 
     // MARK: - Extracted Sections
-    // Quick-add state removed (superseded by Action Items UI)
 
     // Collapsed transcript + banners state
     @State private var isTranscriptExpanded: Bool = false
@@ -683,8 +679,6 @@ struct MemoDetailView: View {
     }
 
     // MARK: - UI Helper Methods
-
-    // Removed unused shareText helper (sharing handled via share file use cases)
 
     private func copyText(_ text: String) {
         UIPasteboard.general.string = text

@@ -3,7 +3,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
 
-// MARK: - Share Functionality Methods (moved)
+// MARK: - Share Functionality Methods
 
 extension MemoDetailViewModel {
     /// Prepare share content based on selected options

@@ -38,8 +38,6 @@ enum MemoListColors {
 /// All values are documented for easy customization
 enum MemoListConstants {
 
-    // Removed unused ListStyling nested enum.
-
     /// **Row Configuration**
     /// Fine-tune individual row appearance
     /// Proper insets that work with insetGrouped style

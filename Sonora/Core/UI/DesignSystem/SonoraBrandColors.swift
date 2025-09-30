@@ -63,8 +63,6 @@ extension Color {
     /// Warning states and important notifications
     static let warningState = sparkOrange
 
-    // (removed unused info state)
-
     // MARK: - Text Hierarchy
 
     /// Primary text on light backgrounds
@@ -75,8 +73,6 @@ extension Color {
 
     /// Text on dark or colored backgrounds
     static let textOnColored = clarityWhite
-
-    // (removed unused textTertiary)
 
     // MARK: - Backgrounds
 
@@ -153,7 +149,6 @@ struct SonoraBrandTheme {
     let secondary: Color
     let accent: Color
     let background: Color
-    // Note: Removed unused properties per periphery scan
 
     /// Designated initializer with sensible defaults for the light theme
     init(
@@ -166,7 +161,6 @@ struct SonoraBrandTheme {
         self.secondary = secondary
         self.accent = accent
         self.background = background
-        // Note: Removed unused property assignments
     }
 
     /// Default Sonora brand theme (light)

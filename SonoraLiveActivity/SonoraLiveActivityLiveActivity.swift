@@ -182,7 +182,6 @@ private func countdownString(_ remaining: TimeInterval) -> String {
     let t = max(0, Int(remaining))
     return String(format: "%d:%02d", t / 60, t % 60)
 }
-// removed unused helpers shortCountdown and timerString
 
 // Deterministic mini-waveform bar heights (no random). Level: 0..1
 // Expressive, deterministic bar heights driven by level and elapsed time

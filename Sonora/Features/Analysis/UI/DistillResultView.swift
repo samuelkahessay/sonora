@@ -58,8 +58,6 @@ struct DistillResultView: View {
                 ReflectionQuestionsPlaceholderView()
             }
 
-            // Performance info removed for cleaner UI
-
             // Copy results action (also triggers smart transcript expand via notification)
             HStack {
                 Spacer()
@@ -120,16 +118,6 @@ struct DistillResultView: View {
         }
     }()
 
-    // Unused local support types removed in favor of shared support types in ActionItemDetectionsSupport.swift
-
-    // MARK: - Progress Section
-
-    // Progress section extracted into component DistillProgressSectionView
-
-    // MARK: - Summary Section
-
-    // Summary section extracted into component DistillSummarySectionView
-
     // MARK: - Action Items Host Section
     @ViewBuilder
     private var actionItemsHostSection: some View {
@@ -148,15 +136,13 @@ struct DistillResultView: View {
             onOpenBatch: { selected in
                 let reviewItems = detection.visibleItems
                 detection.batchInclude = selected
-                Task { @MainActor in
-                    do { try await detection.loadDestinationsIfNeeded(for: reviewItems); detection.showBatchSheet = true } catch { }
-                }
+                Task { @MainActor in await openBatchReview(reviewItems) }
             },
             onEditToggle: { id in detection.toggleEdit(id) },
-            onAdd: { updated in Task { @MainActor in await detection.handleSingleAdd(updated, permissionService: permissionService) } },
+            onAdd: { updated in Task { @MainActor in await addSingle(updated) } },
             onDismissItem: { id in detection.dismiss(id) },
             onAddSelected: { selected, calendar, reminderList in
-                Task { @MainActor in await detection.handleBatchAdd(selected: selected, calendar: calendar, reminderList: reminderList, permissionService: permissionService) }
+                Task { @MainActor in await handleBatchAdd(selected: selected, calendar: calendar, reminderList: reminderList) }
             },
             onDismissSheet: { }
         )
@@ -174,42 +160,89 @@ struct DistillResultView: View {
 
     // MARK: - Detection helpers
     // Filtering and batch helpers consolidated in ActionItemDetectionState
-    // prepareDetectionsIfNeeded moved to DistillResultView+Detections.swift
-    // toggleEdit moved to DistillResultView+Detections.swift
-    // dismiss moved to DistillResultView+Detections.swift
-    // onAddSingle moved to DistillResultView+Detections.swift
-    // undoAdd moved to DistillResultView+Detections.swift
-    // merge moved to DistillResultView+Detections.swift
 
-    // updateDetection moved to DistillResultView+Detections.swift
+    // MARK: - Async wrappers
+    @MainActor
+    private func openBatchReview(_ reviewItems: [ActionItemDetectionUI]) async {
+        do {
+            let dest = try await detection.fetchDestinationsIfNeeded(for: reviewItems)
+            if dest.didLoadCalendars { detection.availableCalendars = dest.calendars; detection.defaultCalendar = dest.defaultCalendar; detection.calendarsLoaded = true }
+            if dest.didLoadReminderLists { detection.availableReminderLists = dest.reminderLists; detection.defaultReminderList = dest.defaultReminderList; detection.reminderListsLoaded = true }
+            detection.showBatchSheet = true
+        } catch { }
+    }
 
-    // Key used to persist "handled" detections.
-    // Use the detection's own stable sourceId (UUID from detection payload) for uniqueness.
-    // detectionKey moved to DistillResultView+Detections.swift
+    @MainActor
+    private func addSingle(_ item: ActionItemDetectionUI) async {
+        detection.update(item)
+        detection.setProcessing(item.id, to: true)
+        defer { detection.setProcessing(item.id, to: false) }
+        do {
+            switch item.kind {
+            case .event:
+                try await detection.ensureCalendarPermission(permissionService: permissionService)
+                let dest = try await detection.fetchDestinationsIfNeeded(for: [item])
+                if dest.didLoadCalendars { detection.availableCalendars = dest.calendars; detection.defaultCalendar = dest.defaultCalendar; detection.calendarsLoaded = true }
+                let createdId = try await detection.createEvent(for: item, in: detection.defaultCalendar ?? detection.availableCalendars.first)
+                detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .event, identifier: createdId)
+            case .reminder:
+                try await detection.ensureReminderPermission(permissionService: permissionService)
+                let dest = try await detection.fetchDestinationsIfNeeded(for: [item])
+                if dest.didLoadReminderLists { detection.availableReminderLists = dest.reminderLists; detection.defaultReminderList = dest.defaultReminderList; detection.reminderListsLoaded = true }
+                let createdId = try await detection.createReminder(for: item, in: detection.defaultReminderList ?? detection.availableReminderLists.first)
+                detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .reminder, identifier: createdId)
+            }
+            detection.added.insert(item.id)
+            detection.appendAddedMessage(for: item)
+            HapticManager.shared.playSuccess()
+        } catch {
+            HapticManager.shared.playError()
+        }
+    }
 
-    // Removed duplicate handleSingleAdd/handleUndo (kept in DistillResultView+Detections.swift)
+    @MainActor
+    private func handleBatchAdd(selected: [ActionItemDetectionUI], calendar: CalendarDTO?, reminderList: CalendarDTO?) async {
+        guard !selected.isEmpty else { return }
+        selected.forEach { detection.update($0) }
+        let ids = selected.map { $0.id }
+        ids.forEach { detection.setProcessing($0, to: true) }
+        defer { ids.forEach { detection.setProcessing($0, to: false) } }
 
-    // setProcessing moved to DistillResultView+Detections.swift
+        let eventItems = selected.filter { $0.kind == .event }
+        let reminderItems = selected.filter { $0.kind == .reminder }
+        do {
+            if !eventItems.isEmpty {
+                try await detection.ensureCalendarPermission(permissionService: permissionService)
+                let dest = try await detection.fetchDestinationsIfNeeded(for: eventItems)
+                if dest.didLoadCalendars { detection.availableCalendars = dest.calendars; detection.defaultCalendar = dest.defaultCalendar; detection.calendarsLoaded = true }
+                let destination = calendar ?? detection.defaultCalendar ?? detection.availableCalendars.first
+                guard let destination else { throw EventKitError.calendarNotFound(identifier: "default") }
+                for item in eventItems {
+                    let id = try await detection.createEvent(for: item, in: destination)
+                    detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .event, identifier: id)
+                    detection.added.insert(item.id)
+                    detection.appendAddedMessage(for: item)
+                }
+            }
+            if !reminderItems.isEmpty {
+                try await detection.ensureReminderPermission(permissionService: permissionService)
+                let dest = try await detection.fetchDestinationsIfNeeded(for: reminderItems)
+                if dest.didLoadReminderLists { detection.availableReminderLists = dest.reminderLists; detection.defaultReminderList = dest.defaultReminderList; detection.reminderListsLoaded = true }
+                let destination = reminderList ?? detection.defaultReminderList ?? detection.availableReminderLists.first
+                guard let destination else { throw EventKitError.reminderListNotFound(identifier: "default") }
+                for item in reminderItems {
+                    let id = try await detection.createReminder(for: item, in: destination)
+                    detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .reminder, identifier: id)
+                    detection.added.insert(item.id)
+                    detection.appendAddedMessage(for: item)
+                }
+            }
+            HapticManager.shared.playSuccess()
+        } catch {
+            HapticManager.shared.playError()
+        }
+    }
 
-    // addEvent moved to DistillResultView+Detections.swift
-
-    // addReminder moved to DistillResultView+Detections.swift
-
-    // handleBatchAdd moved to DistillResultView+Detections.swift
-
-    // batchAddEvents moved to DistillResultView+Detections.swift
-
-    // batchAddReminders moved to DistillResultView+Detections.swift
-
-    // buildEventPayload/buildReminderPayload moved to DistillDetectionsUtils
-
-    // loadDestinationsIfNeeded moved to DistillResultView+Detections.swift
-
-    // ensureCalendarPermission moved to DistillResultView+Detections.swift
-
-    // ensureReminderPermission moved to DistillResultView+Detections.swift
-
-    // appendAddedMessage moved to DistillResultView+Detections.swift
 
     private var shouldShowPermissionExplainer: Bool {
         // Show explainer if either permission not determined or denied/restricted
@@ -218,15 +251,7 @@ struct DistillResultView: View {
         return !(cal.isAuthorized && rem.isAuthorized)
     }
 
-    // eventLine, reminderLine, formatShortDate moved to DistillDetectionsUtils
-
-    // dedupeDetections moved to DistillDetectionsUtils
-
     // MARK: - Placeholder Views
-
-    // Placeholders extracted into dedicated components
-
-    // Performance info removed — simplified progress UI (no technical details)
 
     // Build a concatenated text representation for copying
     private func buildCopyText() -> String {

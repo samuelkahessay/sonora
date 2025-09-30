@@ -253,8 +253,6 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
     }
 
     // MARK: - Helper Methods
-
-    // removed unused formatting helpers
 }
 
 // MARK: - Future ActivityKit Integration Notes

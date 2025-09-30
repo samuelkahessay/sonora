@@ -1,4 +1,3 @@
-// Moved into Features/Recording/ViewModels
 import Combine
 import Foundation
 import SwiftUI
@@ -57,8 +56,6 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     var formattedRemainingTime: String {
         state.countdown.formattedRemainingTime
     }
-
-    // Removed unused daily quota status string.
 
     /// Recording button color based on state
     var recordingButtonColor: Color {

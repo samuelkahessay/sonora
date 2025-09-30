@@ -3,8 +3,6 @@ import Combine
 import Foundation
 import SwiftData
 
-// Previous file-based metadata/index removed in SwiftData migration
-
 @MainActor
 final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     @Published var memos: [Memo] = []
@@ -36,9 +34,6 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
 
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private let memosDirectoryPath: URL
-    // Legacy sidecar metadata removed with SwiftData migration
-
-    // MARK: - Transcription dependencies
 
     // MARK: - Initialization
     init(

@@ -219,5 +219,3 @@ public enum EventCategory: String, CaseIterable {
         }
     }
 }
-
-// (Removed unused AppEventType protocol and conformance)

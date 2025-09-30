@@ -22,7 +22,6 @@ struct SettingsView: View {
                     PersonalizationSectionView()
 
                     // Transcription language settings
-                    // (Legacy usage meter removed in favor of monthly cap UI above)
                     TranscriptionLanguageSectionView()
 
                     // Data Management (includes Export + Import)

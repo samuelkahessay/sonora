@@ -105,9 +105,7 @@ final class BrandThemeManager: ObservableObject {
         // Scale animation intensity
         return baseAnimation.speed(animationIntensity)
     }
-
-    // removed unused theme helper builders
-
+    
     // MARK: - Private Implementation
 
     /// Setup accessibility observers for motion preferences
@@ -240,8 +238,6 @@ enum TransitionType {
     }
 }
 
-// removed unused theme data structs
-
 /// Extended brand theme with dark mode adaptation
 extension SonoraBrandTheme {
 
@@ -253,10 +249,6 @@ extension SonoraBrandTheme {
         background: Color.sonoraDep
     )
 }
-
-// MARK: - Brand Themeable Protocol
-
-// removed unused BrandThemeable protocol and defaults
 
 // MARK: - View Modifier for Theme Management
 

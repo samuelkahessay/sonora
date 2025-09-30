@@ -148,10 +148,4 @@ struct FileNameSanitizer {
 
         return output
     }
-
-    // removed unused isValid/makeUnique helpers
 }
-
-// MARK: - Preview Helper
-
-// removed preview test cases

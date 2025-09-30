@@ -135,8 +135,6 @@ private struct PriorityBadge: View {
     }
 }
 
-// Confidence badges removed from UI (logic retained in backend)
-
 #Preview {
     RemindersResultView(
         data: RemindersData(

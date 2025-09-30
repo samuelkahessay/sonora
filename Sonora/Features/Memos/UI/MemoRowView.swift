@@ -41,8 +41,6 @@ struct MemoRowView: View {
 
     // MARK: - Design Constants
 
-    // Removed unused Typography constants (using SonoraDesignSystem instead)
-
     /// **Color Configuration**
     /// Semantic colors ensure proper light/dark mode adaptation
     private enum Colors {
@@ -77,8 +75,6 @@ struct MemoRowView: View {
         static let editGutterWidth: CGFloat = 44
     }
 
-    // MARK: - Animation Configuration (accent pulse removed)
-
     // MARK: - Selection & Accent Components
 
     /// **Selection Indicator**
@@ -105,8 +101,6 @@ struct MemoRowView: View {
             : "Select \(memo.displayName)")
         .accessibilityHint("Tap to toggle selection")
     }
-
-    // Accent line removed for cleaner design
 
     // MARK: - View Body
 
@@ -221,11 +215,7 @@ struct MemoRowView: View {
         return components.joined(separator: ", ")
     }
 
-    // accentStateKey removed with accent line
-
     // MARK: - Constants
-
-    // Removed unused SystemIconNames alias; use MemoSystemIcons directly where needed.
 
     /// **Accessibility Strings**
     /// Localization-ready accessibility strings

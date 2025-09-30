@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Backward Compatibility Properties (moved)
+// MARK: - Backward Compatibility Properties
 
 extension MemoDetailViewModel {
 

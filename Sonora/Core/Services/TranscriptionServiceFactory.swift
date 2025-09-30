@@ -1,7 +1,6 @@
 import Foundation
 
 /// Factory for creating transcription services.
-/// Local WhisperKit support has been removed; the factory now always returns the cloud API service.
 @MainActor
 final class TranscriptionServiceFactory {
     private let logger = Logger.shared

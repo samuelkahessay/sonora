@@ -118,8 +118,6 @@ private struct EventItemView: View {
     }
 }
 
-// Confidence badges removed from UI (logic retained in backend)
-
 #Preview {
     EventsResultView(
         data: EventsData(

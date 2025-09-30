@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-// MARK: - User Actions & Operations (moved)
+// MARK: - User Actions & Operations
 extension MemoDetailViewModel {
     /// Start transcription for the current memo
     func startTranscription() {

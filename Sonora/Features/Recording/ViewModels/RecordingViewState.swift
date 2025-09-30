@@ -124,8 +124,6 @@ struct RecordingViewState: Equatable {
             if let rem = remainingDailySeconds { return rem <= 0 }
             return false
         }
-
-        // NOTE: Former user-facing daily quota string removed; monthly gating is handled elsewhere.
     }
 
     var quota = QuotaState()

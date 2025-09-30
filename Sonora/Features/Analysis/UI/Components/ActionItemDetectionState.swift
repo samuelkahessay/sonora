@@ -238,20 +238,44 @@ struct ActionItemDetectionState {
     }
 
     // MARK: - EventKit operations
-    @MainActor
-    mutating func loadDestinationsIfNeeded(for items: [ActionItemDetectionUI]) async throws {
+    struct DestinationsResult {
+        let calendars: [CalendarDTO]
+        let defaultCalendar: CalendarDTO?
+        let reminderLists: [CalendarDTO]
+        let defaultReminderList: CalendarDTO?
+        let didLoadCalendars: Bool
+        let didLoadReminderLists: Bool
+    }
+
+    func fetchDestinationsIfNeeded(for items: [ActionItemDetectionUI]) async throws -> DestinationsResult {
+        var calendarsOut = availableCalendars
+        var defaultCalendarOut = defaultCalendar
+        var reminderListsOut = availableReminderLists
+        var defaultReminderListOut = defaultReminderList
+        var didLoadCal = false
+        var didLoadRem = false
+
         if items.contains(where: { $0.kind == .event }) && !calendarsLoaded {
             let repo = DIContainer.shared.eventKitRepository()
-            availableCalendars = try await repo.getCalendars()
-            defaultCalendar = try await repo.getDefaultCalendar() ?? availableCalendars.first
-            calendarsLoaded = true
+            calendarsOut = try await repo.getCalendars()
+            defaultCalendarOut = try await repo.getDefaultCalendar() ?? calendarsOut.first
+            didLoadCal = true
         }
         if items.contains(where: { $0.kind == .reminder }) && !reminderListsLoaded {
             let repo = DIContainer.shared.eventKitRepository()
-            availableReminderLists = try await repo.getReminderLists()
-            defaultReminderList = try await repo.getDefaultReminderList() ?? availableReminderLists.first
-            reminderListsLoaded = true
+            reminderListsOut = try await repo.getReminderLists()
+            defaultReminderListOut = try await repo.getDefaultReminderList() ?? reminderListsOut.first
+            didLoadRem = true
         }
+
+        return DestinationsResult(
+            calendars: calendarsOut,
+            defaultCalendar: defaultCalendarOut,
+            reminderLists: reminderListsOut,
+            defaultReminderList: defaultReminderListOut,
+            didLoadCalendars: didLoadCal,
+            didLoadReminderLists: didLoadRem
+        )
     }
 
     @MainActor
@@ -322,30 +346,24 @@ struct ActionItemDetectionState {
         return (successCount, failures)
     }
 
-    @MainActor
-    private mutating func addEvent(for item: ActionItemDetectionUI, permissionService: EventKitPermissionService) async throws -> String {
+    func createEvent(for item: ActionItemDetectionUI, in calendar: CalendarDTO?) async throws -> String {
         guard let base = eventSources[item.id] else { throw EventKitError.invalidEventData(field: "event source missing") }
         let event = buildEventPayload(from: item, base: base)
-        try await ensureCalendarPermission(permissionService: permissionService)
-        try await loadDestinationsIfNeeded(for: [item])
         let repo = DIContainer.shared.eventKitRepository()
         let suggested = try await repo.suggestCalendar(for: event)
-        let calendar = suggested ?? defaultCalendar ?? availableCalendars.first
-        guard let calendar else { throw EventKitError.calendarNotFound(identifier: "default") }
-        return try await DIContainer.shared.createCalendarEventUseCase().execute(event: event, calendar: calendar)
+        let cal = calendar ?? suggested ?? defaultCalendar ?? availableCalendars.first
+        guard let cal else { throw EventKitError.calendarNotFound(identifier: "default") }
+        return try await DIContainer.shared.createCalendarEventUseCase().execute(event: event, calendar: cal)
     }
 
-    @MainActor
-    private mutating func addReminder(for item: ActionItemDetectionUI, permissionService: EventKitPermissionService) async throws -> String {
+    func createReminder(for item: ActionItemDetectionUI, in list: CalendarDTO?) async throws -> String {
         guard let base = reminderSources[item.id] else { throw EventKitError.invalidEventData(field: "reminder source missing") }
         let reminder = buildReminderPayload(from: item, base: base)
-        try await ensureReminderPermission(permissionService: permissionService)
-        try await loadDestinationsIfNeeded(for: [item])
         let repo = DIContainer.shared.eventKitRepository()
         let suggested = try await repo.suggestReminderList(for: reminder)
-        let list = suggested ?? defaultReminderList ?? availableReminderLists.first
-        guard let list else { throw EventKitError.reminderListNotFound(identifier: "default") }
-        return try await DIContainer.shared.createReminderUseCase().execute(reminder: reminder, list: list)
+        let dest = list ?? suggested ?? defaultReminderList ?? availableReminderLists.first
+        guard let dest else { throw EventKitError.reminderListNotFound(identifier: "default") }
+        return try await DIContainer.shared.createReminderUseCase().execute(reminder: reminder, list: dest)
     }
 
     // MARK: - Internal helpers
@@ -365,7 +383,7 @@ struct ActionItemDetectionState {
         )
     }
 
-    private mutating func appendAddedMessage(for item: ActionItemDetectionUI) {
+    mutating func appendAddedMessage(for item: ActionItemDetectionUI) {
         let date: Date? = {
             if let d = item.suggestedDate { return d }
             switch item.kind {

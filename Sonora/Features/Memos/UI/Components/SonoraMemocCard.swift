@@ -173,7 +173,6 @@ struct SonoraMemocCard: View {
     /// Subtle state indicator
     @ViewBuilder
     private var stateIndicator: some View {
-        // Removed transcription progress indicator for cleaner card design
         EmptyView()
     }
 
@@ -237,7 +236,6 @@ struct SonoraMemocCard: View {
     // MARK: - Animation Helpers
 
     private func configureAnimations() {
-        // Removed shimmer animation during transcription for cleaner UI
         // Animate insight hint if insights exist
         if hasInsights {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -287,7 +285,3 @@ struct SonoraMemocCard: View {
         return memo.displayName
     }
 }
-
-// MARK: - Date Formatter Extension
-
-// Removed unused DateFormatter.timeOnly

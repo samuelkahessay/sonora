@@ -1,4 +1,3 @@
-// Moved to Features/Analysis/UI
 import SwiftUI
 
 struct AnalysisResultsView: View {
@@ -101,8 +100,6 @@ struct HeaderInfoView<T: Codable & Sendable>: View {
         .cornerRadius(12)
     }
 }
-
-// TLDRResultView removed - functionality moved to DistillResultView
 
 struct AnalysisResultView: View {
     let data: AnalysisData

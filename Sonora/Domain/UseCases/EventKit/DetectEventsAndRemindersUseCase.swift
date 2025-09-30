@@ -522,9 +522,3 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         }
     }
 }
-
-// MARK: - Operation Type Extension
-
-// Removed custom OperationType extension. We use `.analysis(memoId:analysisType:)` with `.analysis`.
-
-// Removed unused EventReminderAnalysisType enum.

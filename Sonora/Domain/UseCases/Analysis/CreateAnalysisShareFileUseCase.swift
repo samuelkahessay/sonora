@@ -81,7 +81,6 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
                     let ts = timestampByMode[.distill] ?? Date()
                     var s = "📝 DISTILL (Updated: \(Self.fmtDate(ts)))\n\n"
                     s += env.data.summary + "\n\n"
-                    // Themes removed from Distill export; use Themes mode section below if available.
                     if let actions = env.data.action_items, !actions.isEmpty {
                         s += "✅ Action Items\n"
                         actions.forEach { s += "• \($0.text) [\($0.priority.rawValue)]\n" }

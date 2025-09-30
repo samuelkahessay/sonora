@@ -458,7 +458,7 @@ extension StartTranscriptionUseCase {
             "memoId": memo.id.uuidString,
             "textLength": textLen,
             "language": langToSave,
-            "quality": qualityToSave
+            "quality": qualityToSave as Any
         ]
         baseInfo = await enrichedServiceInfo(for: memo.id, base: baseInfo)
         let payload = FinalizationPayload(operationId: operationId, memo: memo, textToSave: textToSave, processedText: processedText, originalText: originalText, langToSave: langToSave, qualityToSave: qualityToSave, info: baseInfo, logMessage: "Transcription completed (single, preferred language)", logLevel: .debug)
@@ -483,7 +483,7 @@ extension StartTranscriptionUseCase {
             "memoId": memo.id.uuidString,
             "textLength": textLen,
             "language": langToSave,
-            "quality": qualityToSave
+            "quality": qualityToSave as Any
         ]
         baseInfo = await enrichedServiceInfo(for: memo.id, base: baseInfo)
         let payload = FinalizationPayload(operationId: operationId, memo: memo, textToSave: textToSave, processedText: processedText, originalText: originalText, langToSave: langToSave, qualityToSave: qualityToSave, info: baseInfo, logMessage: "Transcription completed (chunked, preferred language)", logLevel: .debug)
@@ -524,7 +524,7 @@ extension StartTranscriptionUseCase {
                 "memoId": memo.id.uuidString,
                 "textLength": textLen,
                 "language": langToSave,
-                "quality": qualityToSave
+                "quality": qualityToSave as Any
             ]
             baseInfo = await enrichedServiceInfo(for: memo.id, base: baseInfo)
             let payload = FinalizationPayload(operationId: operationId, memo: memo, textToSave: textToSave, processedText: processedText, originalText: originalText, langToSave: langToSave, qualityToSave: qualityToSave, info: baseInfo, logMessage: "Transcription completed (single, cloud)", logLevel: .debug)
@@ -545,7 +545,7 @@ extension StartTranscriptionUseCase {
             "memoId": memo.id.uuidString,
             "textLength": textLen,
             "language": langToSave,
-            "quality": qualityToSave
+            "quality": qualityToSave as Any
         ]
         baseInfo = await enrichedServiceInfo(for: memo.id, base: baseInfo)
         let payload = FinalizationPayload(operationId: operationId, memo: memo, textToSave: textToSave, processedText: processedText, originalText: originalText, langToSave: langToSave, qualityToSave: qualityToSave, info: baseInfo, logMessage: "Transcription completed successfully (chunked)", logLevel: .info)

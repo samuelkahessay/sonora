@@ -394,5 +394,4 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         """
     }
 
-    // Testing helper removed as unused
 }

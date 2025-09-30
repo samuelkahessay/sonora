@@ -23,5 +23,3 @@ struct SettingsCard<Content: View>: View {
         .cornerRadius(12)
     }
 }
-
-// removed unused SettingsCardModifier and View.settingsCard() helper

@@ -179,8 +179,6 @@ extension NotificationBanner {
         )
     }
 
-    // Removed unused networkError convenience
-
     /// Success banner
     static func success(
         message: String,

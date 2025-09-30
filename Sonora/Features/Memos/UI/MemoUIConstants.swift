@@ -24,7 +24,3 @@ enum MemoSystemIcons: String {
     /// Delete action icon
     case delete = "trash"
 }
-
-// Legacy NotificationCenter names removed — migrated to EventBus
-
-// Removed unused TranscriptionStateKey.

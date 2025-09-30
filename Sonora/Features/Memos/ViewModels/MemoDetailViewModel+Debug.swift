@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Debug Helpers (moved from main file)
+// MARK: - Debug Helpers
 
 extension MemoDetailViewModel {
 

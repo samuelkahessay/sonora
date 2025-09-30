@@ -145,14 +145,8 @@ enum SonoraDesignSystem {
             .easeInOut(duration: 2.0)
             .repeatForever(autoreverses: true)
 
-        // MARK: - Timing Functions
-        // (unused explicit duration constants removed)
     }
-
-    // MARK: - Shadow & Elevation
-
-    // Shadow presets struct/enum removed; keep simple view modifiers below
-
+    
     // MARK: - Layout Constraints
 
     /// Layout specifications for consistent component sizing

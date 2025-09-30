@@ -309,8 +309,6 @@ public final class ErrorMapping {
         }
     }
 
-    // Unused specialized mapping helpers removed: mapHTTPStatusCode, mapAVFoundationError, mapNetworkError, mapCoreDataError
-
     // MARK: - TranscriptionError Mapping
 
     /// Maps TranscriptionError to appropriate SonoraError cases

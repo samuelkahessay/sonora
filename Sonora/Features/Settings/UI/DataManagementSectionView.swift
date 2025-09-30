@@ -77,7 +77,6 @@ struct DataManagementSectionView: View {
                 }
             }
         }
-        // Delete flow moved back to Danger Zone section
         .sheet(isPresented: $controller.isPresentingExportSheet, onDismiss: {
             controller.isPresentingExportSheet = false
         }) {

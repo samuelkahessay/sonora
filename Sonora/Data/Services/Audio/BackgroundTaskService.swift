@@ -120,8 +120,6 @@ final class BackgroundTaskService: NSObject, BackgroundTaskServiceProtocol, @unc
         }
     }
 
-    // removed unused helpers for remaining time and availability
-
     // MARK: - Private Methods
 
     /// Handles background task expiration

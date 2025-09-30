@@ -143,10 +143,6 @@ public actor OperationCoordinator {
 
     // MARK: - Operation Registration
 
-    // Registration moved to OperationCoordinator+Queue.swift
-
-    // Start moved to OperationCoordinator+Queue.swift
-
     /// Complete an operation (success)
     public func completeOperation(_ operationId: UUID) async {
         await finishOperation(operationId, status: .completed, errorDescription: nil)
@@ -299,22 +295,6 @@ public actor OperationCoordinator {
         // Clean up old completed operations to prevent memory growth
         await cleanupCompletedOperations()
     }
-
-    // Conflict detection moved to OperationCoordinator+Queue.swift
-
-    // Conflict handling moved to OperationCoordinator+Queue.swift
-
-    // tryStartOperation moved to OperationCoordinator+Queue.swift
-
-    // getOperation moved to OperationCoordinator+Queue.swift
-
-    // Queue processing moved to OperationCoordinator+Queue.swift
-
-    // Notifications moved to OperationCoordinator+Notifications.swift
-
-    // Cleanup moved to OperationCoordinator+Cleanup.swift
-
-    // Event bus notifications moved to OperationCoordinator+Notifications.swift
 
     // MARK: - Public Query Interface
 

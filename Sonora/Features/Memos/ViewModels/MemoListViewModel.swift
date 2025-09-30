@@ -1,4 +1,3 @@
-// Moved to Features/Memos/ViewModels
 import Combine
 import Foundation
 import SwiftUI
@@ -784,8 +783,6 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         }
     }
 
-    // Drag-based selection helpers removed (tap-only selection)
-
     /// Select all memos
     func selectAll() {
         guard selectionState.isEditMode else { return }
@@ -845,8 +842,6 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
         }
     }
-
-    // Drag selection API removed (tap-only selection)
 
     /// Check if a memo is selected
     func isMemoSelected(_ memo: Memo) -> Bool {

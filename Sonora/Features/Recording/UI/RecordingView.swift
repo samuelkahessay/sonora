@@ -304,7 +304,6 @@ struct RecordingView: View {
             backgroundView
             contentView
         })
-        // Removed category sheet; Inspire Me now shuffles the prompt inline
         .sheet(isPresented: $viewModel.showingPaywall) {
             PaywallView()
         }

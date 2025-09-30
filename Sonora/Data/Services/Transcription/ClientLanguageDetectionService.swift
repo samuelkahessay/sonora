@@ -16,8 +16,6 @@ enum LanguageSource: String {
     case client
 }
 
-// Removed unused CombinedLanguageResult.
-
 // MARK: - Protocol
 
 protocol ClientLanguageDetectionService {
@@ -121,7 +119,3 @@ final class DefaultClientLanguageDetectionService: ClientLanguageDetectionServic
         return false
     }
 }
-
-// MARK: - Integration Utility
-
-// Removed unused combineDetectionResults helper.

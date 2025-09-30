@@ -16,8 +16,6 @@ struct ContentView: View {
     @SwiftUI.Environment(\.scenePhase)
     private var scenePhase
 
-    // Debug toggles removed
-
     var body: some View {
         mainAppContent
             .fullScreenCover(

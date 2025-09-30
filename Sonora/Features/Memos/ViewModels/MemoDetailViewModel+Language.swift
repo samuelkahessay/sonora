@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Language Banner API (moved)
+// MARK: - Language Banner API
 extension MemoDetailViewModel {
     func updateLanguageDetection(language: String?, qualityScore: Double) {
         detectedLanguage = language

@@ -20,8 +20,6 @@ struct MemosView: View {
         self._navigationPath = navigationPath
     }
 
-    // Debug toggles removed
-
     @State private var eventSubscriptionId: UUID?
 
     // MARK: - Computed Properties
@@ -152,7 +150,6 @@ struct MemosView: View {
                     .selectionAnimation(value: viewModel.hasSelection)
             }
         }
-        // Drag selection indicator removed (tap-only selection)
     }
 
     // MARK: - Composed Content
@@ -259,7 +256,7 @@ struct MemosView: View {
             // Provide consistent spacing between memo cards
             .listRowSpacing(MemoListConstants.rowSpacing)
             .scrollContentBackground(.hidden)
-            // Always allow scrolling (drag selection removed)
+            // Always allow scrolling
             .background({
                 if #available(iOS 26, *) {
                     Color.clear
@@ -272,7 +269,6 @@ struct MemosView: View {
             .conditionalRefreshable(!viewModel.isEditMode) {
                 await MainActor.run { viewModel.refreshMemos() }
             }
-            // Drag selection lane and auto-scroll removed (tap-only selection)
         }
     }
 
@@ -339,8 +335,6 @@ extension MemosView {
     /// Bottom delete bar for bulk deletion
     @ViewBuilder
     private var bottomDeleteBar: some View { EmptyView() }
-
-    // Drag selection helpers removed (tap-only selection)
 }
 
 // MARK: - Supporting Structures
