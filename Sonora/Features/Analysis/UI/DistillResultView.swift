@@ -110,19 +110,13 @@ struct DistillResultView: View {
 
     // MARK: - Detections (Events + Reminders)
     @State private var detection = ActionItemDetectionState()
-    @StateObject internal var permissionService: EventKitPermissionService = {
-        if let concrete = DIContainer.shared.eventKitPermissionService() as? EventKitPermissionService {
-            return concrete
-        } else {
-            return EventKitPermissionService()
-        }
-    }()
+    @StateObject private var coordinator = ActionItemCoordinator()
 
     // MARK: - Action Items Host Section
     @ViewBuilder
     private var actionItemsHostSection: some View {
         ActionItemsHostSectionView(
-            permissionService: permissionService,
+            permissionService: coordinator.permissionService,
             visibleItems: detection.visibleItems,
             addedRecords: detection.addedRecords,
             isPro: isPro,
@@ -165,9 +159,9 @@ struct DistillResultView: View {
     @MainActor
     private func openBatchReview(_ reviewItems: [ActionItemDetectionUI]) async {
         do {
-            let dest = try await detection.fetchDestinationsIfNeeded(for: reviewItems)
-            if dest.didLoadCalendars { detection.availableCalendars = dest.calendars; detection.defaultCalendar = dest.defaultCalendar; detection.calendarsLoaded = true }
-            if dest.didLoadReminderLists { detection.availableReminderLists = dest.reminderLists; detection.defaultReminderList = dest.defaultReminderList; detection.reminderListsLoaded = true }
+            let res = try await coordinator.loadDestinationsIfNeeded(for: reviewItems, calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
+            if res.didLoadCalendars { detection.availableCalendars = coordinator.availableCalendars; detection.defaultCalendar = coordinator.defaultCalendar; detection.calendarsLoaded = true }
+            if res.didLoadReminderLists { detection.availableReminderLists = coordinator.availableReminderLists; detection.defaultReminderList = coordinator.defaultReminderList; detection.reminderListsLoaded = true }
             detection.showBatchSheet = true
         } catch { }
     }
@@ -180,20 +174,32 @@ struct DistillResultView: View {
         do {
             switch item.kind {
             case .event:
-                try await detection.ensureCalendarPermission(permissionService: permissionService)
-                let dest = try await detection.fetchDestinationsIfNeeded(for: [item])
-                if dest.didLoadCalendars { detection.availableCalendars = dest.calendars; detection.defaultCalendar = dest.defaultCalendar; detection.calendarsLoaded = true }
-                let createdId = try await detection.createEvent(for: item, in: detection.defaultCalendar ?? detection.availableCalendars.first)
+                try await coordinator.ensureCalendarPermission()
+                let res = try await coordinator.loadDestinationsIfNeeded(for: [item], calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
+                if res.didLoadCalendars { detection.availableCalendars = coordinator.availableCalendars; detection.defaultCalendar = coordinator.defaultCalendar; detection.calendarsLoaded = true }
+                guard let base = detection.eventSources[item.id] else { throw EventKitError.invalidEventData(field: "event source missing") }
+                let createdId = try await coordinator.createEvent(for: item, base: base, in: detection.defaultCalendar ?? detection.availableCalendars.first)
                 detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .event, identifier: createdId)
             case .reminder:
-                try await detection.ensureReminderPermission(permissionService: permissionService)
-                let dest = try await detection.fetchDestinationsIfNeeded(for: [item])
-                if dest.didLoadReminderLists { detection.availableReminderLists = dest.reminderLists; detection.defaultReminderList = dest.defaultReminderList; detection.reminderListsLoaded = true }
-                let createdId = try await detection.createReminder(for: item, in: detection.defaultReminderList ?? detection.availableReminderLists.first)
+                try await coordinator.ensureReminderPermission()
+                let res = try await coordinator.loadDestinationsIfNeeded(for: [item], calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
+                if res.didLoadReminderLists { detection.availableReminderLists = coordinator.availableReminderLists; detection.defaultReminderList = coordinator.defaultReminderList; detection.reminderListsLoaded = true }
+                guard let base = detection.reminderSources[item.id] else { throw EventKitError.invalidEventData(field: "reminder source missing") }
+                let createdId = try await coordinator.createReminder(for: item, base: base, in: detection.defaultReminderList ?? detection.availableReminderLists.first)
                 detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .reminder, identifier: createdId)
             }
             detection.added.insert(item.id)
-            detection.appendAddedMessage(for: item)
+            let date: Date? = {
+                if let d = item.suggestedDate { return d }
+                switch item.kind {
+                case .event: return detection.eventSources[item.id]?.startDate
+                case .reminder: return detection.reminderSources[item.id]?.dueDate
+                }
+            }()
+            let rec = coordinator.makeAddedRecord(for: item, date: date)
+            detection.addedRecords.removeAll { $0.id == rec.id }
+            detection.addedRecords.append(rec)
+            coordinator.recordHandled(rec, for: item.memoId ?? memoId)
             HapticManager.shared.playSuccess()
         } catch {
             HapticManager.shared.playError()
@@ -212,29 +218,39 @@ struct DistillResultView: View {
         let reminderItems = selected.filter { $0.kind == .reminder }
         do {
             if !eventItems.isEmpty {
-                try await detection.ensureCalendarPermission(permissionService: permissionService)
-                let dest = try await detection.fetchDestinationsIfNeeded(for: eventItems)
-                if dest.didLoadCalendars { detection.availableCalendars = dest.calendars; detection.defaultCalendar = dest.defaultCalendar; detection.calendarsLoaded = true }
+                try await coordinator.ensureCalendarPermission()
+                let res = try await coordinator.loadDestinationsIfNeeded(for: eventItems, calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
+                if res.didLoadCalendars { detection.availableCalendars = coordinator.availableCalendars; detection.defaultCalendar = coordinator.defaultCalendar; detection.calendarsLoaded = true }
                 let destination = calendar ?? detection.defaultCalendar ?? detection.availableCalendars.first
                 guard let destination else { throw EventKitError.calendarNotFound(identifier: "default") }
                 for item in eventItems {
-                    let id = try await detection.createEvent(for: item, in: destination)
+                    guard let base = detection.eventSources[item.id] else { continue }
+                    let id = try await coordinator.createEvent(for: item, base: base, in: destination)
                     detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .event, identifier: id)
                     detection.added.insert(item.id)
-                    detection.appendAddedMessage(for: item)
+                    let date = item.suggestedDate ?? base.startDate
+                    let rec = coordinator.makeAddedRecord(for: item, date: date)
+                    detection.addedRecords.removeAll { $0.id == rec.id }
+                    detection.addedRecords.append(rec)
+                    coordinator.recordHandled(rec, for: item.memoId ?? memoId)
                 }
             }
             if !reminderItems.isEmpty {
-                try await detection.ensureReminderPermission(permissionService: permissionService)
-                let dest = try await detection.fetchDestinationsIfNeeded(for: reminderItems)
-                if dest.didLoadReminderLists { detection.availableReminderLists = dest.reminderLists; detection.defaultReminderList = dest.defaultReminderList; detection.reminderListsLoaded = true }
+                try await coordinator.ensureReminderPermission()
+                let res = try await coordinator.loadDestinationsIfNeeded(for: reminderItems, calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
+                if res.didLoadReminderLists { detection.availableReminderLists = coordinator.availableReminderLists; detection.defaultReminderList = coordinator.defaultReminderList; detection.reminderListsLoaded = true }
                 let destination = reminderList ?? detection.defaultReminderList ?? detection.availableReminderLists.first
                 guard let destination else { throw EventKitError.reminderListNotFound(identifier: "default") }
                 for item in reminderItems {
-                    let id = try await detection.createReminder(for: item, in: destination)
+                    guard let base = detection.reminderSources[item.id] else { continue }
+                    let id = try await coordinator.createReminder(for: item, base: base, in: destination)
                     detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .reminder, identifier: id)
                     detection.added.insert(item.id)
-                    detection.appendAddedMessage(for: item)
+                    let date = item.suggestedDate ?? base.dueDate
+                    let rec = coordinator.makeAddedRecord(for: item, date: date)
+                    detection.addedRecords.removeAll { $0.id == rec.id }
+                    detection.addedRecords.append(rec)
+                    coordinator.recordHandled(rec, for: item.memoId ?? memoId)
                 }
             }
             HapticManager.shared.playSuccess()
@@ -243,12 +259,7 @@ struct DistillResultView: View {
         }
     }
 
-    private var shouldShowPermissionExplainer: Bool {
-        // Show explainer if either permission not determined or denied/restricted
-        let cal = permissionService.calendarPermissionState
-        let rem = permissionService.reminderPermissionState
-        return !(cal.isAuthorized && rem.isAuthorized)
-    }
+    // Removed local permission explainer; handled in ActionItemsHostSectionView
 
     // MARK: - Placeholder Views
 
