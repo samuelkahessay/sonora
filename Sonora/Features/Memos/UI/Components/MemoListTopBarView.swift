@@ -25,4 +25,3 @@ struct MemoListTopBarView: View {
 #Preview {
     MemoListTopBarView(isEmpty: false, isEditMode: false) {}
 }
-

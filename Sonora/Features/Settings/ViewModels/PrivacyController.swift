@@ -165,9 +165,7 @@ final class PrivacyController: ObservableObject {
         }
 
         if selectedComponents().isEmpty {
-            if hasMemosContent { exportMemos = true }
-            else if hasTranscriptContent { exportTranscripts = true }
-            else if hasAnalysisContent { exportAnalysis = true }
+            if hasMemosContent { exportMemos = true } else if hasTranscriptContent { exportTranscripts = true } else if hasAnalysisContent { exportAnalysis = true }
         }
     }
 }

@@ -17,7 +17,7 @@ public struct SonoraLiveActivityAttributes: ActivityAttributes {
         public var remainingTime: TimeInterval?
         public var emoji: String
         public var level: Double? // 0.0 ... 1.0 (optional, for calm waveform)
-        
+
         public init(
             memoTitle: String,
             startTime: Date,
@@ -38,7 +38,7 @@ public struct SonoraLiveActivityAttributes: ActivityAttributes {
     }
 
     public var memoId: String
-    
+
     public init(memoId: String) {
         self.memoId = memoId
     }

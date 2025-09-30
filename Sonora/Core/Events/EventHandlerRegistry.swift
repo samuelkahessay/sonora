@@ -4,27 +4,27 @@ import Foundation
 /// Provides lifecycle management, registration, and debugging capabilities
 @MainActor
 public final class EventHandlerRegistry {
-    
+
     // MARK: - Singleton
     private static let _shared = EventHandlerRegistry()
     nonisolated(unsafe) public static var shared: EventHandlerRegistry { MainActor.assumeIsolated { _shared } }
-    
+
     // MARK: - Dependencies
     private let logger: any LoggerProtocol
     private let eventBus: any EventBusProtocol
-    
+
     // MARK: - Handler Management
     private var registeredHandlers: [String: Any] = [:]
     private var handlerStatus: [String: Bool] = [:]
     private var didRegisterAll: Bool = false
-    
+
     // MARK: - Handler Instances
     private var memoEventHandler: MemoEventHandler?
     private var calendarEventHandler: CalendarEventHandler?
     private var remindersEventHandler: RemindersEventHandler?
     private var liveActivityEventHandler: LiveActivityEventHandler?
     private var spotlightEventHandler: SpotlightEventHandler?
-    
+
     // MARK: - Configuration
     private let enabledHandlers: Set<String> = [
         "MemoEventHandler",         // Always enabled for cross-cutting concerns
@@ -32,7 +32,7 @@ public final class EventHandlerRegistry {
         "RemindersEventHandler",     // Reminders integration (auto-detect gated by settings)
         "LiveActivityEventHandler"   // Live Activities for recording
     ]
-    
+
     // MARK: - Initialization
     private init(
         logger: any LoggerProtocol = Logger.shared,
@@ -40,14 +40,14 @@ public final class EventHandlerRegistry {
     ) {
         self.logger = logger
         self.eventBus = eventBus
-        
-        logger.info("EventHandlerRegistry initialized", 
-                   category: .system, 
+
+        logger.info("EventHandlerRegistry initialized",
+                   category: .system,
                    context: LogContext())
     }
-    
+
     // MARK: - Handler Registration
-    
+
     /// Register all standard event handlers
     public func registerAllHandlers() {
         guard !didRegisterAll else {
@@ -55,54 +55,54 @@ public final class EventHandlerRegistry {
             return
         }
         didRegisterAll = true
-        logger.info("Registering all event handlers", 
-                   category: .system, 
+        logger.info("Registering all event handlers",
+                   category: .system,
                    context: LogContext())
-        
+
         // Register memo event handler (core functionality)
         registerMemoEventHandler()
-        
+
         // Register placeholder handlers for future features
         registerCalendarEventHandler()
         registerRemindersEventHandler()
         registerLiveActivityEventHandler()
         registerSpotlightEventHandler()
-        
+
         // Log registration summary
         let activeCount = handlerStatus.values.filter { $0 }.count
         let totalCount = handlerStatus.count
-        
-        logger.info("Event handler registration complete - \(activeCount)/\(totalCount) handlers active", 
-                   category: .system, 
+
+        logger.info("Event handler registration complete - \(activeCount)/\(totalCount) handlers active",
+                   category: .system,
                    context: LogContext(additionalInfo: [
                        "activeHandlers": activeCount,
                        "totalHandlers": totalCount,
                        "handlers": Array(registeredHandlers.keys)
                    ]))
     }
-    
+
     /// Register the core memo event handler
     private func registerMemoEventHandler() {
         let handlerName = "MemoEventHandler"
         let isEnabled = enabledHandlers.contains(handlerName)
-        
+
         if isEnabled {
             let trRepo = DIContainer.shared.transcriptionRepository()
             memoEventHandler = MemoEventHandler(logger: logger, eventBus: eventBus, transcriptionRepository: trRepo)
             registeredHandlers[handlerName] = memoEventHandler
             handlerStatus[handlerName] = true
-            
-            logger.info("Registered and activated MemoEventHandler", 
-                       category: .system, 
+
+            logger.info("Registered and activated MemoEventHandler",
+                       category: .system,
                        context: LogContext())
         } else {
             handlerStatus[handlerName] = false
-            logger.debug("MemoEventHandler disabled in configuration", 
-                        category: .system, 
+            logger.debug("MemoEventHandler disabled in configuration",
+                        category: .system,
                         context: LogContext())
         }
     }
-    
+
     /// Register the calendar event handler
     private func registerCalendarEventHandler() {
         let handlerName = "CalendarEventHandler"
@@ -117,7 +117,7 @@ public final class EventHandlerRegistry {
                     category: .system,
                     context: LogContext())
     }
-    
+
     /// Register the reminders event handler
     private func registerRemindersEventHandler() {
         let handlerName = "RemindersEventHandler"
@@ -132,12 +132,12 @@ public final class EventHandlerRegistry {
                     category: .system,
                     context: LogContext())
     }
-    
+
     /// Register the Live Activity event handler
     private func registerLiveActivityEventHandler() {
         let handlerName = "LiveActivityEventHandler"
         let isEnabled = enabledHandlers.contains(handlerName)
-        
+
         if isEnabled {
             liveActivityEventHandler = LiveActivityEventHandler(logger: logger, eventBus: eventBus)
             registeredHandlers[handlerName] = liveActivityEventHandler
@@ -164,60 +164,60 @@ public final class EventHandlerRegistry {
     }
 
     // MARK: - Handler Management
-        
+
     /// Unregister all handlers (cleanup)
     public func unregisterAllHandlers() {
-        logger.info("Unregistering all event handlers", 
-                   category: .system, 
+        logger.info("Unregistering all event handlers",
+                   category: .system,
                    context: LogContext())
-        
+
         let handlerCount = registeredHandlers.count
-        
+
         // Clean up handlers (they should handle their own cleanup in deinit)
         memoEventHandler = nil
         calendarEventHandler = nil
         remindersEventHandler = nil
-        
+
         registeredHandlers.removeAll()
         handlerStatus.removeAll()
-        
-        logger.info("Unregistered \(handlerCount) event handlers", 
-                   category: .system, 
+
+        logger.info("Unregistered \(handlerCount) event handlers",
+                   category: .system,
                    context: LogContext())
     }
-    
+
     // MARK: - Status and Debugging
-    
+
     /// Get list of registered handler names
     public var registeredHandlerNames: [String] {
         return Array(registeredHandlers.keys).sorted()
     }
-    
+
     /// Get list of active handler names
     public var activeHandlerNames: [String] {
         return handlerStatus.compactMap { key, value in
             value ? key : nil
         }.sorted()
     }
-    
+
     /// Get detailed status information
     public var detailedStatus: String {
         let totalHandlers = registeredHandlers.count
         let activeHandlers = handlerStatus.values.filter { $0 }.count
-        
+
         var status = """
         EventHandlerRegistry Status:
         - Total registered: \(totalHandlers)
         - Currently active: \(activeHandlers)
-        
+
         Handler Details:
         """
-        
+
         for (name, isActive) in handlerStatus.sorted(by: { $0.key < $1.key }) {
             let statusIcon = isActive ? "✅" : "⚪"
             let statusText = isActive ? "Active" : "Inactive"
             status += "\n  \(statusIcon) \(name): \(statusText)"
-            
+
             // Add handler-specific details
             switch name {
             case "MemoEventHandler":
@@ -232,36 +232,36 @@ public final class EventHandlerRegistry {
                 break
             }
         }
-        
+
         return status
     }
-    
+
     /// Get specific handler instance (for debugging)
     public func getHandler<T>(_ handlerName: String, as type: T.Type) -> T? {
         return registeredHandlers[handlerName] as? T
     }
-    
+
     /// Test event flow by publishing a test event
     public func testEventFlow() {
-        logger.info("Testing event flow with synthetic event", 
-                   category: .system, 
+        logger.info("Testing event flow with synthetic event",
+                   category: .system,
                    context: LogContext())
-        
+
         // Create a test memo for event flow testing
         let testMemo = Memo(
             filename: "Test Memo for Event Flow",
             fileURL: URL(fileURLWithPath: "/tmp/test.m4a"),
             creationDate: Date()
         )
-        
+
         // Publish test event
         eventBus.publish(.memoCreated(testMemo))
-        
-        logger.info("Test event published - check handler logs for processing confirmation", 
-                   category: .system, 
+
+        logger.info("Test event published - check handler logs for processing confirmation",
+                   category: .system,
                    context: LogContext())
     }
-    
+
     /// Get handler statistics for specific handler
     public func getHandlerStatistics(_ handlerName: String) -> String? {
         switch handlerName {
@@ -275,7 +275,7 @@ public final class EventHandlerRegistry {
             return "Handler '\(handlerName)' not found or doesn't support statistics"
         }
     }
-    
+
     /// Get registry performance metrics
     public var performanceMetrics: String {
         return """
@@ -286,7 +286,7 @@ public final class EventHandlerRegistry {
         - Cleanup: Automatic via ARC and handler deinit
         """
     }
-    
+
     // MARK: - Cleanup
     deinit {
         // Handler cleanup is automatic via ARC since handlers clean up their own subscriptions

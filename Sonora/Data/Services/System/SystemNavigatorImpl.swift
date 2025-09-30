@@ -8,7 +8,7 @@ final class SystemNavigatorImpl: SystemNavigator {
             completion?(success)
         }
     }
-    
+
     func openSettings(completion: ((Bool) -> Void)? = nil) {
         guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
             completion?(false)
@@ -17,4 +17,3 @@ final class SystemNavigatorImpl: SystemNavigator {
         open(settingsURL, completion: completion)
     }
 }
-

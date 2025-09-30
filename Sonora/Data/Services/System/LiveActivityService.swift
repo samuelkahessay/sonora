@@ -17,11 +17,11 @@ import Combine
 
 @MainActor
 final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, @unchecked Sendable {
-    
+
     // MARK: - Published Properties
     @Published private(set) var isActivityActive: Bool = false
-    @Published private(set) var currentActivityId: String? = nil
-    
+    @Published private(set) var currentActivityId: String?
+
     // MARK: - Private Properties
     private let activityStateSubject = CurrentValueSubject<LiveActivityState, Never>(.inactive)
     private var cancellables = Set<AnyCancellable>()
@@ -31,23 +31,23 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
     @available(iOS 16.1, *)
     private var lastContentState: SonoraLiveActivityAttributes.ContentState?
     #endif
-    
+
     // MARK: - Protocol Properties
     var activityStatePublisher: AnyPublisher<LiveActivityState, Never> {
         activityStateSubject.eraseToAnyPublisher()
     }
-    
+
     // MARK: - Initialization
     init() {
         setupStateObservation()
         print("📱 LiveActivityService: Initialized (ActivityKit-capable)")
     }
-    
+
     deinit {
         // cancellables will be automatically cleaned up
         print("📱 LiveActivityService: Deinitialized")
     }
-    
+
     // MARK: - Private Setup
     private func setupStateObservation() {
         activityStateSubject
@@ -56,7 +56,7 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
             }
             .store(in: &cancellables)
     }
-    
+
     private func handleStateChange(_ state: LiveActivityState) {
         switch state {
         case .inactive:
@@ -76,15 +76,15 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
                 self.currentActivityId = nil
             }
     }
-    
+
     // MARK: - Protocol Implementation
-    
+
     func startRecordingActivity(memoTitle: String, startTime: Date) async throws {
         if isActivityActive {
             try await endCurrentActivity(dismissalPolicy: .immediate)
         }
         activityStateSubject.send(.starting)
-        
+
         #if canImport(ActivityKit)
         if #available(iOS 16.1, *) {
             let authInfo = ActivityAuthorizationInfo()
@@ -92,7 +92,7 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
                 activityStateSubject.send(.error(.permissionDenied))
                 throw LiveActivityError.permissionDenied
             }
-            
+
             let attributes = SonoraLiveActivityAttributes(memoId: UUID().uuidString)
             let initialState = SonoraLiveActivityAttributes.ContentState(
                 memoTitle: memoTitle,
@@ -133,7 +133,7 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
         throw LiveActivityError.notSupported
         #endif
     }
-    
+
     func updateActivity(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?, level: Double?) async throws {
         guard isActivityActive, let activityId = currentActivityId else {
             throw LiveActivityError.notActive
@@ -145,7 +145,7 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
         }
         lastUpdateAt = now
         activityStateSubject.send(.updating)
-        
+
         #if canImport(ActivityKit)
         if #available(iOS 16.1, *) {
             // Locate the activity and update state
@@ -188,11 +188,11 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
         throw LiveActivityError.notSupported
         #endif
     }
-    
+
     func endCurrentActivity(dismissalPolicy: ActivityDismissalPolicy = .afterDelay(4.0)) async throws {
         guard isActivityActive, let activityId = currentActivityId else { return }
         activityStateSubject.send(.ending)
-        
+
         #if canImport(ActivityKit)
         if #available(iOS 16.1, *) {
             let activities = Activity<SonoraLiveActivityAttributes>.activities
@@ -220,7 +220,7 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
                     level: nil
                 )
                 // Use Task to handle ActivityContent Sendable limitations
-                await Task { 
+                await Task {
                     let content = ActivityContent(state: finalState, staleDate: nil)
                     await activity.end(content, dismissalPolicy: policy)
                 }.value
@@ -238,22 +238,22 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
         throw LiveActivityError.notSupported
         #endif
     }
-    
+
     func restartActivity(memoTitle: String, startTime: Date) async throws {
         print("📱 LiveActivityService: Restarting activity (single-owner pattern)")
-        
+
         // This method ensures single-owner pattern by always ending before starting
         if isActivityActive {
             try await endCurrentActivity(dismissalPolicy: .immediate)
         }
-        
+
         try await startRecordingActivity(memoTitle: memoTitle, startTime: startTime)
-        
+
         print("📱 LiveActivityService: ✅ Activity restarted successfully")
     }
-    
+
     // MARK: - Helper Methods
-    
+
     // removed unused formatting helpers
 }
 

@@ -25,8 +25,8 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
         configuration.networkServiceType = .responsiveData
         return URLSession(configuration: configuration, delegate: backgroundDelegate, delegateQueue: nil)
     }()
-    
-    struct APIError: LocalizedError { 
+
+    struct APIError: LocalizedError {
         let message: String
         var errorDescription: String? { message }
     }
@@ -66,7 +66,6 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
             throw error
         }
     }
-
 
     // MARK: - Helpers
     private func mimeType(for url: URL) -> String {

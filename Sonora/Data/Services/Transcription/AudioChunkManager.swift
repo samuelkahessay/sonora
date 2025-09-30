@@ -151,8 +151,7 @@ final class AudioChunkManager: @unchecked Sendable {
 
     private func ensureChunkDirectory() throws {
         if !fileManager.fileExists(atPath: chunkRoot.path) {
-            do { try fileManager.createDirectory(at: chunkRoot, withIntermediateDirectories: true) }
-            catch { throw AudioChunkError.cannotCreateDirectory(chunkRoot.path) }
+            do { try fileManager.createDirectory(at: chunkRoot, withIntermediateDirectories: true) } catch { throw AudioChunkError.cannotCreateDirectory(chunkRoot.path) }
         }
     }
 

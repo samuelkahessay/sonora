@@ -113,4 +113,3 @@ struct GetRemainingMonthlyQuotaUseCaseTests {
         #expect(remaining == 0)
     }
 }
-

@@ -4,7 +4,7 @@ import XCTest
 private final class FakeAnalysisService<T: Codable & Sendable>: ObservableObject, AnalysisServiceProtocol {
     let envelope: AnalyzeEnvelope<T>
     init(envelope: AnalyzeEnvelope<T>) { self.envelope = envelope }
-    func analyze<U>(mode: AnalysisMode, transcript: String, responseType: U.Type) async throws -> AnalyzeEnvelope<U> where U : Sendable, U : Decodable, U : Encodable {
+    func analyze<U>(mode: AnalysisMode, transcript: String, responseType: U.Type) async throws -> AnalyzeEnvelope<U> where U: Sendable, U: Decodable, U: Encodable {
         // Force cast for test harness; only used with same T
         return envelope as! AnalyzeEnvelope<U>
     }
@@ -29,4 +29,3 @@ final class ProgressiveAnalysisServiceTests: XCTestCase {
         XCTAssertEqual(out.model, "tiny")
     }
 }
-

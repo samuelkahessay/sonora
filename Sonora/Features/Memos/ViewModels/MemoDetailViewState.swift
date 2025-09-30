@@ -12,15 +12,15 @@ import SwiftUI
 /// Consolidated state for MemoDetailView
 /// Groups related properties into logical state structures for better maintainability
 struct MemoDetailViewState: Equatable {
-    
+
     // MARK: - Nested State Structures
-    
+
     /// Audio playback state
     struct AudioState: Equatable {
         var isPlaying: Bool = false
         var currentTime: TimeInterval = 0
         var duration: TimeInterval = 0
-        
+
         var playButtonIcon: String {
             isPlaying ? "pause.fill" : "play.fill"
         }
@@ -30,15 +30,15 @@ struct MemoDetailViewState: Equatable {
             return min(1.0, max(0.0, currentTime / duration))
         }
     }
-    
+
     /// Transcription processing state
     struct TranscriptionProcessingState: Equatable {
         var state: Sonora.TranscriptionState = .notStarted
-        var progressPercent: Double? = nil
-        var progressStep: String? = nil
+        var progressPercent: Double?
+        var progressStep: String?
         var moderationFlagged: Bool = false
         var moderationCategories: [String: Bool] = [:]
-        var service: TranscriptionServiceType? = nil
+        var service: TranscriptionServiceType?
 
         var isCompleted: Bool {
             state.isCompleted
@@ -47,7 +47,7 @@ struct MemoDetailViewState: Equatable {
         var isInProgress: Bool {
             state.isInProgress
         }
-        
+
         var isFailed: Bool {
             state.isFailed
         }
@@ -60,23 +60,23 @@ struct MemoDetailViewState: Equatable {
             service.map { _ in "cloud" }
         }
     }
-    
+
     /// Analysis processing state
     struct AnalysisState: Equatable {
-        var selectedMode: AnalysisMode? = nil
+        var selectedMode: AnalysisMode?
         // Store analysis payloads that are not Hashable (e.g., DistillData, AnalyzeEnvelope<...>)
-        var result: Any? = nil
-        var envelope: Any? = nil
+        var result: Any?
+        var envelope: Any?
         var isAnalyzing: Bool = false
-        var error: String? = nil
-        var cacheStatus: String? = nil
-        var performanceInfo: String? = nil
-        
+        var error: String?
+        var cacheStatus: String?
+        var performanceInfo: String?
+
         // Parallel Distill specific
         var isParallelDistillEnabled: Bool = true
-        var distillProgress: DistillProgressUpdate? = nil
-        var partialDistillData: PartialDistillData? = nil
-        
+        var distillProgress: DistillProgressUpdate?
+        var partialDistillData: PartialDistillData?
+
         // Custom Equatable: intentionally ignore `result` and `envelope`
         static func == (lhs: AnalysisState, rhs: AnalysisState) -> Bool {
             return lhs.selectedMode == rhs.selectedMode
@@ -89,22 +89,22 @@ struct MemoDetailViewState: Equatable {
             && lhs.partialDistillData == rhs.partialDistillData
         }
     }
-    
+
     /// Language detection and display state
     struct LanguageState: Equatable {
-        var detectedLanguage: String? = nil
+        var detectedLanguage: String?
         var showNonEnglishBanner: Bool = false
         var bannerMessage: String = ""
         var bannerDismissedForMemo: [UUID: Bool] = [:]
     }
-    
+
     /// Title editing state
     struct TitleEditingState: Equatable {
         var isRenaming: Bool = false
         var editedTitle: String = ""
         var currentMemoTitle: String = ""
     }
-    
+
     /// Share functionality state
     struct ShareState: Equatable {
         var showShareSheet: Bool = false
@@ -114,28 +114,28 @@ struct MemoDetailViewState: Equatable {
         var analysisSelectedTypes: Set<DomainAnalysisType> = []
         var isPreparingShare: Bool = false
     }
-    
+
     /// Operation tracking state
     struct OperationState: Equatable {
         var activeOperations: [UUID] = []  // Just track operation IDs
         var memoOperationSummaries: [UUID] = []  // Just track operation IDs
-        
+
         var hasActiveOperations: Bool {
             !activeOperations.isEmpty
         }
     }
-    
+
     /// General UI state
     struct UIState: Equatable {
-        var error: SonoraError? = nil
+        var error: SonoraError?
         var isLoading: Bool = false
         // Deletion state for memo details
         var didDeleteMemo: Bool = false
-        
+
     }
-    
+
     // MARK: - State Properties
-    
+
     var audio: AudioState = AudioState()
     var transcription: TranscriptionProcessingState = TranscriptionProcessingState()
     var analysis: AnalysisState = AnalysisState()
@@ -144,30 +144,29 @@ struct MemoDetailViewState: Equatable {
     var share: ShareState = ShareState()
     var operations: OperationState = OperationState()
     var ui: UIState = UIState()
-    
+
     // MARK: - Convenience Computed Properties
-    
+
     /// Whether transcription text is available and completed
     var hasCompletedTranscription: Bool {
         transcription.isCompleted
     }
-    
+
     /// Whether any analysis has been completed
     var hasAnalysisAvailable: Bool {
         analysis.result != nil
     }
-    
+
     /// Whether there are any active operations
     var hasActiveOperations: Bool {
         operations.hasActiveOperations
     }
 }
 
-
 // MARK: - State Mutation Helpers
 
 extension MemoDetailViewState {
-    
+
     /// Reset all state to initial values (except persistent settings)
     mutating func reset() {
         audio = AudioState()
@@ -182,19 +181,19 @@ extension MemoDetailViewState {
         operations = OperationState()
         ui = UIState()
     }
-    
+
     /// Update transcription state with progress
     mutating func updateTranscriptionProgress(percent: Double?, step: String?) {
         transcription.progressPercent = percent
         transcription.progressStep = step
     }
-    
+
     /// Update analysis progress
     mutating func updateAnalysisProgress(isAnalyzing: Bool, error: String? = nil) {
         analysis.isAnalyzing = isAnalyzing
         analysis.error = error
     }
-    
+
     /// Set share options based on available content
     mutating func configureShareOptions(hasTranscription: Bool, hasAnalysis: Bool) {
         share.audioEnabled = true // Always available

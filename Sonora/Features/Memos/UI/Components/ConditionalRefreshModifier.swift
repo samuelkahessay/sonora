@@ -19,4 +19,3 @@ extension View {
         modifier(ConditionalRefreshModifier(enabled: enabled, action: action))
     }
 }
-

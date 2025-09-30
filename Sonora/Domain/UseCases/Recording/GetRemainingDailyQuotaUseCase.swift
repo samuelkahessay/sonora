@@ -30,4 +30,3 @@ public final class GetRemainingDailyQuotaUseCase: GetRemainingDailyQuotaUseCaseP
         return remaining
     }
 }
-

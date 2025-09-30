@@ -14,7 +14,7 @@ import CoreSpotlight
 struct SonoraApp: App {
     @StateObject private var themeManager = ThemeManager()
     private let modelContainer: ModelContainer
-    
+
     // Compute system serif fonts for nav bar titles using preferred text styles
     private static func serifUIFont(for textStyle: UIFont.TextStyle) -> UIFont {
         let base = UIFont.preferredFont(forTextStyle: textStyle)
@@ -41,7 +41,7 @@ struct SonoraApp: App {
         // Configure DI and register event handlers before any views initialize
         DIContainer.shared.configure()
         print("🚀 SonoraApp: DIContainer configured with shared services (App init)")
-        
+
         // Build SwiftData container early and inject ModelContext into DI
         let schema = Schema([
             MemoModel.self,
@@ -58,7 +58,7 @@ struct SonoraApp: App {
         DIContainer.shared.setModelContext(ModelContext(modelContainer))
         // Register event handlers now that persistence is ready
         DIContainer.shared.eventHandlerRegistry().registerAllHandlers()
-        
+
         // Initialize onboarding configuration
         _ = OnboardingConfiguration.shared
         print("📋 SonoraApp: OnboardingConfiguration initialized (App init)")
@@ -90,7 +90,7 @@ struct SonoraApp: App {
                 .foregroundColor: UIColor.label
             ]
         }
-        
+
         let navBar = UINavigationBar.appearance()
         navBar.standardAppearance = standardAppearance
         navBar.scrollEdgeAppearance = scrollEdgeAppearance

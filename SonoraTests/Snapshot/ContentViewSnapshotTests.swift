@@ -13,4 +13,3 @@ final class ContentViewSnapshotTests: SnapshotTestCase {
         assertSnapshot(view, name: "ContentView", appearance: .dark)
     }
 }
-

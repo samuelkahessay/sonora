@@ -12,12 +12,12 @@ struct AIDisclosureSectionView: View {
                     .font(.subheadline)
                     .foregroundColor(.semantic(.textSecondary))
                     .accessibilityLabel("Sonora uses artificial intelligence to transcribe your recordings and generate summaries, themes, and to-do lists.")
-                    
+
                 Text("AI-generated content may be inaccurate or incomplete. We label AI outputs and apply content safeguards to reduce harmful or deceptive content.")
                     .font(.subheadline)
                     .foregroundColor(.semantic(.textSecondary))
                     .accessibilityLabel("AI-generated content may be inaccurate or incomplete. We clearly label AI outputs and apply content safeguards to reduce harmful or deceptive content.")
-                    
+
                 Text("Do not rely on AI outputs for medical, legal, or safety-critical decisions.")
                     .font(.footnote)
                     .foregroundColor(.semantic(.warning))

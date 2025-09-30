@@ -4,9 +4,9 @@ import Network
 
 /// Utilities for mapping common iOS system errors to Sonora error types
 public final class ErrorMapping {
-    
+
     // MARK: - Main Error Mapping Function
-    
+
     /// Maps any error to the appropriate Sonora error type
     public static func mapError(_ error: Error) -> SonoraError {
         // Handle already mapped errors
@@ -20,39 +20,38 @@ public final class ErrorMapping {
                 return .transcriptionQuotaExceeded
             }
         }
-        
+
         if let repositoryError = error as? RepositoryError {
             return repositoryError.asSonoraError
         }
-        
+
         if let serviceError = error as? ServiceError {
             return serviceError.asSonoraError
         }
-        
+
         // Handle NSError cases
         if let nsError = error as NSError? {
             return mapNSError(nsError)
         }
-        
+
         // Handle known Swift error types
         if let urlError = error as? URLError {
             return mapURLError(urlError)
         }
-        
+
         if let decodingError = error as? DecodingError {
             return mapDecodingError(decodingError)
         }
-        
+
         if let encodingError = error as? EncodingError {
             return mapEncodingError(encodingError)
         }
-        
+
         // Handle TranscriptionError specifically
         if let transcriptionError = error as? TranscriptionError {
             return mapTranscriptionError(transcriptionError)
         }
 
-        
         // Fallback for unknown errors (apply simple heuristics)
         let message = error.localizedDescription
         if message.lowercased().contains("no speech detected") {
@@ -63,9 +62,9 @@ public final class ErrorMapping {
         }
         return .unknown(message)
     }
-    
+
     // MARK: - NSError Mapping
-    
+
     private static func mapNSError(_ nsError: NSError) -> SonoraError {
         switch nsError.domain {
         case NSCocoaErrorDomain:
@@ -92,9 +91,9 @@ public final class ErrorMapping {
             return .unknown("System error: \(message)")
         }
     }
-    
+
     // MARK: - Specific Error Domain Mappings
-    
+
     private static func mapCocoaError(_ error: NSError) -> SonoraError {
         switch error.code {
         case NSFileReadNoSuchFileError:
@@ -123,7 +122,7 @@ public final class ErrorMapping {
             return .unknown("Cocoa error: \(error.localizedDescription)")
         }
     }
-    
+
     private static func mapURLError(_ error: Error) -> SonoraError {
         if let urlError = error as? URLError {
             switch urlError.code {
@@ -157,10 +156,10 @@ public final class ErrorMapping {
         } else if let nsError = error as NSError? {
             return mapURLError(nsError)
         }
-        
+
         return .networkServerError(0, error.localizedDescription)
     }
-    
+
     private static func mapURLError(_ nsError: NSError) -> SonoraError {
         switch nsError.code {
         case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
@@ -181,7 +180,7 @@ public final class ErrorMapping {
             return .networkServerError(0, nsError.localizedDescription)
         }
     }
-    
+
     private static func mapAudioSessionError(_ error: NSError) -> SonoraError {
         switch error.code {
         case 560030004: // cannotInterruptOthers
@@ -206,7 +205,7 @@ public final class ErrorMapping {
             return .audioSessionSetupFailed("Audio session error: \(error.localizedDescription)")
         }
     }
-    
+
     private static func mapOSStatusError(_ error: NSError) -> SonoraError {
         switch Int32(error.code) {
         case -66681: // kAudioServicesUnsupportedPropertyError
@@ -227,7 +226,7 @@ public final class ErrorMapping {
             return .unknown("OS Status error: \(error.code)")
         }
     }
-    
+
     private static func mapPOSIXError(_ error: NSError) -> SonoraError {
         switch Int32(error.code) {
         case Int32(ENOENT): // No such file or directory
@@ -264,7 +263,7 @@ public final class ErrorMapping {
             return .unknown("POSIX error: \(error.code)")
         }
     }
-    
+
     private static func mapCFNetworkError(_ error: NSError) -> SonoraError {
         switch error.code {
         case 1: // Host not found
@@ -285,7 +284,7 @@ public final class ErrorMapping {
             return .networkServerError(0, "CFNetwork error: \(error.code)")
         }
     }
-    
+
     private static func mapDecodingError(_ error: DecodingError) -> SonoraError {
         switch error {
         case .typeMismatch(let type, let context):
@@ -300,7 +299,7 @@ public final class ErrorMapping {
             return .dataDecodingFailed("Unknown decoding error")
         }
     }
-    
+
     private static func mapEncodingError(_ error: EncodingError) -> SonoraError {
         switch error {
         case .invalidValue(let value, let context):
@@ -309,13 +308,13 @@ public final class ErrorMapping {
             return .dataEncodingFailed("Unknown encoding error")
         }
     }
-    
+
     // MARK: - HTTP Status Code Mapping
-    
+
     /// Maps HTTP status codes to appropriate SonoraError cases
     public static func mapHTTPStatusCode(_ statusCode: Int, data: Data? = nil) -> SonoraError {
         let message = data.flatMap { String(data: $0, encoding: .utf8) }
-        
+
         switch statusCode {
         case 200...299:
             return .networkInvalidResponse // Success codes shouldn't be mapped to errors
@@ -341,9 +340,9 @@ public final class ErrorMapping {
             return .networkServerError(statusCode, message ?? "HTTP error")
         }
     }
-    
+
     // MARK: - AVFoundation Error Mapping
-    
+
     /// Maps AVFoundation specific errors
     public static func mapAVFoundationError(_ error: Error) -> SonoraError {
         if let nsError = error as NSError? {
@@ -358,7 +357,7 @@ public final class ErrorMapping {
         }
         return mapError(error)
     }
-    
+
     private static func mapAVFoundationDomainError(_ error: NSError) -> SonoraError {
         switch error.code {
         case AVError.fileFailedToParse.rawValue:
@@ -388,18 +387,18 @@ public final class ErrorMapping {
             return .audioRecordingFailed("AVFoundation error: \(error.localizedDescription)")
         }
     }
-    
+
     // MARK: - Network Framework Error Mapping
-    
+
     /// Maps Network framework errors (iOS 12+)
     @available(iOS 12.0, *)
     public static func mapNetworkError(_ error: Error) -> SonoraError {
         // Simple fallback to avoid complex NWError handling
         return ErrorMapping.mapError(error)
     }
-    
+
     // MARK: - Core Data Error Mapping (if needed in future)
-    
+
     /// Maps Core Data errors (for future use)
     public static func mapCoreDataError(_ error: Error) -> SonoraError {
         // Simplified Core Data error mapping to avoid missing constants
@@ -419,9 +418,9 @@ public final class ErrorMapping {
         }
         return .unknown("Core Data error: \(error.localizedDescription)")
     }
-    
+
     // MARK: - TranscriptionError Mapping
-    
+
     /// Maps TranscriptionError to appropriate SonoraError cases
     private static func mapTranscriptionError(_ error: TranscriptionError) -> SonoraError {
         switch error {

@@ -2,21 +2,21 @@ import SwiftUI
 
 /// How It Works visual demo component for onboarding
 struct HowItWorksView: View {
-    
+
     // MARK: - Properties
     let onContinue: () -> Void
-    
+
     // MARK: - State
     @State private var currentIndex: Int = 0
-    
+
     // MARK: - Constants
     private let steps = HowItWorksStep.allCases
-    
+
     // MARK: - Body
     var body: some View {
         VStack(spacing: Spacing.md) {
             headerSection
-            
+
             TabView(selection: $currentIndex) {
                 ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                     HowItWorksCard(step: step)
@@ -28,9 +28,9 @@ struct HowItWorksView: View {
             .frame(height: 360)
             .padding(.bottom, Spacing.md)
             .padding(.horizontal, Spacing.lg)
-            
+
             privacySection
-            
+
             actionButtons
         }
         .padding(.top, Spacing.lg)
@@ -40,9 +40,9 @@ struct HowItWorksView: View {
         .background(Color.semantic(.bgPrimary).ignoresSafeArea())
         .fontDesign(.serif)
     }
-    
+
     // MARK: - Sections
-    
+
     private var headerSection: some View {
         VStack(spacing: Spacing.xs) {
             Text("How It Works")
@@ -51,21 +51,21 @@ struct HowItWorksView: View {
                 .foregroundColor(.semantic(.textPrimary))
                 .multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
-            
+
             Text("Transform your voice into actionable insights.")
                 .font(.system(.subheadline, design: .serif))
                 .foregroundColor(.semantic(.textSecondary))
                 .multilineTextAlignment(.center)
         }
     }
-    
+
     private var privacySection: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: "lock.shield")
                 .font(.title3)
                 .foregroundColor(.semantic(.success))
                 .accessibilityHidden(true)
-            
+
             Text("All processing respects your privacy")
                 .font(.subheadline)
                 .fontDesign(.default)
@@ -81,7 +81,7 @@ struct HowItWorksView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Privacy guarantee: All processing respects your privacy")
     }
-    
+
     private var actionButtons: some View {
         VStack(spacing: Spacing.md) {
             Button(action: handleContinue) {
@@ -99,13 +99,13 @@ struct HowItWorksView: View {
             .accessibilityLabel(buttonTitle)
         }
     }
-    
+
     // MARK: - Helpers
-    
+
     private var buttonTitle: String {
         currentIndex < steps.count - 1 ? "Continue" : "Get Started"
     }
-    
+
     private func handleContinue() {
         HapticManager.shared.playSelection()
         if currentIndex < steps.count - 1 {
@@ -124,7 +124,7 @@ private struct HowItWorksCard: View {
     let step: HowItWorksStep
     @State private var isAnimating: Bool = false
     private let barHeights: [CGFloat] = [28, 36, 24]
-    
+
     var body: some View {
         VStack(spacing: Spacing.md) {
             Image(systemName: step.iconName)
@@ -132,21 +132,21 @@ private struct HowItWorksCard: View {
                 .symbolRenderingMode(.multicolor)
                 .frame(height: 60)
                 .accessibilityHidden(true)
-            
+
             VStack(spacing: Spacing.sm) {
                 Text(step.title)
                     .font(.system(.headline, design: .serif))
                     .fontWeight(.semibold)
                     .foregroundColor(.semantic(.textPrimary))
                     .multilineTextAlignment(.center)
-                
+
                 Text(step.description)
                     .font(.system(.body, design: .serif))
                     .foregroundColor(.semantic(.textSecondary))
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
             }
-            
+
             stepVisualContent
         }
         .padding(.vertical, Spacing.lg)
@@ -165,7 +165,7 @@ private struct HowItWorksCard: View {
             isAnimating = false
         }
     }
-    
+
     @ViewBuilder private var stepVisualContent: some View {
         switch step {
         case .record:
@@ -173,7 +173,7 @@ private struct HowItWorksCard: View {
                 Image(systemName: "mic.fill")
                     .font(.title2)
                     .foregroundColor(.semantic(.brandPrimary))
-                
+
                 ForEach(Array(barHeights.enumerated()), id: \.offset) { index, height in
                     RoundedRectangle(cornerRadius: 2)
                         .fill(Color.semantic(.brandPrimary))
@@ -188,7 +188,7 @@ private struct HowItWorksCard: View {
                 }
             }
             .accessibilityLabel("Recording voice memo")
-            
+
         case .transcribe:
             GeometryReader { proxy in
                 let fullWidth = max(proxy.size.width, 1)
@@ -212,7 +212,7 @@ private struct HowItWorksCard: View {
             .frame(height: 28)
             .padding(.horizontal, Spacing.md)
             .accessibilityLabel("Converting speech to text")
-            
+
         case .analyze:
             HStack(spacing: Spacing.lg) {
                 InsightPill(color: .semantic(.info), label: "Summary")
@@ -233,7 +233,7 @@ private struct HowItWorksCard: View {
 private struct InsightPill: View {
     let color: Color
     let label: String
-    
+
     var body: some View {
         VStack(spacing: Spacing.xs) {
             Circle()
@@ -252,7 +252,7 @@ enum HowItWorksStep: CaseIterable {
     case record
     case transcribe
     case analyze
-    
+
     var title: String {
         switch self {
         case .record:
@@ -263,7 +263,7 @@ enum HowItWorksStep: CaseIterable {
             return "3. Get Distilled Insights"
         }
     }
-    
+
     var description: String {
         switch self {
         case .record:
@@ -274,7 +274,7 @@ enum HowItWorksStep: CaseIterable {
             return "Distill gives you a concise summary, action items, and a reflection from your memo."
         }
     }
-    
+
     var iconName: String {
         switch self {
         case .record:
@@ -300,7 +300,7 @@ enum HowItWorksStep: CaseIterable {
 #Preview("How It Works - Interactive") {
     struct PreviewWrapper: View {
         @State private var isPresented = true
-        
+
         var body: some View {
             if isPresented {
                 HowItWorksView(
@@ -316,6 +316,6 @@ enum HowItWorksStep: CaseIterable {
             }
         }
     }
-    
+
     return PreviewWrapper()
 }

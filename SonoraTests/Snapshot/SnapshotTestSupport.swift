@@ -155,4 +155,3 @@ class SnapshotTestCase: XCTestCase {
         }
     }
 }
-

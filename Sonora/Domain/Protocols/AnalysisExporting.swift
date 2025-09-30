@@ -9,4 +9,3 @@ public protocol AnalysisExporting {
     /// - Returns: URL to the created temporary file.
     func makeAnalysisFile(memo: Memo, text: String) throws -> URL
 }
-

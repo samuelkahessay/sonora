@@ -24,33 +24,33 @@ import SwiftUI
 /// - Follows SonoraDesignSystem spacing and typography
 /// - Implements thoughtful animation delays for contemplative feel
 struct SonoraInsightCard: View {
-    
+
     // MARK: - Properties
-    
+
     let insight: InsightData
     let isHighlighted: Bool
     @State private var crystallizationProgress: Double = 0
     @State private var textOpacity: Double = 0
     @State private var cardScale: Double = 0.95
     @State private var glowIntensity: Double = 0
-    
+
     // MARK: - Initialization
-    
+
     init(insight: InsightData, isHighlighted: Bool = false) {
         self.insight = insight
         self.isHighlighted = isHighlighted
     }
-    
+
     // MARK: - View Body
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.md) {
             // Crystallization background pattern
             crystallizationLayer
-            
+
             // Insight content with progressive revelation
             insightContentSection
-            
+
             // Confidence and category indicators
             metadataSection
         }
@@ -66,13 +66,13 @@ struct SonoraInsightCard: View {
             triggerCrystallizationSequence()
         }
     }
-    
+
     // MARK: - View Components
-    
+
     /// Crystallization pattern layer with geometric emergence
     @ViewBuilder
     private var crystallizationLayer: some View {
-        GeometryReader { geometry in
+        GeometryReader { _ in
             Canvas { context, size in
                 drawCrystallinePattern(
                     in: context,
@@ -84,7 +84,7 @@ struct SonoraInsightCard: View {
         .frame(height: 40)
         .opacity(crystallizationProgress > 0 ? 1 : 0)
     }
-    
+
     /// Main insight content with thoughtful typography
     @ViewBuilder
     private var insightContentSection: some View {
@@ -93,7 +93,7 @@ struct SonoraInsightCard: View {
             if !insight.category.isEmpty {
                 categoryIndicator
             }
-            
+
             // Main insight text with system serif
             Text(insight.text)
                 .font(SonoraDesignSystem.Typography.insightSerif)
@@ -103,16 +103,16 @@ struct SonoraInsightCard: View {
                 .multilineTextAlignment(.leading)
         }
     }
-    
+
     /// Metadata section with confidence and additional context
     @ViewBuilder
     private var metadataSection: some View {
         HStack(spacing: SonoraDesignSystem.Spacing.md) {
             // Confidence indicator
             confidenceIndicator
-            
+
             Spacer()
-            
+
             // Insight type or source
             if !insight.source.isEmpty {
                 sourceIndicator
@@ -120,7 +120,7 @@ struct SonoraInsightCard: View {
         }
         .opacity(textOpacity * 0.8)
     }
-    
+
     /// Category indicator with brand colors
     @ViewBuilder
     private var categoryIndicator: some View {
@@ -128,7 +128,7 @@ struct SonoraInsightCard: View {
             Circle()
                 .fill(insightColor)
                 .frame(width: 6, height: 6)
-            
+
             Text(insight.category)
                 .font(SonoraDesignSystem.Typography.caption)
                 .foregroundColor(insightColor)
@@ -136,7 +136,7 @@ struct SonoraInsightCard: View {
         }
         .opacity(textOpacity)
     }
-    
+
     /// Confidence level indicator
     @ViewBuilder
     private var confidenceIndicator: some View {
@@ -148,7 +148,7 @@ struct SonoraInsightCard: View {
             }
         }
     }
-    
+
     /// Source indicator for insight origin
     @ViewBuilder
     private var sourceIndicator: some View {
@@ -156,7 +156,7 @@ struct SonoraInsightCard: View {
             .font(SonoraDesignSystem.Typography.caption)
             .foregroundColor(.reflectionGray)
     }
-    
+
     /// Card background with subtle brand tinting
     @ViewBuilder
     private var cardBackground: some View {
@@ -171,15 +171,15 @@ struct SonoraInsightCard: View {
                     .stroke(insightColor.opacity(glowIntensity * 0.5), lineWidth: 1)
             )
     }
-    
+
     // MARK: - Computed Properties
-    
+
     /// Primary color for this insight based on type and sentiment
     private var insightColor: Color {
         if isHighlighted {
             return .insightGold
         }
-        
+
         switch insight.category.lowercased() {
         case "growth", "positive", "achievement":
             return .growthGreen
@@ -191,7 +191,7 @@ struct SonoraInsightCard: View {
             return .insightGold
         }
     }
-    
+
     /// Background color for insight cards
     private var insightBackgroundColor: Color {
         switch insightColor {
@@ -205,31 +205,31 @@ struct SonoraInsightCard: View {
             return .whisperBlue
         }
     }
-    
+
     /// Confidence level (1-5 dots) based on insight confidence score
     private var confidenceLevel: Int {
         Int((insight.confidence * 5).rounded())
     }
-    
+
     // MARK: - Animation Methods
-    
+
     /// Trigger the complete crystallization sequence
     private func triggerCrystallizationSequence() {
         // Phase 1: Card emergence
         withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
             cardScale = 1.0
         }
-        
+
         // Phase 2: Crystallization pattern (starts after card appears)
         withAnimation(.easeInOut(duration: 1.5).delay(0.2)) {
             crystallizationProgress = 1.0
         }
-        
+
         // Phase 3: Text revelation (starts during crystallization)
         withAnimation(.easeOut(duration: 0.8).delay(1.0)) {
             textOpacity = 1.0
         }
-        
+
         // Phase 4: Subtle glow for highlighted insights
         if isHighlighted {
             withAnimation(.easeInOut(duration: 1.0).delay(1.5)) {
@@ -237,13 +237,13 @@ struct SonoraInsightCard: View {
             }
         }
     }
-    
+
     /// Draw crystalline pattern that emerges over time
     private func drawCrystallinePattern(in context: GraphicsContext, size: CGSize, progress: Double) {
         let centerX = size.width / 2
         let centerY = size.height / 2
         let maxRadius = min(size.width, size.height) / 2
-        
+
         // Create crystalline points based on progress
         let pointCount = Int(progress * 8) + 2
         let points = (0..<pointCount).map { i in
@@ -254,7 +254,7 @@ struct SonoraInsightCard: View {
                 y: centerY + sin(angle) * radius * 0.3
             )
         }
-        
+
         // Draw connecting lines with opacity based on progress
         for i in 0..<points.count {
             let nextIndex = (i + 1) % points.count
@@ -262,14 +262,14 @@ struct SonoraInsightCard: View {
                 path.move(to: points[i])
                 path.addLine(to: points[nextIndex])
             }
-            
+
             context.stroke(
                 path,
                 with: .color(insightColor.opacity(progress * 0.6)),
                 lineWidth: 1.0
             )
         }
-        
+
         // Add central connection point
         if progress > 0.5 {
             let centralPath = Path { path in
@@ -280,7 +280,7 @@ struct SonoraInsightCard: View {
                     height: 4
                 ))
             }
-            
+
             context.fill(
                 centralPath,
                 with: .color(insightColor.opacity(progress))
@@ -298,7 +298,7 @@ struct InsightData {
     let confidence: Double // 0.0 to 1.0
     let source: String
     let timestamp: Date
-    
+
     init(text: String, category: String = "", confidence: Double = 0.8, source: String = "", timestamp: Date = Date()) {
         self.text = text
         self.category = category
@@ -321,7 +321,7 @@ struct InsightData {
             ),
             isHighlighted: true
         )
-        
+
         SonoraInsightCard(
             insight: InsightData(
                 text: "Consider scheduling dedicated time for the project planning you mentioned.",

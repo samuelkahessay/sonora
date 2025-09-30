@@ -2,32 +2,32 @@ import SwiftUI
 
 /// Reusable onboarding page template component
 struct OnboardingPageView: View {
-    
+
     // MARK: - Properties
     let page: OnboardingPage
     let onPrimaryAction: (() -> Void)?
     let onSkip: () -> Void
     let isLoading: Bool
-    
+
     // MARK: - Optional customization
     let showDetailedPoints: Bool
     let primaryButtonStyle: OnboardingButtonStyle
-    
+
     // MARK: - Accessibility
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
-    
+
     enum AccessibleElement {
         case pageContent
         case primaryButton
         case skipButton
     }
-    
+
     // MARK: - Button styles
     enum OnboardingButtonStyle {
         case primary
         case secondary
         case warning
-        
+
         var backgroundColor: Color {
             switch self {
             case .primary:
@@ -38,7 +38,7 @@ struct OnboardingPageView: View {
                 return .semantic(.warning)
             }
         }
-        
+
         var foregroundColor: Color {
             switch self {
             case .primary:
@@ -50,7 +50,7 @@ struct OnboardingPageView: View {
             }
         }
     }
-    
+
     // MARK: - Initialization
     init(
         page: OnboardingPage,
@@ -67,7 +67,7 @@ struct OnboardingPageView: View {
         self.showDetailedPoints = showDetailedPoints
         self.primaryButtonStyle = primaryButtonStyle
     }
-    
+
     // MARK: - Body
     var body: some View {
         ScrollView {
@@ -80,7 +80,7 @@ struct OnboardingPageView: View {
                         .foregroundColor(.semantic(.brandPrimary))
                         .symbolRenderingMode(.hierarchical)
                         .accessibilityHidden(true)
-                    
+
                     // Title and description
                     VStack(spacing: Spacing.md) {
                         Text(page.title)
@@ -89,7 +89,7 @@ struct OnboardingPageView: View {
                             .foregroundColor(.semantic(.textPrimary))
                             .multilineTextAlignment(.center)
                             .accessibilityAddTraits(.isHeader)
-                        
+
                         Text(page.description)
                             .font(.system(.body, design: .serif))
                             .foregroundColor(.semantic(.textSecondary))
@@ -101,7 +101,7 @@ struct OnboardingPageView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("\(page.title). \(page.description)")
                 .accessibilityFocused($focusedElement, equals: .pageContent)
-                
+
                 // Detailed points section
                 if showDetailedPoints && !page.detailedPoints.isEmpty {
                     VStack(alignment: .leading, spacing: Spacing.md) {
@@ -111,13 +111,13 @@ struct OnboardingPageView: View {
                     }
                     .padding(.horizontal, Spacing.md)
                 }
-                
+
                 Spacer(minLength: Spacing.xxl)
-                
+
                 // Action buttons
                 VStack(spacing: Spacing.md) {
                     // Primary action button
-                    if let primaryTitle = page.primaryButtonTitle, 
+                    if let primaryTitle = page.primaryButtonTitle,
                        let primaryAction = onPrimaryAction {
                         Button(action: {
                             HapticManager.shared.playSelection()
@@ -129,7 +129,7 @@ struct OnboardingPageView: View {
                                         .tint(.white)
                                         .accessibilityLabel("Loading")
                                 }
-                                
+
                                 Text(primaryTitle)
                                     .font(.system(.body, design: .serif))
                                     .fontWeight(.semibold)
@@ -148,7 +148,7 @@ struct OnboardingPageView: View {
                         .accessibilityFocused($focusedElement, equals: .primaryButton)
                         .accessibilityAddTraits(isLoading ? [.updatesFrequently] : [])
                     }
-                    
+
                 }
             }
             .padding(.horizontal, Spacing.xl)
@@ -163,9 +163,9 @@ struct OnboardingPageView: View {
             }
         }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     private func getPrimaryButtonHint() -> String {
         switch page {
         case .nameEntry:
@@ -183,7 +183,7 @@ struct OnboardingPageView: View {
 /// Individual feature point display row
 struct OnboardingFeatureRow: View {
     let text: String
-    
+
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
             // Checkmark icon
@@ -192,7 +192,7 @@ struct OnboardingFeatureRow: View {
                 .foregroundColor(.semantic(.success))
                 .symbolRenderingMode(.hierarchical)
                 .accessibilityHidden(true)
-            
+
             // Feature text
             Text(text)
                 .font(.system(.body, design: .serif))

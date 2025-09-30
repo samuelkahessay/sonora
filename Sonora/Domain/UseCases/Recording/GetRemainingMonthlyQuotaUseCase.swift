@@ -41,4 +41,3 @@ public final class GetRemainingMonthlyQuotaUseCase: GetRemainingMonthlyQuotaUseC
         return max(0, limit - monthUsage)
     }
 }
-

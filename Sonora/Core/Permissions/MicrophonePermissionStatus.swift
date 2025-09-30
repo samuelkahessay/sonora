@@ -9,7 +9,7 @@ public enum MicrophonePermissionStatus: String, CaseIterable, Equatable, Sendabl
     case granted = "granted"
     case denied = "denied"
     case restricted = "restricted"
-    
+
     /// Human-readable display name for UI
     public var displayName: String {
         switch self {
@@ -23,7 +23,7 @@ public enum MicrophonePermissionStatus: String, CaseIterable, Equatable, Sendabl
             return "Permission Restricted"
         }
     }
-    
+
     /// User-friendly description of the status
     public var description: String {
         switch self {
@@ -37,7 +37,7 @@ public enum MicrophonePermissionStatus: String, CaseIterable, Equatable, Sendabl
             return "Microphone access is restricted by device settings"
         }
     }
-    
+
     /// Icon name for UI display
     public var iconName: String {
         switch self {
@@ -51,22 +51,22 @@ public enum MicrophonePermissionStatus: String, CaseIterable, Equatable, Sendabl
             return "lock.fill"
         }
     }
-    
+
     /// Whether recording is allowed with this permission status
     public var allowsRecording: Bool {
         return self == .granted
     }
-    
+
     /// Whether user can request permission (not permanently denied)
     public var canRequestPermission: Bool {
         return self == .notDetermined
     }
-    
+
     /// Whether user needs to go to Settings to change permission
     public var requiresSettingsNavigation: Bool {
         return self == .denied
     }
-    
+
     /// Convert from AVAudioSession.RecordPermission to our enum
     public static func from(avPermission: AVAudioSession.RecordPermission) -> MicrophonePermissionStatus {
         switch avPermission {
@@ -80,7 +80,7 @@ public enum MicrophonePermissionStatus: String, CaseIterable, Equatable, Sendabl
             return .denied // Safe fallback for future AVAudioSession cases
         }
     }
-    
+
     /// Get current system permission status
     /// This is a synchronous read of the current state
     public static func current() -> MicrophonePermissionStatus {

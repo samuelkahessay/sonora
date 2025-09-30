@@ -17,4 +17,3 @@ public struct InterpolatedPrompt: Identifiable, Equatable, Hashable, Sendable {
         self.weekPart = weekPart
     }
 }
-

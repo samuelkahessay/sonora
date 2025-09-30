@@ -5,14 +5,14 @@ struct UnifiedStateView: View {
     let state: ViewState
     let onPrimaryAction: (() -> Void)?
     let onSecondaryAction: (() -> Void)?
-    
+
     /// View state types that can be displayed
     enum ViewState {
         case empty(icon: String, title: String, subtitle: String, actionTitle: String? = nil)
         case error(SonoraError, retryable: Bool = true)
         case offline(retryable: Bool = true)
         case loading(message: String = "Loading...")
-        
+
         var icon: String {
             switch self {
             case .empty(let icon, _, _, _):
@@ -25,7 +25,7 @@ struct UnifiedStateView: View {
                 return ""
             }
         }
-        
+
         var title: String {
             switch self {
             case .empty(_, let title, _, _):
@@ -38,7 +38,7 @@ struct UnifiedStateView: View {
                 return message
             }
         }
-        
+
         var subtitle: String? {
             switch self {
             case .empty(_, _, let subtitle, _):
@@ -51,7 +51,7 @@ struct UnifiedStateView: View {
                 return nil
             }
         }
-        
+
         var primaryActionTitle: String? {
             switch self {
             case .empty(_, _, _, let actionTitle):
@@ -64,7 +64,7 @@ struct UnifiedStateView: View {
                 return nil
             }
         }
-        
+
         var secondaryActionTitle: String? {
             switch self {
             case .empty, .loading:
@@ -73,7 +73,7 @@ struct UnifiedStateView: View {
                 return "Dismiss"
             }
         }
-        
+
         var iconColor: Color {
             switch self {
             case .empty:
@@ -86,7 +86,7 @@ struct UnifiedStateView: View {
                 return .semantic(.brandPrimary)
             }
         }
-        
+
         private func severityColor(for severity: SonoraErrorSeverity) -> Color {
             switch severity {
             case .info:
@@ -98,7 +98,7 @@ struct UnifiedStateView: View {
             }
         }
     }
-    
+
     init(
         state: ViewState,
         onPrimaryAction: (() -> Void)? = nil,
@@ -108,7 +108,7 @@ struct UnifiedStateView: View {
         self.onPrimaryAction = onPrimaryAction
         self.onSecondaryAction = onSecondaryAction
     }
-    
+
     var body: some View {
         VStack(spacing: Spacing.lg) {
             if case .loading = state {
@@ -120,12 +120,12 @@ struct UnifiedStateView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(Spacing.xl)
     }
-    
+
     @ViewBuilder
     private var loadingView: some View {
         VStack(spacing: Spacing.lg) {
             LoadingIndicator(size: .large)
-            
+
             Text(state.title)
                 .font(.title2)
                 .fontWeight(.semibold)
@@ -133,7 +133,7 @@ struct UnifiedStateView: View {
                 .accessibilityLabel(state.title)
         }
     }
-    
+
     @ViewBuilder
     private var contentView: some View {
         // Icon
@@ -141,7 +141,7 @@ struct UnifiedStateView: View {
             .font(.system(size: 48, weight: .medium))
             .foregroundColor(state.iconColor)
             .accessibilityHidden(true)
-        
+
         // Text content
         VStack(spacing: Spacing.sm) {
             Text(state.title)
@@ -149,7 +149,7 @@ struct UnifiedStateView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.semantic(.textPrimary))
                 .accessibilityAddTraits(.isHeader)
-            
+
             if let subtitle = state.subtitle {
                 Text(subtitle)
                     .font(.body)
@@ -159,7 +159,7 @@ struct UnifiedStateView: View {
             }
         }
         .padding(.horizontal, Spacing.lg)
-        
+
         // Action buttons
         if state.primaryActionTitle != nil || state.secondaryActionTitle != nil {
             VStack(spacing: Spacing.sm) {
@@ -182,7 +182,7 @@ struct UnifiedStateView: View {
                     .accessibilityLabel(primaryTitle)
                     .accessibilityHint("Double tap to \(primaryTitle.lowercased())")
                 }
-                
+
                 // Secondary action button
                 if let secondaryTitle = state.secondaryActionTitle,
                    let secondaryAction = onSecondaryAction {
@@ -213,7 +213,7 @@ extension UnifiedStateView {
             )
         )
     }
-    
+
     /// Empty state for transcription
     static func noTranscription() -> UnifiedStateView {
         UnifiedStateView(
@@ -224,7 +224,7 @@ extension UnifiedStateView {
             )
         )
     }
-    
+
     /// Empty state for analysis results
     static func noAnalysis() -> UnifiedStateView {
         UnifiedStateView(
@@ -235,7 +235,7 @@ extension UnifiedStateView {
             )
         )
     }
-    
+
     /// Empty state for search results
     static func noSearchResults(query: String) -> UnifiedStateView {
         UnifiedStateView(
@@ -246,7 +246,7 @@ extension UnifiedStateView {
             )
         )
     }
-    
+
     /// Error state with retry
     static func error(
         _ error: SonoraError,
@@ -259,7 +259,7 @@ extension UnifiedStateView {
             onSecondaryAction: onDismiss
         )
     }
-    
+
     /// Offline state with retry
     static func offline(onRetry: @escaping () -> Void) -> UnifiedStateView {
         UnifiedStateView(
@@ -267,7 +267,7 @@ extension UnifiedStateView {
             onPrimaryAction: onRetry
         )
     }
-    
+
     /// Loading state
     static func loading(message: String = "Loading...") -> UnifiedStateView {
         UnifiedStateView(
@@ -281,10 +281,10 @@ extension UnifiedStateView {
 /// Standardized loading indicator with consistent sizing
 struct LoadingIndicator: View {
     let size: Size
-    
+
     enum Size {
         case small, regular, large
-        
+
         var scale: CGFloat {
             switch self {
             case .small: return 0.8
@@ -293,11 +293,11 @@ struct LoadingIndicator: View {
             }
         }
     }
-    
+
     init(size: Size = .regular) {
         self.size = size
     }
-    
+
     var body: some View {
         ProgressView()
             .scaleEffect(size.scale)

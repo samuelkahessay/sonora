@@ -39,4 +39,3 @@ struct MemoBottomDeleteBar: View {
 }
 
 #Preview { MemoBottomDeleteBar(selectedCount: 2) {} }
-

@@ -25,4 +25,3 @@ final class TranscriptionStatusViewSnapshotTests: SnapshotTestCase {
         assertSnapshot(view, name: "TranscriptionStatus_Completed", appearance: .dark)
     }
 }
-

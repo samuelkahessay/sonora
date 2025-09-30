@@ -38,4 +38,3 @@ final class PromptUsageRecord {
         self.version = version
     }
 }
-

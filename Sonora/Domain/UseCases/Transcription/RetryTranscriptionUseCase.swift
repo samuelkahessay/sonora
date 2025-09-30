@@ -7,27 +7,27 @@ protocol RetryTranscriptionUseCaseProtocol: Sendable {
 }
 
 final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol, @unchecked Sendable {
-    
+
     // MARK: - Dependencies
     private let transcriptionRepository: any TranscriptionRepository
     private let transcriptionAPI: any TranscriptionAPI
-    
+
     // MARK: - Initialization
     init(transcriptionRepository: any TranscriptionRepository, transcriptionAPI: any TranscriptionAPI) {
         self.transcriptionRepository = transcriptionRepository
         self.transcriptionAPI = transcriptionAPI
     }
-    
+
     // MARK: - Use Case Execution
     @MainActor
     func execute(memo: Memo) async throws {
         print("🔄 RetryTranscriptionUseCase: Retrying transcription for memo: \(memo.filename)")
-        
+
         // Check current transcription state
         let currentState = await MainActor.run {
             transcriptionRepository.getTranscriptionState(for: memo.id)
         }
-        
+
         // Only allow retry if failed or not started
         guard currentState.isFailed || currentState.isNotStarted else {
             if currentState.isInProgress {
@@ -44,22 +44,22 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol, @unche
 
         // Do not retry when the previous failure was "No speech detected" (legacy) or the new phrasing
         if case .failed(let message) = currentState,
-           (message == TranscriptionError.noSpeechDetected.errorDescription || message.lowercased().contains("no speech detected")) {
+           message == TranscriptionError.noSpeechDetected.errorDescription || message.lowercased().contains("no speech detected") {
             print("⚠️ RetryTranscriptionUseCase: No speech detected previously; retry not allowed")
             throw TranscriptionError.noSpeechDetected
         }
-        
+
         // Check if file exists
         guard FileManager.default.fileExists(atPath: memo.fileURL.path) else {
             print("❌ RetryTranscriptionUseCase: Audio file not found")
             throw TranscriptionError.fileNotFound
         }
-        
+
         // Set state to in-progress
         await MainActor.run {
             transcriptionRepository.saveTranscriptionState(.inProgress, for: memo.id)
         }
-        
+
         do {
             // Perform transcription retry with the configured language hint
             let preferredLanguage = AppConfiguration.shared.preferredTranscriptionLanguage
@@ -76,16 +76,16 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol, @unche
 
                 print("💾 RetryTranscriptionUseCase: Transcription persisted to repository")
             }
-            
+
         } catch {
             print("❌ RetryTranscriptionUseCase: Transcription retry failed for \(memo.filename): \(error)")
-            
+
             // Save failed state to repository
             await MainActor.run {
                 let failedState = TranscriptionState.failed(error.localizedDescription)
                 transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
             }
-            
+
             throw TranscriptionError.transcriptionFailed(error.localizedDescription)
         }
     }

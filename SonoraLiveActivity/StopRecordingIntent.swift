@@ -8,7 +8,7 @@ import SwiftUI
 struct StopRecordingIntent: AppIntent {
     static var title: LocalizedStringResource { "Stop Recording" }
     static var description: IntentDescription { IntentDescription("Stops the current recording in Sonora") }
-    
+
     // This intent should open the app and then perform the action.
     static var openAppWhenRun: Bool { true }
 
@@ -18,15 +18,15 @@ struct StopRecordingIntent: AppIntent {
         // handle the stop recording logic when it becomes active.
         // The Live Activity extension runs in a separate process and doesn't have
         // direct access to the main app's services.
-        
+
         print("🎙️ StopRecordingIntent: Intent triggered - app will open and handle stop recording.")
-        
+
         // Set a flag in shared UserDefaults to indicate that recording should be stopped
         // This will be checked by the main app when it becomes active
         let sharedDefaults = UserDefaults(suiteName: "group.sonora.shared") ?? UserDefaults.standard
         sharedDefaults.set(true, forKey: "shouldStopRecordingOnActivation")
         sharedDefaults.synchronize()
-        
+
         // The app will be opened automatically and can check the flag to stop recording
         return .result()
     }

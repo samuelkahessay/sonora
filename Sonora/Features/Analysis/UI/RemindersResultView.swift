@@ -4,7 +4,7 @@ import SwiftUI
 struct RemindersResultView: View {
     let data: RemindersData
     @State private var showingReminderConfirmation = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
@@ -41,7 +41,7 @@ struct RemindersResultView: View {
                         .withDIContainer()
                 }
             }
-            
+
             if data.reminders.isEmpty {
                 Text("No reminders detected in this memo")
                     .font(.body)
@@ -64,7 +64,7 @@ struct RemindersResultView: View {
 /// Individual reminder item view
 private struct ReminderItemView: View {
     let reminder: RemindersData.DetectedReminder
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -74,7 +74,7 @@ private struct ReminderItemView: View {
                 Spacer()
                 PriorityBadge(priority: reminder.priority)
             }
-            
+
             if let dueDate = reminder.dueDate {
                 HStack {
                     Image(systemName: "clock")
@@ -85,7 +85,7 @@ private struct ReminderItemView: View {
                         .foregroundColor(.semantic(.textSecondary))
                 }
             }
-            
+
             Text(reminder.sourceText)
                 .font(.caption2)
                 .foregroundColor(.semantic(.textTertiary))
@@ -98,7 +98,7 @@ private struct ReminderItemView: View {
         .background(Color.semantic(.bgPrimary))
         .cornerRadius(8)
     }
-    
+
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -110,7 +110,7 @@ private struct ReminderItemView: View {
 /// Priority level badge
 private struct PriorityBadge: View {
     let priority: RemindersData.DetectedReminder.Priority
-    
+
     var body: some View {
         HStack(spacing: 2) {
             Image(systemName: priorityIcon)
@@ -125,7 +125,7 @@ private struct PriorityBadge: View {
         .foregroundColor(Color(priority.color))
         .cornerRadius(4)
     }
-    
+
     private var priorityIcon: String {
         switch priority {
         case .high: return "exclamationmark.circle.fill"

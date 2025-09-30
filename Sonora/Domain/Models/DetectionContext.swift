@@ -48,8 +48,8 @@ enum DetectionContextBuilder {
         let timePatterns = [":", "am", "pm", "eod", "end of day", "noon", "midnight",
                             "morning", "afternoon", "evening", "tonight", "today", "tomorrow",
                             "next "]
-        let weekdays = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"]
-        let months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"]
+        let weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+        let months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
         if timePatterns.contains(where: { lower.contains($0) }) { return true }
         if weekdays.contains(where: { lower.contains($0) }) { return true }
         if months.contains(where: { lower.contains($0) }) { return true }
@@ -78,7 +78,7 @@ enum DetectionContextBuilder {
         let tokens = lower.split { !$0.isLetter }
         guard !tokens.isEmpty else { return 0 }
         // common imperative/command-like verbs
-        let imperative = Set(["schedule","set","remind","email","call","ping","book","reserve","send","follow","prepare","draft","finish","complete","review"])
+        let imperative = Set(["schedule", "set", "remind", "email", "call", "ping", "book", "reserve", "send", "follow", "prepare", "draft", "finish", "complete", "review"])
         let hits = tokens.filter { imperative.contains(String($0)) }.count
         return Double(hits) / Double(tokens.count)
     }

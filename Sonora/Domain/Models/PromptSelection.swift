@@ -59,4 +59,3 @@ public struct NextPromptResponse: Sendable, Equatable {
         self.source = source
     }
 }
-

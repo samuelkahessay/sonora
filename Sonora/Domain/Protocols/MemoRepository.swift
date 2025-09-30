@@ -5,12 +5,12 @@ import Combine
 protocol MemoRepository: ObservableObject {
     var objectWillChange: ObservableObjectPublisher { get }
     var memos: [Memo] { get set }
-    
+
     // MARK: - Reactive Publishers (Swift 6 Compliant)
-    
+
     /// Publisher for memo list changes - enables unified state management
     var memosPublisher: AnyPublisher<[Memo], Never> { get }
-    
+
     // Playback state
     var playingMemo: Memo? { get }
     var isPlaying: Bool { get }
@@ -20,7 +20,7 @@ protocol MemoRepository: ObservableObject {
     func seek(to time: TimeInterval, for memo: Memo)
     /// Publishes periodic playback progress updates for the active memo
     var playbackProgressPublisher: AnyPublisher<PlaybackProgress, Never> { get }
-    
+
     // Persistence
     func loadMemos()
     func saveMemo(_ memo: Memo)

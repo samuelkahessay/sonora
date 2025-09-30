@@ -2,19 +2,19 @@ import SwiftUI
 
 /// Name entry component for personalized onboarding
 struct NameEntryView: View {
-    
+
     // MARK: - Properties
     let onContinue: (String) -> Void
-    
+
     // MARK: - State
     @State private var nameInput: String = ""
     @State private var isValid: Bool = true
     @FocusState private var isTextFieldFocused: Bool
     @State private var shouldAutoFocus = true
-    
+
     // MARK: - Constants
     private let maxNameLength = 20
-    
+
     // MARK: - Body
     var body: some View {
         VStack(spacing: Spacing.lg) {
@@ -87,19 +87,19 @@ struct NameEntryView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { isTextFieldFocused = true }
         }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     private func validateInput(_ input: String) {
         // Validate input length
         isValid = input.count <= maxNameLength
-        
+
         // Truncate if too long (prevent typing beyond limit)
         if input.count > maxNameLength {
             nameInput = String(input.prefix(maxNameLength))
         }
     }
-    
+
     private func handleContinue() {
         HapticManager.shared.playSelection()
         isTextFieldFocused = false
@@ -122,7 +122,7 @@ struct NameEntryView: View {
 #Preview("Name Entry - With Text") {
     struct PreviewWrapper: View {
         @State private var name = "Sam"
-        
+
         var body: some View {
             NameEntryView(
                 onContinue: { name in
@@ -131,6 +131,6 @@ struct NameEntryView: View {
             )
         }
     }
-    
+
     return PreviewWrapper()
 }

@@ -15,4 +15,3 @@ final class RecordingViewSnapshotTests: SnapshotTestCase {
         assertSnapshot(view, name: "RecordingView", appearance: .dark)
     }
 }
-

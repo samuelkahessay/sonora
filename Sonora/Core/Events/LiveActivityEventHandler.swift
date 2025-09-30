@@ -5,17 +5,17 @@ import Foundation
 final class LiveActivityEventHandler {
     private let logger: any LoggerProtocol
     private let subscriptionManager: EventSubscriptionManager
-    
+
     private let memoRepository: any MemoRepository
     private let audioRepository: any AudioRepository
     private let startUseCase: any StartLiveActivityUseCaseProtocol
     private let updateUseCase: any UpdateLiveActivityUseCaseProtocol
     private let endUseCase: any EndLiveActivityUseCaseProtocol
-    
+
     private var cancellables = Set<AnyCancellable>()
     private var lastLiveActivityUpdateAt: Date = .distantPast
     private let minUpdateInterval: TimeInterval = 0.5 // 2 Hz max
-    
+
     init(
         logger: any LoggerProtocol,
         eventBus: any EventBusProtocol,
@@ -32,13 +32,13 @@ final class LiveActivityEventHandler {
         self.startUseCase = startUseCase
         self.updateUseCase = updateUseCase
         self.endUseCase = endUseCase
-        
+
         setupEventSubscriptions()
         setupRecordingTimeUpdates()
-        
+
         logger.debug("LiveActivityEventHandler initialized", category: .system, context: LogContext())
     }
-    
+
     convenience init(
         logger: any LoggerProtocol,
         eventBus: any EventBusProtocol
@@ -60,7 +60,7 @@ final class LiveActivityEventHandler {
             endUseCase: end
         )
     }
-    
+
     private func setupEventSubscriptions() {
         subscriptionManager.subscribe(to: AppEvent.self) { [weak self] event in
             Task { @MainActor in
@@ -68,7 +68,7 @@ final class LiveActivityEventHandler {
             }
         }
     }
-    
+
     private func setupRecordingTimeUpdates() {
         // Throttle updates by relying on Combine polling already at 0.1s; ActivityKit handles rate internally.
         audioRepository.isRecordingPublisher
@@ -103,7 +103,7 @@ final class LiveActivityEventHandler {
             }
             .store(in: &cancellables)
     }
-    
+
     private func handle(_ event: AppEvent) async {
         switch event {
         case .recordingStarted(let memoId):
@@ -125,7 +125,7 @@ final class LiveActivityEventHandler {
             break
         }
     }
-    
+
     deinit {
         subscriptionManager.cleanup()
     }

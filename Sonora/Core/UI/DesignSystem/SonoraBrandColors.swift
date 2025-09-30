@@ -11,34 +11,34 @@ import SwiftUI
 // MARK: - Sonora Brand Color Palette
 
 extension Color {
-    
+
     // MARK: - Primary Palette
-    
+
     /// Sonora Deep: Rich, contemplative navy that conveys depth and wisdom
     static let sonoraDep = Color(hexString: "#1A2332")
-    
+
     /// Clarity White: Pure, clean white for breathing room and mental clarity
     static let clarityWhite = Color(hexString: "#FDFFFE")
-    
+
     /// Insight Gold: Warm, premium gold for highlighting key insights and achievements
     static let insightGold = Color(hexString: "#D4AF37")
-    
+
     // MARK: - Secondary Palette
-    
+
     /// Reflection Gray: Soft blue-gray for secondary text and subtle elements
     static let reflectionGray = Color(hexString: "#8B9DC3")
-    
+
     /// Whisper Blue: Ultra-light blue for backgrounds and gentle highlights
     static let whisperBlue = Color(hexString: "#E8F0FF")
-    
+
     /// Growth Green: Muted teal for progress indicators and positive actions
     static let growthGreen = Color(hexString: "#4A9B8E")
-    
+
     // MARK: - Accent Colors
-    
+
     /// Spark Orange: Energetic coral for call-to-action elements
     static let sparkOrange = Color(hexString: "#FF6B35")
-    
+
     /// Depth Purple: Rich purple for premium features and depth
     static let depthPurple = Color(hexString: "#6B4C93")
 }
@@ -46,48 +46,46 @@ extension Color {
 // MARK: - Semantic Color Mappings
 
 extension Color {
-    
+
     // MARK: - Recording States
-    
+
     /// Active recording state - uses Insight Gold for premium feel
     static let recordingActive = insightGold
-    
+
     /// Inactive recording state - uses Reflection Gray for subtle presence
     static let recordingInactive = reflectionGray
-    
+
     // MARK: - Interface Elements
-    
-    
+
     /// Error states and destructive actions
     static let errorState = sparkOrange
-    
-    
+
     /// Warning states and important notifications
     static let warningState = sparkOrange
-    
+
     // (removed unused info state)
-    
+
     // MARK: - Text Hierarchy
-    
+
     /// Primary text on light backgrounds
     static let textPrimary = sonoraDep
-    
+
     /// Secondary text and metadata
     static let textSecondary = reflectionGray
-    
+
     /// Text on dark or colored backgrounds
     static let textOnColored = clarityWhite
-    
+
     // (removed unused textTertiary)
-    
+
     // MARK: - Backgrounds
-    
+
 }
 
 // MARK: - Color Utilities
 
 extension Color {
-    
+
     /// Initialize Color from hex string
     /// - Parameter hexString: Hex color string (e.g., "#1A2332")
     init(hexString: String) {
@@ -110,11 +108,11 @@ extension Color {
             .sRGB,
             red: Double(r) / 255,
             green: Double(g) / 255,
-            blue:  Double(b) / 255,
+            blue: Double(b) / 255,
             opacity: Double(a) / 255
         )
     }
-    
+
     /// Convert Color to hex string
     /// - Returns: Hex string representation (e.g., "#1A2332")
     func toHex() -> String? {
@@ -156,7 +154,7 @@ struct SonoraBrandTheme {
     let accent: Color
     let background: Color
     // Note: Removed unused properties per periphery scan
-    
+
     /// Designated initializer with sensible defaults for the light theme
     init(
         primary: Color = .insightGold,
@@ -170,7 +168,7 @@ struct SonoraBrandTheme {
         self.background = background
         // Note: Removed unused property assignments
     }
-    
+
     /// Default Sonora brand theme (light)
     static let `default` = SonoraBrandTheme()
 }

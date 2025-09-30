@@ -6,7 +6,7 @@ struct AnalysisSectionView: View {
     let transcript: String
     @ObservedObject var viewModel: MemoDetailViewModel
     @State private var loaderMessageIndex = -1
-    
+
     var body: some View {
         let isDistillCompleted = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisResult != nil)
         let showDebugBorders = LayoutDebug.distillButton
@@ -81,7 +81,7 @@ struct AnalysisSectionView: View {
                 .cornerRadius(8)
                 .animation(.easeInOut(duration: 0.35), value: loaderMessageIndex)
             }
-            
+
             // Results with AI disclaimer (only when there are results)
             if let mode = viewModel.selectedAnalysisMode {
                 VStack(alignment: .leading, spacing: 12) {

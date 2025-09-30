@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 final class ModerationService: ObservableObject, ModerationServiceProtocol {
     private let config = AppConfiguration.shared
-    
+
     func moderate(text: String) async throws -> ModerationResult {
         let url = config.apiBaseURL.appendingPathComponent("moderate")
         var request = URLRequest(url: url)
@@ -20,4 +20,3 @@ final class ModerationService: ObservableObject, ModerationServiceProtocol {
         return result
     }
 }
-

@@ -75,4 +75,3 @@ struct PermissionExplainerCard: View {
         }
     }
 }
-

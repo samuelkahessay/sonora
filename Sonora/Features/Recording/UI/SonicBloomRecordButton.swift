@@ -13,27 +13,27 @@ import SwiftUI
 /// The centerpiece recording button that embodies Sonora's brand identity
 /// Features organic waveform animation that transforms into geometric patterns during recording
 struct SonicBloomRecordButton: View {
-    
+
     // Progress (0...1) to display an outer ring during recording
-    var progress: Double? = nil
-    
+    var progress: Double?
+
     // MARK: - Properties
-    
+
     let isRecording: Bool
     let action: () -> Void
-    
+
     // Animation state
     @SwiftUI.Environment(\.accessibilityReduceMotion) private var reduceMotion: Bool
     @State private var isAnimating: Bool = false
     @State private var bloomScale: CGFloat = 1.0
     @State private var pulseOpacity: Double = 0.0
     @State private var bloomEvent: BloomEvent = BloomEvent(id: UUID(), style: .expand)
-    
+
     // Constants
     private let buttonSize: CGFloat = 180
     private let waveformCount: Int = 8
     private let bloomAnimationDuration: TimeInterval = 0.8
-    
+
     var body: some View {
         Button(action: {
             performAction()
@@ -41,16 +41,16 @@ struct SonicBloomRecordButton: View {
             ZStack {
                 // Outer pulse ring (appears during recording)
                 pulseRing
-                
+
                 // Main button background with gradient
                 mainButtonBackground
-                
+
                 // Waveform bloom pattern
                 waveformBloom
-                
+
                 // Central icon with smooth transitions
                 centerIcon
-                
+
                 // Inner geometric pattern (appears during recording)
                 innerGeometry
             }
@@ -77,9 +77,8 @@ struct SonicBloomRecordButton: View {
             isAnimating = false
         }
     }
-    
+
     // MARK: - Button Components
-    
 
     @ViewBuilder
     private var pulseRing: some View {
@@ -101,7 +100,7 @@ struct SonicBloomRecordButton: View {
                 .animation(SonoraDesignSystem.Animation.breathing, value: pulseOpacity)
         }
     }
-    
+
     /// Main button background with brand gradient
     private var mainButtonBackground: some View {
         Circle()
@@ -125,7 +124,7 @@ struct SonicBloomRecordButton: View {
             )
             .brandShadow()
     }
-    
+
     /// Organic waveform pattern that transforms during recording (time-driven)
     private var waveformBloom: some View {
         TimelineView(.animation) { context in
@@ -158,7 +157,7 @@ struct SonicBloomRecordButton: View {
             .opacity(isRecording ? 1.0 : 0.7)
         }
     }
-    
+
     /// Center icon with smooth state transitions
     private var centerIcon: some View {
         ZStack {
@@ -183,7 +182,7 @@ struct SonicBloomRecordButton: View {
             value: isAnimating
         )
     }
-    
+
     /// Inner geometric pattern that emerges during recording
     @ViewBuilder
     private var innerGeometry: some View {
@@ -208,34 +207,34 @@ struct SonicBloomRecordButton: View {
             .animation(SonoraDesignSystem.Animation.gentleSpring.delay(0.2), value: isRecording)
         }
     }
-    
+
     // MARK: - Animation Logic
-    
+
     /// Perform the button action with haptic feedback
     private func performAction() {
         // Immediate visual feedback
         withAnimation(SonoraDesignSystem.Animation.quickFeedback) {
             bloomScale = 0.95
         }
-        
+
         // Spring back
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             withAnimation(SonoraDesignSystem.Animation.energeticSpring) {
                 bloomScale = 1.0
             }
         }
-        
+
         // Execute the action
         action()
     }
-    
+
     /// Animate the recording state transition
     private func animateRecordingState(_ recording: Bool) {
         withAnimation(SonoraDesignSystem.Animation.bloomTransition) {
             // Scale slightly larger when recording for prominence
             bloomScale = recording ? 1.05 : 1.0
         }
-        
+
         if recording {
             // Start recording animations
             withAnimation(SonoraDesignSystem.Animation.breathing) {
@@ -248,7 +247,7 @@ struct SonicBloomRecordButton: View {
             }
         }
     }
-    
+
     // No manual frame loop; animations are value-driven and display-synced
 }
 
@@ -260,13 +259,13 @@ struct WaveformPetal: Shape {
     var phase: CGFloat // animatable
     let isActive: Bool
     let petalIndex: Int
-    
+
     // Animate smoothly by exposing `phase` as animatable data
     var animatableData: CGFloat {
         get { phase }
         set { phase = newValue }
     }
-    
+
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let center = CGPoint(x: rect.midX, y: rect.midY)
@@ -298,22 +297,22 @@ struct WaveformPetal: Shape {
         // Start point
         let startAngle = Angle.degrees(angle - Double(petalWidth) / 2)
         let endAngle = Angle.degrees(angle + Double(petalWidth) / 2)
-        
+
         let startPoint = CGPoint(
             x: center.x + cos(startAngle.radians) * startRadius,
             y: center.y + sin(startAngle.radians) * startRadius
         )
-        
+
         let endPoint = CGPoint(
             x: center.x + cos(endAngle.radians) * startRadius,
             y: center.y + sin(endAngle.radians) * startRadius
         )
-        
+
         let tipPoint = CGPoint(
             x: center.x + cos(Angle.degrees(angle).radians) * endRadius,
             y: center.y + sin(Angle.degrees(angle).radians) * endRadius
         )
-        
+
         // Create curved petal shape (break into simpler sub-expressions for type-checker)
         path.move(to: startPoint)
         let midRadius = (startRadius + endRadius) / 2
@@ -328,7 +327,7 @@ struct WaveformPetal: Shape {
         path.addQuadCurve(to: tipPoint, control: ctrl1)
         path.addQuadCurve(to: endPoint, control: ctrl2)
         path.closeSubpath()
-        
+
         return path
     }
 }
@@ -336,19 +335,19 @@ struct WaveformPetal: Shape {
 // MARK: - Accessibility Support
 
 extension SonicBloomRecordButton {
-    
+
     /// Accessibility label based on current state
     var accessibilityLabel: String {
         isRecording ? "Stop recording voice memo" : "Start recording voice memo"
     }
-    
+
     /// Accessibility hint for user guidance
     var accessibilityHint: String {
-        isRecording 
+        isRecording
         ? "Double tap to stop the current recording and save your voice memo"
         : "Double tap to begin recording a voice memo"
     }
-    
+
     /// Apply accessibility modifiers
     func accessibilityConfiguration() -> some View {
         self

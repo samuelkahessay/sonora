@@ -66,7 +66,7 @@ public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable
         print("🛒 [StoreKitService] purchase() start, productId=\(productId)")
         let ids = Array(productIds)
         let products = try await Product.products(for: ids)
-        print("🛒 [StoreKitService] products fetched: \(products.map{ $0.id }) for ids=\(ids)")
+        print("🛒 [StoreKitService] products fetched: \(products.map { $0.id }) for ids=\(ids)")
         guard let product = products.first(where: { $0.id == productId }) else {
             print("🛒 [StoreKitService] requested product not found in fetched list")
             return false

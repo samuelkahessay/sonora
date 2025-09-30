@@ -165,4 +165,3 @@ final class DefaultLanguageQualityEvaluator: LanguageQualityEvaluator {
 
     private func clamp01(_ x: Double) -> Double { max(0.0, min(1.0, x)) }
 }
-

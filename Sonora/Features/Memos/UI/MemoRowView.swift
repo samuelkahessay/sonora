@@ -20,9 +20,9 @@ import SwiftUI
 /// **Customization Points:**
 /// All sizing, spacing, and styling constants are documented below for easy adjustment
 struct MemoRowView: View {
-    
+
     // MARK: - Properties
-    
+
     let memo: Memo
     @ObservedObject var viewModel: MemoListViewModel
     /// Show a subtle internal top hairline to separate stacked cards.
@@ -38,37 +38,37 @@ struct MemoRowView: View {
     private var transcriptionState: TranscriptionState {
         viewModel.getTranscriptionState(for: memo)
     }
-    
+
     // MARK: - Design Constants
-    
+
     /// **Typography Configuration**
     /// Adjust these values to fine-tune text appearance and hierarchy
     private enum Typography {
         /// Primary title font - prominent but not overwhelming
         /// 1.75x size: .title3 with semibold weight for strong hierarchy
         static let titleFont: Font = .system(.title3, design: .default, weight: .semibold)
-        
+
         /// Metadata font for duration and date information
         /// 1.75x size: .subheadline for better readability
         static let metadataFont: Font = .system(.subheadline, design: .default, weight: .regular)
-        
+
         /// Clock icon font size - should complement metadata text
         /// 1.75x size: .footnote with medium weight for better visibility
         static let iconFont: Font = .system(.footnote, design: .default, weight: .medium)
     }
-    
+
     /// **Color Configuration**
     /// Semantic colors ensure proper light/dark mode adaptation
     private enum Colors {
         /// Primary text color for memo titles - maximum contrast
         static let titleText: Color = .semantic(.textPrimary)
-        
+
         /// Secondary text color for metadata - reduced emphasis
         static let metadataText: Color = .semantic(.textSecondary)
-        
+
         /// Icon tint color - should match or complement metadata text
         static let iconTint: Color = .semantic(.textSecondary)
-        
+
         /// Accent line color based on transcription state
         /// Follows semantic color patterns for accessibility and theming
         static func accentColor(for state: TranscriptionState) -> Color {
@@ -84,45 +84,45 @@ struct MemoRowView: View {
             }
         }
     }
-    
+
     /// **Layout Configuration**
     /// These follow iOS Human Interface Guidelines spacing standards
     private enum Layout {
         /// Vertical padding for generous card appearance
         static let verticalPadding: CGFloat = 14
-        
+
         /// Spacing between title and metadata sections
         static let titleToMetadataSpacing: CGFloat = 7
-        
+
         /// Horizontal spacing between metadata elements
         static let metadataElementSpacing: CGFloat = 21
-        
+
         /// Spacing between icons and their associated text
         static let iconToTextSpacing: CGFloat = 5
-        
+
         /// Line limit stays the same
         static let titleLineLimit: Int = 2
-        
+
         /// **Accent Line Configuration - Proportional to 1.75x Design**
         /// Color-coded status indicators following iOS design principles
-        
+
         /// Accent line width - prominent but not overwhelming
         static let accentLineWidth: CGFloat = 4
-        
+
         /// Accent line corner radius - subtle rounding for modern appearance
         static let accentLineCornerRadius: CGFloat = 2
-        
+
         /// Accent line spacing - proportional to iconToTextSpacing for visual balance
         static let accentLineSpacing: CGFloat = 8
 
         /// Reserved gutter width when in edit mode for selection control
         static let editGutterWidth: CGFloat = 44
     }
-    
+
     // MARK: - Animation Configuration (accent pulse removed)
-    
+
     // MARK: - Selection & Accent Components
-    
+
     /// **Selection Indicator**
     /// Shows selection state in edit mode
     @ViewBuilder
@@ -130,8 +130,8 @@ struct MemoRowView: View {
         Button(action: {
             viewModel.toggleMemoSelection(memo)
         }) {
-            Image(systemName: viewModel.isMemoSelected(memo) 
-                ? "checkmark.circle.fill" 
+            Image(systemName: viewModel.isMemoSelected(memo)
+                ? "checkmark.circle.fill"
                 : "circle")
                 .foregroundColor(viewModel.isMemoSelected(memo)
                     ? .semantic(.brandPrimary)
@@ -142,16 +142,16 @@ struct MemoRowView: View {
         }
         .buttonStyle(.plain)
         .animation(.spring(response: 0.3), value: viewModel.isMemoSelected(memo))
-        .accessibilityLabel(viewModel.isMemoSelected(memo) 
-            ? "Selected \(memo.displayName)" 
+        .accessibilityLabel(viewModel.isMemoSelected(memo)
+            ? "Selected \(memo.displayName)"
             : "Select \(memo.displayName)")
         .accessibilityHint("Tap to toggle selection")
     }
-    
+
     // Accent line removed for cleaner design
-    
+
     // MARK: - View Body
-    
+
     var body: some View {
         HStack(spacing: 0) {
             // Single reserved gutter for the selection control.
@@ -183,13 +183,13 @@ struct MemoRowView: View {
                 } label: {
                     Label("Rename", systemImage: "pencil")
                 }
-                
+
                 Button {
                     shareMemo()
                 } label: {
                     Label("Share", systemImage: "square.and.arrow.up")
                 }
-                
+
                 Button(role: .destructive) {
                     deleteMemo()
                 } label: {
@@ -236,12 +236,12 @@ struct MemoRowView: View {
             .presentationDragIndicator(.visible)
         }
     }
-    
+
     // MARK: - Content Views
     // All content now handled by SonoraMemocCard for brand consistency
-    
+
     // MARK: - Helper Properties
-    
+
     /// Formatted relative date string using system formatter
     /// Example outputs: "5 minutes ago", "2 hours ago", "yesterday"
     private var formattedRelativeDate: String {
@@ -251,7 +251,7 @@ struct MemoRowView: View {
         let endDate = min(memo.recordingEndDate, now)
         return formatter.localizedString(for: endDate, relativeTo: now)
     }
-    
+
     /// Comprehensive accessibility description for VoiceOver users
     /// Provides all essential information in logical reading order
     private var accessibilityDescription: String {
@@ -262,25 +262,25 @@ struct MemoRowView: View {
         ]
         return components.joined(separator: ", ")
     }
-    
+
     // accentStateKey removed with accent line
-    
+
     // MARK: - Constants
-    
+
     /// **System Icon Names**
     /// Type-safe SF Symbols names for consistency
     private enum SystemIconNames {
         static let clock = MemoSystemIcons.clock.rawValue
     }
-    
+
     /// **Accessibility Strings**
     /// Localization-ready accessibility strings
     private enum AccessibilityStrings {
         static let rowHint = "Double tap to view memo details"
     }
-    
+
     // MARK: - Helper Methods
-    
+
     /// Start renaming the memo
     private func startRename() {
         Task { @MainActor in
@@ -288,7 +288,7 @@ struct MemoRowView: View {
         }
         viewModel.startEditing(memo: memo)
     }
-    
+
     /// Share the memo using native iOS share sheet
     private func shareMemo() {
         Task { @MainActor in
@@ -296,7 +296,7 @@ struct MemoRowView: View {
         }
         viewModel.shareMemo(memo)
     }
-    
+
     /// Delete the memo with haptic feedback
     private func deleteMemo() {
         Task { @MainActor in
@@ -306,18 +306,18 @@ struct MemoRowView: View {
             viewModel.deleteMemo(at: index)
         }
     }
-    
+
     /// Submit the rename operation
     private func submitRename() {
         let trimmedTitle = editedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         // Revert to original if empty
         if trimmedTitle.isEmpty {
             editedTitle = memo.displayName
             viewModel.stopEditing()
             return
         }
-        
+
         // Only rename if changed
         if trimmedTitle != memo.displayName {
             Task {

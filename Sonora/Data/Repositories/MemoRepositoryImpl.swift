@@ -1,5 +1,4 @@
 import Foundation
-import Foundation
 import Combine
 import AVFoundation
 import SwiftData
@@ -9,38 +8,38 @@ import SwiftData
 @MainActor
 final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     @Published var memos: [Memo] = []
-    
+
     // Lightweight in-memory cache for common list queries
-    private var memosCache: [Memo]? = nil
-    private var memosCacheTime: Date? = nil
+    private var memosCache: [Memo]?
+    private var memosCacheTime: Date?
     private var cancellables: Set<AnyCancellable> = []
-    
+
     // MARK: - Reactive Publishers (Swift 6 Compliant)
-    
+
     /// Publisher for memo list changes - enables unified state management
     var memosPublisher: AnyPublisher<[Memo], Never> {
         $memos.eraseToAnyPublisher()
     }
-    
+
     // Playback state
     @Published private(set) var playingMemo: Memo?
     @Published private(set) var isPlaying: Bool = false
-    
+
     // Transcription is handled via dedicated repository and use cases
     private let transcriptionRepository: any TranscriptionRepository
     private let autoTitleJobRepository: any AutoTitleJobRepository
     private let context: ModelContext
-    
+
     private var player: AVAudioPlayer?
     private var playbackTimer: Timer?
     private let playbackSubject = PassthroughSubject<PlaybackProgress, Never>()
-    
+
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private let memosDirectoryPath: URL
     // Legacy sidecar metadata removed with SwiftData migration
-    
+
     // MARK: - Transcription dependencies
-    
+
     // MARK: - Initialization
     init(
         context: ModelContext,
@@ -62,29 +61,29 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             }
             .store(in: &cancellables)
     }
-    
+
     // MARK: - Directory Management
     private func createDirectoriesIfNeeded() {
         do {
-            try FileManager.default.createDirectory(at: memosDirectoryPath, 
-                                                   withIntermediateDirectories: true, 
+            try FileManager.default.createDirectory(at: memosDirectoryPath,
+                                                   withIntermediateDirectories: true,
                                                    attributes: nil)
             print("✅ MemoRepository: Created Memos directory at \(memosDirectoryPath.path)")
         } catch {
             print("❌ MemoRepository: Failed to create Memos directory: \(error)")
         }
     }
-    
+
     private func memoDirectoryPath(for memoId: UUID) -> URL {
         return memosDirectoryPath.appendingPathComponent(memoId.uuidString)
     }
-    
+
     private func audioFilePath(for memoId: UUID) -> URL {
         return memoDirectoryPath(for: memoId).appendingPathComponent("audio.m4a")
     }
-    
+
     // SwiftData-backed: no sidecar metadata file
-    
+
     // MARK: - Playback
     func playMemo(_ memo: Memo) {
         // Handle pause/resume toggle for same memo
@@ -92,7 +91,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             pausePlaying()
             return
         }
-        
+
         // Resume paused memo
         if playingMemo?.id == memo.id && !isPlaying && player != nil {
             player?.play()
@@ -100,12 +99,12 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             print("▶️ MemoRepository: Resumed \(memo.filename)")
             return
         }
-        
+
         // Stop current if different memo
         if let current = playingMemo, current.id != memo.id {
             stopPlaying()
         }
-        
+
         do {
             // Ensure audio session is configured for playback (speaker)
             let session = AVAudioSession.sharedInstance()
@@ -134,7 +133,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
 
         }
     }
-    
+
     func pausePlaying() {
         player?.pause()
         isPlaying = false
@@ -143,7 +142,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             self.publishProgress()
         }
     }
-    
+
     func stopPlaying() {
         player?.stop()
         player = nil
@@ -210,13 +209,13 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         )
         playbackSubject.send(progress)
     }
-    
+
     // MARK: - File Helpers
-    
+
     private func fileExists(at url: URL) -> Bool {
         return FileManager.default.fileExists(atPath: url.path)
     }
-    
+
     // MARK: - SwiftData Helpers
     private func fetchMemoModel(id: UUID) -> MemoModel? {
         let descriptor = FetchDescriptor<MemoModel>(predicate: #Predicate { $0.id == id })
@@ -268,7 +267,6 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         memosCache = updated
         memosCacheTime = Date()
     }
-
 
     func loadMemos() {
         // Serve cached list immediately if fresh (perceived latency win)
@@ -334,12 +332,12 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         do {
             let memoDirectoryPath = memoDirectoryPath(for: memo.id)
             let audioDestination = audioFilePath(for: memo.id)
-            
+
             // Create memo directory
             try FileManager.default.createDirectory(at: memoDirectoryPath,
                                                    withIntermediateDirectories: true,
                                                    attributes: nil)
-            
+
             // Copy audio file if it's not already in the correct location
             if memo.fileURL != audioDestination {
                 if fileExists(at: audioDestination) {
@@ -348,7 +346,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 try FileManager.default.copyItem(at: memo.fileURL, to: audioDestination)
                 print("📁 MemoRepository: Audio file copied to \(audioDestination.lastPathComponent)")
             }
-            
+
             // Get duration using AVAudioFile with readiness helper
             let duration: TimeInterval = {
                 do {
@@ -361,7 +359,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                     return 0
                 }
             }()
-            
+
             // Upsert SwiftData model
             if let model = fetchMemoModel(id: memo.id) {
                 model.filename = memo.filename
@@ -384,7 +382,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 context.insert(model)
             }
             try context.save()
-            
+
             // Construct canonical saved memo
             let savedMemo = Memo(
                 id: memo.id,
@@ -398,7 +396,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 shareableFileName: memo.shareableFileName,
                 autoTitleState: autoTitleState(for: memo.id)
             )
-            
+
             // Update in-memory list
             if let idx = memos.firstIndex(where: { $0.id == memo.id }) {
                 memos[idx] = savedMemo
@@ -407,12 +405,12 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 memos.sort { $0.recordingEndDate > $1.recordingEndDate }
                 print("📝 MemoRepository: Added memo \(savedMemo.filename) to in-memory list with ID \(savedMemo.id)")
             }
-            
+
             print("✅ MemoRepository: Successfully saved memo \(memo.filename) [SwiftData]")
             // Invalidate list cache
             memosCache = nil; memosCacheTime = nil
             return savedMemo
-        
+
         } catch {
             print("❌ MemoRepository: Failed to save memo \(memo.filename): \(error)")
             return memo
@@ -428,82 +426,82 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             if playingMemo?.id == memo.id {
                 stopPlaying()
             }
-            
+
             let memoDirectory = memoDirectoryPath(for: memo.id)
-            
+
             // Remove entire memo directory
             if fileExists(at: memoDirectory) {
                 try FileManager.default.removeItem(at: memoDirectory)
                 print("🗑️ MemoRepository: Deleted memo directory for \(memo.filename)")
             }
-            
+
             // Delete SwiftData model (cascades to related data)
             if let model = fetchMemoModel(id: memo.id) {
                 context.delete(model)
                 try context.save()
             }
-            
+
             // Update in-memory list
             memos.removeAll { $0.id == memo.id }
-            
+
             print("✅ MemoRepository: Successfully deleted memo \(memo.filename)")
             // Invalidate list cache
             memosCache = nil; memosCacheTime = nil
-            
+
         } catch {
             print("❌ MemoRepository: Failed to delete memo \(memo.filename): \(error)")
         }
     }
-    
+
     func getMemo(by id: UUID) -> Memo? {
         if let model = fetchMemoModel(id: id) { return mapToDomain(model) }
         return nil
     }
-    
+
     func getMemo(by url: URL) -> Memo? {
         let descriptor = FetchDescriptor<MemoModel>(predicate: #Predicate { $0.audioFilePath == url.path })
         if let model = try? context.fetch(descriptor).first { return mapToDomain(model) }
         return nil
     }
-    
+
     @discardableResult
     func handleNewRecording(at url: URL) -> Memo {
         print("📁 MemoRepository: 🚨 NEW RECORDING RECEIVED - STARTING AUTO-TRANSCRIPTION FLOW")
         print("📁 MemoRepository: File URL: \(url.lastPathComponent)")
         print("📁 MemoRepository: Full path: \(url.path)")
-        
+
         // Verify file exists and is accessible
         guard fileExists(at: url) else {
             print("❌ MemoRepository: Recording file does not exist at \(url.path)")
             return Memo(filename: url.lastPathComponent, fileURL: url, creationDate: Date())
         }
-        
+
         do {
             let resourceValues = try url.resourceValues(forKeys: [.creationDateKey, .fileSizeKey])
             let creationDate = resourceValues.creationDate ?? Date()
             let fileSize = resourceValues.fileSize ?? 0
-            
+
             print("📊 MemoRepository: File size: \(fileSize) bytes")
-            
+
             // Verify file has content
             guard fileSize > 0 else {
                 print("⚠️ MemoRepository: Recording file is empty, skipping")
                 return Memo(filename: url.lastPathComponent, fileURL: url, creationDate: creationDate)
             }
-            
+
             let newMemo = Memo(
                 filename: url.lastPathComponent,
                 fileURL: url,
                 creationDate: creationDate
             )
-            
+
             print("💾 MemoRepository: Saving new recording as memo \(newMemo.filename)")
             let saved = saveAndReturn(newMemo)
-            
+
             // Auto-transcription is orchestrated via memoCreated event to avoid duplicate triggers
             print("✅ MemoRepository: Successfully processed new recording")
             return saved
-        
+
         } catch {
             print("❌ MemoRepository: Failed to process new recording: \(error)")
             return Memo(filename: url.lastPathComponent, fileURL: url, creationDate: Date())
@@ -515,7 +513,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         // For now, log and ignore to maintain signature.
         print("📝 MemoRepository: Metadata update requested (ignored in SwiftData migration) for memo \(memo.filename) — data: \(metadata)")
     }
-    
+
     func renameMemo(_ memo: Memo, newTitle: String) {
         let sanitizedTitle = newTitle.isEmpty ? nil : newTitle
         if let model = fetchMemoModel(id: memo.id) {

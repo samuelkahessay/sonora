@@ -14,4 +14,3 @@ public protocol TranscriptExporting {
     /// - Throws: Any file system write/removal errors encountered during export.
     func makeTranscriptFile(memo: Memo, text: String) throws -> URL
 }
-

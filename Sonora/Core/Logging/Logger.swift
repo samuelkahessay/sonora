@@ -9,11 +9,11 @@ public enum LogLevel: Int, CaseIterable, Comparable, Sendable {
     case warning = 3
     case error = 4
     case critical = 5
-    
+
     public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
         return lhs.rawValue < rhs.rawValue
     }
-    
+
     var displayName: String {
         switch self {
         case .verbose: return "VERBOSE"
@@ -24,7 +24,7 @@ public enum LogLevel: Int, CaseIterable, Comparable, Sendable {
         case .critical: return "CRITICAL"
         }
     }
-    
+
     var emoji: String {
         switch self {
         case .verbose: return "💬"
@@ -35,7 +35,7 @@ public enum LogLevel: Int, CaseIterable, Comparable, Sendable {
         case .critical: return "🚨"
         }
     }
-    
+
     var osLogType: OSLogType {
         switch self {
         case .verbose, .debug: return .debug
@@ -60,7 +60,7 @@ public enum LogCategory: String, CaseIterable, Sendable {
     case error = "Error"
     case system = "System"
     case eventkit = "EventKit"
-    
+
     var emoji: String {
         switch self {
         case .viewModel: return "📱"
@@ -94,7 +94,7 @@ public struct LogContext: @unchecked Sendable {
     public let function: String
     public let correlationId: String?
     public let additionalInfo: [String: Any]?
-    
+
     public init(
         file: String = #file,
         line: Int = #line,
@@ -119,7 +119,7 @@ public protocol LoggerProtocol: Sendable {
         context: LogContext?,
         error: Error?
     )
-    
+
     func verbose(_ message: String, category: LogCategory, context: LogContext?)
     func debug(_ message: String, category: LogCategory, context: LogContext?)
     func info(_ message: String, category: LogCategory, context: LogContext?)
@@ -130,21 +130,21 @@ public protocol LoggerProtocol: Sendable {
 
 /// High-performance, thread-safe logging system following Clean Architecture
 public final class Logger: LoggerProtocol, @unchecked Sendable {
-    
+
     // MARK: - Singleton
     public static let shared = Logger()
-    
+
     // MARK: - Configuration
     private let queue = DispatchQueue(label: "com.sonora.logger", qos: .utility)
     private var currentLogLevel: LogLevel = .info
     private var destinations: Set<LogDestination> = [.console, .osLog]
     private let dateFormatter: DateFormatter
     private let osLog: OSLog
-    
+
     // MARK: - Dedupe
     private var dedupeMap: [String: Date] = [:]
     private let dedupeWindow: TimeInterval = 0.4
-    
+
     // MARK: - Privacy & Performance
     private let maxMessageLength = 1000
     private let sanitizationCache = NSCache<NSString, NSString>()
@@ -156,21 +156,21 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
             #"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b"#,         // Credit card
             #"\b\d{3}-\d{2}-\d{4}\b"#,                           // SSN
             #"Bearer\s+[A-Za-z0-9\-_.~\+/]+=*"#,                   // Bearer tokens
-            #"api[_-]?key["']?\s*[:=]\s*["']?[A-Za-z0-9]{20,}"#,  // API keys
+            #"api[_-]?key["']?\s*[:=]\s*["']?[A-Za-z0-9]{20,}"#  // API keys
         ]
         return patterns.compactMap { try? NSRegularExpression(pattern: $0, options: .caseInsensitive) }
     }()
-    
+
     // MARK: - Initialization
     private init() {
         dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
         osLog = OSLog(subsystem: "com.sonora.app", category: "General")
-        
+
         // Configure sanitization cache
         sanitizationCache.countLimit = 500 // Reasonable cache size
         sanitizationCache.totalCostLimit = 1024 * 1024 // 1MB cache limit
-        
+
         #if DEBUG
         currentLogLevel = .verbose
         destinations = [.console, .osLog]
@@ -179,7 +179,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
         destinations = [.osLog]
         #endif
     }
-    
+
     // MARK: - Configuration Methods
     public func configure(logLevel: LogLevel, destinations: Set<LogDestination> = [.console, .osLog]) {
         queue.async {
@@ -187,7 +187,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
             self.destinations = destinations
         }
     }
-    
+
     // MARK: - Core Logging Method
     public func log(
         level: LogLevel,
@@ -198,12 +198,12 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     ) {
         let logLevel = self.currentLogLevel
         let destinations = self.destinations
-        
+
         guard level >= logLevel else { return }
-        
+
         let truncatedMessage = String(message.prefix(maxMessageLength))
         let messageKeyNSString = NSString(string: truncatedMessage)
-        
+
         // Check cache first for immediate logging
         if let cachedSanitized = sanitizationCache.object(forKey: messageKeyNSString) {
             let cachedString = String(cachedSanitized)
@@ -219,7 +219,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
                     context: context,
                     error: error
                 )
-                
+
                 self.writeToDestinations(formattedMessage, level: level, category: category, destinations: destinations)
             }
         } else {
@@ -227,14 +227,14 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
             let messageKeyString = truncatedMessage // capture Sendable String
             sanitizationQueue.async { [weak self] in
                 guard let self = self else { return }
-                
+
                 let sanitizedMessage = self.performSanitization(truncatedMessage)
                 let sanitizedKey = NSString(string: sanitizedMessage)
-                
+
                 // Cache the result
                 let cacheKey = NSString(string: messageKeyString)
                 self.sanitizationCache.setObject(sanitizedKey, forKey: cacheKey)
-                
+
                 // Log on main queue
                 self.queue.async {
                     // Dedupe check (based on truncated message, level, and category)
@@ -248,7 +248,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
                         context: context,
                         error: error
                     )
-                    
+
                     self.writeToDestinations(formattedMessage, level: level, category: category, destinations: destinations)
                 }
             }
@@ -266,7 +266,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
         dedupeMap[key] = now
         return false
     }
-    
+
     // MARK: - Convenience Methods
     public func verbose(
         _ message: String,
@@ -275,7 +275,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     ) {
         log(level: .verbose, category: category, message: message, context: context, error: nil)
     }
-    
+
     public func debug(
         _ message: String,
         category: LogCategory = .system,
@@ -283,7 +283,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     ) {
         log(level: .debug, category: category, message: message, context: context, error: nil)
     }
-    
+
     public func info(
         _ message: String,
         category: LogCategory = .system,
@@ -291,7 +291,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     ) {
         log(level: .info, category: category, message: message, context: context, error: nil)
     }
-    
+
     public func warning(
         _ message: String,
         category: LogCategory = .error,
@@ -300,7 +300,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     ) {
         log(level: .warning, category: category, message: message, context: context, error: error)
     }
-    
+
     public func error(
         _ message: String,
         category: LogCategory = .error,
@@ -309,7 +309,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     ) {
         log(level: .error, category: category, message: message, context: context, error: error)
     }
-    
+
     public func critical(
         _ message: String,
         category: LogCategory = .error,
@@ -318,7 +318,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     ) {
         log(level: .critical, category: category, message: message, context: context, error: error)
     }
-    
+
     // MARK: - Private Implementation
     private func formatMessage(
         level: LogLevel,
@@ -331,7 +331,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
         let levelEmoji = level.emoji
         let categoryEmoji = category.emoji
         let thread = Thread.isMainThread ? "Main" : "Background"
-        
+
         var components = [
             timestamp,
             "[\(thread)]",
@@ -339,7 +339,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
             "\(categoryEmoji) \(category.rawValue):",
             message
         ]
-        
+
         if let context = context {
             var contextInfo = "[\(context.file):\(context.line) \(context.function)]"
             if let correlationId = context.correlationId {
@@ -347,28 +347,28 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
             }
             components.append(contextInfo)
         }
-        
+
         if let error = error {
             components.append("Error: \(error.localizedDescription)")
         }
-        
+
         return components.joined(separator: " ")
     }
-        
+
     private func performSanitization(_ message: String) -> String {
         var sanitized = message
-        
+
         // Early exit if no sensitive patterns to check
         guard !sensitivePatterns.isEmpty else { return sanitized }
-        
+
         // Quick check: if message doesn't contain common sensitive indicators, skip regex
-        let hasCommonIndicators = sanitized.contains("@") || 
-                                 sanitized.contains("-") || 
-                                 sanitized.contains("Bearer") || 
+        let hasCommonIndicators = sanitized.contains("@") ||
+                                 sanitized.contains("-") ||
+                                 sanitized.contains("Bearer") ||
                                  sanitized.contains("api")
-        
+
         guard hasCommonIndicators else { return sanitized }
-        
+
         // Perform regex sanitization
         for pattern in sensitivePatterns {
             let range = NSRange(location: 0, length: sanitized.utf16.count)
@@ -379,32 +379,32 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
                 withTemplate: "[REDACTED]"
             )
         }
-        
+
         return sanitized
     }
-    
+
     private func writeToDestinations(_ message: String, level: LogLevel, category: LogCategory, destinations: Set<LogDestination>) {
         for destination in destinations {
             switch destination {
             case .console:
                 print(message)
-                
+
             case .osLog:
                 os_log("%{public}@", log: osLog, type: level.osLogType, message)
-                
+
             case .file(let url):
                 writeToFile(message, url: url)
-                
+
             case .remote(let url):
                 sendToRemoteService(message, url: url, level: level, category: category)
             }
         }
     }
-    
+
     private func writeToFile(_ message: String, url: URL) {
         do {
             let data = (message + "\n").data(using: .utf8) ?? Data()
-            
+
             if FileManager.default.fileExists(atPath: url.path) {
                 let fileHandle = try FileHandle(forWritingTo: url)
                 fileHandle.seekToEndOfFile()
@@ -417,7 +417,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
             print("Logger: Failed to write to file: \(error)")
         }
     }
-    
+
     private func sendToRemoteService(_ message: String, url: URL, level: LogLevel, category: LogCategory) {
         // No-op remote logging; acknowledge parameters to avoid unused warnings
         os_log("Remote logging not configured (%{public}@) [%{public}@/%{public}@]: %{public}@",
@@ -437,7 +437,7 @@ public final class PerformanceTimer {
     private let operation: String
     private let category: LogCategory
     private let logger: any LoggerProtocol
-    
+
     public init(
         operation: String,
         category: LogCategory = .performance,
@@ -447,25 +447,25 @@ public final class PerformanceTimer {
         self.category = category
         self.logger = logger
         self.startTime = CFAbsoluteTimeGetCurrent()
-        
+
         logger.debug("Started: \(operation)", category: category, context: LogContext())
     }
-    
+
     public func finish(additionalInfo: String? = nil) -> TimeInterval {
         let duration = CFAbsoluteTimeGetCurrent() - startTime
         let durationMs = duration * 1000
-        
+
         var message = "Completed: \(operation) in \(String(format: "%.2f", durationMs))ms"
         if let info = additionalInfo {
             message += " - \(info)"
         }
-        
+
         let level: LogLevel = durationMs > 1000 ? .warning : .info
         logger.log(level: level, category: category, message: message, context: LogContext(), error: nil)
-        
+
         return duration
     }
-    
+
     deinit {
         _ = finish()
     }
@@ -474,7 +474,7 @@ public final class PerformanceTimer {
 // MARK: - Convenience Extensions
 
 public extension LoggerProtocol {
-    
+
     func audio(
         _ message: String,
         level: LogLevel = .info,
@@ -483,7 +483,7 @@ public extension LoggerProtocol {
     ) {
         log(level: level, category: .audio, message: message, context: context, error: error)
     }
-    
+
     func transcription(
         _ message: String,
         level: LogLevel = .info,
@@ -492,7 +492,7 @@ public extension LoggerProtocol {
     ) {
         log(level: level, category: .transcription, message: message, context: context, error: error)
     }
-    
+
     func analysis(
         _ message: String,
         level: LogLevel = .info,
@@ -501,7 +501,7 @@ public extension LoggerProtocol {
     ) {
         log(level: level, category: .analysis, message: message, context: context, error: error)
     }
-    
+
     func repository(
         _ message: String,
         level: LogLevel = .info,
@@ -510,7 +510,7 @@ public extension LoggerProtocol {
     ) {
         log(level: level, category: .repository, message: message, context: context, error: error)
     }
-    
+
     func useCase(
         _ message: String,
         level: LogLevel = .info,
@@ -519,7 +519,7 @@ public extension LoggerProtocol {
     ) {
         log(level: level, category: .useCase, message: message, context: context, error: error)
     }
-    
+
     func viewModel(
         _ message: String,
         level: LogLevel = .info,

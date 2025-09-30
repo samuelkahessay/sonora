@@ -15,7 +15,7 @@ struct DistillResultView: View {
     private var isPro: Bool { DIContainer.shared.storeKitService().isPro }
     @State private var showPaywall: Bool = false
     @SwiftUI.Environment(\.diContainer) private var container: DIContainer
-    
+
     // Convenience initializers for backward compatibility
     init(data: DistillData, envelope: AnalyzeEnvelope<DistillData>, memoId: UUID? = nil) {
         self.data = data
@@ -32,33 +32,33 @@ struct DistillResultView: View {
         self.progress = progress
         self.memoId = memoId
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             // Progress indicator for parallel processing
             if let progress = progress, progress.completedComponents < progress.totalComponents {
                 progressSection(progress)
             }
-            
+
             // Summary Section
             if let summary = effectiveSummary {
                 summarySection(summary)
             } else if isShowingProgress {
                 summaryPlaceholder
             }
-            
+
             // Action Items Section (host both tasks and detections)
             actionItemsHostSection
-            
+
             // Reflection Questions Section
             if let reflectionQuestions = effectiveReflectionQuestions, !reflectionQuestions.isEmpty {
                 reflectionQuestionsSection(reflectionQuestions)
             } else if isShowingProgress {
                 reflectionQuestionsPlaceholder
             }
-        
+
             // Performance info removed for cleaner UI
-            
+
             // Copy results action (also triggers smart transcript expand via notification)
             HStack {
                 Spacer()
@@ -79,22 +79,22 @@ struct DistillResultView: View {
         .textSelection(.enabled)
         .sheet(isPresented: $showPaywall) { PaywallView() }
     }
-    
+
     // MARK: - Computed Properties
-    
+
     private var isShowingProgress: Bool {
         progress != nil && partialData != nil
     }
-    
+
     private var isProgressComplete: Bool {
         guard let p = progress else { return false }
         return p.completedComponents >= p.totalComponents
     }
-    
+
     private var effectiveSummary: String? {
         return data?.summary ?? partialData?.summary
     }
-    
+
     private var effectiveReflectionQuestions: [String]? {
         return data?.reflection_questions ?? partialData?.reflectionQuestions
     }
@@ -124,8 +124,8 @@ struct DistillResultView: View {
     @State private var createdArtifacts: [UUID: CreatedArtifact] = [:]
     @State private var availableCalendars: [CalendarDTO] = []
     @State private var availableReminderLists: [CalendarDTO] = []
-    @State private var defaultCalendar: CalendarDTO? = nil
-    @State private var defaultReminderList: CalendarDTO? = nil
+    @State private var defaultCalendar: CalendarDTO?
+    @State private var defaultReminderList: CalendarDTO?
     @State private var calendarsLoaded = false
     @State private var reminderListsLoaded = false
     @StateObject private var permissionService = DIContainer.shared.eventKitPermissionService() as! EventKitPermissionService
@@ -190,9 +190,9 @@ struct DistillResultView: View {
             entries(for: memoId).contains { $0.id == key }
         }
     }
-    
+
     // MARK: - Progress Section
-    
+
     @ViewBuilder
     private func progressSection(_ progress: DistillProgressUpdate) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -203,9 +203,9 @@ struct DistillResultView: View {
                 Text("Processing Components (\(progress.completedComponents)/\(progress.totalComponents))")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                
+
                 Spacer()
-                
+
                 if let latestComponent = progress.latestComponent {
                     Text(latestComponent.displayName)
                         .font(.caption)
@@ -216,7 +216,7 @@ struct DistillResultView: View {
                         .cornerRadius(4)
                 }
             }
-            
+
             ProgressView(value: progress.progress)
                 .progressViewStyle(LinearProgressViewStyle(tint: .semantic(.brandPrimary)))
         }
@@ -225,9 +225,9 @@ struct DistillResultView: View {
         .cornerRadius(8)
         .animation(.easeInOut(duration: 0.3), value: progress.completedComponents)
     }
-    
+
     // MARK: - Summary Section
-    
+
     @ViewBuilder
     private func summarySection(_ summary: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -240,7 +240,7 @@ struct DistillResultView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.semantic(.textPrimary))
             }
-            
+
             Text(summary)
                 .font(.body)
                 .foregroundColor(.semantic(.textPrimary))
@@ -248,7 +248,7 @@ struct DistillResultView: View {
                 .multilineTextAlignment(.leading)
         }
     }
-    
+
     // MARK: - Action Items Host Section
     @ViewBuilder
     private var actionItemsHostSection: some View {
@@ -338,9 +338,9 @@ struct DistillResultView: View {
             )
         }
     }
-    
+
     // MARK: - Reflection Questions Section
-    
+
     @ViewBuilder
     private func reflectionQuestionsSection(_ questions: [String]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -353,7 +353,7 @@ struct DistillResultView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.semantic(.textPrimary))
             }
-            
+
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(Array(questions.enumerated()), id: \.offset) { index, question in
                     HStack(alignment: .top, spacing: 10) {
@@ -362,7 +362,7 @@ struct DistillResultView: View {
                             .fontWeight(.medium)
                             .foregroundColor(.semantic(.textSecondary))
                             .frame(minWidth: 20)
-                        
+
                         Text(question)
                             .font(.callout)
                             .foregroundColor(.semantic(.textPrimary))
@@ -952,9 +952,9 @@ struct DistillResultView: View {
 
         return (finalEvents, finalReminders)
     }
-    
+
     // MARK: - Placeholder Views
-    
+
     @ViewBuilder
     private var summaryPlaceholder: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -966,12 +966,12 @@ struct DistillResultView: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.semantic(.textSecondary))
-                
+
                 Spacer()
-                
+
                 LoadingIndicator(size: .small)
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(Color.semantic(.separator).opacity(0.3))
@@ -997,12 +997,12 @@ struct DistillResultView: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.semantic(.textSecondary))
-                
+
                 Spacer()
-                
+
                 LoadingIndicator(size: .small)
             }
-            
+
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(0..<3, id: \.self) { index in
                     HStack(alignment: .top, spacing: 10) {
@@ -1011,7 +1011,7 @@ struct DistillResultView: View {
                             .fontWeight(.medium)
                             .foregroundColor(.semantic(.textSecondary))
                             .frame(minWidth: 20)
-                        
+
                         VStack(alignment: .leading, spacing: 4) {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(Color.semantic(.separator).opacity(0.3))
@@ -1021,7 +1021,7 @@ struct DistillResultView: View {
                                 .frame(height: 12)
                                 .scaleEffect(x: 0.6, anchor: .leading)
                         }
-                        
+
                         Spacer()
                     }
                     .padding(12)
@@ -1033,9 +1033,9 @@ struct DistillResultView: View {
         .redacted(reason: .placeholder)
         .frame(minHeight: 180)
     }
-    
+
     // Performance info removed — simplified progress UI (no technical details)
-    
+
     // Build a concatenated text representation for copying
     private func buildCopyText() -> String {
         var parts: [String] = []

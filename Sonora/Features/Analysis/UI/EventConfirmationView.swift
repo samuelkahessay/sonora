@@ -21,12 +21,12 @@ struct EventConfirmationView: View {
     @SwiftUI.Environment(\.dismiss) private var dismiss: DismissAction
 
     @State private var calendars: [CalendarDTO] = []
-    @State private var selectedCalendar: CalendarDTO? = nil
+    @State private var selectedCalendar: CalendarDTO?
     @State private var selectedEventIds: Set<String> = []
     @State private var editableEvents: [String: EditableEvent] = [:]
     @State private var isLoading: Bool = false
-    @State private var errorMessage: String? = nil
-    @State private var editingEventId: String? = nil
+    @State private var errorMessage: String?
+    @State private var editingEventId: String?
 
     var body: some View {
         NavigationView {

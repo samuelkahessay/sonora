@@ -52,4 +52,3 @@ enum ModelConfigurationInit {
         return ModelConfiguration(isStoredInMemoryOnly: true)
     }
 }
-

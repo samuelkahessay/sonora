@@ -18,7 +18,7 @@ final class PromptViewModel: ObservableObject {
     private let getDynamic: any GetDynamicPromptUseCaseProtocol
     private let getCategory: any GetPromptCategoryUseCaseProtocol
     private var refreshTask: Task<Void, Never>?
-    private var rotationToken: PromptRotationToken? = nil
+    private var rotationToken: PromptRotationToken?
 
     init(getDynamic: any GetDynamicPromptUseCaseProtocol, getCategory: any GetPromptCategoryUseCaseProtocol) {
         self.getDynamic = getDynamic

@@ -6,7 +6,7 @@ protocol AudioRepository: ObservableObject {
     // MARK: - Playback Properties
     var playingMemo: Memo? { get set }
     var isPlaying: Bool { get set }
-    
+
     // MARK: - Recording State Properties
     var isRecording: Bool { get }
     var recordingTime: TimeInterval { get }
@@ -16,7 +16,7 @@ protocol AudioRepository: ObservableObject {
     var autoStopMessage: String? { get }
     var isInCountdown: Bool { get }
     var remainingTime: TimeInterval { get }
-    
+
     // MARK: - Reactive Publishers
     var isRecordingPublisher: AnyPublisher<Bool, Never> { get }
     var recordingTimePublisher: AnyPublisher<TimeInterval, Never> { get }
@@ -29,13 +29,13 @@ protocol AudioRepository: ObservableObject {
     var isPausedPublisher: AnyPublisher<Bool, Never> { get }
     /// Current pause state snapshot
     var isPaused: Bool { get }
-    
+
     // MARK: - Playback Control
     func playAudio(at url: URL) throws
     func pauseAudio()
     func stopAudio()
     func isAudioPlaying(for memo: Memo) -> Bool
-    
+
     // MARK: - Recording Control
     /// Start recording with optional per-session cap override (seconds). Pass nil for default behavior.
     func startRecording(allowedCap: TimeInterval?) async throws -> UUID
@@ -45,7 +45,7 @@ protocol AudioRepository: ObservableObject {
     func pauseRecording()
     func resumeRecording()
     func checkMicrophonePermissions()
-    
+
     // MARK: - Recording Callbacks
     func setRecordingFinishedHandler(_ handler: @escaping (URL) -> Void)
     func setRecordingFailedHandler(_ handler: @escaping (Error) -> Void)

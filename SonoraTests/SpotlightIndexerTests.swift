@@ -28,4 +28,3 @@ final class SpotlightIndexerTests: XCTestCase {
         XCTAssertTrue(mock.indexed.contains(memo.id))
     }
 }
-

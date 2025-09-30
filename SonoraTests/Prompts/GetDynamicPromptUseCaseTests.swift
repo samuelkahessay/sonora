@@ -84,7 +84,7 @@ struct FixedDateProvider: DateProvider, Sendable {
         let weekday = calendar.component(.weekday, from: date)
         let first = calendar.firstWeekday
         let offset = (weekday - first + 7) % 7
-        switch offset { case 0,1: return .startOfWeek; case 2,3: return .midWeek; default: return .endOfWeek }
+        switch offset { case 0, 1: return .startOfWeek; case 2, 3: return .midWeek; default: return .endOfWeek }
     }
 }
 

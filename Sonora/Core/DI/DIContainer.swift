@@ -8,13 +8,13 @@ protocol Resolver {
 /// Simple dependency injection container for Sonora services
 /// Provides protocol-based access to existing service instances
 final class DIContainer: ObservableObject, Resolver {
-    
+
     // MARK: - Singleton
     static let shared = DIContainer()
-    
+
     // MARK: - Registration Container
     private var registrations: [ObjectIdentifier: Any] = [:]
-    
+
     // MARK: - Private Service Instances (Selective Memory Management)
     // Protocol types cannot use weak references, so we use a hybrid approach:
     // - Concrete class types: weak references where beneficial
@@ -56,7 +56,7 @@ final class DIContainer: ObservableObject, Resolver {
     // MARK: - Phase 2: Core Optimization Services
     private var _audioQualityManager: AudioQualityManager?
     private var _memoryPressureDetector: MemoryPressureDetector?
-    
+
     // MARK: - EventKit Services (Protocol References)
     private var _eventKitRepository: (any EventKitRepository)?
     private var _eventKitPermissionService: (any EventKitPermissionServiceProtocol)?
@@ -64,56 +64,56 @@ final class DIContainer: ObservableObject, Resolver {
     private var _createReminderUseCase: (any CreateReminderUseCaseProtocol)?
     private var _detectEventsAndRemindersUseCase: (any DetectEventsAndRemindersUseCaseProtocol)?
     private var _buildExportBundleUseCase: (any BuildExportBundleUseCaseProtocol)?
-    
+
     // MARK: - Core Services (Strong References)
     // These services need to stay alive for the app lifetime
     private var _operationCoordinator: (any OperationCoordinatorProtocol)!
-    
+
     // MARK: - Service Lifecycle Management
     private var serviceAccessTimes: [String: Date] = [:]
     private let serviceCleanupInterval: TimeInterval = 300 // 5 minutes
     private var lastCleanupTime = Date()
-    
+
     // MARK: - Initialization
     private init() {
         // Services will be injected after initialization
         print("🏭 DIContainer: Initialized, waiting for service injection")
     }
-    
+
     // MARK: - Configuration Guard
     private var isConfigured: Bool = false
-    
+
     // MARK: - Memory Management
-    
+
     /// Track service access for lifecycle management
     func trackServiceAccess(_ serviceName: String) {
         serviceAccessTimes[serviceName] = Date()
         scheduleCleanupIfNeeded()
     }
-    
+
     /// Schedule cleanup if needed based on memory pressure
     private func scheduleCleanupIfNeeded() {
         let now = Date()
         guard now.timeIntervalSince(lastCleanupTime) > serviceCleanupInterval else { return }
-        
+
         Task.detached(priority: .utility) { [weak self] in
             await self?.performMemoryCleanup()
         }
     }
-    
+
     /// Perform memory cleanup based on access patterns and system state
     @MainActor
     private func performMemoryCleanup() {
         let now = Date()
         lastCleanupTime = now
-        
+
         // Check system memory pressure
         let memoryPressure = ProcessInfo.processInfo.thermalState
         let aggressiveCleanup = memoryPressure != .nominal
         let cleanupThreshold: TimeInterval = aggressiveCleanup ? 120 : serviceCleanupInterval
-        
+
         var cleanedServices: [String] = []
-        
+
         // Clean up unused services based on access time
         for (serviceName, lastAccess) in serviceAccessTimes {
             if now.timeIntervalSince(lastAccess) > cleanupThreshold {
@@ -122,21 +122,21 @@ final class DIContainer: ObservableObject, Resolver {
                 cleanedServices.append(serviceName)
             }
         }
-        
+
         if !cleanedServices.isEmpty {
             let pressureIndicator = aggressiveCleanup ? " (memory pressure)" : ""
             _logger?.debug("DIContainer: Cleaned \(cleanedServices.count) unused services\(pressureIndicator): \(cleanedServices.joined(separator: ", "))", category: .system, context: LogContext())
         }
     }
-    
+
     // MARK: - Registration Methods
-    
+
     /// Register a service with a factory closure
     func register<T>(_ type: T.Type, factory: @escaping (any Resolver) -> T) {
         let key = ObjectIdentifier(type)
         registrations[key] = factory
     }
-    
+
     /// Resolve a service from registrations
     func resolve<T>(_ type: T.Type) -> T? {
         let key = ObjectIdentifier(type)
@@ -145,31 +145,31 @@ final class DIContainer: ObservableObject, Resolver {
         }
         return factory(self)
     }
-    
+
     /// Setup repository registrations
     @MainActor
     private func setupRepositories() {
         // Register focused audio services
-        register(AudioSessionService.self) { resolver in
+        register(AudioSessionService.self) { _ in
             return AudioSessionService()
         }
-        
-        register(AudioRecordingService.self) { resolver in
+
+        register(AudioRecordingService.self) { _ in
             return AudioRecordingService()
         }
-        
-        register(BackgroundTaskService.self) { resolver in
+
+        register(BackgroundTaskService.self) { _ in
             return BackgroundTaskService()
         }
-        
-        register(AudioPermissionService.self) { resolver in
+
+        register(AudioPermissionService.self) { _ in
             return AudioPermissionService()
         }
-        
-        register(RecordingTimerService.self) { resolver in
+
+        register(RecordingTimerService.self) { _ in
             return RecordingTimerService()
         }
-        
+
         // Register BackgroundAudioService with orchestrated services
         register(BackgroundAudioService.self) { resolver in
             let sessionService = resolver.resolve(AudioSessionService.self)!
@@ -185,12 +185,12 @@ final class DIContainer: ObservableObject, Resolver {
                 timerService: timerService
             )
         }
-        
+
         // Register SystemNavigator
         register((any SystemNavigator).self) { _ in
             return SystemNavigatorImpl() as any SystemNavigator
         }
-        
+
         // Register AudioRepository 
         register((any AudioRepository).self) { resolver in
             let backgroundService = resolver.resolve(BackgroundAudioService.self)!
@@ -201,7 +201,7 @@ final class DIContainer: ObservableObject, Resolver {
         register((any RecordingUsageRepository).self) { _ in
             return RecordingUsageRepositoryImpl() as any RecordingUsageRepository
         }
-        
+
         // Register StoreKit service for subscriptions
         register((any StoreKitServiceProtocol).self) { _ in
             return StoreKitService() as any StoreKitServiceProtocol
@@ -212,7 +212,7 @@ final class DIContainer: ObservableObject, Resolver {
             let sk = resolver.resolve((any StoreKitServiceProtocol).self) ?? (StoreKitService() as any StoreKitServiceProtocol)
             return DefaultRecordingQuotaPolicy(isProProvider: { sk.isPro }) as any RecordingQuotaPolicyProtocol
         }
-                
+
         // Register LiveActivityService
         register((any LiveActivityServiceProtocol).self) { _ in
             return LiveActivityService() as any LiveActivityServiceProtocol
@@ -231,7 +231,7 @@ final class DIContainer: ObservableObject, Resolver {
             return DefaultLocalizationProvider() as any LocalizationProvider
         }
     }
-    
+
     /// Configure DIContainer with shared service instances
     /// This ensures all parts of the app use the same service instances
     @MainActor
@@ -246,12 +246,12 @@ final class DIContainer: ObservableObject, Resolver {
         self._operationCoordinator = OperationCoordinator.shared
         // Setup repositories first
         setupRepositories()
-        
+
         // Initialize core infrastructure
         self._logger = logger ?? Logger.shared
         self._eventBus = EventBus.shared
         // Persistence-backed repositories are initialized once ModelContext is injected
-        
+
         // Initialize services from registrations
         // initialize DI-managed services
         self._audioRepository = resolve((any AudioRepository).self)!
@@ -271,7 +271,7 @@ final class DIContainer: ObservableObject, Resolver {
             detector.startMonitoring()
             self._memoryPressureDetector = detector
         }
-        
+
         // Initialize external API services  
         // prefer factory-based creation; remove legacy _transcriptionAPI instance
         self._analysisService = analysisService ?? AnalysisService()
@@ -279,9 +279,9 @@ final class DIContainer: ObservableObject, Resolver {
         // Coordinator already initialized above
         // Initialize Event Handler Registry with shared EventBus (via protocol)
         self._eventHandlerRegistry = EventHandlerRegistry.shared
-        
+
         // Defer repository initialization until ModelContext is set
-        
+
         _logger?.info("DIContainer: Configured with shared service instances", category: .system, context: LogContext())
         if let memoRepo = self._memoRepository {
             _logger?.debug("DIContainer: MemoRepository: \(ObjectIdentifier(memoRepo))", category: .system, context: LogContext())
@@ -293,7 +293,7 @@ final class DIContainer: ObservableObject, Resolver {
             _logger?.debug("DIContainer: AnalysisRepository: \(ObjectIdentifier(analysisRepoObj as AnyObject))", category: .system, context: LogContext())
         }
     }
-    
+
     /// Check if container has been properly configured
     @MainActor
     func ensureConfigured() {
@@ -301,9 +301,9 @@ final class DIContainer: ObservableObject, Resolver {
             configure()
         }
     }
-    
+
     // MARK: - Protocol-Based Service Access
-    
+
     /// Get transcription service factory (modern approach)
     @MainActor
     func transcriptionServiceFactory() -> TranscriptionServiceFactory {
@@ -311,7 +311,7 @@ final class DIContainer: ObservableObject, Resolver {
         guard let factory = _transcriptionServiceFactory else { fatalError("DIContainer not configured: transcriptionServiceFactory") }
         return factory
     }
-    
+
     /// Get start transcription use case (cached)
     @MainActor
     func startTranscriptionUseCase() -> any StartTranscriptionUseCaseProtocol {
@@ -331,7 +331,7 @@ final class DIContainer: ObservableObject, Resolver {
         _startTranscriptionUseCase = uc
         return uc
     }
-    
+
     /// Get system navigator
     @MainActor
     func systemNavigator() -> any SystemNavigator {
@@ -339,7 +339,7 @@ final class DIContainer: ObservableObject, Resolver {
         guard let nav = _systemNavigator else { fatalError("DIContainer not configured: systemNavigator") }
         return nav
     }
-    
+
     /// Get logger service
     @MainActor
     func logger() -> any LoggerProtocol {
@@ -451,14 +451,14 @@ final class DIContainer: ObservableObject, Resolver {
         }
         return _buildExportBundleUseCase!
     }
-    
+
     /// Get operation coordinator service
     @MainActor
     func operationCoordinator() -> any OperationCoordinatorProtocol {
         ensureConfigured()
         return _operationCoordinator
     }
-    
+
     /// Get live activity service
     @MainActor
     func liveActivityService() -> any LiveActivityServiceProtocol {
@@ -466,7 +466,7 @@ final class DIContainer: ObservableObject, Resolver {
         guard let service = _liveActivityService else { fatalError("DIContainer not configured: liveActivityService") }
         return service
     }
-    
+
     /// Get event bus (protocol)
     @MainActor
     func eventBus() -> any EventBusProtocol {
@@ -474,7 +474,7 @@ final class DIContainer: ObservableObject, Resolver {
         guard let bus = _eventBus else { fatalError("DIContainer not configured: eventBus") }
         return bus
     }
-    
+
     /// Get event handler registry (protocol)
     @MainActor
     func eventHandlerRegistry() -> any EventHandlerRegistryProtocol {
@@ -490,9 +490,9 @@ final class DIContainer: ObservableObject, Resolver {
         guard let idx = _spotlightIndexer else { fatalError("DIContainer not configured: spotlightIndexer") }
         return idx
     }
-    
+
     // MARK: - EventKit Services
-    
+
     /// Get EventKit repository
     @MainActor
     func eventKitRepository() -> any EventKitRepository {
@@ -502,7 +502,7 @@ final class DIContainer: ObservableObject, Resolver {
         }
         return _eventKitRepository!
     }
-    
+
     /// Get EventKit permission service
     @MainActor
     func eventKitPermissionService() -> any EventKitPermissionServiceProtocol {
@@ -512,7 +512,7 @@ final class DIContainer: ObservableObject, Resolver {
         }
         return _eventKitPermissionService!
     }
-    
+
     /// Factory: CreateCalendarEventUseCase
     @MainActor
     func createCalendarEventUseCase() -> any CreateCalendarEventUseCaseProtocol {
@@ -527,7 +527,7 @@ final class DIContainer: ObservableObject, Resolver {
         }
         return _createCalendarEventUseCase!
     }
-    
+
     /// Factory: CreateReminderUseCase
     @MainActor
     func createReminderUseCase() -> any CreateReminderUseCaseProtocol {
@@ -542,7 +542,7 @@ final class DIContainer: ObservableObject, Resolver {
         }
         return _createReminderUseCase!
     }
-    
+
     /// Factory: DetectEventsAndRemindersUseCase
     @MainActor
     func detectEventsAndRemindersUseCase() -> any DetectEventsAndRemindersUseCaseProtocol {
@@ -558,7 +558,7 @@ final class DIContainer: ObservableObject, Resolver {
         }
         return _detectEventsAndRemindersUseCase!
     }
-    
+
     /// Factory: CreateTranscriptShareFileUseCase
     @MainActor
     func createTranscriptShareFileUseCase() -> CreateTranscriptShareFileUseCase {
@@ -696,7 +696,7 @@ final class DIContainer: ObservableObject, Resolver {
             )
         }
     }
-    
+
 }
 
 // The container is accessed from SwiftUI on the main actor

@@ -3,25 +3,25 @@ import Foundation
 /// App-wide events that can be published and subscribed to
 /// Supports reactive programming patterns and loose coupling between components
 public enum AppEvent: Equatable {
-    
+
     // MARK: - Memo Lifecycle Events
-    
+
     /// Published when a new memo is created and saved
     case memoCreated(Memo)
-    
+
     // MARK: - Recording Events
-    
+
     /// Published when audio recording starts for a memo
     case recordingStarted(memoId: UUID)
-    
+
     /// Published when audio recording completes successfully
     case recordingCompleted(memoId: UUID)
-    
+
     // MARK: - Transcription Events
-    
+
     /// Published when transcription completes successfully
     case transcriptionCompleted(memoId: UUID, text: String)
-    
+
     /// Published when a route is decided for a transcription request
     /// route: "local" or "cloud"; reason: optional description for fallback
     case transcriptionRouteDecided(memoId: UUID, route: String, reason: String?)
@@ -29,9 +29,9 @@ public enum AppEvent: Equatable {
     /// Published when transcription makes progress (0.0 ... 1.0)
     /// step is an optional human-readable status message
     case transcriptionProgress(memoId: UUID, fraction: Double, step: String?)
-    
+
     // MARK: - Analysis Events
-    
+
     /// Published when any analysis type completes successfully
     case analysisCompleted(memoId: UUID, type: AnalysisMode, result: String)
 
@@ -90,15 +90,15 @@ public enum AppEvent: Equatable {
 
     /// Microphone permission status changed (result of a permission request)
     case microphonePermissionStatusChanged(status: MicrophonePermissionStatus)
-    
+
     // MARK: - Event Properties
-    
+
     /// The memo ID associated with this event (if applicable)
     public var memoId: UUID? {
         switch self {
         case .memoCreated(let memo):
             return memo.id
-        case .recordingStarted(let memoId), 
+        case .recordingStarted(let memoId),
              .recordingCompleted(let memoId),
              .transcriptionCompleted(let memoId, _),
              .transcriptionRouteDecided(let memoId, _, _),
@@ -109,7 +109,7 @@ public enum AppEvent: Equatable {
             return nil
         case .navigateOpenMemoByID(let memoId):
             return memoId
-        case .microphonePermissionStatusChanged(_):
+        case .microphonePermissionStatusChanged:
             return nil
         case .calendarEventCreated(let memoId, _):
             return memoId
@@ -122,7 +122,7 @@ public enum AppEvent: Equatable {
             return nil
         }
     }
-    
+
     /// Human-readable description of the event
     public var description: String {
         switch self {
@@ -176,7 +176,7 @@ public enum AppEvent: Equatable {
             return "Prompt favorite toggled: id=\(id), isFavorite=\(isFav)"
         }
     }
-    
+
     /// Event category for filtering or logging purposes
     public var category: EventCategory {
         switch self {
@@ -209,7 +209,7 @@ public enum EventCategory: String, CaseIterable {
     case recording = "recording"
     case transcription = "transcription"
     case analysis = "analysis"
-    
+
     public var displayName: String {
         switch self {
         case .memo: return "Memo"

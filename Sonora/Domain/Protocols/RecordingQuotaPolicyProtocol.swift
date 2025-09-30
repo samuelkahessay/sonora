@@ -5,4 +5,3 @@ import Foundation
 public protocol RecordingQuotaPolicyProtocol: Sendable {
     func monthlyLimit(for service: TranscriptionServiceType) -> TimeInterval?
 }
-

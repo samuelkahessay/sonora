@@ -12,18 +12,18 @@ enum AnalysisError: LocalizedError {
     case networkError(String)
     case invalidResponse
     case serviceUnavailable
-    
+
     // MARK: - Business Logic Errors
     case emptyTranscript
     case transcriptTooShort
     case analysisServiceError(String)
     case systemBusy
-    
+
     // MARK: - Repository & Cache Errors
     case cacheError(String)
     case repositoryError(String)
     case invalidMemoId
-    
+
     var errorDescription: String? {
         switch self {
         // Network & Service Errors
@@ -43,7 +43,7 @@ enum AnalysisError: LocalizedError {
             return "Invalid response from analysis service"
         case .serviceUnavailable:
             return "Analysis service is currently unavailable"
-            
+
         // Business Logic Errors
         case .emptyTranscript:
             return "Transcript is empty or contains only whitespace"
@@ -53,7 +53,7 @@ enum AnalysisError: LocalizedError {
             return "Analysis service error: \(message)"
         case .systemBusy:
             return "System is busy - analysis queue is full"
-            
+
         // Repository & Cache Errors
         case .cacheError(let message):
             return "Cache error: \(message)"
@@ -63,7 +63,7 @@ enum AnalysisError: LocalizedError {
             return "Invalid memo ID provided"
         }
     }
-    
+
     var recoverySuggestion: String? {
         switch self {
         // Network & Service Errors
@@ -83,7 +83,7 @@ enum AnalysisError: LocalizedError {
             return "The analysis service returned an unexpected response. Please try again."
         case .serviceUnavailable:
             return "Please try again later when the analysis service is available."
-            
+
         // Business Logic Errors
         case .emptyTranscript:
             return "Please provide a valid transcript with content."
@@ -93,7 +93,7 @@ enum AnalysisError: LocalizedError {
             return "Please try again later or check your network connection."
         case .systemBusy:
             return "Please try again in a few moments when the system is less busy."
-            
+
         // Repository & Cache Errors
         case .cacheError:
             return "The analysis will continue without caching."

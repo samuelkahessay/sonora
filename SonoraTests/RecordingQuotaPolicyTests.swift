@@ -8,4 +8,3 @@ struct RecordingQuotaPolicyTests {
         #expect(limit == 3600)
     }
 }
-

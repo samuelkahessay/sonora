@@ -115,7 +115,7 @@ public final class GetDynamicPromptUseCase: GetDynamicPromptUseCaseProtocol, @un
         let seed = seedString(now: now, dayPart: dayPart, weekPart: weekPart)
 
         var chosen: RecordingPrompt?
-        var newToken: PromptRotationToken? = nil
+        var newToken: PromptRotationToken?
 
         if request.policy == .exploration {
             // Use or create rotation order

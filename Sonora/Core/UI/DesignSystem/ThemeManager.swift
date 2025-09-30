@@ -5,7 +5,7 @@ enum ThemeMode: String, CaseIterable, Identifiable, Codable {
     case system = "system"
     case light = "light"
     case dark = "dark"
-    
+
     var id: String { rawValue }
 }
 
@@ -16,7 +16,7 @@ final class ThemeManager: ObservableObject {
     @Published var useGlassEffects: Bool { didSet { persist() } }
     @Published var reducedMotion: Bool { didSet { persist() } }
     @Published var accentColor: Color { didSet { persist() } }
-    
+
     init(
         mode: ThemeMode? = nil,
         useGlassEffects: Bool? = nil,
@@ -28,13 +28,13 @@ final class ThemeManager: ObservableObject {
         self.useGlassEffects = useGlassEffects ?? stored.useGlassEffects
         self.reducedMotion = reducedMotion ?? stored.reducedMotion
         self.accentColor = accentColor ?? stored.accentColor
-        
+
         // Subscribe to accessibility changes
         setupAccessibilityObservers()
     }
-    
+
     // MARK: - Accessibility
-    
+
     private func setupAccessibilityObservers() {
         NotificationCenter.default.publisher(for: UIAccessibility.reduceMotionStatusDidChangeNotification)
             .receive(on: RunLoop.main)
@@ -42,11 +42,11 @@ final class ThemeManager: ObservableObject {
                 self?.reducedMotion = UIAccessibility.isReduceMotionEnabled
             }
             .store(in: &cancellables)
-        
+
         // Initial value
         reducedMotion = UIAccessibility.isReduceMotionEnabled
     }
-    
+
     private var cancellables = Set<AnyCancellable>()
 }
 
@@ -58,17 +58,17 @@ private extension ThemeManager {
         let reducedMotion: Bool
         let accentColorHex: String
     }
-    
+
     static func loadSettings() -> (mode: ThemeMode, useGlassEffects: Bool, reducedMotion: Bool, accentColor: Color) {
         guard let data = UserDefaults.standard.data(forKey: "app.theme.settings"),
               let settings = try? JSONDecoder().decode(StoredSettings.self, from: data) else {
             return (.system, false, false, .blue)
         }
-        
+
         let accentColor = Color(hexString: settings.accentColorHex)
         return (settings.mode, settings.useGlassEffects, settings.reducedMotion, accentColor)
     }
-    
+
     func persist() {
         let settings = StoredSettings(
             mode: mode,
@@ -76,10 +76,9 @@ private extension ThemeManager {
             reducedMotion: reducedMotion,
             accentColorHex: accentColor.toHex() ?? "#007AFF"
         )
-        
+
         if let data = try? JSONEncoder().encode(settings) {
             UserDefaults.standard.set(data, forKey: "app.theme.settings")
         }
     }
 }
-

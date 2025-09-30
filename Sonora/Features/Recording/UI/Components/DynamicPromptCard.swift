@@ -3,7 +3,7 @@ import SwiftUI
 struct DynamicPromptCard: View {
     let prompt: InterpolatedPrompt
     let onRefresh: () -> Void
-    
+
     @SwiftUI.Environment(\.accessibilityReduceMotion) private var reduceMotion: Bool
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
 

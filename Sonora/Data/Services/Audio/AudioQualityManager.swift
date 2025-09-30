@@ -15,7 +15,7 @@ import AVFoundation
 protocol AudioQualityManagerProtocol: Sendable {
     var currentProfile: AudioQualityProfile { get }
     var isAdaptiveMode: Bool { get }
-    
+
     func setProfile(_ profile: AudioQualityProfile)
     func getOptimalSettings(for contentType: AudioContentType) -> AudioRecordingSettings
     func enableAdaptiveMode(_ enabled: Bool)
@@ -25,95 +25,95 @@ protocol AudioQualityManagerProtocol: Sendable {
 /// Intelligent audio quality management service
 @MainActor
 final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, @unchecked Sendable {
-    
+
     // MARK: - Configuration
-    
+
     private let config = AppConfiguration.shared
     private let logger = Logger.shared
-    
+
     // MARK: - Published Properties
-    
+
     @Published var currentProfile: AudioQualityProfile {
         didSet {
             UserDefaults.standard.set(currentProfile.rawValue, forKey: "audioQualityProfile")
             logger.info("🎚️ AudioQualityManager: Profile changed to \(currentProfile.displayName)")
         }
     }
-    
+
     @Published var isAdaptiveMode: Bool {
         didSet {
             UserDefaults.standard.set(isAdaptiveMode, forKey: "adaptiveAudioMode")
             logger.info("🎚️ AudioQualityManager: Adaptive mode \(isAdaptiveMode ? "enabled" : "disabled")")
         }
     }
-    
+
     // MARK: - Private Properties
-    
+
     private var qualityMetrics = AudioQualityMetrics()
     private let systemMonitor = SystemConditionMonitor()
-    
+
     // MARK: - Initialization
-    
+
     init() {
         // Load saved preferences
         let savedProfile = UserDefaults.standard.string(forKey: "audioQualityProfile") ?? AudioQualityProfile.voiceOptimized.rawValue
         self.currentProfile = AudioQualityProfile(rawValue: savedProfile) ?? .voiceOptimized
-        
+
         self.isAdaptiveMode = UserDefaults.standard.object(forKey: "adaptiveAudioMode") as? Bool ?? true
-        
+
         logger.info("🎚️ AudioQualityManager: Initialized with profile: \(currentProfile.displayName), adaptive: \(isAdaptiveMode)")
     }
-    
+
     // MARK: - Public Interface
-    
+
     /// Sets the audio quality profile
     /// - Parameter profile: The audio quality profile to apply
     func setProfile(_ profile: AudioQualityProfile) {
         let previousProfile = currentProfile
         currentProfile = profile
-        
+
         qualityMetrics.profileChanges += 1
         qualityMetrics.lastProfileChange = Date()
-        
+
         logger.info("🎚️ AudioQualityManager: Profile changed from \(previousProfile.displayName) to \(profile.displayName)")
     }
-    
+
     /// Returns optimal recording settings for the specified content type
     /// - Parameter contentType: The type of content being recorded
     /// - Returns: Optimized audio recording settings
     func getOptimalSettings(for contentType: AudioContentType = .voice) -> AudioRecordingSettings {
         let baseSettings = getProfileBaseSettings(for: contentType)
-        
+
         guard isAdaptiveMode else {
             qualityMetrics.nonAdaptiveRequests += 1
             return baseSettings
         }
-        
+
         // Apply adaptive optimizations
         let systemConditions = systemMonitor.getCurrentConditions()
         let adaptedSettings = adaptSettings(baseSettings, for: systemConditions)
-        
+
         qualityMetrics.adaptiveRequests += 1
         qualityMetrics.lastAdaptation = Date()
-        
+
         logger.debug("🎚️ AudioQualityManager: Optimized settings - SR: \(adaptedSettings.sampleRate)Hz, BR: \(adaptedSettings.bitRate)bps, Q: \(adaptedSettings.quality)")
-        
+
         return adaptedSettings
     }
-    
+
     /// Enables or disables adaptive audio quality mode
     /// - Parameter enabled: Whether to enable adaptive mode
     func enableAdaptiveMode(_ enabled: Bool) {
         isAdaptiveMode = enabled
     }
-    
+
     /// Returns current quality management metrics
     func getQualityMetrics() -> AudioQualityMetrics {
         return qualityMetrics
     }
-    
+
     // MARK: - Private Implementation
-    
+
     private func getProfileBaseSettings(for contentType: AudioContentType) -> AudioRecordingSettings {
         switch currentProfile {
         case .voiceOptimized:
@@ -124,7 +124,7 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
                 channels: 1,
                 format: .mpeg4AAC
             )
-            
+
         case .highQuality:
             return AudioRecordingSettings(
                 sampleRate: config.highQualitySampleRate,
@@ -133,7 +133,7 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
                 channels: contentType == .music ? 2 : 1,
                 format: .mpeg4AAC
             )
-            
+
         case .balanced:
             return AudioRecordingSettings(
                 sampleRate: contentType == .voice ? 22050.0 : 44100.0,
@@ -142,7 +142,7 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
                 channels: 1,
                 format: .mpeg4AAC
             )
-            
+
         case .batterySaver:
             return AudioRecordingSettings(
                 sampleRate: 16000.0, // Minimal acceptable for voice
@@ -151,15 +151,15 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
                 channels: 1,
                 format: .mpeg4AAC
             )
-            
+
         case .custom:
             return getCustomSettings(for: contentType)
         }
     }
-    
+
     private func adaptSettings(_ baseSettings: AudioRecordingSettings, for conditions: SystemConditions) -> AudioRecordingSettings {
         var adaptedSettings = baseSettings
-        
+
         // Battery level adaptation
         if conditions.batteryLevel >= 0 && conditions.batteryLevel < 0.2 {
             // Low battery: reduce quality significantly
@@ -171,14 +171,14 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
             adaptedSettings.quality *= 0.85
             adaptedSettings.bitRate = Int(Double(adaptedSettings.bitRate) * 0.8)
         }
-        
+
         // Thermal state adaptation
         switch conditions.thermalState {
         case .serious:
             adaptedSettings.quality *= 0.8
             adaptedSettings.bitRate = Int(Double(adaptedSettings.bitRate) * 0.75)
             qualityMetrics.thermalOptimizations += 1
-            
+
         case .critical:
             adaptedSettings.quality *= 0.6
             adaptedSettings.bitRate = max(32000, Int(Double(adaptedSettings.bitRate) * 0.5))
@@ -187,11 +187,11 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
                 adaptedSettings.sampleRate = 22050.0
             }
             qualityMetrics.thermalOptimizations += 1
-            
+
         default:
             break
         }
-        
+
         // Available storage adaptation
         if conditions.availableStorageGB < 1.0 {
             // Very low storage: aggressive compression
@@ -203,7 +203,7 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
             adaptedSettings.bitRate = Int(Double(adaptedSettings.bitRate) * 0.7)
             adaptedSettings.quality *= 0.8
         }
-        
+
         // Memory pressure adaptation
         if conditions.isUnderMemoryPressure {
             // Reduce sample rate to lower memory usage during recording
@@ -212,14 +212,14 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
             }
             qualityMetrics.memoryOptimizations += 1
         }
-        
+
         // Ensure minimum quality thresholds
         adaptedSettings.quality = max(0.3, min(1.0, adaptedSettings.quality))
         adaptedSettings.bitRate = max(16000, min(320000, adaptedSettings.bitRate))
-        
+
         return adaptedSettings
     }
-    
+
     private func getCustomSettings(for contentType: AudioContentType) -> AudioRecordingSettings {
         // Custom settings could be loaded from UserDefaults or a configuration file
         // For now, return balanced settings as default
@@ -236,7 +236,7 @@ public enum AudioQualityProfile: String, CaseIterable, Sendable {
     case highQuality = "high_quality"
     case batterySaver = "battery_saver"
     case custom = "custom"
-    
+
     /// Human-readable display name
     public var displayName: String {
         switch self {
@@ -252,7 +252,7 @@ public enum AudioQualityProfile: String, CaseIterable, Sendable {
             return "Custom"
         }
     }
-    
+
     /// Profile description for settings UI
     public var description: String {
         switch self {
@@ -279,13 +279,13 @@ public struct AudioRecordingSettings: Sendable {
     var quality: Float
     var channels: Int
     var format: AudioFormat
-    
+
     /// Estimated file size per minute of recording (in MB)
     var estimatedFileSizePerMinute: Double {
         // Approximate calculation: (bitRate * 60 seconds) / 8 / 1024 / 1024
         return Double(bitRate) * 60.0 / 8.0 / 1024.0 / 1024.0
     }
-    
+
     /// Battery usage impact (relative scale: 1.0 = normal, >1.0 = higher usage)
     var batteryImpactFactor: Double {
         let baseFactor = sampleRate > 22050 ? 1.2 : 1.0
@@ -299,7 +299,7 @@ public enum AudioFormat: String, CaseIterable, Sendable {
     case mpeg4AAC = "m4a"
     case appleLossless = "alac"
     case linearPCM = "wav"
-    
+
     var displayName: String {
         switch self {
         case .mpeg4AAC:
@@ -317,15 +317,15 @@ public enum AudioFormat: String, CaseIterable, Sendable {
 /// Monitors system conditions for adaptive quality management
 @MainActor
 private class SystemConditionMonitor: @unchecked Sendable {
-    
+
     func getCurrentConditions() -> SystemConditions {
         let device = UIDevice.current
-        
+
         // Enable battery monitoring if not already enabled
         if !device.isBatteryMonitoringEnabled {
             device.isBatteryMonitoringEnabled = true
         }
-        
+
         return SystemConditions(
             batteryLevel: device.batteryLevel,
             batteryState: device.batteryState,
@@ -334,7 +334,7 @@ private class SystemConditionMonitor: @unchecked Sendable {
             isUnderMemoryPressure: isUnderMemoryPressure()
         )
     }
-    
+
     private func getAvailableStorageGB() -> Double {
         do {
             let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
@@ -346,22 +346,22 @@ private class SystemConditionMonitor: @unchecked Sendable {
         }
         return 100.0 // Default assumption if we can't determine
     }
-    
+
     private func isUnderMemoryPressure() -> Bool {
         var info = mach_task_basic_info()
         var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
-        
+
         let result = withUnsafeMutablePointer(to: &info) {
             $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
                 task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
             }
         }
-        
+
         if result == KERN_SUCCESS {
             let memoryUsage = Double(info.resident_size) / 1024.0 / 1024.0 // MB
             return memoryUsage > 150.0 // Consider >150MB as memory pressure
         }
-        
+
         return false
     }
 }
@@ -388,16 +388,16 @@ public struct AudioQualityMetrics: Sendable {
     var thermalOptimizations: Int = 0
     var storageOptimizations: Int = 0
     var memoryOptimizations: Int = 0
-    
+
     var lastProfileChange: Date?
     var lastAdaptation: Date?
-    
+
     /// Percentage of requests that used adaptive optimization
     var adaptiveUsageRate: Double {
         let total = adaptiveRequests + nonAdaptiveRequests
         return total > 0 ? Double(adaptiveRequests) / Double(total) : 0.0
     }
-    
+
     /// Total number of system-condition optimizations performed
     var totalOptimizations: Int {
         return batteryOptimizations + thermalOptimizations + storageOptimizations + memoryOptimizations

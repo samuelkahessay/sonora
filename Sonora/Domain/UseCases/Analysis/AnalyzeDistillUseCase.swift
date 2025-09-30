@@ -7,17 +7,17 @@ protocol AnalyzeDistillUseCaseProtocol: Sendable {
 }
 
 final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sendable {
-    
+
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
     private let analysisRepository: any AnalysisRepository
     private let logger: any LoggerProtocol
     private let eventBus: any EventBusProtocol
     private let operationCoordinator: any OperationCoordinatorProtocol
-    
+
     // MARK: - Initialization
     init(
-        analysisService: any AnalysisServiceProtocol, 
+        analysisService: any AnalysisServiceProtocol,
         analysisRepository: any AnalysisRepository,
         logger: any LoggerProtocol = Logger.shared,
         eventBus: any EventBusProtocol,
@@ -29,13 +29,13 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sen
         self.eventBus = eventBus
         self.operationCoordinator = operationCoordinator
     }
-    
+
     // MARK: - Use Case Execution
     @MainActor
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<DistillData> {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
-        
+
         logger.analysis("Starting Distill analysis (comprehensive mentor-like insights)", context: context)
 
         // Validate inputs early (avoid creating coordinator ops for invalid requests)
@@ -72,13 +72,13 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sen
 
         do {
             // Inputs already validated above
-            
+
             logger.debug("Transcript validated (\(transcript.count) characters)", category: .analysis, context: context)
-            
-            logger.analysis("No cached result found, calling analysis service", 
-                          level: .warning, 
+
+            logger.analysis("No cached result found, calling analysis service",
+                          level: .warning,
                           context: LogContext(correlationId: correlationId, additionalInfo: ["cacheHit": false]))
-        
+
             // Call service to perform analysis
             let analysisTimer = PerformanceTimer(operation: "Distill Analysis API Call", category: .analysis)
             let result = try await analysisService.analyzeDistill(transcript: transcript)
@@ -90,8 +90,8 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sen
                 throw AnalysisError.invalidResponse
             }
             _ = analysisTimer.finish(additionalInfo: "Service call completed successfully")
-            
-            logger.analysis("Distill analysis completed successfully", 
+
+            logger.analysis("Distill analysis completed successfully",
                           context: LogContext(correlationId: correlationId, additionalInfo: [
                               "apiLatencyMs": result.latency_ms,
                               "summaryLength": result.data.summary.count,
@@ -99,38 +99,38 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sen
                               "questionsCount": result.data.reflection_questions.count,
                               "model": result.model
                           ]))
-            
+
             // SAVE TO CACHE: Store result for future use
             let saveTimer = PerformanceTimer(operation: "Distill Cache Save", category: .performance)
             await MainActor.run {
                 analysisRepository.saveAnalysisResult(result, for: memoId, mode: .distill)
             }
             _ = saveTimer.finish(additionalInfo: "Analysis cached successfully")
-            
-            logger.analysis("Distill analysis cached successfully", 
+
+            logger.analysis("Distill analysis cached successfully",
                           context: LogContext(correlationId: correlationId, additionalInfo: ["cached": true]))
-            
+
             // Publish analysisCompleted event on main actor
             logger.debug("Publishing analysisCompleted event for Distill analysis", category: .analysis, context: context)
             await MainActor.run {
                 EventBus.shared.publish(.analysisCompleted(memoId: memoId, type: .distill, result: result.data.summary))
             }
-            
+
             // Complete the analysis operation
             await operationCoordinator.completeOperation(operationId)
             logger.debug("Distill analysis operation completed: \(operationId)", category: .analysis, context: context)
-            
+
             return result
-            
+
         } catch {
-            logger.error("Distill analysis service call failed", 
-                       category: .analysis, 
-                       context: LogContext(correlationId: correlationId, additionalInfo: ["serviceError": error.localizedDescription]), 
+            logger.error("Distill analysis service call failed",
+                       category: .analysis,
+                       context: LogContext(correlationId: correlationId, additionalInfo: ["serviceError": error.localizedDescription]),
                        error: error)
-            
+
             // Fail the analysis operation
             await operationCoordinator.failOperation(operationId, errorDescription: error.localizedDescription)
-            
+
             throw AnalysisError.analysisServiceError(error.localizedDescription)
         }
     }

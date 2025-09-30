@@ -38,7 +38,7 @@ final class SpotlightIndexer: SpotlightIndexing {
     }
 
     // MARK: - Core Spotlight Queue Isolation
-    
+
     /// Queue-isolated wrapper for indexing Core Spotlight items
     private func cs_index(_ items: [CSSearchableItem]) async throws {
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
@@ -53,7 +53,7 @@ final class SpotlightIndexer: SpotlightIndexing {
             }
         }
     }
-    
+
     /// Queue-isolated wrapper for deleting Core Spotlight items by identifier
     private func cs_delete(identifiers: [String]) async throws {
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
@@ -68,7 +68,6 @@ final class SpotlightIndexer: SpotlightIndexing {
             }
         }
     }
-    
 
     // MARK: - Public API
     func index(memoID: UUID) async {
@@ -142,7 +141,7 @@ final class SpotlightIndexer: SpotlightIndexing {
             logger.info("Spotlight: skipping private memo", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]))
             return
         }
-        
+
     }
 
     private func buildSearchableItem(for memo: Memo) async -> CSSearchableItem? {

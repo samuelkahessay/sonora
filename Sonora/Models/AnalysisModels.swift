@@ -2,18 +2,18 @@ import Foundation
 
 public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
     case distill, analysis, themes, todos, events, reminders
-    
+
     // Individual Distill Components (used internally for parallel processing)
     case distillSummary = "distill-summary"
-    case distillActions = "distill-actions" 
+    case distillActions = "distill-actions"
     case distillThemes = "distill-themes"
     case distillReflection = "distill-reflection"
-    
+
     // UI-visible analysis modes (excludes internal component modes)
     public static var uiVisibleCases: [AnalysisMode] {
         return [.distill, .analysis, .themes, .todos, .events, .reminders]
     }
-    
+
     var displayName: String {
         switch self {
         case .distill: return "Distill"
@@ -28,7 +28,7 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
         case .distillReflection: return "Reflection"
         }
     }
-    
+
     var iconName: String {
         switch self {
         case .distill: return "sparkles"
@@ -43,7 +43,7 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
         case .distillReflection: return "questionmark.circle"
         }
     }
-    
+
     // Helper to check if this is a distill component mode
     var isDistillComponent: Bool {
         switch self {
@@ -75,14 +75,14 @@ public struct DistillData: Codable, Sendable {
     public let reflection_questions: [String]
     public let events: [EventsData.DetectedEvent]?
     public let reminders: [RemindersData.DetectedReminder]?
-    
+
     public struct ActionItem: Codable, Sendable, Equatable {
         public let text: String
         public let priority: Priority
-        
+
         public enum Priority: String, Codable, Sendable, Equatable {
             case high, medium, low
-            
+
             var color: String {
                 switch self {
                 case .high: return "red"
@@ -118,7 +118,6 @@ public struct DistillReflectionData: Codable, Sendable {
     public let reflection_questions: [String]
 }
 
-
 public struct AnalysisData: Codable, Sendable {
     public let summary: String
     public let key_points: [String]
@@ -131,11 +130,11 @@ public struct ThemesData: Codable, Sendable {
     }
     public let themes: [Theme]
     public let sentiment: String
-    
+
     var sentimentColor: String {
         switch sentiment.lowercased() {
         case "positive": return "green"
-        case "negative": return "red" 
+        case "negative": return "red"
         case "mixed": return "orange"
         default: return "gray"
         }
@@ -146,7 +145,7 @@ public struct TodosData: Codable, Sendable {
     public struct Todo: Codable, Sendable {
         public let text: String
         public let due: String?
-        
+
         var dueDate: Date? {
             guard let due = due else { return nil }
             let formatter = ISO8601DateFormatter()
@@ -169,7 +168,7 @@ public struct EventsData: Codable, Sendable {
         public let confidence: Float
         public let sourceText: String
         public let memoId: UUID?
-        
+
         public init(
             id: String = UUID().uuidString,
             title: String,
@@ -191,7 +190,7 @@ public struct EventsData: Codable, Sendable {
             self.sourceText = sourceText
             self.memoId = memoId
         }
-        
+
         // Confidence categories for UI
         public var confidenceCategory: ConfidenceLevel {
             switch confidence {
@@ -200,12 +199,12 @@ public struct EventsData: Codable, Sendable {
             default: return .low
             }
         }
-        
+
         public enum ConfidenceLevel: String, CaseIterable {
             case high = "High"
-            case medium = "Medium" 
+            case medium = "Medium"
             case low = "Low"
-            
+
             var color: String {
                 switch self {
                 case .high: return "green"
@@ -215,9 +214,9 @@ public struct EventsData: Codable, Sendable {
             }
         }
     }
-    
+
     public let events: [DetectedEvent]
-    
+
     public init(events: [DetectedEvent]) {
         self.events = events
     }
@@ -232,7 +231,7 @@ public struct RemindersData: Codable, Sendable {
         public let confidence: Float
         public let sourceText: String
         public let memoId: UUID?
-        
+
         public init(
             id: String = UUID().uuidString,
             title: String,
@@ -250,12 +249,12 @@ public struct RemindersData: Codable, Sendable {
             self.sourceText = sourceText
             self.memoId = memoId
         }
-        
+
         public enum Priority: String, Codable, Sendable, CaseIterable {
             case high = "High"
             case medium = "Medium"
             case low = "Low"
-            
+
             var color: String {
                 switch self {
                 case .high: return "red"
@@ -263,7 +262,7 @@ public struct RemindersData: Codable, Sendable {
                 case .low: return "green"
                 }
             }
-            
+
             var sortOrder: Int {
                 switch self {
                 case .high: return 0
@@ -272,7 +271,7 @@ public struct RemindersData: Codable, Sendable {
                 }
             }
         }
-        
+
         // Convenience computed property for confidence level
         public var confidenceCategory: EventsData.DetectedEvent.ConfidenceLevel {
             switch confidence {
@@ -282,9 +281,9 @@ public struct RemindersData: Codable, Sendable {
             }
         }
     }
-    
+
     public let reminders: [DetectedReminder]
-    
+
     public init(reminders: [DetectedReminder]) {
         self.reminders = reminders
     }

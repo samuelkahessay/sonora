@@ -70,7 +70,7 @@ struct OnboardingView: View {
 #Preview("Onboarding - Name Entry") {
     struct PreviewWrapper: View {
         @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createOnboardingViewModel()
-        
+
         var body: some View {
             OnboardingView()
                 .onAppear {
@@ -78,14 +78,14 @@ struct OnboardingView: View {
                 }
         }
     }
-    
+
     return PreviewWrapper()
 }
 
 #Preview("Onboarding - How It Works") {
     struct PreviewWrapper: View {
         @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createOnboardingViewModel()
-        
+
         var body: some View {
             OnboardingView()
                 .onAppear {
@@ -93,14 +93,14 @@ struct OnboardingView: View {
                 }
         }
     }
-    
+
     return PreviewWrapper()
 }
 
 #Preview("Onboarding - First Recording") {
     struct PreviewWrapper: View {
         @StateObject private var viewModel = DIContainer.shared.viewModelFactory().createOnboardingViewModel()
-        
+
         var body: some View {
             OnboardingView()
                 .onAppear {
@@ -108,7 +108,7 @@ struct OnboardingView: View {
                 }
         }
     }
-    
+
     return PreviewWrapper()
 }
 #endif

@@ -155,8 +155,7 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
                 let todos = env.data.todos
                 if !todos.isEmpty {
                     todos.forEach { todo in
-                        if let due = todo.due { s += "• \(todo.text) (due: \(due))\n" }
-                        else { s += "• \(todo.text)\n" }
+                        if let due = todo.due { s += "• \(todo.text) (due: \(due))\n" } else { s += "• \(todo.text)\n" }
                     }
                     s += "\n"
                 }

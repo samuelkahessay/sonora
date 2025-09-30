@@ -18,7 +18,7 @@ protocol StartTranscriptionUseCaseProtocol {
 
 @MainActor
 final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
-    
+
     // MARK: - Dependencies
     private let transcriptionRepository: any TranscriptionRepository
     private let transcriptionAPI: any TranscriptionAPI
@@ -34,7 +34,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
     private let qualityEvaluator: any LanguageQualityEvaluator
     private let clientLanguageService: any ClientLanguageDetectionService
     private let languageFallbackConfig: LanguageFallbackConfig
-    
+
     // MARK: - Initialization
     init(
         transcriptionRepository: any TranscriptionRepository,
@@ -63,7 +63,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         self.moderationService = moderationService
         self.fillerWordFilter = fillerWordFilter
     }
-    
+
     // MARK: - Use Case Execution
     @MainActor
     func execute(memo: Memo) async throws {
@@ -71,9 +71,9 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             "memoId": memo.id.uuidString,
             "filename": memo.filename
         ])
-        
+
         logger.info("Starting transcription for memo: \(memo.filename)", category: .transcription, context: context)
-        
+
         // Idempotency guard: do not proceed if already completed or in progress, or previously skipped for silence
         let preState = transcriptionRepository.getTranscriptionState(for: memo.id)
         if preState.isInProgress {
@@ -82,27 +82,27 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         if case .completed = preState {
             throw TranscriptionError.alreadyCompleted
         }
-        if case .failed(let msg) = preState, (msg.lowercased().contains("no speech detected") || msg.localizedCaseInsensitiveContains("didn't quite catch")) {
+        if case .failed(let msg) = preState, msg.lowercased().contains("no speech detected") || msg.localizedCaseInsensitiveContains("didn't quite catch") {
             // Treat silence as non-actionable; skip quietly
             logger.info("Skipping transcription: previous attempt reported no speech", category: .transcription, context: context)
             return
         }
-        
+
         // Check for operation conflicts (e.g., can't transcribe while recording same memo)
         guard await operationCoordinator.canStartTranscription(for: memo.id) else {
-            logger.warning("Cannot start transcription - conflicting operation (recording) active", 
+            logger.warning("Cannot start transcription - conflicting operation (recording) active",
                           category: .transcription, context: context, error: nil)
             throw TranscriptionError.conflictingOperation
         }
-        
+
         // Register transcription operation
         guard let operationId = await operationCoordinator.registerOperation(.transcription(memoId: memo.id)) else {
             logger.warning("Transcription rejected by operation coordinator", category: .transcription, context: context, error: nil)
             throw TranscriptionError.systemBusy
         }
-        
+
         logger.debug("Transcription operation registered with ID: \(operationId)", category: .transcription, context: context)
-        
+
         do {
             await MainActor.run { CurrentTranscriptionContext.memoId = memo.id }
             defer { Task { await MainActor.run { CurrentTranscriptionContext.memoId = nil } } }
@@ -422,16 +422,16 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
         } catch {
             logger.error("Transcription failed", category: .transcription, context: context, error: error)
-            
+
             // Save failed state to repository
             await MainActor.run {
                 let failedState = TranscriptionState.failed(error.localizedDescription)
                 transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
             }
-            
+
             // Fail the transcription operation
             await operationCoordinator.failOperation(operationId, errorDescription: error.localizedDescription)
-            
+
             throw TranscriptionError.transcriptionFailed(error.localizedDescription)
         }
     }
@@ -666,7 +666,7 @@ public enum TranscriptionError: LocalizedError {
     case conflictingOperation
     case systemBusy
     case noSpeechDetected
-    
+
     public var errorDescription: String? {
         switch self {
         case .alreadyInProgress:

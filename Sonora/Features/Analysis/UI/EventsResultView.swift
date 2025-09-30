@@ -4,7 +4,7 @@ import SwiftUI
 struct EventsResultView: View {
     let data: EventsData
     @State private var showingEventConfirmation = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
@@ -21,7 +21,7 @@ struct EventsResultView: View {
                     .background(Color.semantic(.brandPrimary).opacity(0.1))
                     .cornerRadius(8)
             }
-            
+
             // Add to Calendar action
             if !data.events.isEmpty {
                 Button {
@@ -41,7 +41,7 @@ struct EventsResultView: View {
                         .withDIContainer()
                 }
             }
-            
+
             if data.events.isEmpty {
                 Text("No events detected in this memo")
                     .font(.body)
@@ -64,7 +64,7 @@ struct EventsResultView: View {
 /// Individual event item view
 private struct EventItemView: View {
     let event: EventsData.DetectedEvent
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -73,7 +73,7 @@ private struct EventItemView: View {
                     .fontWeight(.medium)
                 Spacer()
             }
-            
+
             if let startDate = event.startDate {
                 HStack {
                     Image(systemName: "calendar")
@@ -84,7 +84,7 @@ private struct EventItemView: View {
                         .foregroundColor(.semantic(.textSecondary))
                 }
             }
-            
+
             if let location = event.location {
                 HStack {
                     Image(systemName: "location")
@@ -96,7 +96,7 @@ private struct EventItemView: View {
                         .lineLimit(1)
                 }
             }
-            
+
             Text(event.sourceText)
                 .font(.caption2)
                 .foregroundColor(.semantic(.textTertiary))
@@ -109,7 +109,7 @@ private struct EventItemView: View {
         .background(Color.semantic(.bgPrimary))
         .cornerRadius(8)
     }
-    
+
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium

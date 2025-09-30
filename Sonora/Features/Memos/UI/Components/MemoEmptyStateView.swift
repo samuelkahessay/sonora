@@ -4,15 +4,15 @@ struct MemoEmptyStateView: View {
     @State private var sonicBloomPulse: Bool = false
     @State private var messageOpacity: Double = 0
     @State private var currentTimeOfDay = TimeOfDay.current
-    
+
     var body: some View {
         VStack(spacing: SonoraDesignSystem.Spacing.lg) {
             // SonicBloom hint animation
             sonicBloomHint
-            
+
             // Contextual brand voice messaging
             brandVoiceSection
-            
+
             // Subtle recording hint
             recordingHintSection
         }
@@ -23,9 +23,9 @@ struct MemoEmptyStateView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
     }
-    
+
     // MARK: - View Components
-    
+
     /// SonicBloom hint with gentle pulsing animation
     @ViewBuilder
     private var sonicBloomHint: some View {
@@ -36,14 +36,14 @@ struct MemoEmptyStateView: View {
                 .frame(width: 88, height: 88)
                 .scaleEffect(sonicBloomPulse ? 1.2 : 1.0)
                 .opacity(sonicBloomPulse ? 0.0 : 0.6)
-            
+
             // Inner bloom effect
             Circle()
                 .stroke(Color.insightGold.opacity(0.4), lineWidth: 1)
                 .frame(width: 64, height: 64)
                 .scaleEffect(sonicBloomPulse ? 1.1 : 1.0)
                 .opacity(sonicBloomPulse ? 0.2 : 0.8)
-            
+
             // Core waveform icon
             Image(systemName: "waveform.circle.fill")
                 .font(.system(size: 44, weight: .light))
@@ -52,7 +52,7 @@ struct MemoEmptyStateView: View {
         }
         .padding(.bottom, SonoraDesignSystem.Spacing.md)
     }
-    
+
     /// Brand voice messaging section
     @ViewBuilder
     private var brandVoiceSection: some View {
@@ -63,7 +63,7 @@ struct MemoEmptyStateView: View {
                 .foregroundColor(.textPrimary)
                 .multilineTextAlignment(.center)
                 .opacity(messageOpacity)
-            
+
             // Secondary encouragement
             Text(encouragementMessage)
                 .font(SonoraDesignSystem.Typography.bodyRegular)
@@ -73,7 +73,7 @@ struct MemoEmptyStateView: View {
         }
         .padding(.horizontal, SonoraDesignSystem.Spacing.breathingRoom)
     }
-    
+
     /// Subtle recording hint section
     @ViewBuilder
     private var recordingHintSection: some View {
@@ -81,7 +81,7 @@ struct MemoEmptyStateView: View {
             Image(systemName: "mic.circle")
                 .font(.caption)
                 .foregroundColor(.reflectionGray)
-            
+
             Text("Tap the bloom button to begin")
                 .font(SonoraDesignSystem.Typography.caption)
                 .foregroundColor(.reflectionGray)
@@ -89,9 +89,9 @@ struct MemoEmptyStateView: View {
         .opacity(messageOpacity * 0.6)
         .padding(.top, SonoraDesignSystem.Spacing.md)
     }
-    
+
     // MARK: - Helper Properties
-    
+
     /// Contextual message based on time of day
     private var contextualMessage: String {
         switch currentTimeOfDay {
@@ -105,25 +105,25 @@ struct MemoEmptyStateView: View {
             return "Your late-night clarity awaits"
         }
     }
-    
+
     /// Encouragement message
     private var encouragementMessage: String {
         "Your voice holds insights waiting to be discovered. Each recording becomes a step toward greater self-understanding."
     }
-    
+
     /// Comprehensive accessibility description
     private var accessibilityDescription: String {
         "\(contextualMessage) \(encouragementMessage) Tap the bloom button to begin recording."
     }
-    
+
     // MARK: - Animation Configuration
-    
+
     private func configureAnimations() {
         // SonicBloom pulse animation
         withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
             sonicBloomPulse = true
         }
-        
+
         // Message fade-in with delay for organic feel
         withAnimation(.easeOut(duration: 0.8).delay(0.3)) {
             messageOpacity = 1.0
@@ -135,7 +135,7 @@ struct MemoEmptyStateView: View {
 
 enum TimeOfDay {
     case morning, afternoon, evening, lateNight
-    
+
     static var current: TimeOfDay {
         let hour = Calendar.current.component(.hour, from: Date())
         switch hour {

@@ -17,7 +17,7 @@ struct DetectionMetadata: Sendable {
     let highConfidenceCount: Int
     let processingTime: TimeInterval
     let analysisMode: String // "cloud" or "cached"
-    
+
     var detectionQuality: DetectionQuality {
         switch averageConfidence {
         case 0.8...1.0: return .excellent
@@ -26,13 +26,13 @@ struct DetectionMetadata: Sendable {
         default: return .poor
         }
     }
-    
+
     enum DetectionQuality: String, CaseIterable {
         case excellent = "Excellent"
         case good = "Good"
         case fair = "Fair"
         case poor = "Poor"
-        
+
         var color: String {
             switch self {
             case .excellent: return "green"
@@ -45,7 +45,7 @@ struct DetectionMetadata: Sendable {
 }
 
 final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProtocol, @unchecked Sendable {
-    
+
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
     private let analysisRepository: any AnalysisRepository
@@ -53,12 +53,12 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
     private let eventBus: EventBusProtocol
     private let operationCoordinator: OperationCoordinatorProtocol
     private let thresholdPolicy: any AdaptiveThresholdPolicy
-    
+
     // MARK: - Configuration
     // Legacy static thresholds remain as a safety floor; adaptive policy refines per-context
     private var legacyEventThreshold: Float { Float(UserDefaults.standard.object(forKey: "eventConfidenceThreshold") as? Double ?? 0.45) }
     private var legacyReminderThreshold: Float { Float(UserDefaults.standard.object(forKey: "reminderConfidenceThreshold") as? Double ?? 0.45) }
-    
+
     // MARK: - Initialization
     init(
         analysisService: any AnalysisServiceProtocol,
@@ -75,9 +75,9 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         self.operationCoordinator = operationCoordinator
         self.thresholdPolicy = thresholdPolicy
     }
-    
+
     // MARK: - Use Case Execution
-    
+
     @MainActor
     func execute(transcript: String, memoId: UUID) async throws -> DetectionResult {
         let startTime = Date()
@@ -86,27 +86,27 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
             "memoId": memoId.uuidString,
             "transcriptLength": transcript.count
         ])
-        
+
         logger.info("Starting event and reminder detection",
                    category: .analysis,
                    context: context)
-        
+
         // Validate inputs
         guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw AnalysisError.emptyTranscript
         }
-        
+
         guard transcript.count >= 10 else {
             throw AnalysisError.transcriptTooShort
         }
-        
+
         // Check cache first
         if let cachedEvents = await getCachedAnalysis(for: memoId, mode: .events) as EventsData?,
            let cachedReminders = await getCachedAnalysis(for: memoId, mode: .reminders) as RemindersData? {
             logger.info("Using cached event/reminder detection results",
                        category: .analysis,
                        context: context)
-            
+
             return DetectionResult(
                 events: cachedEvents,
                 reminders: cachedReminders,
@@ -118,7 +118,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
                 )
             )
         }
-        
+
         // Register operation (use generic analysis category)
         guard let operationId = await operationCoordinator.registerOperation(
             .analysis(memoId: memoId, analysisType: .analysis)
@@ -129,14 +129,14 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
                           error: nil)
             throw AnalysisError.systemBusy
         }
-        
+
         do {
             // Build feature context and adaptive thresholds
             let detectionContext = DetectionContextBuilder.build(memoId: memoId, transcript: transcript)
             let adaptive = thresholdPolicy.thresholds(for: detectionContext)
             let eventThreshold = max(adaptive.event, legacyEventThreshold)
             let reminderThreshold = max(adaptive.reminder, legacyReminderThreshold)
-            
+
             logger.debug("Adaptive thresholds computed",
                         category: .analysis,
                         context: LogContext(correlationId: correlationId, additionalInfo: [
@@ -158,18 +158,18 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
                 eventThreshold: eventThreshold,
                 reminderThreshold: reminderThreshold
             )
-            
+
             // Cache results
             if let events = result.events {
                 await cacheAnalysisResult(events, for: memoId, mode: .events)
             }
-            
+
             if let reminders = result.reminders {
                 await cacheAnalysisResult(reminders, for: memoId, mode: .reminders)
             }
-            
+
             await operationCoordinator.completeOperation(operationId)
-            
+
             logger.info("Event and reminder detection completed successfully",
                        category: .analysis,
                        context: LogContext(correlationId: correlationId, additionalInfo: [
@@ -178,9 +178,9 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
                            "processingTime": result.detectionMetadata.processingTime,
                            "averageConfidence": result.detectionMetadata.averageConfidence
                        ]))
-            
+
             return result
-            
+
         } catch {
             await operationCoordinator.failOperation(operationId, errorDescription: error.localizedDescription)
             logger.error("Event and reminder detection failed",
@@ -190,9 +190,9 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
             throw error
         }
     }
-    
+
     // MARK: - Private Implementation
-    
+
     private func performDetection(
         transcript: String,
         memoId: UUID,
@@ -210,7 +210,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
             reminderThreshold: reminderThreshold
         )
     }
-    
+
     private func performCloudDetection(
         transcript: String,
         memoId: UUID,
@@ -234,7 +234,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
             transcript: transcript,
             responseType: RemindersData.self
         )
-        
+
         // Process results and filter by confidence
         let eventsEnvelope = try await eventsResult
         let remindersEnvelope = try await remindersResult
@@ -275,39 +275,39 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
             )
         )
     }
-    
+
     // MARK: - Result Processing
-    
+
     private func filterEventsByConfidence(_ eventsData: EventsData?, threshold: Float) -> EventsData? {
         guard let eventsData = eventsData else { return nil }
         let filteredEvents = eventsData.events.filter { event in
             event.confidence >= threshold
         }
-        
+
         logger.debug(
             "Filtered events by confidence: \(eventsData.events.count) → \(filteredEvents.count) (threshold: \(threshold))",
             category: .analysis,
             context: nil
         )
-        
+
         return filteredEvents.isEmpty ? nil : EventsData(events: filteredEvents)
     }
-    
+
     private func filterRemindersByConfidence(_ remindersData: RemindersData?, threshold: Float) -> RemindersData? {
         guard let remindersData = remindersData else { return nil }
         let filteredReminders = remindersData.reminders.filter { reminder in
             reminder.confidence >= threshold
         }
-        
+
         logger.debug(
             "Filtered reminders by confidence: \(remindersData.reminders.count) → \(filteredReminders.count) (threshold: \(threshold))",
             category: .analysis,
             context: nil
         )
-        
+
         return filteredReminders.isEmpty ? nil : RemindersData(reminders: filteredReminders)
     }
-    
+
     private func createMetadata(
         events: EventsData?,
         reminders: RemindersData?,
@@ -317,7 +317,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         let eventCount = events?.events.count ?? 0
         let reminderCount = reminders?.reminders.count ?? 0
         let totalDetections = eventCount + reminderCount
-        
+
         // Calculate average confidence
         var allConfidences: [Float] = []
         if let events = events {
@@ -326,13 +326,13 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         if let reminders = reminders {
             allConfidences.append(contentsOf: reminders.reminders.map { $0.confidence })
         }
-        
-        let averageConfidence = allConfidences.isEmpty ? 0.0 : 
+
+        let averageConfidence = allConfidences.isEmpty ? 0.0 :
             allConfidences.reduce(0, +) / Float(allConfidences.count)
-        
+
         // Count high confidence detections (>= 0.8)
         let highConfidenceCount = allConfidences.filter { $0 >= 0.8 }.count
-        
+
         return DetectionMetadata(
             totalDetections: totalDetections,
             averageConfidence: averageConfidence,
@@ -341,11 +341,11 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
             analysisMode: analysisMode
         )
     }
-    
+
     // MARK: - Cache Management
-    
+
     private func getCachedAnalysis<T: Codable & Sendable>(
-        for memoId: UUID, 
+        for memoId: UUID,
         mode: AnalysisMode
     ) async -> T? {
         return await MainActor.run {
@@ -356,7 +356,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
             )?.data
         }
     }
-    
+
     private func cacheAnalysisResult<T: Codable & Sendable>(
         _ data: T,
         for memoId: UUID,
@@ -371,7 +371,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
                 latency_ms: 0, // Simplified for now
                 moderation: nil
             )
-            
+
             analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
         }
     }

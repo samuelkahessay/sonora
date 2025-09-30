@@ -6,7 +6,7 @@ import SwiftUI
 struct ErrorAlertModifier: ViewModifier {
     @Binding var error: SonoraError?
     let onRetry: (() -> Void)?
-    
+
     func body(content: Content) -> some View {
         content
             .alert(
@@ -21,7 +21,7 @@ struct ErrorAlertModifier: ViewModifier {
                             error = nil
                         }
                     }
-                    
+
                     // Settings button for permission errors
                     if needsSettingsButton(for: presentedError) {
                         Button("Settings") {
@@ -29,7 +29,7 @@ struct ErrorAlertModifier: ViewModifier {
                             error = nil
                         }
                     }
-                    
+
                     // Dismiss button
                     Button(presentedError.isRetryable ? "Cancel" : "OK", role: .cancel) {
                         error = nil
@@ -40,7 +40,7 @@ struct ErrorAlertModifier: ViewModifier {
                         if let description = presentedError.errorDescription {
                             Text(description)
                         }
-                        
+
                         if let suggestion = presentedError.recoverySuggestion {
                             Text(suggestion)
                                 .font(.caption)
@@ -49,7 +49,7 @@ struct ErrorAlertModifier: ViewModifier {
                 }
             )
     }
-    
+
     private func needsSettingsButton(for error: SonoraError) -> Bool {
         switch error {
         case .audioPermissionDenied, .storagePermissionDenied:
@@ -58,7 +58,7 @@ struct ErrorAlertModifier: ViewModifier {
             return false
         }
     }
-    
+
     private func openSettings() {
         if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
             if UIApplication.shared.canOpenURL(settingsUrl) {
@@ -74,7 +74,7 @@ struct ErrorAlertModifier: ViewModifier {
 struct ErrorBannerModifier: ViewModifier {
     @Binding var error: SonoraError?
     let onRetry: (() -> Void)?
-    
+
     func body(content: Content) -> some View {
         VStack(spacing: 0) {
             if let error = error {
@@ -89,7 +89,7 @@ struct ErrorBannerModifier: ViewModifier {
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
-            
+
             content
         }
         .animation(.easeInOut(duration: 0.3), value: error != nil)
@@ -104,13 +104,13 @@ struct LoadingStateModifier: ViewModifier {
     let loadingMessage: String
     @Binding var error: SonoraError?
     let onRetry: (() -> Void)?
-    
+
     func body(content: Content) -> some View {
         ZStack {
             content
                 .disabled(isLoading)
                 .blur(radius: isLoading ? 2 : 0)
-            
+
             if isLoading {
                 LoadingStateView(message: loadingMessage)
                     .transition(.opacity)
@@ -125,12 +125,12 @@ struct LoadingStateModifier: ViewModifier {
 /// Simple loading state view
 struct LoadingStateView: View {
     let message: String
-    
+
     var body: some View {
         VStack(spacing: Spacing.lg) {
             LoadingIndicator(size: .large)
                 .tint(.semantic(.brandPrimary))
-            
+
             Text(message)
                 .font(.body)
                 .foregroundColor(.semantic(.textSecondary))
@@ -151,7 +151,7 @@ extension View {
     ) -> some View {
         modifier(ErrorAlertModifier(error: error, onRetry: onRetry))
     }
-    
+
     /// Shows SonoraError as a dismissible banner
     func errorBanner(
         _ error: Binding<SonoraError?>,
@@ -159,7 +159,7 @@ extension View {
     ) -> some View {
         modifier(ErrorBannerModifier(error: error, onRetry: onRetry))
     }
-    
+
     /// Shows loading state with optional error handling
     func loadingState(
         isLoading: Bool,
@@ -183,7 +183,7 @@ extension View {
 protocol ErrorHandling: ObservableObject {
     var error: SonoraError? { get set }
     var isLoading: Bool { get }
-    
+
     func handleError(_ error: Error)
     func clearError()
     func retryLastOperation()
@@ -195,11 +195,11 @@ extension ErrorHandling {
     func handleError(_ error: Error) {
         self.error = ErrorMapping.mapError(error)
     }
-    
+
     func clearError() {
         self.error = nil
     }
-    
+
     func retryLastOperation() {
         // Default implementation - override in specific ViewModels
         clearError()
@@ -210,18 +210,18 @@ extension ErrorHandling {
 
 #Preview("Error Alert") {
     struct PreviewView: View {
-        @State private var error: SonoraError? = nil
-        
+        @State private var error: SonoraError?
+
         var body: some View {
             VStack(spacing: Spacing.lg) {
                 Button("Show Permission Error") {
                     error = .audioPermissionDenied
                 }
-                
+
                 Button("Show Network Error") {
                     error = .networkTimeout
                 }
-                
+
                 Button("Show Storage Error") {
                     error = .storageSpaceInsufficient
                 }
@@ -231,14 +231,14 @@ extension ErrorHandling {
             }
         }
     }
-    
+
     return PreviewView()
 }
 
 #Preview("Error Banner") {
     struct PreviewView: View {
         @State private var error: SonoraError? = SonoraError.networkUnavailable
-        
+
         var body: some View {
             List {
                 ForEach(1...10, id: \.self) { index in
@@ -250,15 +250,15 @@ extension ErrorHandling {
             }
         }
     }
-    
+
     return PreviewView()
 }
 
 #Preview("Loading State") {
     struct PreviewView: View {
         @State private var isLoading = true
-        @State private var error: SonoraError? = nil
-        
+        @State private var error: SonoraError?
+
         var body: some View {
             List {
                 ForEach(1...10, id: \.self) { index in
@@ -284,6 +284,6 @@ extension ErrorHandling {
             }
         }
     }
-    
+
     return PreviewView()
 }

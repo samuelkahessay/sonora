@@ -30,4 +30,3 @@ public final class ConsumeRecordingUsageUseCase: ConsumeRecordingUsageUseCasePro
         await usageRepository.addUsage(clamped, for: today)
     }
 }
-

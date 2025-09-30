@@ -53,12 +53,12 @@ enum AnalysisGuardrails {
         }
         return true
     }
-    
+
     static func validate(distill: DistillData) -> Bool {
         // Validate summary
         guard !distill.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
         guard distill.summary.count <= 10_000 else { return false }
-        
+
         // Validate action items (optional)
         if let actionItems = distill.action_items {
             guard actionItems.count <= 50 else { return false }
@@ -67,11 +67,11 @@ enum AnalysisGuardrails {
                 if item.text.count > 2000 { return false }
             }
         }
-        
+
         // Validate reflection questions
         guard distill.reflection_questions.count > 0 && distill.reflection_questions.count <= 5 else { return false }
         guard distill.reflection_questions.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 1000 }) else { return false }
-        
+
         return true
     }
 }

@@ -12,7 +12,7 @@ struct ShareMemoSheet: View {
     let memo: Memo
     @ObservedObject var viewModel: MemoDetailViewModel
     let dismiss: () -> Void
-    
+
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 24) {
@@ -21,12 +21,12 @@ struct ShareMemoSheet: View {
                     Text("Share Memo")
                         .font(.title2)
                         .fontWeight(.bold)
-                    
+
                     Text("Choose what to include in your share")
                         .font(.subheadline)
                         .foregroundColor(.semantic(.textSecondary))
                 }
-                
+
                 // Content Options
                 VStack(spacing: 16) {
                     // Audio File Toggle
@@ -37,7 +37,7 @@ struct ShareMemoSheet: View {
                         isEnabled: $viewModel.shareAudioEnabled,
                         isAvailable: true
                     )
-                    
+
                     // Transcription Toggle
                     ShareOptionRow(
                         title: "Transcription",
@@ -46,7 +46,7 @@ struct ShareMemoSheet: View {
                         isEnabled: $viewModel.shareTranscriptionEnabled,
                         isAvailable: viewModel.isTranscriptionCompleted
                     )
-                    
+
                     // Analysis Toggle
                     ShareOptionRow(
                         title: "AI Analysis",
@@ -56,9 +56,9 @@ struct ShareMemoSheet: View {
                         isAvailable: hasAnalysisResults
                     )
                 }
-                
+
                 Spacer()
-                
+
                 // Action Buttons
                 VStack(spacing: 12) {
                     if viewModel.isPreparingShare {
@@ -76,7 +76,7 @@ struct ShareMemoSheet: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(!hasSelectedContent || viewModel.isPreparingShare)
                     .frame(maxWidth: .infinity)
-                    
+
                     Button("Cancel") {
                         HapticManager.shared.playLightImpact()
                         dismiss()
@@ -95,9 +95,9 @@ struct ShareMemoSheet: View {
             setupInitialState()
         }
     }
-    
+
     // MARK: - Helper Properties
-    
+
     private var transcriptionSubtitle: String {
         if viewModel.isTranscriptionCompleted {
             if let text = viewModel.transcriptionText {
@@ -108,7 +108,7 @@ struct ShareMemoSheet: View {
         }
         return "Not available"
     }
-    
+
     private var analysisSubtitle: String {
         if hasAnalysisResults {
             if let updated = viewModel.latestAnalysisUpdatedAt {
@@ -122,17 +122,16 @@ struct ShareMemoSheet: View {
         return "Not available"
     }
 
-    
     private var hasAnalysisResults: Bool {
         viewModel.hasAnalysisAvailable
     }
-    
+
     private var hasSelectedContent: Bool {
         viewModel.shareAudioEnabled || viewModel.shareTranscriptionEnabled || viewModel.shareAnalysisEnabled
     }
-    
+
     // MARK: - Setup
-    
+
     private func setupInitialState() {
         // Smart defaults
         viewModel.shareAudioEnabled = true
@@ -149,7 +148,7 @@ struct ShareOptionRow: View {
     let icon: String
     @Binding var isEnabled: Bool
     let isAvailable: Bool
-    
+
     var body: some View {
         HStack(spacing: 16) {
             // Icon
@@ -157,20 +156,20 @@ struct ShareOptionRow: View {
                 .font(.title2)
                 .foregroundColor(iconColor)
                 .frame(width: 32, height: 32)
-            
+
             // Content
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.headline)
                     .foregroundColor(textColor)
-                
+
                 Text(subtitle)
                     .font(.caption)
                     .foregroundColor(.semantic(.textSecondary))
             }
-            
+
             Spacer()
-            
+
             // Toggle
             Toggle("", isOn: Binding(
                 get: { isAvailable && isEnabled },
@@ -190,14 +189,14 @@ struct ShareOptionRow: View {
         .accessibilityLabel("\(title): \(subtitle)")
         .accessibilityHint(isAvailable ? "Toggle to include in share" : "Not available")
     }
-    
+
     private var iconColor: Color {
         if !isAvailable {
             return .semantic(.textSecondary)
         }
         return isEnabled ? .semantic(.brandPrimary) : .semantic(.textSecondary)
     }
-    
+
     private var textColor: Color {
         isAvailable ? .semantic(.textPrimary) : .semantic(.textSecondary)
     }

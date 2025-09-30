@@ -17,16 +17,16 @@ struct RecordingView: View {
     @SwiftUI.Environment(\.accessibilityReduceMotion) private var reduceMotion: Bool
     @AppStorage("hasSeenInspireMe") private var hasSeenInspireMe: Bool = false
     @AppStorage("settings.showGuidedPrompts") private var showGuidedPrompts: Bool = true
-    @State private var idlePulseTask: Task<Void, Never>? = nil
+    @State private var idlePulseTask: Task<Void, Never>?
     @State private var inspireButtonScale: CGFloat = 1.0
     @State private var inspireButtonOpacity: Double = 1.0
-    
+
     enum AccessibleElement {
         case recordButton
         case permissionButton
         case statusText
     }
-    
+
     // Extracted background to help the compiler type-check faster
     private var backgroundView: some View {
         ZStack {
@@ -61,12 +61,12 @@ struct RecordingView: View {
             }
         }
     }
-    
+
     // Extracted main content to help the compiler
     private var contentView: some View {
         NavigationStack {
             VStack(spacing: SonoraDesignSystem.Spacing.xxl) {
-                
+
                 if !viewModel.hasPermission {
                     VStack(spacing: SonoraDesignSystem.Spacing.lg) {
                         Image(systemName: viewModel.permissionStatus.iconName)
@@ -74,18 +74,18 @@ struct RecordingView: View {
                             .fontWeight(.medium)
                             .foregroundColor(.sparkOrange)
                             .accessibilityHidden(true)
-                        
+
                         Text(viewModel.permissionStatus.displayName)
                             .headingStyle(.medium)
                             .accessibilityAddTraits(.isHeader)
-                        
+
                         Text(getPermissionDescription())
                             .bodyStyle(.regular)
                             .foregroundColor(.textSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, SonoraDesignSystem.Spacing.breathingRoom)
                             .accessibilityLabel(getPermissionAccessibilityLabel())
-                        
+
                         if viewModel.isRequestingPermission {
                             VStack(spacing: 8) {
                                 LoadingIndicator(size: .regular)
@@ -202,7 +202,7 @@ struct RecordingView: View {
                     }
                     // Rely on outer breathingRoom() for horizontal padding
                 }
-                
+
                 Spacer()
             }
             .breathingRoom()
@@ -211,7 +211,7 @@ struct RecordingView: View {
             }
             .navigationTitle("Sonora")
             .navigationBarTitleDisplayMode(.large)
-            
+
             .onAppear {
                 viewModel.onViewAppear()
                 if showGuidedPrompts {
@@ -274,7 +274,7 @@ struct RecordingView: View {
             } message: {
                 Text(viewModel.autoStopMessage ?? "")
             }
-            .onChange(of: scenePhase) { oldPhase, newPhase in
+            .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     // Check if we should stop recording due to Live Activity stop button
                     let sharedDefaults = UserDefaults(suiteName: "group.sonora.shared") ?? UserDefaults.standard
@@ -282,7 +282,7 @@ struct RecordingView: View {
                         // Clear the flag immediately to prevent duplicate stops
                         sharedDefaults.removeObject(forKey: "shouldStopRecordingOnActivation")
                         sharedDefaults.synchronize()
-                        
+
                         // Stop recording if currently recording
                         if viewModel.isRecording || viewModel.recordingState == .paused {
                             HapticManager.shared.playRecordingFeedback(isStarting: false)
@@ -291,8 +291,7 @@ struct RecordingView: View {
                     }
                     // Resume idle pulse when returning active
                     resetIdlePulse()
-                }
-                else {
+                } else {
                     // Stop any attention animation when not active
                     cancelIdlePulse()
                 }
@@ -309,9 +308,9 @@ struct RecordingView: View {
             PaywallView()
         }
     }
-    
+
     // MARK: - Permission UI Helpers
-    
+
     private func getPermissionDescription() -> String {
         switch viewModel.permissionStatus {
         case .notDetermined:
@@ -324,12 +323,12 @@ struct RecordingView: View {
             return "Your voice is ready to be captured"
         }
     }
-    
+
     @ViewBuilder
     private func getPermissionButton() -> some View {
         switch viewModel.permissionStatus {
         case .notDetermined:
-            Button("Enable Voice Capture") { 
+            Button("Enable Voice Capture") {
                 HapticManager.shared.playSelection()
                 viewModel.requestPermission()
             }
@@ -337,32 +336,32 @@ struct RecordingView: View {
             .disabled(viewModel.isRequestingPermission)
             .accessibilityLabel("Enable voice capture")
             .accessibilityHint("Double tap to allow Sonora to listen and capture your thoughts")
-            
+
         case .denied:
-            Button("Open Settings") { 
+            Button("Open Settings") {
                 HapticManager.shared.playSelection()
                 viewModel.openSettings()
             }
             .buttonStyle(.bordered)
             .accessibilityLabel("Open Settings app")
             .accessibilityHint("Double tap to open Settings where you can enable microphone access for voice capture")
-            
+
         case .restricted:
-            Button("Review Settings") { 
+            Button("Review Settings") {
                 HapticManager.shared.playSelection()
                 viewModel.openSettings()
             }
             .buttonStyle(.bordered)
             .accessibilityLabel("Review device settings")
             .accessibilityHint("Double tap to open Settings to check device restrictions for voice recording")
-            
+
         case .granted:
             EmptyView()
         }
     }
-    
+
     // MARK: - Accessibility Helpers
-    
+
     private func getPermissionAccessibilityLabel() -> String {
         switch viewModel.permissionStatus {
         case .notDetermined:
@@ -375,7 +374,7 @@ struct RecordingView: View {
             return "Microphone access is enabled. You can now record voice memos."
         }
     }
-    
+
     private func getRecordButtonAccessibilityLabel() -> String {
         if viewModel.isRecording {
             return "Stop capturing your thoughts"
@@ -383,7 +382,7 @@ struct RecordingView: View {
             return "Share your thoughts"
         }
     }
-    
+
     private func getRecordButtonAccessibilityHint() -> String {
         if viewModel.isRecording {
             return "Double tap to stop recording and preserve your reflection"
@@ -391,7 +390,7 @@ struct RecordingView: View {
             return "Double tap to begin sharing your thoughts through voice"
         }
     }
-    
+
     private func getTimeAccessibilityLabel() -> String {
         let timeComponents = viewModel.formattedRecordingTime.split(separator: ":")
         if timeComponents.count == 2 {

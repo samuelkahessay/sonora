@@ -7,7 +7,7 @@ struct DebugSectionView: View {
     @State private var showRemindersSheet = false
     @State private var sampleEvents: [EventsData.DetectedEvent] = []
     @State private var sampleReminders: [RemindersData.DetectedReminder] = []
-    @State private var alertMessage: String? = nil
+    @State private var alertMessage: String?
 
     var body: some View {
         SettingsCard {

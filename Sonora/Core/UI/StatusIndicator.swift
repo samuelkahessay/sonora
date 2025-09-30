@@ -5,14 +5,14 @@ enum IconSize: CGFloat, CaseIterable {
     /// Small icons for compact UI elements (16pt)
     case small = 16
     /// Standard icons for most UI elements (24pt) - Accessibility minimum
-    case standard = 24  
+    case standard = 24
     /// Medium icons for section headers and important elements (28pt)
     case medium = 28
     /// Large icons for primary actions and state displays (32pt)
     case large = 32
     /// Extra large icons for main UI elements and hero states (48pt)
     case extraLarge = 48
-    
+
     /// Font equivalent for SF Symbols
     var font: Font {
         .system(size: rawValue, weight: .medium)
@@ -24,7 +24,7 @@ struct StatusIndicator: View {
     let status: Status
     let size: IconSize
     let showText: Bool
-    
+
     /// Status types with consistent icons and colors
     enum Status {
         case success(String? = nil)
@@ -35,7 +35,7 @@ struct StatusIndicator: View {
         case completed(String? = nil)
         case failed(String? = nil)
         case inProgress(String? = nil)
-        
+
         var icon: String {
             switch self {
             case .success, .completed:
@@ -50,7 +50,7 @@ struct StatusIndicator: View {
                 return "clock.fill"
             }
         }
-        
+
         var color: Color {
             switch self {
             case .success, .completed:
@@ -65,7 +65,7 @@ struct StatusIndicator: View {
                 return .semantic(.brandPrimary)
             }
         }
-        
+
         var text: String? {
             switch self {
             case .success(let text), .warning(let text), .error(let text),
@@ -74,7 +74,7 @@ struct StatusIndicator: View {
                 return text
             }
         }
-        
+
         var defaultText: String {
             switch self {
             case .success:
@@ -96,7 +96,7 @@ struct StatusIndicator: View {
             }
         }
     }
-    
+
     init(
         status: Status,
         size: IconSize = .medium,
@@ -106,7 +106,7 @@ struct StatusIndicator: View {
         self.size = size
         self.showText = showText
     }
-    
+
     var body: some View {
         HStack(spacing: Spacing.sm) {
             switch status {
@@ -118,7 +118,7 @@ struct StatusIndicator: View {
                     .font(size.font)
                     .foregroundColor(status.color)
             }
-            
+
             if showText {
                 Text(status.text ?? status.defaultText)
                     .font(textFont)
@@ -129,9 +129,9 @@ struct StatusIndicator: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(accessibilityTraits)
     }
-    
+
     // MARK: - Private Helpers
-    
+
     private var loadingSize: LoadingIndicator.Size {
         switch size {
         case .small:
@@ -142,7 +142,7 @@ struct StatusIndicator: View {
             return .large
         }
     }
-    
+
     private var textFont: Font {
         switch size {
         case .small:
@@ -155,7 +155,7 @@ struct StatusIndicator: View {
             return .title3
         }
     }
-    
+
     private var accessibilityLabel: String {
         let statusText = status.text ?? status.defaultText
         switch status {
@@ -171,7 +171,7 @@ struct StatusIndicator: View {
             return "\(statusText) information"
         }
     }
-    
+
     private var accessibilityTraits: AccessibilityTraits {
         switch status {
         case .loading, .inProgress:
@@ -197,7 +197,7 @@ extension StatusIndicator {
             showText: showText
         )
     }
-    
+
     /// Warning indicator
     static func warning(
         _ text: String? = nil,
@@ -210,7 +210,7 @@ extension StatusIndicator {
             showText: showText
         )
     }
-    
+
     /// Error indicator
     static func error(
         _ text: String? = nil,
@@ -223,7 +223,7 @@ extension StatusIndicator {
             showText: showText
         )
     }
-    
+
     /// Info indicator
     static func info(
         _ text: String? = nil,
@@ -236,7 +236,7 @@ extension StatusIndicator {
             showText: showText
         )
     }
-    
+
     /// Loading indicator
     static func loading(
         _ text: String? = nil,
@@ -249,7 +249,7 @@ extension StatusIndicator {
             showText: showText
         )
     }
-    
+
     /// Completed indicator (alias for success)
     static func completed(
         _ text: String? = nil,
@@ -262,7 +262,7 @@ extension StatusIndicator {
             showText: showText
         )
     }
-    
+
     /// Failed indicator (alias for error)
     static func failed(
         _ text: String? = nil,
@@ -275,7 +275,7 @@ extension StatusIndicator {
             showText: showText
         )
     }
-    
+
     /// In progress indicator (alias for loading)
     static func inProgress(
         _ text: String? = nil,
@@ -323,7 +323,7 @@ extension StatusIndicator {
         VStack(spacing: Spacing.sm) {
             Text("Icon Only")
                 .font(.headline)
-            
+
             HStack(spacing: Spacing.md) {
                 StatusIndicator.success()
                 StatusIndicator.warning()
@@ -332,11 +332,11 @@ extension StatusIndicator {
                 StatusIndicator.loading()
             }
         }
-        
+
         VStack(spacing: Spacing.sm) {
             Text("With Text")
                 .font(.headline)
-            
+
             VStack(spacing: Spacing.sm) {
                 StatusIndicator.success("Operation completed successfully", showText: true)
                 StatusIndicator.warning("Please check your settings", showText: true)
@@ -345,11 +345,11 @@ extension StatusIndicator {
                 StatusIndicator.loading("Processing your request", showText: true)
             }
         }
-        
+
         VStack(spacing: Spacing.sm) {
             Text("Different Sizes")
                 .font(.headline)
-            
+
             HStack(spacing: Spacing.md) {
                 StatusIndicator.success(size: .small)
                 StatusIndicator.success(size: .standard)

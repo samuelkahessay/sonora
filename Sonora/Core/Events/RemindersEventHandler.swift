@@ -103,7 +103,6 @@ final class RemindersEventHandler {
         setupEventSubscriptions()
     }
 
-
     // MARK: - Debug
     var integrationStatus: String {
         return """

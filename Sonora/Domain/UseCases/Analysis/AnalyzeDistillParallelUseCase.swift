@@ -13,7 +13,7 @@ public struct DistillProgressUpdate: Sendable, Equatable {
     public let totalComponents: Int
     public let completedResults: PartialDistillData
     public let latestComponent: AnalysisMode?
-    
+
     public var progress: Double {
         return Double(completedComponents) / Double(totalComponents)
     }
@@ -26,14 +26,14 @@ public struct PartialDistillData: Sendable, Equatable {
     public var reflectionQuestions: [String]?
     public var events: [EventsData.DetectedEvent]?
     public var reminders: [RemindersData.DetectedReminder]?
-    
+
     /// Convert to complete DistillData if all required components are present
     public func toDistillData() -> DistillData? {
         guard let summary = summary,
               let reflectionQuestions = reflectionQuestions else {
             return nil
         }
-        
+
         return DistillData(
             summary: summary,
             action_items: actionItems,
@@ -69,7 +69,7 @@ enum DistillComponentData: Sendable {
 }
 
 final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol, @unchecked Sendable {
-    
+
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
     private let analysisRepository: any AnalysisRepository
@@ -77,10 +77,10 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     private let eventBus: any EventBusProtocol
     private let operationCoordinator: any OperationCoordinatorProtocol
     private let detectUseCase: any DetectEventsAndRemindersUseCaseProtocol
-    
+
     // MARK: - Constants
     private let componentModes: [AnalysisMode] = [.distillSummary, .distillActions, .distillReflection]
-    
+
     // MARK: - Initialization
     init(
         analysisService: any AnalysisServiceProtocol,
@@ -97,13 +97,13 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         self.operationCoordinator = operationCoordinator
         self.detectUseCase = detectUseCase
     }
-    
+
     // MARK: - Use Case Execution
     @MainActor
     func execute(transcript: String, memoId: UUID, progressHandler: @MainActor @escaping (DistillProgressUpdate) -> Void) async throws -> AnalyzeEnvelope<DistillData> {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
-        
+
         logger.analysis("Starting parallel Distill analysis", context: context)
 
         // Validate inputs early; avoid registering an op for invalid requests
@@ -129,7 +129,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         }
 
         do {
-            
+
             // Execute parallel component analysis
             let result = try await executeParallelComponents(
                 transcript: transcript,
@@ -137,43 +137,43 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                 progressHandler: progressHandler,
                 context: context
             )
-            
+
             // Save complete result to cache
             await MainActor.run {
                 analysisRepository.saveAnalysisResult(result, for: memoId, mode: .distill)
             }
-            
+
             // Publish completion event
             await MainActor.run {
                 EventBus.shared.publish(.analysisCompleted(memoId: memoId, type: .distill, result: result.data.summary))
             }
-            
+
             await operationCoordinator.completeOperation(operationId)
-            
+
             logger.analysis("Parallel Distill analysis completed successfully", context: context)
             return result
-            
+
         } catch {
             await operationCoordinator.failOperation(operationId, errorDescription: error.localizedDescription)
             throw error
         }
     }
-    
+
     // MARK: - Private Implementation
-    
+
     private func executeParallelComponents(
         transcript: String,
         memoId: UUID,
         progressHandler: @MainActor @escaping (DistillProgressUpdate) -> Void,
         context: LogContext
     ) async throws -> AnalyzeEnvelope<DistillData> {
-        
+
         var partialData = PartialDistillData()
         var completedCount = 0
         var combinedLatency = 0
         let model = "gpt-5-nano"
         var combinedTokens = TokenUsage(input: 0, output: 0)
-        
+
         // Send initial progress
         let totalComponents = componentModes.count + 1
         let initialPartial = partialData
@@ -185,12 +185,12 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                 latestComponent: nil
             ))
         }
-        
+
         logger.analysis("Starting parallel execution of \(componentModes.count) components", context: context)
-        
+
         // Execute all components in parallel using TaskGroup
         try await withThrowingTaskGroup(of: (AnalysisMode?, DistillComponentData, Int, TokenUsage).self) { group in
-            
+
             // Add tasks for each component
             for mode in componentModes {
                 group.addTask { [self] in
@@ -199,14 +199,14 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                         logger.debug("Cache hit for component \(mode.rawValue)", category: .analysis, context: context)
                         return (mode, cached.data, cached.latency_ms, cached.tokens)
                     }
-                    
+
                     // Execute API call for component
                     logger.debug("Executing API call for component \(mode.rawValue)", category: .analysis, context: context)
                     let result = try await executeComponentAnalysis(mode: mode, transcript: transcript, memoId: memoId)
-                    
+
                     // Save component to cache
                     await saveComponentCache(data: result.data, latency: result.latency_ms, tokens: result.tokens, mode: mode, memoId: memoId)
-                    
+
                     return (mode, result.data, result.latency_ms, result.tokens)
                 }
             }
@@ -222,7 +222,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                     return (nil, .detections(nil, nil), 0, TokenUsage(input: 0, output: 0))
                 }
             }
-            
+
             // Collect results as they complete
             for try await (mode, data, latency, tokens) in group {
                 combinedLatency = max(combinedLatency, latency) // Use max since parallel
@@ -230,14 +230,14 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                     input: combinedTokens.input + tokens.input,
                     output: combinedTokens.output + tokens.output
                 )
-                
+
                 // Update partial data based on component type
                 updatePartialData(&partialData, mode: mode, data: data)
-                
+
                 completedCount += 1
                 let currentCompleted = completedCount
                 let currentPartial = partialData
-                
+
                 // Send progress update on main actor
                 await MainActor.run {
                     progressHandler(DistillProgressUpdate(
@@ -248,24 +248,24 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                     ))
                 }
 
-                logger.debug("Component \(mode?.rawValue ?? "detections") completed (\(completedCount)/\(totalComponents))", 
+                logger.debug("Component \(mode?.rawValue ?? "detections") completed (\(completedCount)/\(totalComponents))",
                            category: .analysis, context: context)
             }
         }
-        
+
         // Combine results into final DistillData
         guard let finalData = partialData.toDistillData() else {
             logger.error("Failed to combine parallel component results", category: .analysis, context: context, error: nil)
             throw AnalysisError.invalidResponse
         }
-        
-        logger.analysis("Parallel component execution completed", 
+
+        logger.analysis("Parallel component execution completed",
                        context: LogContext(correlationId: context.correlationId, additionalInfo: [
                            "combinedLatency": combinedLatency,
                            "totalInputTokens": combinedTokens.input,
                            "totalOutputTokens": combinedTokens.output
                        ]))
-        
+
         // Create final envelope
         return AnalyzeEnvelope(
             mode: .distill,
@@ -276,7 +276,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             moderation: nil
         )
     }
-    
+
     private func checkComponentCache(mode: AnalysisMode, memoId: UUID) async -> (data: DistillComponentData, latency_ms: Int, tokens: TokenUsage)? {
         return await MainActor.run {
             switch mode {
@@ -298,7 +298,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             return nil
         }
     }
-    
+
     private func executeComponentAnalysis(mode: AnalysisMode, transcript: String, memoId: UUID) async throws -> (data: DistillComponentData, latency_ms: Int, tokens: TokenUsage) {
         switch mode {
         case .distillSummary:
@@ -314,7 +314,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             throw AnalysisError.invalidResponse
         }
     }
-    
+
     private func saveComponentCache(data: DistillComponentData, latency: Int, tokens: TokenUsage, mode: AnalysisMode, memoId: UUID) async {
         await MainActor.run {
             switch data {
@@ -333,7 +333,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             }
         }
     }
-    
+
     private func updatePartialData(_ partialData: inout PartialDistillData, mode: AnalysisMode?, data: DistillComponentData) {
         switch data {
         case .summary(let summaryData):

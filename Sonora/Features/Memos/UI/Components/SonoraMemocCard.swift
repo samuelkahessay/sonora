@@ -23,9 +23,9 @@ import SwiftUI
 /// - Follows SonoraDesignSystem spacing and typography
 /// - Implements gentle spring animations for organic feel
 struct SonoraMemocCard: View {
-    
+
     // MARK: - Properties
-    
+
     let memo: Memo
     @ObservedObject var viewModel: MemoListViewModel
     /// Whether to draw a subtle top hairline inside the card to
@@ -37,13 +37,13 @@ struct SonoraMemocCard: View {
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var insightHintOpacity: Double = 0
     @ObservedObject private var titleCoordinator = DIContainer.shared.titleGenerationCoordinator()
-    
+
     // MARK: - Computed Properties
-    
+
     private var transcriptionState: TranscriptionState {
         viewModel.getTranscriptionState(for: memo)
     }
-    
+
     private var hasInsights: Bool {
         // Check if memo has analysis results with insights
         memo.analysisResults.contains(where: { result in
@@ -51,17 +51,16 @@ struct SonoraMemocCard: View {
             return false
         })
     }
-    
+
     // MARK: - View Body
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: SonoraDesignSystem.Spacing.md) {
             // Title with thoughtful typography
             titleSection
-            
+
             // Unified metadata row: duration · relative time (+ optional insights)
             metadataRow
-            
 
         }
         // Consistent, compact vertical rhythm with generous horizontal padding
@@ -100,9 +99,9 @@ struct SonoraMemocCard: View {
             }
         }
     }
-    
+
     // MARK: - View Components
-    
+
     /// Title section with premium typography
     @ViewBuilder
     private var titleSection: some View {
@@ -133,7 +132,7 @@ struct SonoraMemocCard: View {
             }
         }
     }
-    
+
     /// Unified metadata row with duration and relative time (single source of truth)
     @ViewBuilder
     private var metadataRow: some View {
@@ -141,21 +140,19 @@ struct SonoraMemocCard: View {
             Image(systemName: "clock")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
             Text("\(memo.durationString) · \(relativeTime)")
                 .font(.footnote)
                 .foregroundColor(.secondary)
                 .monospacedDigit()
-            
+
             Spacer(minLength: 0)
-            
+
             // Insight teaser (if available)
             if hasInsights { insightHintView }
         }
     }
-    
 
-    
     /// Insight hint view with Growth Green accent
     @ViewBuilder
     private var insightHintView: some View {
@@ -163,7 +160,7 @@ struct SonoraMemocCard: View {
             Image(systemName: "lightbulb.fill")
                 .font(.caption2)
                 .foregroundColor(.growthGreen)
-            
+
             Text("Insights")
                 .font(SonoraDesignSystem.Typography.caption)
                 .foregroundColor(.growthGreen)
@@ -171,14 +168,14 @@ struct SonoraMemocCard: View {
         .opacity(insightHintOpacity)
         .scaleEffect(insightHintOpacity == 0 ? 0.8 : 1.0)
     }
-    
+
     /// Subtle state indicator
     @ViewBuilder
     private var stateIndicator: some View {
         // Removed transcription progress indicator for cleaner card design
         EmptyView()
     }
-    
+
     /// Card background with whisper blue tint
     @ViewBuilder
     private var cardBackground: some View {
@@ -195,9 +192,9 @@ struct SonoraMemocCard: View {
                           : Color.whisperBlue.opacity(0.3))
             )
     }
-    
+
     // MARK: - Helper Properties
-    
+
     /// Relative time string in compact system style (e.g., "1m ago", "2h ago")
     private var relativeTime: String {
         let formatter = RelativeDateTimeFormatter()
@@ -206,7 +203,7 @@ struct SonoraMemocCard: View {
         let endDate = min(memo.recordingEndDate, now)
         return formatter.localizedString(for: endDate, relativeTo: now)
     }
-    
+
     /// Clip shape that rounds only the exposed corners within a stacked group
     private var groupClipShape: some InsettableShape {
         let r = SonoraDesignSystem.Spacing.cardRadius
@@ -225,21 +222,19 @@ struct SonoraMemocCard: View {
         // Middle: square corners
         return UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 0)
     }
-    
+
     /// Single-pixel hairline thickness based on device scale
     private var hairlineThickness: CGFloat { 1.5 }
-    
+
     /// Low-contrast separator color that adapts to color scheme
     private var hairlineColor: Color {
         (colorScheme == .dark
          ? Color.semantic(.separator).opacity(0.22)
          : Color.semantic(.separator).opacity(0.14))
     }
-    
 
-    
     // MARK: - Animation Helpers
-    
+
     private func configureAnimations() {
         // Removed shimmer animation during transcription for cleaner UI
         // Animate insight hint if insights exist
@@ -249,7 +244,7 @@ struct SonoraMemocCard: View {
             }
         }
     }
-    
+
     private func animateInsightHint() {
         withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {
             insightHintOpacity = 1.0
@@ -269,7 +264,7 @@ struct SonoraMemocCard: View {
         case .success(let title):
             print("🧠 UI[List]: received title for memo=\(memo.id) -> \(title)")
             return false
-        case .failed(_, _):
+        case .failed:
             print("🧠 UI[List]: auto-title failed for memo=\(memo.id)")
             return false
         case .idle:

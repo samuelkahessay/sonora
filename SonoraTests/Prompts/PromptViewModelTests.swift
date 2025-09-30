@@ -49,4 +49,3 @@ final class PromptViewModelTests: XCTestCase {
         XCTAssertEqual(cat.setFavArgs?.isFav, true)
     }
 }
-

@@ -19,4 +19,3 @@ public final class DefaultRecordingQuotaPolicy: RecordingQuotaPolicyProtocol, @u
         }
     }
 }
-

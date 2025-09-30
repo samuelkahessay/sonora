@@ -8,7 +8,7 @@ import UniformTypeIdentifiers
 /// Uses dependency injection for testability and clean architecture
 @MainActor
 final class MemoListViewModel: ObservableObject, ErrorHandling {
-    
+
     // MARK: - Dependencies
     private let loadMemosUseCase: LoadMemosUseCaseProtocol
     private let deleteMemoUseCase: DeleteMemoUseCaseProtocol
@@ -22,7 +22,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     private let transcriptionRepository: any TranscriptionRepository // For transcription states
     private let titleCoordinator: TitleGenerationCoordinator
     private var cancellables = Set<AnyCancellable>()
-    
+
     // Event-driven updates (Swift 6 compliant - no more polling)
     private var eventSubscriptionId: UUID?
     private var transcriptionStateSubscription: AnyCancellable?
@@ -30,133 +30,133 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     private var titleStateSubscription: AnyCancellable?
     private let eventBus = EventBus.shared
     private let logger: any LoggerProtocol = Logger.shared
-    
+
     // MARK: - Grouped State Management (Swift 6 Optimized - Reduces @Published Count from 12 to 6)
-    
+
     /// Unified memo state combining memo data with transcription states
     @Published var memosWithState: [MemoWithState] = []
-    
+
     /// UI state consolidation - reduces individual @Published properties
     @Published var uiState = MemoListUIState()
-    
+
     /// Selection state consolidation - reduces edit mode @Published properties
     @Published var selectionState = MemoSelectionState()
-    
+
     /// Transcription state consolidation - reduces transcription @Published properties
     @Published var transcriptionDisplayState = TranscriptionDisplayState()
-    
+
     /// Playback state consolidation - reduces playback @Published properties
     @Published var playbackState = PlaybackState()
-    
+
     /// Legacy memo list for backward compatibility during transition
     @Published var memos: [Memo] = []
-    
+
     // MARK: - Computed Properties
-    
+
     /// Whether the memo list is empty
     var isEmpty: Bool {
         memos.isEmpty
     }
-    
+
     /// Empty state message for UI
     var emptyStateTitle: String {
         "No Memos Yet"
     }
-    
+
     /// Empty state subtitle for UI
     var emptyStateSubtitle: String {
         "Start recording to see your audio memos here"
     }
-    
+
     /// Empty state icon name
     var emptyStateIcon: String {
         "mic.slash"
     }
-    
+
     // MARK: - Multi-Select Computed Properties (Delegated to selectionState)
-    
+
     /// Whether any memos are selected
     var hasSelection: Bool {
         selectionState.hasSelection
     }
-    
+
     /// Number of selected memos
     var selectedCount: Int {
         selectionState.selectedCount
     }
-    
+
     /// Whether delete action can be performed
     var canDelete: Bool {
         selectionState.canDelete
     }
-    
+
     /// Whether edit mode is active
     var isEditMode: Bool {
         selectionState.isEditMode
     }
-    
+
     /// Current selected memo IDs
     var selectedMemoIds: Set<UUID> {
         selectionState.selectedMemoIds
     }
-    
+
     // MARK: - UI State Computed Properties (Delegated to uiState)
-    
+
     /// Current error state
     var error: SonoraError? {
         get { uiState.error }
         set { uiState = uiState.with(error: newValue) }
     }
-    
+
     /// Current loading state
     var isLoading: Bool {
         get { uiState.isLoading }
         set { uiState = uiState.with(isLoading: newValue) }
     }
-    
+
     /// Current editing memo ID
     var editingMemoId: UUID? {
         get { uiState.editingMemoId }
         set { uiState = uiState.with(editingMemoId: newValue) }
     }
-    
+
     /// Navigation path for SwiftUI navigation
     var navigationPath: NavigationPath {
         get { uiState.navigationPath }
-        set { 
+        set {
             var updatedState = uiState
             updatedState.navigationPath = newValue
             uiState = updatedState
         }
     }
-    
+
     /// Refresh trigger for UI updates
     private var refreshTrigger: Int {
         uiState.refreshTrigger
     }
-    
+
     // MARK: - Playback State Computed Properties (Delegated to playbackState)
-    
+
     /// Currently playing memo
     var playingMemo: Memo? {
         playbackState.playingMemo
     }
-    
+
     /// Whether any memo is currently playing
     var isPlaying: Bool {
         playbackState.isPlaying
     }
-    
+
     // MARK: - Transcription State Access (Delegated to transcriptionDisplayState)
-    
+
     /// Legacy transcription states dictionary for backward compatibility
     var transcriptionStates: [String: TranscriptionState] {
         get { transcriptionDisplayState.states }
         set { transcriptionDisplayState = TranscriptionDisplayState(states: newValue) }
     }
-    
+
     // MARK: - Initialization
-    
+
     init(
         loadMemosUseCase: LoadMemosUseCaseProtocol,
         deleteMemoUseCase: DeleteMemoUseCaseProtocol,
@@ -181,10 +181,10 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         self.memoRepository = memoRepository
         self.transcriptionRepository = transcriptionRepository
         self.titleCoordinator = titleCoordinator
-        
+
         setupBindings()
         loadMemos()
-        
+
         logger.debug("MemoListViewModel initialized", category: .viewModel, context: LogContext())
     }
 
@@ -202,13 +202,12 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
         }
     }
-    
-    
+
     // MARK: - Setup Methods
-    
+
     private func setupBindings() {
         // MARK: - Unified State Management (Swift 6 Compliant)
-        
+
         // Create unified publisher combining memo and transcription data
         unifiedStateSubscription = Publishers.CombineLatest3(
             memoRepository.memosPublisher,
@@ -222,7 +221,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         .sink { [weak self] memos, _, playbackState in
             self?.updateUnifiedState(memos: memos, playingMemo: playbackState.0, isPlaying: playbackState.1)
         }
-        
+
         unifiedStateSubscription?.store(in: &cancellables)
 
         titleStateSubscription = titleCoordinator.$stateByMemo
@@ -236,7 +235,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                 )
             }
         titleStateSubscription?.store(in: &cancellables)
-        
+
         // Legacy repository observation for backward compatibility
         memoRepository.objectWillChange
             .receive(on: RunLoop.main)
@@ -268,11 +267,11 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                 break
             }
         }
-        
+
         // Initial update
         updateFromRepository()
         updateTranscriptionStates()
-        
+
         // Initialize unified state
         updateUnifiedState(
             memos: memoRepository.memos,
@@ -280,7 +279,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             isPlaying: memoRepository.isPlaying
         )
     }
-    
+
     private func updateFromRepository() {
         memos = memoRepository.memos
         playbackState = PlaybackState(
@@ -288,7 +287,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             isPlaying: memoRepository.isPlaying
         )
     }
-    
+
     private func updateTranscriptionStates() {
         let oldStates = transcriptionDisplayState.states
         let newStates = transcriptionRepository.transcriptionStates
@@ -311,12 +310,12 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             logger.debug("Repo objectWillChange with no effective state diff", category: .viewModel, context: LogContext())
         }
     }
-    
+
     /// Handle event-driven transcription state changes (Swift 6 compliant)
     private func handleTranscriptionStateChange(_ stateChange: TranscriptionStateChange) {
         let memoIdString = stateChange.memoId.uuidString
         let previousState = transcriptionDisplayState.states[memoIdString]
-        
+
         // Update consolidated transcription state
         objectWillChange.send()
         transcriptionDisplayState = transcriptionDisplayState.with(
@@ -324,9 +323,9 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             for: stateChange.memoId
         )
         uiState.incrementRefresh()
-        
-        logger.debug("Event-driven transcription state update", 
-                    category: .viewModel, 
+
+        logger.debug("Event-driven transcription state update",
+                    category: .viewModel,
                     context: LogContext(additionalInfo: [
                         "memoId": stateChange.memoId.uuidString,
                         "previousState": previousState?.statusText ?? "nil",
@@ -334,7 +333,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                         "refreshTrigger": "\(uiState.refreshTrigger)"
                     ]))
     }
-    
+
     /// Update unified state combining memos with transcription states (Swift 6 compliant)
     private func updateUnifiedState(memos: [Memo], playingMemo: Memo?, isPlaying: Bool) {
         let newMemosWithState = memos.map { memo in
@@ -358,15 +357,15 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                 isPlaying: isThisMemoPlaying
             )
         }
-        
+
         // Only update if there are actual changes to reduce UI churn
         if newMemosWithState != memosWithState {
             objectWillChange.send()
             memosWithState = newMemosWithState
             uiState.incrementRefresh()
-            
-            logger.debug("Unified state updated", 
-                        category: .viewModel, 
+
+            logger.debug("Unified state updated",
+                        category: .viewModel,
                         context: LogContext(additionalInfo: [
                             "memoCount": "\(memos.count)",
                             "playingMemoId": playingMemo?.id.uuidString ?? "nil",
@@ -375,19 +374,19 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                         ]))
         }
     }
-    
+
     // MARK: - Event-Driven Updates (No More Polling)
-    
+
     /// Event-driven transcription state updates have eliminated the need for polling
     /// This significantly reduces CPU usage and battery drain during transcription operations
-    
+
     /// Force refresh a specific memo's transcription state (now event-driven)
     private func refreshTranscriptionState(for memoId: UUID) {
         guard let memo = memos.first(where: { $0.id == memoId }) else { return }
-        
+
         let newState = getTranscriptionStateUseCase.execute(memo: memo)
         let key = memoId.uuidString
-        
+
         if transcriptionStates[key] != newState {
             objectWillChange.send()
             transcriptionStates[key] = newState
@@ -398,9 +397,9 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             logger.debug("Event update for \(memo.filename): \(newState.statusText). refreshTrigger=\(refreshTrigger)", category: .viewModel, context: LogContext())
         }
     }
-    
+
     // MARK: - Public Methods
-    
+
     /// Load memos from repository
     func loadMemos() {
         logger.debug("Loading memos", category: .viewModel, context: LogContext())
@@ -420,12 +419,12 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
         }
     }
-    
+
     /// Refresh memos (same as loadMemos, for pull-to-refresh)
     func refreshMemos() {
         loadMemos()
     }
-    
+
     /// Delete memo at specific index
     func deleteMemo(at index: Int) {
         guard index < memos.count else { return }
@@ -441,7 +440,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
         }
     }
-    
+
     /// Delete memos at multiple indices
     func deleteMemos(at offsets: IndexSet) {
         print("📱 MemoListViewModel: Deleting \(offsets.count) memos")
@@ -459,7 +458,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
         }
     }
-    
+
     /// Play or pause a memo
     func playMemo(_ memo: Memo) {
         print("📱 MemoListViewModel: Playing memo: \(memo.filename)")
@@ -473,7 +472,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
         }
     }
-    
+
     /// Start transcription for a memo
     func startTranscription(for memo: Memo) {
         print("📱 MemoListViewModel: Starting transcription for: \(memo.filename)")
@@ -488,7 +487,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
         }
     }
-    
+
     /// Retry transcription for a memo
     func retryTranscription(for memo: Memo) {
         print("📱 MemoListViewModel: Retrying transcription for: \(memo.filename)")
@@ -503,35 +502,35 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
         }
     }
-    
+
     /// Get transcription state for a memo
     func getTranscriptionState(for memo: Memo) -> TranscriptionState {
         return getTranscriptionStateUseCase.execute(memo: memo)
     }
-    
+
     // MARK: - Rename Methods
-    
+
     /// Start editing a memo's title
     func startEditing(memo: Memo) {
         print("📝 MemoListViewModel: Starting edit for memo: \(memo.displayName)")
         editingMemoId = memo.id
     }
-    
+
     /// Stop editing (clear editing state)
     func stopEditing() {
         print("📝 MemoListViewModel: Stopping edit mode")
         editingMemoId = nil
     }
-    
+
     /// Check if a memo is currently being edited
     func isEditing(memo: Memo) -> Bool {
         return editingMemoId == memo.id
     }
-    
+
     /// Rename a memo with the given title
     func renameMemo(_ memo: Memo, newTitle: String) async {
         print("📝 MemoListViewModel: Renaming memo to: \(newTitle)")
-        
+
         do {
             try await renameMemoUseCase.execute(memo: memo, newTitle: newTitle)
             await MainActor.run {
@@ -545,39 +544,39 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
         }
     }
-    
+
     /// Share a memo using native iOS share sheet with user-friendly filename
     func shareMemo(_ memo: Memo, from sourceView: UIView? = nil) {
         print("📤 MemoListViewModel: Sharing memo: \(memo.displayName)")
-        
+
         guard FileManager.default.fileExists(atPath: memo.fileURL.path) else {
             print("❌ MemoListViewModel: Cannot share memo - file not found at \(memo.fileURL.path)")
             self.error = SonoraError.storageFileNotFound(memo.fileURL.path)
             return
         }
-        
+
         // Create temporary copy with user-friendly filename
         let tempDirectory = FileManager.default.temporaryDirectory
         let shareableFilename = memo.preferredShareableFileName
         let tempURL = tempDirectory.appendingPathComponent(shareableFilename)
-        
+
         do {
             // Remove existing temp file if it exists
             if FileManager.default.fileExists(atPath: tempURL.path) {
                 try FileManager.default.removeItem(at: tempURL)
             }
-            
+
             // Copy original file to temp location with friendly name
             try FileManager.default.copyItem(at: memo.fileURL, to: tempURL)
-            
+
             print("📤 MemoListViewModel: Created temporary share file: \(shareableFilename)")
-            
+
             // Share via NSItemProvider with explicit UTType and suggestedName to preserve filename
             if #available(iOS 14.0, *) {
                 let provider = NSItemProvider(item: tempURL as NSSecureCoding, typeIdentifier: UTType.mpeg4Audio.identifier)
                 provider.suggestedName = shareableFilename
                 let activityVC = UIActivityViewController(activityItems: [provider], applicationActivities: nil)
-                
+
                 // Clean up temp file after sharing
                 activityVC.completionWithItemsHandler = { _, _, _, _ in
                     DispatchQueue.main.async {
@@ -591,7 +590,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                         }
                     }
                 }
-                
+
                 // Configure for iPad presentation
                 if let popover = activityVC.popoverPresentationController {
                     if let sourceView = sourceView {
@@ -604,7 +603,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                         popover.permittedArrowDirections = []
                     }
                 }
-                
+
                 // Present the share sheet
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                    let window = windowScene.windows.first,
@@ -617,7 +616,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             } else {
                 // Fallback: share the file URL directly
                 let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
-                
+
                 activityVC.completionWithItemsHandler = { _, _, _, _ in
                     DispatchQueue.main.async {
                         do {
@@ -630,14 +629,14 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                         }
                     }
                 }
-                
+
                 if let popover = activityVC.popoverPresentationController {
                     if let sourceView = sourceView {
                         popover.sourceView = sourceView
                         popover.sourceRect = sourceView.bounds
                     }
                 }
-                
+
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                    let window = windowScene.windows.first,
                    let rootViewController = window.rootViewController {
@@ -646,13 +645,13 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                     }
                 }
             }
-            
+
         } catch {
             print("❌ MemoListViewModel: Failed to create temporary share file: \(error)")
             self.error = SonoraError.storageWriteFailed("Failed to create shareable copy")
         }
     }
-    
+
     /// Pop navigation to root
     func popToRoot() {
         if !navigationPath.isEmpty {
@@ -660,9 +659,9 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             navigationPath.removeLast(navigationPath.count)
         }
     }
-    
+
     // MARK: - View Helper Methods
-    
+
     /// Get play button icon for a memo
     func playButtonIcon(for memo: Memo) -> String {
         if playingMemo?.id == memo.id && isPlaying {
@@ -671,12 +670,12 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             return "play.circle.fill"
         }
     }
-    
+
     /// Check if memo is currently playing
     func isMemoPaying(_ memo: Memo) -> Bool {
         return playingMemo?.id == memo.id && isPlaying
     }
-    
+
     /// Get transcription action button text for a memo
     func transcriptionActionText(for memo: Memo) -> String? {
         let state = getTranscriptionState(for: memo)
@@ -689,7 +688,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         }
         return nil
     }
-    
+
     /// Get transcription action button color for a memo
     func transcriptionActionColor(for memo: Memo) -> Color {
         let state = getTranscriptionState(for: memo)
@@ -701,13 +700,13 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             return .semantic(.textSecondary)
         }
     }
-    
+
     /// Check if transcription action is available for a memo
     func canPerformTranscriptionAction(for memo: Memo) -> Bool {
         let state = getTranscriptionState(for: memo)
         return state.isFailed || state.isNotStarted
     }
-    
+
     /// Perform transcription action for a memo
     func performTranscriptionAction(for memo: Memo) {
         let state = getTranscriptionState(for: memo)
@@ -717,69 +716,69 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             startTranscription(for: memo)
         }
     }
-    
+
     // MARK: - Lifecycle Methods
-    
+
     func onViewAppear() {
         print("📱 MemoListViewModel: View appeared")
         loadMemos()
     }
-    
+
     func onViewDisappear() {
         print("📱 MemoListViewModel: View disappeared")
     }
-    
+
     // MARK: - Multi-Select Methods
-    
+
     /// Toggle edit mode on/off
     func toggleEditMode() {
         withAnimation(.easeInOut(duration: 0.2)) {
             var newSelectionState = self.selectionState
             newSelectionState.isEditMode.toggle()
-            
+
             // Clear selection when exiting edit mode
             if !newSelectionState.isEditMode {
                 newSelectionState.selectedMemoIds.removeAll()
             }
-            
+
             self.selectionState = newSelectionState
         }
-        
+
         HapticManager.shared.playSelection()
         logger.debug("Edit mode toggled: \(selectionState.isEditMode ? "ON" : "OFF")", category: .viewModel, context: LogContext())
     }
-    
+
     /// Select a specific memo
     func selectMemo(_ memo: Memo) {
         guard selectionState.isEditMode else { return }
-        
+
         withAnimation(Animation.easeInOut(duration: 0.2)) {
             var newSelectionState = self.selectionState
             newSelectionState.selectedMemoIds.insert(memo.id)
             self.selectionState = newSelectionState
         }
-        
+
         HapticManager.shared.playSelection()
         logger.debug("Selected memo: \(memo.filename)", category: .viewModel, context: LogContext())
     }
-    
+
     /// Deselect a specific memo
     func deselectMemo(_ memo: Memo) {
         guard selectionState.isEditMode else { return }
-        
+
         withAnimation(Animation.easeInOut(duration: 0.2)) {
             var newSelectionState = self.selectionState
             newSelectionState.selectedMemoIds.remove(memo.id)
             self.selectionState = newSelectionState
         }
-        
+
         HapticManager.shared.playSelection()
     }
-    
+
     /// Toggle selection state of a memo
     func toggleMemoSelection(_ memo: Memo) {
         guard selectionState.isEditMode else { return }
-        
+
         if selectionState.selectedMemoIds.contains(memo.id) {
             deselectMemo(memo)
         } else {
@@ -788,44 +787,44 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     }
 
     // Drag-based selection helpers removed (tap-only selection)
-    
+
     /// Select all memos
     func selectAll() {
         guard selectionState.isEditMode else { return }
-        
+
         withAnimation(Animation.easeInOut(duration: 0.2)) {
             var newSelectionState = self.selectionState
             newSelectionState.selectedMemoIds = Set(memos.map { $0.id })
             self.selectionState = newSelectionState
         }
-        
+
         HapticManager.shared.playSelection()
         logger.debug("Selected all \(memos.count) memos", category: .viewModel, context: LogContext())
     }
-    
+
     /// Deselect all memos
     func deselectAll() {
         guard selectionState.isEditMode else { return }
-        
+
         withAnimation(.spring(response: 0.3)) {
             var newSelectionState = self.selectionState
             newSelectionState.selectedMemoIds.removeAll()
             self.selectionState = newSelectionState
         }
-        
+
         HapticManager.shared.playSelection()
         logger.debug("Deselected all memos", category: .viewModel, context: LogContext())
     }
-    
+
     /// Delete selected memos with confirmation
     func deleteSelectedMemos() {
         guard selectionState.isEditMode && selectionState.hasSelection else { return }
-        
+
         let memosToDelete = memos.filter { selectionState.selectedMemoIds.contains($0.id) }
         let count = memosToDelete.count
-        
+
         logger.debug("Deleting \(count) selected memos", category: .viewModel, context: LogContext())
-        
+
         Task {
             for memo in memosToDelete {
                 do {
@@ -837,7 +836,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                     }
                 }
             }
-            
+
             await MainActor.run {
                 // Clear selection and exit edit mode after successful deletion
                 var newSelectionState = self.selectionState
@@ -848,9 +847,9 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
         }
     }
-    
+
     // Drag selection API removed (tap-only selection)
-    
+
     /// Check if a memo is selected
     func isMemoSelected(_ memo: Memo) -> Bool {
         return selectionState.selectedMemoIds.contains(memo.id)
@@ -860,14 +859,14 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
 // MARK: - MemoRow ViewModel Support
 
 extension MemoListViewModel {
-    
+
     /// Create memo row state for a specific memo (legacy method)
     func memoRowState(for memo: Memo) -> MemoRowState {
         // Try to use unified state first for efficiency
         if let memoWithState = memosWithState.first(where: { $0.memo.id == memo.id }) {
             return MemoRowState(from: memoWithState)
         }
-        
+
         // Fallback to individual lookups
         return MemoRowState(
             memo: memo,
@@ -883,7 +882,7 @@ extension MemoListViewModel {
             playButtonIcon: playButtonIcon(for: memo)
         )
     }
-    
+
     /// Get unified memo state for a specific memo (preferred method)
     func memoWithState(for memo: Memo) -> MemoWithState? {
         return memosWithState.first(where: { $0.memo.id == memo.id })
@@ -900,7 +899,7 @@ struct MemoListUIState: Equatable {
     var refreshTrigger: Int
     // Note: NavigationPath is not Sendable in current iOS versions, using workaround
     var navigationPath: NavigationPath
-    
+
     init() {
         self.isLoading = false
         self.error = nil
@@ -908,28 +907,28 @@ struct MemoListUIState: Equatable {
         self.refreshTrigger = 0
         self.navigationPath = NavigationPath()
     }
-    
+
     /// Create updated state with new error
     func with(error: SonoraError?) -> MemoListUIState {
         var updated = self
         updated.error = error
         return updated
     }
-    
+
     /// Create updated state with loading status
     func with(isLoading: Bool) -> MemoListUIState {
         var updated = self
         updated.isLoading = isLoading
         return updated
     }
-    
+
     /// Create updated state with editing memo ID
     func with(editingMemoId: UUID?) -> MemoListUIState {
         var updated = self
         updated.editingMemoId = editingMemoId
         return updated
     }
-    
+
     /// Increment refresh trigger for UI updates
     mutating func incrementRefresh() {
         refreshTrigger = refreshTrigger &+ 1
@@ -940,22 +939,22 @@ struct MemoListUIState: Equatable {
 struct MemoSelectionState: Equatable {
     var isEditMode: Bool
     var selectedMemoIds: Set<UUID>
-    
+
     init() {
         self.isEditMode = false
         self.selectedMemoIds = Set()
     }
-    
+
     /// Whether any memos are selected
     var hasSelection: Bool {
         !selectedMemoIds.isEmpty
     }
-    
+
     /// Number of selected memos
     var selectedCount: Int {
         selectedMemoIds.count
     }
-    
+
     /// Whether delete action can be performed
     var canDelete: Bool {
         hasSelection
@@ -965,20 +964,20 @@ struct MemoSelectionState: Equatable {
 /// Transcription display state grouping - consolidates transcription-related @Published properties
 struct TranscriptionDisplayState: Equatable {
     var states: [String: TranscriptionState]
-    
+
     init() {
         self.states = [:]
     }
-    
+
     init(states: [String: TranscriptionState]) {
         self.states = states
     }
-    
+
     /// Get transcription state for memo ID
     func state(for memoId: UUID) -> TranscriptionState? {
         return states[memoId.uuidString]
     }
-    
+
     /// Create updated state with new transcription state
     func with(state: TranscriptionState, for memoId: UUID) -> TranscriptionDisplayState {
         var updated = self
@@ -991,22 +990,22 @@ struct TranscriptionDisplayState: Equatable {
 struct PlaybackState: Equatable {
     var playingMemo: Memo?
     var isPlaying: Bool
-    
+
     init() {
         self.playingMemo = nil
         self.isPlaying = false
     }
-    
+
     init(playingMemo: Memo?, isPlaying: Bool) {
         self.playingMemo = playingMemo
         self.isPlaying = isPlaying
     }
-    
+
     /// Whether a specific memo is currently playing
     func isPlaying(memo: Memo) -> Bool {
         return playingMemo?.id == memo.id && isPlaying
     }
-    
+
     /// Get appropriate play button icon for a memo
     func playButtonIcon(for memo: Memo) -> String {
         if playingMemo?.id == memo.id && isPlaying {
@@ -1026,22 +1025,22 @@ struct MemoWithState: Identifiable, Equatable, Sendable {
     let titleState: TitleGenerationState
     let isPlaying: Bool
     let playButtonIcon: String
-    
+
     var id: UUID { memo.id }
-    
+
     init(memo: Memo, transcriptionState: TranscriptionState, titleState: TitleGenerationState, isPlaying: Bool = false) {
         self.memo = memo
         self.transcriptionState = transcriptionState
         self.titleState = titleState
         self.isPlaying = isPlaying
-        
+
         if isPlaying {
             self.playButtonIcon = "pause.circle.fill"
         } else {
             self.playButtonIcon = "play.circle.fill"
         }
     }
-    
+
     /// Convenience accessors for common memo properties
     var displayName: String { memo.displayName }
     var filename: String { memo.filename }
@@ -1081,11 +1080,10 @@ struct MemoRowState: Identifiable, Equatable {
     }
 }
 
-
 // MARK: - Debug Helpers
 
 extension MemoListViewModel {
-    
+
     /// Get debug information about the current state
     var debugInfo: String {
         return """
@@ -1100,16 +1098,16 @@ extension MemoListViewModel {
         - isLoading: \(isLoading)
         """
     }
-    
+
     // MARK: - ErrorHandling Protocol
-    
+
     func retryLastOperation() {
         clearError()
         loadMemos()
     }
-    
+
     // MARK: - Cleanup
-    
+
     /// Clean up resources before deallocation
     func cleanup() {
         // Clean up event subscription
@@ -1117,18 +1115,18 @@ extension MemoListViewModel {
             eventBus.unsubscribe(subscriptionId)
             eventSubscriptionId = nil
         }
-        
+
         // Clean up transcription state subscription
         transcriptionStateSubscription?.cancel()
         transcriptionStateSubscription = nil
-        
+
         // Clean up unified state subscription
         unifiedStateSubscription?.cancel()
         unifiedStateSubscription = nil
-        
+
         print("📱 MemoListViewModel: Cleaned up all subscriptions including unified state management")
     }
-    
+
     // Note: deinit cannot be used with @MainActor classes
     // The timer cancellable will be automatically released
     // EventBus subscriptions should be cleaned up manually via cleanup() if needed

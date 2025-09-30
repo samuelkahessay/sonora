@@ -4,14 +4,14 @@ import UIKit
 /// Centralized focus management utility for accessibility
 @MainActor
 final class FocusManager {
-    
+
     // MARK: - Shared Instance
     static let shared = FocusManager()
-    
+
     private init() {}
-    
+
     // MARK: - Focus Timing Constants
-    
+
     /// Focus timing constants (kept nonisolated to avoid Swift 6 isolation issues)
     private enum FocusDelays {
         static let standard: TimeInterval = 0.3
@@ -23,9 +23,9 @@ final class FocusManager {
     nonisolated static var standardDelay: TimeInterval { FocusDelays.standard }
     nonisolated static var contentDelay: TimeInterval { FocusDelays.content }
     nonisolated static var quickDelay: TimeInterval { FocusDelays.quick }
-    
+
     // MARK: - Focus Management Methods
-    
+
     /// Delays focus assignment to allow UI to settle
     /// - Parameters:
     ///   - delay: Time to wait before setting focus
@@ -35,7 +35,7 @@ final class FocusManager {
             action()
         }
     }
-    
+
     /// Announces content changes to screen readers while preserving focus
     /// - Parameters:
     ///   - message: Message to announce
@@ -43,7 +43,7 @@ final class FocusManager {
     func announceChange(_ message: String, priority: UIAccessibility.Notification = .announcement) {
         UIAccessibility.post(notification: priority, argument: message)
     }
-    
+
     /// Announces and focuses on new content
     /// - Parameters:
     ///   - message: Message to announce
@@ -57,7 +57,7 @@ final class FocusManager {
         announceChange(message)
         delayedFocus(after: delay, focusAction)
     }
-    
+
     /// Sets focus on error states while announcing the error
     /// - Parameters:
     ///   - error: The error to announce
@@ -65,18 +65,18 @@ final class FocusManager {
     func handleErrorFocus(_ error: Error, focusAction: (() -> Void)? = nil) {
         let message = "Error: \(error.localizedDescription)"
         announceChange(message, priority: .announcement)
-        
+
         if let focusAction = focusAction {
             delayedFocus(after: FocusDelays.quick, focusAction)
         }
     }
-        
+
     /// Sets initial focus when a view appears
     /// - Parameter focusAction: Focus assignment action
     func setInitialFocus(_ focusAction: @escaping () -> Void) {
         delayedFocus(after: FocusDelays.standard, focusAction)
     }
-    
+
     /// Manages focus for tab/navigation changes
     /// - Parameter focusAction: Focus assignment action
     func handleNavigationFocus(_ focusAction: @escaping () -> Void) {
@@ -87,7 +87,7 @@ final class FocusManager {
 // MARK: - SwiftUI View Extensions
 
 extension View {
-    
+
     /// Sets initial focus when view appears with standard timing
     /// - Parameter focusAction: Focus assignment action
     func initialFocus(_ focusAction: @escaping () -> Void) -> some View {
@@ -95,7 +95,7 @@ extension View {
             FocusManager.shared.setInitialFocus(focusAction)
         }
     }
-    
+
     /// Handles error announcements and optional focus
     /// - Parameters:
     ///   - error: Binding to error state

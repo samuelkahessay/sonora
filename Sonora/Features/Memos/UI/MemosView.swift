@@ -13,7 +13,7 @@ struct MemosView: View {
     let popToRoot: (() -> Void)?
     @Binding var navigationPath: NavigationPath
     @State private var showSettings: Bool = false
-    
+
     init(popToRoot: (() -> Void)? = nil, navigationPath: Binding<NavigationPath>) {
         self.popToRoot = popToRoot
         self._navigationPath = navigationPath
@@ -21,10 +21,10 @@ struct MemosView: View {
 
     // Debug toggles removed
 
-    @State private var eventSubscriptionId: UUID? = nil
-    
+    @State private var eventSubscriptionId: UUID?
+
     // MARK: - Computed Properties
-    
+
     // Cached grouping to avoid recomputation on each render
     @State private var cachedGroupedMemos: [MemoSection] = []
 
@@ -167,7 +167,7 @@ struct MemosView: View {
 
     @ViewBuilder
     private var memoListView: some View {
-        ScrollViewReader { proxy in
+        ScrollViewReader { _ in
             List {
                 Section { EmptyView() } header: {
                     AlternativeSelectionControls(viewModel: viewModel)
@@ -192,7 +192,7 @@ struct MemosView: View {
                                     viewModel: viewModel,
                                     isSelected: viewModel.isMemoSelected(memo)
                                 )
-                            
+
                             if viewModel.isEditMode {
                                 rowContent
                                     .contentShape(Rectangle())
@@ -289,7 +289,6 @@ struct MemosView: View {
     }
 }
 
-
 // MARK: - Swipe Action Components
 
 // Apply plain list style on iOS 26; insetGrouped elsewhere
@@ -305,7 +304,7 @@ private struct ConditionalListStyle: ViewModifier {
 
 /// **Swipe Actions Configuration**
 extension MemosView {
-    
+
     /// **Contextual Transcription Actions**
     /// Contextual actions based on memo transcription state (excluding delete)
     /// 
@@ -315,32 +314,32 @@ extension MemosView {
     /// - Accessibility: Full VoiceOver support with descriptive labels
     @ViewBuilder
     private func contextualTranscriptionActions(for memo: Memo) -> some View { EmptyView() }
-    
+
     // MARK: Transcription Actions
-    
+
     /// **Transcribe Button**
     /// Primary action for unprocessed memos
     @ViewBuilder
     private func transcribeButton(for memo: Memo) -> some View { EmptyView() }
-    
+
     /// **Retry Transcription Button**
     /// Recovery action for failed transcriptions
     @ViewBuilder
     private func retryTranscriptionButton(for memo: Memo) -> some View { EmptyView() }
-    
+
     // MARK: Destructive Actions
-    
+
     /// **Delete Button**
     /// Destructive action with appropriate styling and feedback
     @ViewBuilder
     private func deleteButton(for memo: Memo) -> some View { EmptyView() }
-    
+
     // MARK: - Bottom Delete Bar
-    
+
     /// Bottom delete bar for bulk deletion
     @ViewBuilder
     private var bottomDeleteBar: some View { EmptyView() }
-    
+
     // Drag selection helpers removed (tap-only selection)
 }
 
@@ -349,14 +348,14 @@ extension MemosView {
 /// Time period categorization for contextual memo grouping
 enum TimePeriod: String, CaseIterable {
     case thisMorning = "this_morning"
-    case thisAfternoon = "this_afternoon" 
+    case thisAfternoon = "this_afternoon"
     case thisEvening = "this_evening"
     case today = "today"
     case yesterday = "yesterday"
     case thisWeek = "this_week"
     case thisMonth = "this_month"
     case older = "older"
-    
+
     /// Brand voice header text with contextual messaging
     var headerText: String {
         switch self {
@@ -391,16 +390,16 @@ struct ContextualSectionHeader: View {
     let period: TimePeriod
     let memoCount: Int
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: ColorScheme
-    
+
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             // Brand voice header with New York serif (resolved via design system)
             Text(period.headerText)
                 .font(SonoraDesignSystem.Typography.navigationTitle)
                 .foregroundColor(.semantic(.textPrimary))
-            
+
             Spacer()
-            
+
             // Subtle count indicator
             Text("\(memoCount)")
                 .font(SonoraDesignSystem.Typography.caption)

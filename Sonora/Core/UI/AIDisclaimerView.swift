@@ -2,18 +2,18 @@ import SwiftUI
 
 /// Reusable AI content disclaimer component for accessibility and transparency
 struct AIDisclaimerView: View {
-    
+
     // MARK: - Configuration
     let contentType: AIContentType
     let style: DisclaimerStyle
-    
+
     // MARK: - Content Types
     enum AIContentType: String, CaseIterable {
         case transcription = "transcription"
         case analysis = "analysis"
         case summary = "summary"
         case generic = "generic"
-        
+
         var displayName: String {
             switch self {
             case .transcription:
@@ -26,7 +26,7 @@ struct AIDisclaimerView: View {
                 return "AI-generated content"
             }
         }
-        
+
         var accessibilityDescription: String {
             switch self {
             case .transcription:
@@ -40,13 +40,13 @@ struct AIDisclaimerView: View {
             }
         }
     }
-    
+
     // MARK: - Disclaimer Styles
     enum DisclaimerStyle {
         case compact
         case detailed
         case inline
-        
+
         var iconName: String {
             switch self {
             case .compact, .inline:
@@ -55,7 +55,7 @@ struct AIDisclaimerView: View {
                 return "info.circle.fill"
             }
         }
-        
+
         var backgroundColor: Color {
             switch self {
             case .compact:
@@ -66,7 +66,7 @@ struct AIDisclaimerView: View {
                 return .semantic(.brandPrimary).opacity(0.1)
             }
         }
-        
+
         var foregroundColor: Color {
             switch self {
             case .compact:
@@ -78,7 +78,7 @@ struct AIDisclaimerView: View {
             }
         }
     }
-    
+
     // MARK: - Initialization
     init(
         contentType: AIContentType = .generic,
@@ -87,7 +87,7 @@ struct AIDisclaimerView: View {
         self.contentType = contentType
         self.style = style
     }
-    
+
     // MARK: - Body
     var body: some View {
         switch style {
@@ -99,7 +99,7 @@ struct AIDisclaimerView: View {
             inlineDisclaimer
         }
     }
-    
+
     // MARK: - Compact Disclaimer
     @ViewBuilder
     private var compactDisclaimer: some View {
@@ -107,7 +107,7 @@ struct AIDisclaimerView: View {
             Image(systemName: style.iconName)
                 .font(.caption)
                 .foregroundColor(style.foregroundColor)
-            
+
             Text(contentType.displayName)
                 .font(.caption)
                 .foregroundColor(.semantic(.textSecondary))
@@ -120,14 +120,14 @@ struct AIDisclaimerView: View {
         .accessibilityLabel(contentType.accessibilityDescription)
         .accessibilityAddTraits(.isStaticText)
     }
-    
+
     // MARK: - Detailed Disclaimer
     @ViewBuilder
     private var detailedDisclaimer: some View {
         // Compact, on-brand copy with a Learn more link to the AI disclosure sheet
         DetailedDisclosureRow(tint: style.foregroundColor, bg: style.backgroundColor)
     }
-    
+
     // MARK: - Inline Disclaimer
     @ViewBuilder
     private var inlineDisclaimer: some View {
@@ -135,7 +135,7 @@ struct AIDisclaimerView: View {
             Image(systemName: style.iconName)
                 .font(.caption2)
                 .foregroundColor(style.foregroundColor)
-            
+
             Text("AI")
                 .font(.caption2)
                 .fontWeight(.medium)
@@ -200,22 +200,22 @@ private struct DetailedDisclosureRow: View {
 // MARK: - Convenience Initializers
 
 extension AIDisclaimerView {
-    
+
     /// Disclaimer for transcription content
     static func transcription(style: DisclaimerStyle = .compact) -> AIDisclaimerView {
         AIDisclaimerView(contentType: .transcription, style: style)
     }
-    
+
     /// Disclaimer for analysis content
     static func analysis(style: DisclaimerStyle = .detailed) -> AIDisclaimerView {
         AIDisclaimerView(contentType: .analysis, style: style)
     }
-    
+
     /// Disclaimer for summary content
     static func summary(style: DisclaimerStyle = .compact) -> AIDisclaimerView {
         AIDisclaimerView(contentType: .summary, style: style)
     }
-    
+
     /// Inline disclaimer badge
     static func inline() -> AIDisclaimerView {
         AIDisclaimerView(contentType: .generic, style: .inline)
@@ -268,7 +268,7 @@ extension View {
             Spacer()
             AIDisclaimerView.inline()
         }
-        
+
         HStack {
             Text("Analysis Summary")
                 .font(.headline)
@@ -287,7 +287,7 @@ extension View {
             .background(Color.semantic(.fillSecondary))
             .cornerRadius(12)
             .withAIDisclaimer(.transcription, style: .detailed)
-        
+
         Text("Summary: The memo discusses project updates and next steps for the team.")
             .padding()
             .background(Color.semantic(.fillSecondary))

@@ -14,11 +14,11 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
         self.logger = logger
         logger.repository("AnalysisRepository initialized (SwiftData)", context: LogContext())
     }
-    
+
     private func cacheKey(for memoId: UUID, mode: AnalysisMode) -> String {
         return "\(memoId.uuidString)_\(mode.rawValue)"
     }
-    
+
     func saveAnalysisResult<T: Codable>(_ result: AnalyzeEnvelope<T>, for memoId: UUID, mode: AnalysisMode) {
         let correlationId = UUID().uuidString
         let logCtx = LogContext(correlationId: correlationId, additionalInfo: [
@@ -70,17 +70,17 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             "operation": "get",
             "responseType": String(describing: T.self)
         ])
-        
+
         let loadTimer = PerformanceTimer(operation: "Analysis Load Operation", category: .repository)
-        
+
         let key = cacheKey(for: memoId, mode: mode)
-        
+
         logger.repository("Starting analysis retrieval", context: context)
-        
+
         // Check memory cache first
         if let cached = analysisCache[key] as? AnalyzeEnvelope<T> {
             _ = loadTimer.finish(additionalInfo: "Memory cache HIT")
-            logger.repository("Analysis found in memory cache", 
+            logger.repository("Analysis found in memory cache",
                             level: .info,
                             context: LogContext(correlationId: correlationId, additionalInfo: [
                                 "memoId": memoId.uuidString,
@@ -90,7 +90,7 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
                             ]))
             return cached
         }
-        
+
         logger.debug("Memory cache miss, checking SwiftData store", category: .repository, context: context)
 
         do {
@@ -115,20 +115,20 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             return nil
         }
     }
-    
+
     func hasAnalysisResult(for memoId: UUID, mode: AnalysisMode) -> Bool {
         let key = cacheKey(for: memoId, mode: mode)
-        
+
         if analysisCache[key] != nil {
             return true
         }
-        
+
         let descriptor = FetchDescriptor<AnalysisResultModel>(
             predicate: #Predicate { ($0.memo?.id == memoId) && ($0.mode == mode.rawValue) }
         )
         return ((try? modelContext.fetch(descriptor))?.isEmpty == false)
     }
-    
+
     func deleteAnalysisResults(for memoId: UUID) {
         do {
             let descriptor = FetchDescriptor<AnalysisResultModel>(predicate: #Predicate { $0.memo?.id == memoId })
@@ -141,7 +141,7 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             logger.error("Failed to delete all analysis results", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error)
         }
     }
-    
+
     func deleteAnalysisResult(for memoId: UUID, mode: AnalysisMode) {
         let key = cacheKey(for: memoId, mode: mode)
         do {
@@ -160,10 +160,10 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             logger.error("Failed to delete analysis result", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "mode": mode.rawValue]), error: error)
         }
     }
-    
+
     func getAllAnalysisResults(for memoId: UUID) -> [AnalysisMode: Any] {
         var results: [AnalysisMode: Any] = [:]
-        
+
         for mode in AnalysisMode.allCases {
             let key = cacheKey(for: memoId, mode: mode)
             if let cached = analysisCache[key] {
@@ -172,23 +172,23 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
                 let descriptor = FetchDescriptor<AnalysisResultModel>(
                     predicate: #Predicate { ($0.memo?.id == memoId) && ($0.mode == mode.rawValue) }
                 )
-                if ((try? modelContext.fetch(descriptor))?.isEmpty == false) {
+                if (try? modelContext.fetch(descriptor))?.isEmpty == false {
                     results[mode] = "Available in store"
                 }
             }
         }
-        
+
         return results
     }
-    
+
     func clearCache() {
         analysisCache.removeAll()
         analysisHistory.removeAll()
         print("🧹 AnalysisRepository: Cleared analysis cache")
     }
-    
+
     func getCacheSize() -> Int { analysisCache.count }
-    
+
     func getAnalysisHistory(for memoId: UUID) -> [(mode: AnalysisMode, timestamp: Date)] {
         if let existing = analysisHistory[memoId] { return existing }
         // Derive from store

@@ -14,9 +14,9 @@ struct ContentView: View {
     @StateObject private var onboardingConfiguration = OnboardingConfiguration.shared
     @StateObject private var titleCoordinator = DIContainer.shared.titleGenerationCoordinator()
     @SwiftUI.Environment(\.scenePhase) private var scenePhase
-    
+
     // Debug toggles removed
-    
+
     var body: some View {
         mainAppContent
             .fullScreenCover(
@@ -29,7 +29,7 @@ struct ContentView: View {
                     .interactiveDismissDisabled() // avoid accidental dismiss during setup
             }
     }
-    
+
     @ViewBuilder
     private var mainAppContent: some View {
         TabView(selection: $selectedTab) {
@@ -67,7 +67,7 @@ struct ContentView: View {
             }
         }
     }
-    
+
     private func popToRoot() {
         // Clear memos navigation stack and notify observers for legacy handlers
         memosPath = NavigationPath()

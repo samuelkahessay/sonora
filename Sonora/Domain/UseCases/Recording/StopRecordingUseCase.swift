@@ -7,12 +7,12 @@ protocol StopRecordingUseCaseProtocol: Sendable {
 }
 
 final class StopRecordingUseCase: StopRecordingUseCaseProtocol, @unchecked Sendable {
-    
+
     // MARK: - Dependencies
     private let audioRepository: any AudioRepository
     private let operationCoordinator: any OperationCoordinatorProtocol
     private let logger: any LoggerProtocol
-    
+
     // MARK: - Initialization
     init(
         audioRepository: any AudioRepository,
@@ -23,26 +23,24 @@ final class StopRecordingUseCase: StopRecordingUseCaseProtocol, @unchecked Senda
         self.operationCoordinator = operationCoordinator
         self.logger = logger
     }
-    
-    
-    
+
     // MARK: - Use Case Execution
     func execute(memoId: UUID) async throws {
         let context = LogContext(additionalInfo: ["memoId": memoId.uuidString])
-        
+
         logger.info("Stopping recording for memo: \(memoId)", category: .audio, context: context)
-        
+
         // Check if recording operation exists for this memo
         let isRecordingActive = await operationCoordinator.isRecordingActive(for: memoId)
         guard isRecordingActive else {
             logger.warning("No active recording operation found for memo", category: .audio, context: context, error: nil)
             throw RecordingError.notRecording
         }
-        
+
         // Get the recording operation to complete it later
         let activeOperations = await operationCoordinator.getActiveOperations(for: memoId)
         let recordingOperation = activeOperations.first { $0.type.category == .recording }
-        
+
         // Stop via repository on main actor for thread safety
         await MainActor.run {
             // Allow stopping when paused as well as recording
@@ -53,7 +51,7 @@ final class StopRecordingUseCase: StopRecordingUseCaseProtocol, @unchecked Senda
                 logger.warning("Audio repository shows no active or paused recording", category: .audio, context: context, error: nil)
             }
         }
-        
+
         // Complete the recording operation
         if let recordingOp = recordingOperation {
             await operationCoordinator.completeOperation(recordingOp.id)

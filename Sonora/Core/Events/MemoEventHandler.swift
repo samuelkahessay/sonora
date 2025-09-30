@@ -7,21 +7,21 @@ import UserNotifications
 /// Handles cross-cutting concerns like logging, analytics, and audit trail
 @MainActor
 public final class MemoEventHandler {
-    
+
     // MARK: - Dependencies
     private let logger: any LoggerProtocol
     private let transcriptionRepository: any TranscriptionRepository
     private let subscriptionManager: EventSubscriptionManager
-    
+
     // MARK: - Analytics Tracking
     private var memoCount: Int = 0
     private var transcriptionStartTime: [UUID: Date] = [:]
     private var analysisStartTime: [UUID: Date] = [:]
     private var eventAuditTrail: [(Date, AppEvent)] = []
-    
+
     // MARK: - Configuration
     private let maxAuditTrailEvents = 100
-    
+
     // MARK: - Initialization
     init(
         logger: any LoggerProtocol = Logger.shared,
@@ -31,15 +31,15 @@ public final class MemoEventHandler {
         self.logger = logger
         self.transcriptionRepository = transcriptionRepository
         self.subscriptionManager = EventSubscriptionManager(eventBus: eventBus)
-        
+
         // Subscribe to all memo-related events
         setupEventSubscriptions()
-        
-        logger.info("MemoEventHandler initialized and subscribed to events", 
-                   category: .system, 
+
+        logger.info("MemoEventHandler initialized and subscribed to events",
+                   category: .system,
                    context: LogContext())
     }
-    
+
     // MARK: - Event Subscriptions
     private func setupEventSubscriptions() {
         // Subscribe to all AppEvent types
@@ -48,12 +48,12 @@ public final class MemoEventHandler {
                 await self?.handleEvent(event)
             }
         }
-        
-        logger.debug("MemoEventHandler subscribed to all app events", 
-                    category: .system, 
+
+        logger.debug("MemoEventHandler subscribed to all app events",
+                    category: .system,
                     context: LogContext())
     }
-    
+
     // MARK: - Event Handling
     private func handleEvent(_ event: AppEvent) async {
         let correlationId = UUID().uuidString
@@ -64,29 +64,29 @@ public final class MemoEventHandler {
                 "memoId": event.memoId?.uuidString ?? "unknown"
             ]
         )
-        
+
         // Add to audit trail
         addToAuditTrail(event)
-        
+
         // Log the event
-        logger.info("Processing event: \(event.description)", 
-                   category: .useCase, 
+        logger.info("Processing event: \(event.description)",
+                   category: .useCase,
                    context: context)
-        
+
         // Handle specific event types
         switch event {
         case .memoCreated(let domainMemo):
             await handleMemoCreated(domainMemo, correlationId: correlationId)
-            
+
         case .recordingStarted(let memoId):
             await handleRecordingStarted(memoId, correlationId: correlationId)
-            
+
         case .recordingCompleted(let memoId):
             await handleRecordingCompleted(memoId, correlationId: correlationId)
-            
+
         case .transcriptionCompleted(let memoId, let text):
             await handleTranscriptionCompleted(memoId: memoId, text: text, correlationId: correlationId)
-            
+
         case .analysisCompleted(let memoId, let type, let result):
             await handleAnalysisCompleted(memoId: memoId, type: type, result: result, correlationId: correlationId)
         case .transcriptionRouteDecided:
@@ -97,32 +97,32 @@ public final class MemoEventHandler {
             break
         case .navigatePopToRootMemos:
             break
-        case .navigateOpenMemoByID(memoId: _):
+        case .navigateOpenMemoByID:
             break
-        case .microphonePermissionStatusChanged(status: _):
+        case .microphonePermissionStatusChanged:
             break
-        case .calendarEventCreated(_, _),
-             .eventCreationFailed(_, _),
-             .batchEventCreationCompleted(_, _, _),
-             .eventConflictDetected(_, _),
-             .reminderCreated(_, _),
-             .reminderCreationFailed(_, _),
-             .batchReminderCreationCompleted(_, _, _):
+        case .calendarEventCreated,
+             .eventCreationFailed,
+             .batchEventCreationCompleted,
+             .eventConflictDetected,
+             .reminderCreated,
+             .reminderCreationFailed,
+             .batchReminderCreationCompleted:
             // EventKit-specific events are handled by their respective handlers
             break
-        case .promptShown(_, _, _, _, _),
-             .promptUsed(_, _, _, _, _),
-             .promptFavoritedToggled(_, _):
+        case .promptShown,
+             .promptUsed,
+             .promptFavoritedToggled:
             // Prompt analytics handled separately; audit only
             break
         }
-        
+
         // Update analytics
         updateAnalytics(for: event)
     }
-    
+
     // MARK: - Specific Event Handlers
-    
+
     private func handleMemoCreated(_ domainMemo: Memo, correlationId: String) async {
         let context = LogContext(
             correlationId: correlationId,
@@ -132,17 +132,17 @@ public final class MemoEventHandler {
                 "fileSize": domainMemo.formattedFileSize
             ]
         )
-        
-        logger.info("New memo created: \(domainMemo.filename)", 
-                   category: .useCase, 
+
+        logger.info("New memo created: \(domainMemo.filename)",
+                   category: .useCase,
                    context: context)
-        
+
         // Track memo creation metrics
         memoCount += 1
-        
+
         // Log file metadata for debugging
-        logger.debug("Memo metadata - Size: \(domainMemo.formattedFileSize), Extension: \(domainMemo.fileExtension)", 
-                    category: .useCase, 
+        logger.debug("Memo metadata - Size: \(domainMemo.formattedFileSize), Extension: \(domainMemo.fileExtension)",
+                    category: .useCase,
                     context: context)
 
         // Start transcription (idempotent) – single orchestrator to avoid duplicates
@@ -192,37 +192,37 @@ public final class MemoEventHandler {
             }
         }
     }
-    
+
     private func handleRecordingStarted(_ memoId: UUID, correlationId: String) async {
         let context = LogContext(
             correlationId: correlationId,
             additionalInfo: ["memoId": memoId.uuidString, "phase": "recording_started"]
         )
-        
-        logger.info("Recording started for memo: \(memoId)", 
-                   category: .audio, 
+
+        logger.info("Recording started for memo: \(memoId)",
+                   category: .audio,
                    context: context)
     }
-    
+
     private func handleRecordingCompleted(_ memoId: UUID, correlationId: String) async {
         let context = LogContext(
             correlationId: correlationId,
             additionalInfo: ["memoId": memoId.uuidString, "phase": "recording_completed"]
         )
-        
-        logger.info("Recording completed for memo: \(memoId)", 
-                   category: .audio, 
+
+        logger.info("Recording completed for memo: \(memoId)",
+                   category: .audio,
                    context: context)
-        
+
         // Start tracking transcription time
         transcriptionStartTime[memoId] = Date()
     }
-    
+
     private func handleTranscriptionCompleted(memoId: UUID, text: String, correlationId: String) async {
         // Calculate transcription duration
         let duration = transcriptionStartTime[memoId].map { Date().timeIntervalSince($0) }
         transcriptionStartTime.removeValue(forKey: memoId)
-        
+
         // Pre-calculate metrics to avoid complex expression
         let wordsCount = text.split(separator: " ").count
         let wordsPerMinute: Double
@@ -231,7 +231,7 @@ public final class MemoEventHandler {
         } else {
             wordsPerMinute = 0
         }
-        
+
         // Fetch transcription metadata to report the service used
         let serviceMeta: (serviceKey: String, serviceLabel: String) = {
             let meta = transcriptionRepository.getTranscriptionMetadata(for: memoId)
@@ -258,14 +258,14 @@ public final class MemoEventHandler {
                    category: .transcription,
                    context: context)
         await scheduleTranscriptionCompletionNotificationIfNeeded(memoId: memoId, wordsCount: wordsCount)
-        
+
         // Log transcription performance metrics
         if let duration = duration {
-            logger.info("Transcription metrics - Duration: \(String(format: "%.1f", duration))s, Words: \(wordsCount), WPM: \(String(format: "%.1f", wordsPerMinute))", 
-                       category: .transcription, 
+            logger.info("Transcription metrics - Duration: \(String(format: "%.1f", duration))s, Words: \(wordsCount), WPM: \(String(format: "%.1f", wordsPerMinute))",
+                       category: .transcription,
                        context: context)
         }
-        
+
         // Start tracking analysis time
         analysisStartTime[memoId] = Date()
 
@@ -308,11 +308,11 @@ public final class MemoEventHandler {
         let hasEnoughWords = transcript.split(separator: " ").count > 5
         return hasEnoughWords && (hasDateTime || hasEventLanguage || hasReminderLanguage)
     }
-    
+
     private func handleAnalysisCompleted(memoId: UUID, type: AnalysisMode, result: String, correlationId: String) async {
         // Calculate analysis duration
         let duration = analysisStartTime[memoId].map { Date().timeIntervalSince($0) }
-        
+
         let context = LogContext(
             correlationId: correlationId,
             additionalInfo: [
@@ -322,25 +322,25 @@ public final class MemoEventHandler {
                 "analysisDurationSeconds": duration?.rounded() ?? 0
             ]
         )
-        
-        logger.info("Analysis completed for memo: \(memoId) - Type: \(type.displayName)", 
-                   category: .analysis, 
+
+        logger.info("Analysis completed for memo: \(memoId) - Type: \(type.displayName)",
+                   category: .analysis,
                    context: context)
-        
+
         // Log analysis performance metrics
         if let duration = duration {
-            logger.info("Analysis metrics - Type: \(type.displayName), Duration: \(String(format: "%.1f", duration))s, Result: \(result.prefix(50))...", 
-                       category: .analysis, 
+            logger.info("Analysis metrics - Type: \(type.displayName), Duration: \(String(format: "%.1f", duration))s, Result: \(result.prefix(50))...",
+                       category: .analysis,
                        context: context)
         }
-        
+
         // Clean up analysis start time when all analyses might be done
         // (In a real implementation, you'd track multiple analysis types per memo)
         analysisStartTime.removeValue(forKey: memoId)
     }
-    
+
     // MARK: - Analytics & Metrics
-    
+
     private func updateAnalytics(for event: AppEvent) {
         // Update internal metrics based on event type
         switch event.category {
@@ -358,28 +358,28 @@ public final class MemoEventHandler {
             break
         }
     }
-    
+
     private func addToAuditTrail(_ event: AppEvent) {
         eventAuditTrail.append((Date(), event))
-        
+
         // Maintain maximum audit trail size
         if eventAuditTrail.count > maxAuditTrailEvents {
             eventAuditTrail.removeFirst()
         }
     }
-    
+
     // MARK: - Public Analytics Access
-    
+
     /// Get current memo count tracked by this handler
     public var currentMemoCount: Int {
         return memoCount
     }
-    
+
     /// Get recent events from audit trail
     public func getRecentEvents(limit: Int = 10) -> [(Date, AppEvent)] {
         return Array(eventAuditTrail.suffix(limit))
     }
-    
+
     /// Get handler statistics for debugging
     public var handlerStatistics: String {
         return """
@@ -390,7 +390,7 @@ public final class MemoEventHandler {
         - Audit trail events: \(eventAuditTrail.count)
         """
     }
-    
+
     // MARK: - Cleanup
     deinit {
         subscriptionManager.cleanup()

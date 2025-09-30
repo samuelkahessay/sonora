@@ -8,7 +8,7 @@ struct NotificationBanner: View {
     let primaryTitle: String?
     let onDismiss: () -> Void
     let compact: Bool
-    
+
     /// Banner types with consistent styling
     enum BannerType {
         case info
@@ -16,7 +16,7 @@ struct NotificationBanner: View {
         case error
         case success
         case language
-        
+
         var icon: String {
             switch self {
             case .info:
@@ -31,7 +31,7 @@ struct NotificationBanner: View {
                 return "globe"
             }
         }
-        
+
         var iconColor: Color {
             switch self {
             case .info:
@@ -46,16 +46,16 @@ struct NotificationBanner: View {
                 return .semantic(.warning) // Using warning color for language notices
             }
         }
-        
+
         var backgroundColor: Color {
             iconColor.opacity(0.1)
         }
-        
+
         var borderColor: Color {
             iconColor.opacity(0.3)
         }
     }
-    
+
     init(
         type: BannerType,
         message: String,
@@ -71,7 +71,7 @@ struct NotificationBanner: View {
         self.primaryTitle = primaryTitle
         self.onDismiss = onDismiss
     }
-    
+
     var body: some View {
         HStack(spacing: compact ? Spacing.sm : Spacing.md) {
             // Icon
@@ -79,7 +79,7 @@ struct NotificationBanner: View {
                 .font(compact ? .caption.weight(.medium) : .title3.weight(.medium))
                 .foregroundColor(type.iconColor)
                 .accessibilityHidden(true)
-            
+
             // Message content
             Text(message)
                 .font(compact ? .caption : .subheadline)
@@ -88,7 +88,7 @@ struct NotificationBanner: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityLabel(message)
                 .accessibilityAddTraits(.isStaticText)
-            
+
             // Action buttons
             if !compact {
                 HStack(spacing: Spacing.xs) {
@@ -104,7 +104,7 @@ struct NotificationBanner: View {
                         .accessibilityLabel("Retry")
                         .accessibilityHint("Double tap to retry the action")
                     }
-                    
+
                     // Dismiss button
                     Button(action: {
                         HapticManager.shared.playSelection()
@@ -161,7 +161,7 @@ extension NotificationBanner {
             onDismiss: onDismiss
         )
     }
-    
+
     /// Error banner with retry option
     static func error(
         _ error: SonoraError,
@@ -178,7 +178,7 @@ extension NotificationBanner {
             onDismiss: onDismiss
         )
     }
-    
+
     /// Network error banner
     static func networkError(
         compact: Bool = false,
@@ -194,7 +194,7 @@ extension NotificationBanner {
             onDismiss: onDismiss
         )
     }
-    
+
     /// Success banner
     static func success(
         message: String,
@@ -208,7 +208,7 @@ extension NotificationBanner {
             onDismiss: onDismiss
         )
     }
-    
+
     /// Info banner
     static func info(
         message: String,
@@ -236,19 +236,19 @@ extension NotificationBanner {
         ) {
             print("Language banner dismissed")
         }
-        
+
         NotificationBanner.error(
             .networkTimeout,
             onRetry: { print("Retry network") },
             onDismiss: { print("Dismiss error") }
         )
-        
+
         NotificationBanner.success(
             message: "Your memo has been successfully transcribed!"
         ) {
             print("Success dismissed")
         }
-        
+
         NotificationBanner.info(
             message: "This is an informational message with some helpful details."
         ) {
@@ -268,7 +268,7 @@ extension NotificationBanner {
         ) {
             print("Compact warning dismissed")
         }
-        
+
         NotificationBanner(
             type: .success,
             message: "Saved to Files",

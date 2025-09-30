@@ -7,11 +7,11 @@ protocol UpdateLiveActivityUseCaseProtocol: Sendable {
 @MainActor
 final class UpdateLiveActivityUseCase: UpdateLiveActivityUseCaseProtocol, @unchecked Sendable {
     private let liveActivityService: any LiveActivityServiceProtocol
-    
+
     init(liveActivityService: any LiveActivityServiceProtocol) {
         self.liveActivityService = liveActivityService
     }
-    
+
     func execute(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?, level: Double?) async throws {
         try await liveActivityService.updateActivity(
             duration: duration,

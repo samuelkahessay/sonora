@@ -3,7 +3,7 @@ import AVFoundation
 
 /// Specific error types for service layer operations
 public enum ServiceError: LocalizedError, Equatable {
-    
+
     // MARK: - Audio Service Errors
     case audioSessionConfigurationFailed(String)
     case audioRecordingPermissionDenied
@@ -14,7 +14,7 @@ public enum ServiceError: LocalizedError, Equatable {
     case audioFileProcessingFailed(String)
     case audioSessionInterrupted(String)
     case audioHardwareError(String)
-    
+
     // MARK: - Transcription Service Errors
     case transcriptionServiceOffline
     case transcriptionAPIKeyInvalid
@@ -26,7 +26,7 @@ public enum ServiceError: LocalizedError, Equatable {
     case transcriptionResultInvalid(String)
     case transcriptionServiceTimeout
     case transcriptionServiceRateLimited
-    
+
     // MARK: - Analysis Service Errors
     case analysisServiceOffline
     case analysisAPIKeyInvalid
@@ -39,7 +39,7 @@ public enum ServiceError: LocalizedError, Equatable {
     case analysisServiceTimeout
     case analysisServiceRateLimited
     case analysisLanguageUnsupported(String)
-    
+
     // MARK: - Network Service Errors
     case networkServiceUnavailable
     case networkConnectionLost
@@ -49,7 +49,7 @@ public enum ServiceError: LocalizedError, Equatable {
     case networkProxyError(String)
     case networkDNSError(String)
     case networkCertificateError(String)
-    
+
     // MARK: - File Service Errors
     case fileServicePermissionDenied(String)
     case fileServiceDiskFull
@@ -59,7 +59,7 @@ public enum ServiceError: LocalizedError, Equatable {
     case fileServiceSyncFailed(String)
     case fileServiceQuotaExceeded(String)
     case fileServiceCorruptionDetected(String)
-    
+
     // MARK: - Configuration Service Errors
     case configurationServiceNotInitialized
     case configurationKeyMissing(String)
@@ -67,7 +67,7 @@ public enum ServiceError: LocalizedError, Equatable {
     case configurationFileCorrupted(String)
     case configurationSchemaMismatch(String)
     case configurationMigrationFailed(String)
-    
+
     // MARK: - Authentication Service Errors
     case authenticationRequired
     case authenticationFailed(String)
@@ -75,14 +75,14 @@ public enum ServiceError: LocalizedError, Equatable {
     case authenticationTokenInvalid
     case authenticationServiceUnavailable
     case authenticationRateLimited
-    
+
     // MARK: - Metadata Service Errors
     case metadataExtractionFailed(String)
     case metadataValidationFailed(String)
     case metadataStorageFailed(String)
     case metadataRetrievalFailed(String)
     case metadataFormatUnsupported(String)
-    
+
     // MARK: - Synchronization Service Errors
     case syncServiceConflict(String)
     case syncServiceConnectionLost
@@ -90,16 +90,16 @@ public enum ServiceError: LocalizedError, Equatable {
     case syncServiceDataCorrupted(String)
     case syncServicePermissionDenied
     case syncServiceQuotaExceeded
-    
+
     // MARK: - Cache Service Errors
     case cacheServiceFull
     case cacheServiceCorrupted(String)
     case cacheServiceEvictionFailed(String)
     case cacheServiceValidationFailed(String)
     case cacheServiceSizeLimitExceeded(String)
-    
+
     // MARK: - LocalizedError Implementation
-    
+
     public var errorDescription: String? {
         switch self {
         // Audio Service Errors
@@ -121,7 +121,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return "Audio session was interrupted: \(reason)"
         case .audioHardwareError(let details):
             return "Audio hardware error: \(details)"
-            
+
         // Transcription Service Errors
         case .transcriptionServiceOffline:
             return "Transcription service is currently offline"
@@ -143,7 +143,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return "Transcription service request timed out"
         case .transcriptionServiceRateLimited:
             return "Transcription service rate limit exceeded"
-            
+
         // Analysis Service Errors
         case .analysisServiceOffline:
             return "Analysis service is currently offline"
@@ -167,7 +167,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return "Analysis service rate limit exceeded"
         case .analysisLanguageUnsupported(let language):
             return "Unsupported language for analysis: \(language)"
-            
+
         // Network Service Errors
         case .networkServiceUnavailable:
             return "Network service is unavailable"
@@ -185,7 +185,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return "DNS resolution error: \(details)"
         case .networkCertificateError(let details):
             return "Certificate error: \(details)"
-            
+
         // File Service Errors
         case .fileServicePermissionDenied(let operation):
             return "Permission denied for file operation: \(operation)"
@@ -203,7 +203,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return "File service quota exceeded: \(details)"
         case .fileServiceCorruptionDetected(let details):
             return "File corruption detected: \(details)"
-            
+
         // Configuration Service Errors
         case .configurationServiceNotInitialized:
             return "Configuration service is not initialized"
@@ -217,7 +217,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return "Configuration schema mismatch: \(details)"
         case .configurationMigrationFailed(let reason):
             return "Configuration migration failed: \(reason)"
-            
+
         // Authentication Service Errors
         case .authenticationRequired:
             return "Authentication is required"
@@ -231,7 +231,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return "Authentication service is unavailable"
         case .authenticationRateLimited:
             return "Authentication rate limit exceeded"
-            
+
         // Metadata Service Errors
         case .metadataExtractionFailed(let reason):
             return "Metadata extraction failed: \(reason)"
@@ -243,7 +243,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return "Metadata retrieval failed: \(reason)"
         case .metadataFormatUnsupported(let format):
             return "Unsupported metadata format: \(format)"
-            
+
         // Synchronization Service Errors
         case .syncServiceConflict(let details):
             return "Sync conflict detected: \(details)"
@@ -257,7 +257,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return "Permission denied for sync operation"
         case .syncServiceQuotaExceeded:
             return "Sync service quota exceeded"
-            
+
         // Cache Service Errors
         case .cacheServiceFull:
             return "Cache service is full"
@@ -271,7 +271,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return "Cache size limit exceeded: \(details)"
         }
     }
-    
+
     public var failureReason: String? {
         switch self {
         case .audioRecordingPermissionDenied:
@@ -290,7 +290,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return nil
         }
     }
-    
+
     public var recoverySuggestion: String? {
         switch self {
         case .audioRecordingPermissionDenied:
@@ -313,9 +313,9 @@ public enum ServiceError: LocalizedError, Equatable {
             return "Please try again. If the problem persists, contact support."
         }
     }
-    
+
     // MARK: - Error Classification
-    
+
     /// The type of service that generated this error
     public var serviceType: ServiceType {
         switch self {
@@ -341,7 +341,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return .cache
         }
     }
-    
+
     /// Whether this error is recoverable by retrying
     public var isRetryable: Bool {
         switch self {
@@ -359,7 +359,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return false
         }
     }
-    
+
     /// Whether this error requires user intervention
     public var requiresUserIntervention: Bool {
         switch self {
@@ -375,7 +375,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return false
         }
     }
-    
+
     /// Severity level of this error
     public var severity: ServiceErrorSeverity {
         switch self {
@@ -391,7 +391,7 @@ public enum ServiceError: LocalizedError, Equatable {
             return .error
         }
     }
-    
+
     /// Convert to a SonoraError for unified error handling
     public var asSonoraError: SonoraError {
         switch self {
@@ -449,7 +449,7 @@ public enum ServiceType: String, CaseIterable {
     case metadata
     case synchronization
     case cache
-    
+
     public var displayName: String {
         switch self {
         case .audio: return "Audio"
@@ -464,7 +464,7 @@ public enum ServiceType: String, CaseIterable {
         case .cache: return "Cache"
         }
     }
-    
+
     public var iconName: String {
         switch self {
         case .audio: return "waveform"
@@ -487,11 +487,11 @@ public enum ServiceErrorSeverity: String, CaseIterable, Comparable {
     case warning
     case error
     case critical
-    
+
     public var displayName: String {
         rawValue.capitalized
     }
-    
+
     public var iconName: String {
         switch self {
         case .info: return "info.circle.fill"
@@ -500,7 +500,7 @@ public enum ServiceErrorSeverity: String, CaseIterable, Comparable {
         case .critical: return "exclamationmark.octagon.fill"
         }
     }
-    
+
     public var color: String {
         switch self {
         case .info: return "blue"
@@ -509,7 +509,7 @@ public enum ServiceErrorSeverity: String, CaseIterable, Comparable {
         case .critical: return "purple"
         }
     }
-    
+
     public static func < (lhs: ServiceErrorSeverity, rhs: ServiceErrorSeverity) -> Bool {
         let order: [ServiceErrorSeverity] = [.info, .warning, .error, .critical]
         guard let lhsIndex = order.firstIndex(of: lhs),

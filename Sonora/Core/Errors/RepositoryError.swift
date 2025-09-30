@@ -2,7 +2,7 @@ import Foundation
 
 /// Specific error types for repository operations in the data layer
 public enum RepositoryError: LocalizedError, Equatable {
-    
+
     // MARK: - File System Errors
     case fileNotFound(String)
     case fileCreationFailed(String)
@@ -14,7 +14,7 @@ public enum RepositoryError: LocalizedError, Equatable {
     case directoryCreationFailed(String)
     case pathInvalid(String)
     case permissionDenied(String)
-    
+
     // MARK: - Data Integrity Errors
     case indexCorrupted(String)
     case metadataInvalid(String)
@@ -23,7 +23,7 @@ public enum RepositoryError: LocalizedError, Equatable {
     case checksumMismatch(String)
     case duplicateEntry(String)
     case referentialIntegrityViolation(String)
-    
+
     // MARK: - Encoding/Decoding Errors
     case encodingFailed(String)
     case decodingFailed(String)
@@ -31,7 +31,7 @@ public enum RepositoryError: LocalizedError, Equatable {
     case jsonDeserializationFailed(String)
     case unsupportedDataFormat(String)
     case schemaValidationFailed(String)
-    
+
     // MARK: - Repository State Errors
     case repositoryNotInitialized(String)
     case repositoryCorrupted(String)
@@ -39,7 +39,7 @@ public enum RepositoryError: LocalizedError, Equatable {
     case repositoryMigrationRequired(String)
     case repositoryVersionUnsupported(String)
     case repositoryConfigurationInvalid(String)
-    
+
     // MARK: - Resource Management Errors
     case resourceNotFound(String)
     case resourceAlreadyExists(String)
@@ -47,21 +47,21 @@ public enum RepositoryError: LocalizedError, Equatable {
     case resourceUnavailable(String)
     case resourceQuotaExceeded(String)
     case resourceSizeLimitExceeded(String)
-    
+
     // MARK: - Transaction Errors
     case transactionFailed(String)
     case transactionRolledBack(String)
     case transactionTimeout(String)
     case transactionDeadlock(String)
     case concurrentModification(String)
-    
+
     // MARK: - Cache Errors
     case cacheNotFound(String)
     case cacheExpired(String)
     case cacheCorrupted(String)
     case cacheEvictionFailed(String)
     case cacheSizeLimitExceeded(String)
-    
+
     // MARK: - Validation Errors
     case validationFailed(String)
     case constraintViolation(String)
@@ -69,9 +69,9 @@ public enum RepositoryError: LocalizedError, Equatable {
     case requiredFieldMissing(String)
     case fieldValueInvalid(field: String, value: String)
     case relationshipInvalid(String)
-    
+
     // MARK: - LocalizedError Implementation
-    
+
     public var errorDescription: String? {
         switch self {
         // File System Errors
@@ -95,7 +95,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return "Invalid file path: \(path)"
         case .permissionDenied(let operation):
             return "Permission denied for operation: \(operation)"
-            
+
         // Data Integrity Errors
         case .indexCorrupted(let details):
             return "Index file is corrupted: \(details)"
@@ -111,7 +111,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return "Duplicate entry found: \(identifier)"
         case .referentialIntegrityViolation(let details):
             return "Referential integrity violation: \(details)"
-            
+
         // Encoding/Decoding Errors
         case .encodingFailed(let reason):
             return "Data encoding failed: \(reason)"
@@ -125,7 +125,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return "Unsupported data format: \(format)"
         case .schemaValidationFailed(let reason):
             return "Schema validation failed: \(reason)"
-            
+
         // Repository State Errors
         case .repositoryNotInitialized(let name):
             return "Repository not initialized: \(name)"
@@ -139,7 +139,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return "Repository version unsupported: \(version)"
         case .repositoryConfigurationInvalid(let reason):
             return "Repository configuration is invalid: \(reason)"
-            
+
         // Resource Management Errors
         case .resourceNotFound(let identifier):
             return "Resource not found: \(identifier)"
@@ -153,7 +153,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return "Resource quota exceeded: \(details)"
         case .resourceSizeLimitExceeded(let details):
             return "Resource size limit exceeded: \(details)"
-            
+
         // Transaction Errors
         case .transactionFailed(let reason):
             return "Transaction failed: \(reason)"
@@ -165,7 +165,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return "Transaction deadlock detected: \(details)"
         case .concurrentModification(let resource):
             return "Concurrent modification detected: \(resource)"
-            
+
         // Cache Errors
         case .cacheNotFound(let key):
             return "Cache entry not found: \(key)"
@@ -177,7 +177,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return "Cache eviction failed: \(reason)"
         case .cacheSizeLimitExceeded(let details):
             return "Cache size limit exceeded: \(details)"
-            
+
         // Validation Errors
         case .validationFailed(let reason):
             return "Validation failed: \(reason)"
@@ -193,7 +193,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return "Invalid relationship: \(details)"
         }
     }
-    
+
     public var failureReason: String? {
         switch self {
         case .permissionDenied:
@@ -212,7 +212,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return nil
         }
     }
-    
+
     public var recoverySuggestion: String? {
         switch self {
         case .permissionDenied:
@@ -237,9 +237,9 @@ public enum RepositoryError: LocalizedError, Equatable {
             return "Try the operation again. If the problem persists, restart the app."
         }
     }
-    
+
     // MARK: - Error Classification
-    
+
     /// Whether this error is recoverable by retrying the operation
     public var isRetryable: Bool {
         switch self {
@@ -253,7 +253,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return false
         }
     }
-    
+
     /// Whether this error indicates data corruption
     public var indicatesCorruption: Bool {
         switch self {
@@ -263,7 +263,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return false
         }
     }
-    
+
     /// Whether this error requires immediate attention
     public var isCritical: Bool {
         switch self {
@@ -273,7 +273,7 @@ public enum RepositoryError: LocalizedError, Equatable {
             return false
         }
     }
-    
+
     /// The category of repository operation that failed
     public var operationType: RepositoryOperationType {
         switch self {
@@ -306,7 +306,7 @@ public enum RepositoryOperationType: String, CaseIterable {
     case transaction
     case cache
     case other
-    
+
     public var displayName: String {
         switch self {
         case .read: return "Read"
@@ -318,7 +318,7 @@ public enum RepositoryOperationType: String, CaseIterable {
         case .other: return "Other"
         }
     }
-    
+
     public var iconName: String {
         switch self {
         case .read: return "doc.text"
@@ -344,7 +344,7 @@ public enum RepositoryRecoveryStrategy: String, CaseIterable {
     case requestPermission
     case userIntervention
     case none
-    
+
     public var displayName: String {
         switch self {
         case .retry: return "Retry Operation"
@@ -362,7 +362,7 @@ public enum RepositoryRecoveryStrategy: String, CaseIterable {
 // MARK: - Error Extensions
 
 public extension RepositoryError {
-    
+
     /// Recommended recovery strategy for this error
     var recommendedRecoveryStrategy: RepositoryRecoveryStrategy {
         switch self {
@@ -382,7 +382,7 @@ public extension RepositoryError {
             return .retry
         }
     }
-    
+
     /// Convert to a SonoraError for unified error handling
     var asSonoraError: SonoraError {
         switch self {

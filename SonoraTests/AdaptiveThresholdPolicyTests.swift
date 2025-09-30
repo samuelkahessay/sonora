@@ -17,4 +17,3 @@ final class AdaptiveThresholdPolicyTests: XCTestCase {
         XCTAssertLessThan(t.reminder, 0.7)
     }
 }
-

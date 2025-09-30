@@ -8,11 +8,11 @@ protocol CreateTranscriptShareFileUseCaseProtocol: Sendable {
 }
 
 final class CreateTranscriptShareFileUseCase: CreateTranscriptShareFileUseCaseProtocol, @unchecked Sendable {
-    
+
     // MARK: - Dependencies
     private let exporter: any TranscriptExporting
     private let logger: any LoggerProtocol
-    
+
     // MARK: - Initialization
     init(
         exporter: any TranscriptExporting,
@@ -21,7 +21,7 @@ final class CreateTranscriptShareFileUseCase: CreateTranscriptShareFileUseCasePr
         self.exporter = exporter
         self.logger = logger
     }
-    
+
     // MARK: - Execution
     func execute(memo: Memo, text: String) async throws -> URL {
         let correlationId = UUID().uuidString
@@ -29,9 +29,9 @@ final class CreateTranscriptShareFileUseCase: CreateTranscriptShareFileUseCasePr
             "memoId": memo.id.uuidString,
             "filename": memo.filename
         ])
-        
+
         logger.useCase("Creating transcript share file", level: .info, context: context)
-        
+
         do {
             // Basic input sanitization (trim whitespace-only payloads)
             let sanitizedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -39,17 +39,17 @@ final class CreateTranscriptShareFileUseCase: CreateTranscriptShareFileUseCasePr
                 logger.useCase("Transcript text is empty; cannot create file", level: .warning, context: context)
                 throw SonoraError.dataFormatInvalid("Transcript text is empty")
             }
-            
+
             // Delegate to exporter (handles overwrite semantics and UTF-8 write)
             let url = try exporter.makeTranscriptFile(memo: memo, text: sanitizedText)
-            
+
             logger.useCase(
                 "Transcript file created successfully: \(url.lastPathComponent)",
                 level: .info,
                 context: context
             )
             return url
-            
+
         } catch let error as RepositoryError {
             // Not expected here, but mapped for consistency
             logger.error("CreateTranscriptShareFileUseCase repository error", category: .useCase, context: context, error: error)
@@ -66,4 +66,3 @@ final class CreateTranscriptShareFileUseCase: CreateTranscriptShareFileUseCasePr
         }
     }
 }
-

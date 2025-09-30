@@ -12,7 +12,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
     public let customTitle: String?
     public let shareableFileName: String?
     public let autoTitleState: TitleGenerationState
-    
+
     public init(
         id: UUID = UUID(),
         filename: String,
@@ -36,76 +36,76 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
         self.shareableFileName = shareableFileName
         self.autoTitleState = autoTitleState
     }
-    
+
     // MARK: - Computed Properties
-    
+
     /// Human-readable display name - uses custom title if available, otherwise date-based
     public var displayName: String {
         // Use custom title if available
         if let customTitle = customTitle, !customTitle.isEmpty {
             return customTitle
         }
-        
+
         // Fallback to date and time format (e.g., "Jan 2, 2025 at 9:18 PM")
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: creationDate)
     }
-    
+
     /// File extension without the dot
     public var fileExtension: String {
         fileURL.pathExtension
     }
-    
+
     /// File size in bytes
     public var fileSizeBytes: Int64? {
         try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize.map(Int64.init) ?? nil
     }
-    
+
     /// Human-readable file size
     public var formattedFileSize: String {
         guard let bytes = fileSizeBytes else { return "Unknown" }
         return ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
-    
+
     /// Whether the memo has been successfully transcribed
     public var isTranscribed: Bool {
         transcriptionStatus.isCompleted
     }
-    
+
     /// Whether transcription is currently in progress
     public var isTranscribing: Bool {
         transcriptionStatus.isInProgress
     }
-    
+
     /// The transcribed text if available
     public var transcriptionText: String? {
         transcriptionStatus.text
     }
-    
+
     /// Whether the memo has any analysis results
     public var hasAnalysisResults: Bool {
         !analysisResults.isEmpty
     }
-    
+
     /// Number of completed analyses
     public var completedAnalysisCount: Int {
         analysisResults.filter { $0.isCompleted }.count
     }
-    
+
     /// Filename for sharing - uses sanitized custom title or fallback
     public var preferredShareableFileName: String {
         if let shareableFileName = shareableFileName {
             return shareableFileName
         }
-        
+
         // Fallback: generate from displayName
         return FileNameSanitizer.sanitize(displayName)
     }
-    
+
     // MARK: - Business Logic Methods
-    
+
     /// Creates a copy with updated transcription status
     public func withTranscriptionStatus(_ status: DomainTranscriptionStatus) -> Memo {
         Memo(
@@ -121,7 +121,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
             autoTitleState: autoTitleState
         )
     }
-    
+
     /// Creates a copy with a custom title
     public func withCustomTitle(_ title: String?) -> Memo {
         let newShareableFileName = title != nil ? FileNameSanitizer.sanitize(title!) : nil
@@ -143,7 +143,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
     public func withAnalysisResult(_ result: DomainAnalysisResult) -> Memo {
         var updatedResults = analysisResults
         updatedResults.append(result)
-        
+
         return Memo(
             id: id,
             filename: filename,
@@ -173,12 +173,12 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
             autoTitleState: state
         )
     }
-    
+
     /// Gets analysis result by type
     public func analysisResult(ofType type: DomainAnalysisType) -> DomainAnalysisResult? {
         analysisResults.first { $0.type == type }
     }
-    
+
     /// Checks if analysis of given type is completed
     public func hasCompletedAnalysis(ofType type: DomainAnalysisType) -> Bool {
         analysisResult(ofType: type)?.isCompleted ?? false
@@ -193,37 +193,37 @@ public enum DomainTranscriptionStatus: Codable, Equatable, Hashable, Sendable {
     case inProgress
     case completed(String)
     case failed(String)
-    
+
     public var isCompleted: Bool {
         if case .completed = self { return true }
         return false
     }
-    
+
     public var isInProgress: Bool {
         if case .inProgress = self { return true }
         return false
     }
-    
+
     public var isFailed: Bool {
         if case .failed = self { return true }
         return false
     }
-    
+
     public var isNotStarted: Bool {
         if case .notStarted = self { return true }
         return false
     }
-    
+
     public var text: String? {
         if case .completed(let text) = self { return text }
         return nil
     }
-    
+
     public var errorMessage: String? {
         if case .failed(let error) = self { return error }
         return nil
     }
-    
+
     public var statusDescription: String {
         switch self {
         case .notStarted:
@@ -245,7 +245,7 @@ public enum DomainAnalysisType: String, CaseIterable, Codable, Hashable, Sendabl
     case themes = "themes"
     case actionItems = "action_items"
     case keyPoints = "key_points"
-    
+
     public var displayName: String {
         switch self {
         case .distill: return "Distill"
@@ -255,7 +255,7 @@ public enum DomainAnalysisType: String, CaseIterable, Codable, Hashable, Sendabl
         case .keyPoints: return "Key Points"
         }
     }
-    
+
     public var iconName: String {
         switch self {
         case .distill: return "sparkles"

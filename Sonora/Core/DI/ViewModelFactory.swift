@@ -7,24 +7,24 @@ import Combine
 protocol ViewModelFactory {
     func createRecordingViewModel() -> RecordingViewModel
     func createPromptViewModel() -> PromptViewModel
-    func createMemoListViewModel() -> MemoListViewModel  
+    func createMemoListViewModel() -> MemoListViewModel
     func createMemoDetailViewModel() -> MemoDetailViewModel
     func createOnboardingViewModel() -> OnboardingViewModel
 }
 
 /// Default implementation of ViewModelFactory using DIContainer
 /// Centralizes all ViewModel creation and dependency injection
-@MainActor  
+@MainActor
 final class DefaultViewModelFactory: ViewModelFactory {
-    
+
     private let container: DIContainer
-    
+
     init(container: DIContainer = DIContainer.shared) {
         self.container = container
     }
-    
+
     // MARK: - ViewModels Creation
-    
+
     func createRecordingViewModel() -> RecordingViewModel {
         let audioRepository = container.audioRepository()
         let memoRepository = container.memoRepository()
@@ -58,7 +58,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
             getCategory: container.getPromptCategoryUseCase()
         )
     }
-    
+
     func createMemoListViewModel() -> MemoListViewModel {
         let memoRepository = container.memoRepository()
         let transcriptionRepository = container.transcriptionRepository()
@@ -84,7 +84,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
         let renameMemoUseCase = RenameMemoUseCase(
             memoRepository: memoRepository
         )
-        
+
         return MemoListViewModel(
             loadMemosUseCase: LoadMemosUseCase(memoRepository: memoRepository),
             deleteMemoUseCase: DeleteMemoUseCase(
@@ -104,7 +104,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
             titleCoordinator: titleCoordinator
         )
     }
-    
+
     func createMemoDetailViewModel() -> MemoDetailViewModel {
         let transcriptionRepository = container.transcriptionRepository()
         let transcriptionAPI = container.createTranscriptionService()
@@ -131,7 +131,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
         let getTranscriptionStateUseCase = GetTranscriptionStateUseCase(
             transcriptionRepository: transcriptionRepository
         )
-        
+
         return MemoDetailViewModel(
             playMemoUseCase: PlayMemoUseCase(memoRepository: memoRepository),
             startTranscriptionUseCase: startTranscriptionUseCase,
@@ -162,7 +162,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
             operationCoordinator: operationCoordinator
         )
     }
-    
+
     func createOnboardingViewModel() -> OnboardingViewModel {
         return OnboardingViewModel(
             onboardingConfiguration: OnboardingConfiguration.shared
@@ -173,7 +173,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
 // MARK: - ViewModelFactory Extension for DIContainer
 
 extension DIContainer {
-    
+
     /// Get the ViewModelFactory instance
     @MainActor
     func viewModelFactory() -> ViewModelFactory {

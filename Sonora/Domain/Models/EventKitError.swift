@@ -17,11 +17,11 @@ public enum EventKitError: LocalizedError, Sendable {
     case cacheExpired
     case invalidEventData(field: String)
     case eventStoreUnavailable
-    
+
     public enum EventKitType: String, Sendable {
         case calendar = "Calendar"
         case reminder = "Reminders"
-        
+
         var permissionKey: String {
             switch self {
             case .calendar: return "NSCalendarsUsageDescription"
@@ -29,7 +29,7 @@ public enum EventKitError: LocalizedError, Sendable {
             }
         }
     }
-    
+
     public var errorDescription: String? {
         switch self {
         case .permissionDenied(let type):
@@ -65,7 +65,7 @@ public enum EventKitError: LocalizedError, Sendable {
             return "EventKit is not available on this device."
         }
     }
-    
+
     public var recoverySuggestion: String? {
         switch self {
         case .permissionDenied:
@@ -92,7 +92,7 @@ public enum EventKitError: LocalizedError, Sendable {
             return "EventKit features require iOS 6.0 or later."
         }
     }
-    
+
     public var failureReason: String? {
         switch self {
         case .permissionDenied, .permissionRestricted:
@@ -117,7 +117,7 @@ public enum EventKitError: LocalizedError, Sendable {
             return "EventKit framework is not available."
         }
     }
-    
+
     /// Whether the error can potentially be resolved by retrying the operation
     public var isRetryable: Bool {
         switch self {
@@ -130,7 +130,7 @@ public enum EventKitError: LocalizedError, Sendable {
             return true // These might be transient
         }
     }
-    
+
     /// Whether the error requires user intervention to resolve
     public var requiresUserAction: Bool {
         switch self {
@@ -141,7 +141,7 @@ public enum EventKitError: LocalizedError, Sendable {
             return false
         }
     }
-    
+
     /// Analytics-friendly error code
     public var analyticsCode: String {
         switch self {
@@ -173,7 +173,7 @@ extension EventKitError {
         // For now, return nil to avoid import issues during compilation
         return nil
     }
-    
+
     /// Create an event creation error with context
     public static func eventCreationError(title: String, underlying: Error) -> EventKitError {
         return .eventCreationFailed(underlying: NSError(
@@ -185,7 +185,7 @@ extension EventKitError {
             ]
         ))
     }
-    
+
     /// Create a reminder creation error with context  
     public static func reminderCreationError(title: String, underlying: Error) -> EventKitError {
         return .reminderCreationFailed(underlying: NSError(

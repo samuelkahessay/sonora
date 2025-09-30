@@ -14,13 +14,13 @@ import SwiftUI
 enum MemoSystemIcons: String {
     /// Clock icon for duration display
     case clock = "clock"
-    
+
     /// Transcription action icon
     case transcribe = "text.quote"
-    
+
     /// Retry action icon
     case retry = "arrow.clockwise"
-    
+
     /// Delete action icon
     case delete = "trash"
 }
@@ -34,16 +34,16 @@ enum MemoSystemIcons: String {
 enum TranscriptionStateKey: String {
     /// State key for memos that haven't started transcription
     case notStarted = "notStarted"
-    
+
     /// State key for memos currently being transcribed
     case inProgress = "inProgress"
-    
+
     /// State key for successfully transcribed memos
     case completed = "completed"
-    
+
     /// State key for failed transcription attempts
     case failed = "failed"
-    
+
     /// Generate appropriate key for transcription state
     /// - Parameter state: Current transcription state
     /// - Returns: Type-safe string key for SwiftUI identity

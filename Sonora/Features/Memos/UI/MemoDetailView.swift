@@ -11,7 +11,7 @@ struct MemoDetailView: View {
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
     @FocusState private var isTitleEditingFocused: Bool
     @State private var scrollOffset: CGFloat = 0
-    
+
     enum AccessibleElement {
         case playButton
         case transcribeButton
@@ -19,7 +19,7 @@ struct MemoDetailView: View {
         case analysisResults
         case memoTitle
     }
-    
+
     private var dynamicNavigationTitle: String {
         let title = viewModel.currentMemoTitle
         if scrollOffset < -100 {
@@ -43,10 +43,10 @@ struct MemoDetailView: View {
                     .padding(.bottom, 20)
 
                 // Banners for events/reminders were removed; Action Items now handles review/adding.
-                
+
                 headerInfoView
                     .padding(.bottom, 20)
-                
+
                 VStack(alignment: .leading, spacing: 20) {
                     audioControlsView
 
@@ -103,7 +103,7 @@ struct MemoDetailView: View {
                     }
                     .accessibilityLabel("Share memo")
                     .accessibilityHint("Share voice recording, transcription, or analysis")
-                    
+
                     RenameButton()
                 }
             }
@@ -211,7 +211,7 @@ struct MemoDetailView: View {
 
     // MARK: - Extracted Sections
     // Quick-add state removed (superseded by Action Items UI)
-    
+
     // Collapsed transcript + banners state
     @State private var isTranscriptExpanded: Bool = false
     @State private var dismissTranscriptionErrorBanner: Bool = false
@@ -220,7 +220,7 @@ struct MemoDetailView: View {
     @State private var scrubValue: Double = 0
     // Delete confirmation
     @State private var showDeleteConfirm: Bool = false
-    
+
     @ViewBuilder
     private var languageBannerView: some View {
         if viewModel.showNonEnglishBanner {
@@ -233,7 +233,7 @@ struct MemoDetailView: View {
             .animation(.easeInOut(duration: 0.3), value: viewModel.showNonEnglishBanner)
         }
     }
-    
+
     @ViewBuilder
     private var headerInfoView: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -256,16 +256,16 @@ struct MemoDetailView: View {
                         }
                         .accessibilityLabel("Memo title editor")
                         .accessibilityFocused($focusedElement, equals: .memoTitle)
-                    
+
                     HStack {
                         Button("Cancel") {
                             viewModel.cancelRenaming()
                         }
                         .buttonStyle(.bordered)
                         .accessibilityLabel("Cancel title editing")
-                        
+
                         Spacer()
-                        
+
                         Button("Save") {
                             viewModel.saveRename()
                         }
@@ -315,7 +315,7 @@ struct MemoDetailView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(viewModel.isRenamingTitle ? "Editing memo title" : "Memo: \(primaryTitle), Duration: \(memo.durationString)")
     }
-    
+
     @ViewBuilder
     private var audioControlsView: some View {
         VStack(spacing: 10) {
@@ -405,7 +405,7 @@ struct MemoDetailView: View {
         let s = total % 60
         return String(format: "%d:%02d", m, s)
     }
-    
+
     @ViewBuilder
     private var transcriptionSectionView: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -413,7 +413,7 @@ struct MemoDetailView: View {
                 Text("Transcription")
                     .font(.system(.headline, design: .serif))
                     .fontWeight(.semibold)
-                
+
                 Spacer()
                 if viewModel.transcriptionState.isFailed {
                     if case .failed(let err) = viewModel.transcriptionState,
@@ -466,7 +466,7 @@ struct MemoDetailView: View {
             Text("This action cannot be undone.")
         }
     }
-    
+
     @ViewBuilder
     private var transcriptCollapsedView: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -502,7 +502,7 @@ struct MemoDetailView: View {
         .cornerRadius(12)
         .shadow(color: Color.semantic(.separator).opacity(0.2), radius: 2, x: 0, y: 1)
     }
-    
+
     @ViewBuilder
     private var transcriptionStateView: some View {
         switch viewModel.transcriptionState {
@@ -557,7 +557,7 @@ struct MemoDetailView: View {
             failedTranscriptionView(error: error)
         }
     }
-    
+
     @ViewBuilder
     private func completedTranscriptionView(text: String) -> some View {
         if viewModel.transcriptionModerationFlagged {
@@ -574,7 +574,7 @@ struct MemoDetailView: View {
         }
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 16) {
-                ForEach(Array(formatTranscriptParagraphs(text).enumerated()), id: \.offset) { index, paragraph in
+                ForEach(Array(formatTranscriptParagraphs(text).enumerated()), id: \.offset) { _, paragraph in
                     Text(paragraph)
                         .font(.body)
                         .lineSpacing(6)
@@ -618,7 +618,7 @@ struct MemoDetailView: View {
             }
         }
     }
-    
+
     @ViewBuilder
     private func failedTranscriptionView(error: String) -> some View {
         VStack(spacing: 12) {
@@ -675,7 +675,7 @@ struct MemoDetailView: View {
         .background((error == TranscriptionError.noSpeechDetected.errorDescription || error.lowercased().contains("no speech detected")) ? Color.clear : Color.semantic(.warning).opacity(0.05))
         .cornerRadius(8)
     }
-    
+
     @ViewBuilder
     private var analysisSectionView: some View {
         if viewModel.isTranscriptionCompleted, let transcriptText = viewModel.transcriptionText {
@@ -683,32 +683,32 @@ struct MemoDetailView: View {
                 .accessibilityFocused($focusedElement, equals: .analysisResults)
         }
     }
-    
+
     // MARK: - UI Helper Methods
-    
+
     private func shareText(_ text: String) {
         let activityController = UIActivityViewController(
             activityItems: [text],
             applicationActivities: nil
         )
-        
+
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let window = windowScene.windows.first {
             window.rootViewController?.present(activityController, animated: true)
         }
     }
-    
+
     private func copyText(_ text: String) {
         UIPasteboard.general.string = text
-        
+
         // Provide accessibility announcement
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             UIAccessibility.post(notification: .announcement, argument: "Text copied to clipboard")
         }
     }
-    
+
     // MARK: - Error Message Helpers
-    
+
     private func getErrorTitle(for error: String) -> String {
         if error == TranscriptionError.noSpeechDetected.errorDescription {
             return "No Speech Detected"
@@ -724,21 +724,21 @@ struct MemoDetailView: View {
             return "Transcription Failed"
         }
     }
-    
+
     // MARK: - Transcript Formatting Helpers
-    
+
     private func formatTranscriptParagraphs(_ text: String) -> [String] {
         // Split text into sentences and group them into paragraphs
         let sentences = text.components(separatedBy: CharacterSet(charactersIn: ".!?"))
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-        
+
         var paragraphs: [String] = []
         var currentParagraph: [String] = []
-        
+
         for sentence in sentences {
             currentParagraph.append(sentence)
-            
+
             // Create a new paragraph every 3-4 sentences for better readability
             if currentParagraph.count >= 3 {
                 let paragraph = currentParagraph.joined(separator: ". ") + "."
@@ -746,13 +746,13 @@ struct MemoDetailView: View {
                 currentParagraph = []
             }
         }
-        
+
         // Add any remaining sentences as the last paragraph
         if !currentParagraph.isEmpty {
             let paragraph = currentParagraph.joined(separator: ". ") + "."
             paragraphs.append(paragraph)
         }
-        
+
         // If no paragraphs were created, return the original text
         return paragraphs.isEmpty ? [text] : paragraphs
     }
@@ -780,7 +780,7 @@ struct MemoDetailView: View {
         case .success(let title):
             print("🧠 UI[Detail]: received title for memo=\(memo.id) -> \(title)")
             return false
-        case .failed(_, _):
+        case .failed:
             print("🧠 UI[Detail]: auto-title failed for memo=\(memo.id)")
             return false
         case .idle:

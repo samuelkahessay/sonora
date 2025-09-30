@@ -15,7 +15,7 @@ struct WhisperLanguages {
         "ko": "korean",
         "ar": "arabic",
         "hi": "hindi",
-        "ur": "urdu",
+        "ur": "urdu"
     ]
 
     static let supportedCodes: Set<String> = Set(codeToName.keys)

@@ -15,63 +15,63 @@ import Combine
 /// Ensures consistent application of colors, animations, and brand elements
 @MainActor
 final class BrandThemeManager: ObservableObject {
-    
+
     // MARK: - Singleton
-    
+
     static let shared = BrandThemeManager()
-    
+
     // MARK: - Published Properties
-    
+
     /// Current brand theme configuration
     @Published var currentTheme: SonoraBrandTheme = .default
-    
+
     /// Current recording state affecting visual presentation
     @Published var recordingState: RecordingState = .idle
-    
+
     /// Whether animations should be reduced for accessibility
     @Published var reducedMotion: Bool = UIAccessibility.isReduceMotionEnabled
-    
+
     /// Current app-wide color scheme preference
     @Published var colorScheme: ColorScheme = .light
-    
+
     /// Whether the app is in focus mode (simplified interface)
     @Published var isFocusMode: Bool = false
-    
+
     /// Animation intensity level (0.0 to 1.0)
     @Published var animationIntensity: Double = 1.0
-    
+
     // MARK: - Private Properties
-    
+
     private var cancellables = Set<AnyCancellable>()
-    
+
     // MARK: - Initialization
-    
+
     private init() {
         setupAccessibilityObservers()
         loadPersistedTheme()
         observeRecordingStateChanges()
     }
-    
+
     // MARK: - Public Interface
-    
+
     /// Update the recording state and trigger appropriate visual changes
     /// - Parameter state: New recording state
     func updateRecordingState(_ state: RecordingState) {
         guard recordingState != state else { return }
-        
+
         withAnimation(getAppropriateAnimation(for: .recordingTransition)) {
             recordingState = state
         }
-        
+
         // Notify all themeable views
         notifyThemeableViews()
-        
+
         // Apply haptic feedback for state changes
         if !reducedMotion {
             applyHapticFeedback(for: state)
         }
     }
-    
+
     /// Switch to a different color scheme
     /// - Parameter scheme: Target color scheme
     func setColorScheme(_ scheme: ColorScheme) {
@@ -79,37 +79,37 @@ final class BrandThemeManager: ObservableObject {
             colorScheme = scheme
             updateThemeForColorScheme(scheme)
         }
-        
+
         persistTheme()
     }
-    
+
     /// Toggle focus mode for simplified interface
     func toggleFocusMode() {
         withAnimation(getAppropriateAnimation(for: .interfaceChange)) {
             isFocusMode.toggle()
         }
-        
+
         notifyThemeableViews()
     }
-    
+
     /// Get the appropriate animation for a given transition type
     /// - Parameter type: Type of transition
     /// - Returns: SwiftUI Animation configured for the transition
     func getAppropriateAnimation(for type: TransitionType) -> Animation {
         let baseAnimation = type.baseAnimation
-        
+
         if reducedMotion {
             return .easeInOut(duration: 0.2)
         }
-        
+
         // Scale animation intensity
         return baseAnimation.speed(animationIntensity)
     }
-    
+
     // removed unused theme helper builders
-    
+
     // MARK: - Private Implementation
-    
+
     /// Setup accessibility observers for motion preferences
     private func setupAccessibilityObservers() {
         NotificationCenter.default.publisher(for: UIAccessibility.reduceMotionStatusDidChangeNotification)
@@ -121,21 +121,21 @@ final class BrandThemeManager: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    
+
     /// Load persisted theme settings
     private func loadPersistedTheme() {
         // Implementation would load from UserDefaults or other persistence
         // For now, use default theme
         currentTheme = .default
     }
-    
+
     /// Persist current theme settings
     private func persistTheme() {
         // Implementation would save to UserDefaults
         // For now, just log the change
         print("🎨 BrandThemeManager: Theme persisted")
     }
-    
+
     /// Observe recording state changes from other parts of the app
     private func observeRecordingStateChanges() {
         NotificationCenter.default.publisher(for: .recordingStateChanged)
@@ -145,7 +145,7 @@ final class BrandThemeManager: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    
+
     /// Update theme properties for new color scheme
     private func updateThemeForColorScheme(_ scheme: ColorScheme) {
         // Sonora brand prefers light appearance but adapts to user preference
@@ -155,7 +155,7 @@ final class BrandThemeManager: ObservableObject {
             currentTheme = .default
         }
     }
-    
+
     /// Update animation intensity based on accessibility settings
     private func updateAnimationIntensity() {
         if reducedMotion {
@@ -164,7 +164,7 @@ final class BrandThemeManager: ObservableObject {
             animationIntensity = 1.0
         }
     }
-    
+
     /// Notify all views that conform to BrandThemeable protocol
     private func notifyThemeableViews() {
         NotificationCenter.default.post(
@@ -177,7 +177,7 @@ final class BrandThemeManager: ObservableObject {
             ]
         )
     }
-    
+
     /// Apply appropriate haptic feedback for recording state changes
     private func applyHapticFeedback(for state: RecordingState) {
         switch state {
@@ -205,7 +205,7 @@ enum RecordingState: Equatable, Sendable {
     case active
     case processing
     case error
-    
+
     var description: String {
         switch self {
         case .idle: return "Ready to record"
@@ -223,7 +223,7 @@ enum TransitionType {
     case interfaceChange
     case contentReveal
     case microInteraction
-    
+
     var baseAnimation: Animation {
         switch self {
         case .recordingTransition:
@@ -244,7 +244,7 @@ enum TransitionType {
 
 /// Extended brand theme with dark mode adaptation
 extension SonoraBrandTheme {
-    
+
     /// Dark-adapted Sonora theme maintaining brand identity
     static let darkAdapted = SonoraBrandTheme(
         primary: Color.insightGold,
@@ -262,7 +262,7 @@ extension SonoraBrandTheme {
 
 struct BrandThemeModifier: ViewModifier {
     @StateObject private var themeManager = BrandThemeManager.shared
-    
+
     func body(content: Content) -> some View {
         content
             .environmentObject(themeManager)
@@ -272,7 +272,7 @@ struct BrandThemeModifier: ViewModifier {
 }
 
 extension View {
-    
+
     /// Apply brand theme management to the view
     func brandThemed() -> some View {
         self.modifier(BrandThemeModifier())
@@ -287,4 +287,3 @@ extension Notification.Name {
 }
 
 // MARK: - Preview Support
-

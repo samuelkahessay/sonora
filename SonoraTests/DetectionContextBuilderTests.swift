@@ -16,4 +16,3 @@ final class DetectionContextBuilderTests: XCTestCase {
         XCTAssertGreaterThan(ctx.imperativeVerbDensity, 0.0)
     }
 }
-

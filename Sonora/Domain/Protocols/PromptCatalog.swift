@@ -13,4 +13,3 @@ public extension PromptCatalog {
         return allPrompts().filter { $0.category == category }
     }
 }
-

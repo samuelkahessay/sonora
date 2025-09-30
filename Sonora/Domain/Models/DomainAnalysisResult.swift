@@ -9,7 +9,7 @@ public struct DomainAnalysisResult: Identifiable, Codable, Equatable, Hashable, 
     public let metadata: DomainAnalysisMetadata
     public let createdAt: Date
     public let updatedAt: Date
-    
+
     public init(
         id: UUID = UUID(),
         type: DomainAnalysisType,
@@ -27,34 +27,34 @@ public struct DomainAnalysisResult: Identifiable, Codable, Equatable, Hashable, 
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
-    
+
     // MARK: - Computed Properties
-    
+
     /// Whether the analysis has completed successfully
     public var isCompleted: Bool {
         status.isCompleted
     }
-    
+
     /// Whether the analysis is currently in progress
     public var isInProgress: Bool {
         status.isInProgress
     }
-    
+
     /// Whether the analysis failed
     public var isFailed: Bool {
         status.isFailed
     }
-    
+
     /// Human-readable status description
     public var statusDescription: String {
         status.description
     }
-    
+
     /// Duration of the analysis operation
     public var duration: TimeInterval {
         updatedAt.timeIntervalSince(createdAt)
     }
-    
+
     /// Human-readable duration
     public var formattedDuration: String {
         let formatter = DateComponentsFormatter()
@@ -62,9 +62,9 @@ public struct DomainAnalysisResult: Identifiable, Codable, Equatable, Hashable, 
         formatter.unitsStyle = .abbreviated
         return formatter.string(from: duration) ?? "0s"
     }
-    
+
     // MARK: - Business Logic Methods
-    
+
     /// Creates a copy with updated status
     public func withStatus(_ newStatus: DomainAnalysisStatus) -> DomainAnalysisResult {
         DomainAnalysisResult(
@@ -77,7 +77,7 @@ public struct DomainAnalysisResult: Identifiable, Codable, Equatable, Hashable, 
             updatedAt: Date()
         )
     }
-    
+
     /// Creates a copy with updated content
     public func withContent(_ newContent: DomainAnalysisContent) -> DomainAnalysisResult {
         DomainAnalysisResult(
@@ -90,7 +90,7 @@ public struct DomainAnalysisResult: Identifiable, Codable, Equatable, Hashable, 
             updatedAt: Date()
         )
     }
-    
+
     /// Creates a copy with updated metadata
     public func withMetadata(_ newMetadata: DomainAnalysisMetadata) -> DomainAnalysisResult {
         DomainAnalysisResult(
@@ -113,32 +113,32 @@ public enum DomainAnalysisStatus: Codable, Equatable, Hashable, Sendable {
     case inProgress
     case completed
     case failed(String)
-    
+
     public var isCompleted: Bool {
         if case .completed = self { return true }
         return false
     }
-    
+
     public var isInProgress: Bool {
         if case .inProgress = self { return true }
         return false
     }
-    
+
     public var isFailed: Bool {
         if case .failed = self { return true }
         return false
     }
-    
+
     public var isNotStarted: Bool {
         if case .notStarted = self { return true }
         return false
     }
-    
+
     public var errorMessage: String? {
         if case .failed(let error) = self { return error }
         return nil
     }
-    
+
     public var description: String {
         switch self {
         case .notStarted:
@@ -151,7 +151,7 @@ public enum DomainAnalysisStatus: Codable, Equatable, Hashable, Sendable {
             return "Failed"
         }
     }
-    
+
     public var iconName: String {
         switch self {
         case .notStarted:
@@ -164,7 +164,7 @@ public enum DomainAnalysisStatus: Codable, Equatable, Hashable, Sendable {
             return "exclamationmark.triangle.fill"
         }
     }
-    
+
     public var iconColor: String {
         switch self {
         case .notStarted:
@@ -187,7 +187,7 @@ public struct DomainAnalysisContent: Codable, Equatable, Hashable, Sendable {
     public let actionItems: [DomainActionItem]
     public let sentiment: String?
     public let confidence: Double?
-    
+
     public init(
         summary: String? = nil,
         keyPoints: [String] = [],
@@ -203,7 +203,7 @@ public struct DomainAnalysisContent: Codable, Equatable, Hashable, Sendable {
         self.sentiment = sentiment
         self.confidence = confidence
     }
-    
+
     /// Whether the content has meaningful data
     public var isEmpty: Bool {
         summary?.isEmpty != false &&
@@ -211,7 +211,7 @@ public struct DomainAnalysisContent: Codable, Equatable, Hashable, Sendable {
         themes.isEmpty &&
         actionItems.isEmpty
     }
-    
+
     /// Total number of content items
     public var itemCount: Int {
         (summary?.isEmpty == false ? 1 : 0) +
@@ -219,7 +219,7 @@ public struct DomainAnalysisContent: Codable, Equatable, Hashable, Sendable {
         themes.count +
         actionItems.count
     }
-    
+
     /// Sentiment color for UI display
     public var sentimentColor: String {
         guard let sentiment = sentiment else { return "gray" }
@@ -238,7 +238,7 @@ public struct DomainTheme: Codable, Equatable, Identifiable, Hashable, Sendable 
     public let name: String
     public let evidence: [String]
     public let confidence: Double?
-    
+
     public init(
         id: UUID = UUID(),
         name: String,
@@ -250,7 +250,7 @@ public struct DomainTheme: Codable, Equatable, Identifiable, Hashable, Sendable 
         self.evidence = evidence
         self.confidence = confidence
     }
-    
+
     /// Human-readable confidence level
     public var confidenceDescription: String {
         guard let confidence = confidence else { return "Unknown" }
@@ -270,7 +270,7 @@ public struct DomainActionItem: Codable, Equatable, Identifiable, Hashable, Send
     public let priority: DomainPriority?
     public let dueDate: Date?
     public let isCompleted: Bool
-    
+
     public init(
         id: UUID = UUID(),
         text: String,
@@ -284,13 +284,13 @@ public struct DomainActionItem: Codable, Equatable, Identifiable, Hashable, Send
         self.dueDate = dueDate
         self.isCompleted = isCompleted
     }
-    
+
     /// Whether the action item is overdue
     public var isOverdue: Bool {
         guard let dueDate = dueDate else { return false }
         return !isCompleted && dueDate < Date()
     }
-    
+
     /// Human-readable due date
     public var formattedDueDate: String? {
         guard let dueDate = dueDate else { return nil }
@@ -307,11 +307,11 @@ public enum DomainPriority: String, Codable, CaseIterable, Hashable, Sendable {
     case medium = "medium"
     case high = "high"
     case urgent = "urgent"
-    
+
     public var displayName: String {
         rawValue.capitalized
     }
-    
+
     public var iconName: String {
         switch self {
         case .low: return "arrow.down.circle"
@@ -320,7 +320,7 @@ public enum DomainPriority: String, Codable, CaseIterable, Hashable, Sendable {
         case .urgent: return "exclamationmark.circle"
         }
     }
-    
+
     public var color: String {
         switch self {
         case .low: return "green"
@@ -338,7 +338,7 @@ public struct DomainAnalysisMetadata: Codable, Equatable, Hashable, Sendable {
     public let processingTimeMs: Int?
     public let version: String?
     public let parameters: [String: String]
-    
+
     public init(
         modelUsed: String? = nil,
         tokensConsumed: Int? = nil,
@@ -352,7 +352,7 @@ public struct DomainAnalysisMetadata: Codable, Equatable, Hashable, Sendable {
         self.version = version
         self.parameters = parameters
     }
-    
+
     /// Human-readable processing time
     public var formattedProcessingTime: String? {
         guard let ms = processingTimeMs else { return nil }
@@ -363,7 +363,7 @@ public struct DomainAnalysisMetadata: Codable, Equatable, Hashable, Sendable {
             return String(format: "%.1fs", seconds)
         }
     }
-    
+
     // MARK: - Hashable Implementation
     public func hash(into hasher: inout Hasher) {
         hasher.combine(modelUsed)

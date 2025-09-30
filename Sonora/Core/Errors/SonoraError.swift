@@ -2,7 +2,7 @@ import Foundation
 
 /// Comprehensive error types for the Sonora application
 public enum SonoraError: LocalizedError, Equatable {
-    
+
     // MARK: - Audio Recording Errors
     case audioPermissionDenied
     case audioSessionSetupFailed(String)
@@ -12,7 +12,7 @@ public enum SonoraError: LocalizedError, Equatable {
     case audioFileCorrupted(String)
     case audioFormatUnsupported(String)
     case audioFileProcessingFailed(String)
-    
+
     // MARK: - Transcription Errors
     case transcriptionServiceUnavailable
     case transcriptionFailed(String)
@@ -21,7 +21,7 @@ public enum SonoraError: LocalizedError, Equatable {
     case transcriptionQuotaExceeded
     case transcriptionFileTooBig(Int64)
     case transcriptionUnsupportedFormat(String)
-    
+
     // MARK: - Analysis Errors
     case analysisServiceUnavailable
     case analysisInvalidInput(String)
@@ -30,7 +30,7 @@ public enum SonoraError: LocalizedError, Equatable {
     case analysisModelUnavailable(String)
     case analysisInsufficientContent
     case analysisQuotaExceeded
-    
+
     // MARK: - Storage Errors
     case storagePermissionDenied
     case storageSpaceInsufficient
@@ -39,7 +39,7 @@ public enum SonoraError: LocalizedError, Equatable {
     case storageWriteFailed(String)
     case storageReadFailed(String)
     case storageDeleteFailed(String)
-    
+
     // MARK: - Network Errors
     case networkUnavailable
     case networkTimeout
@@ -49,37 +49,37 @@ public enum SonoraError: LocalizedError, Equatable {
     case networkUnauthorized
     case networkForbidden
     case networkRateLimited
-    
+
     // MARK: - Configuration Errors
     case configurationMissing(String)
     case configurationInvalid(String)
     case apiKeyMissing
     case apiKeyInvalid
     case endpointUnavailable(String)
-    
+
     // MARK: - Data Errors
     case dataCorrupted(String)
     case dataFormatInvalid(String)
     case dataDecodingFailed(String)
     case dataEncodingFailed(String)
     case dataMigrationFailed(String)
-    
+
     // MARK: - User Interface Errors
     case uiStateInconsistent(String)
     case uiOperationCancelled
     case uiFeatureUnavailable(String)
-    
+
     // MARK: - System Errors
     case systemMemoryLow
     case systemDiskFull
     case systemResourceUnavailable(String)
     case systemVersionUnsupported(String)
-    
+
     // MARK: - Unknown Errors
     case unknown(String)
-    
+
     // MARK: - LocalizedError Implementation
-    
+
     public var errorDescription: String? {
         switch self {
         // Audio Recording Errors
@@ -99,7 +99,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Unsupported audio format: \(format)"
         case .audioFileProcessingFailed(let reason):
             return "Audio file processing failed: \(reason)"
-            
+
         // Transcription Errors
         case .transcriptionServiceUnavailable:
             return "Transcription service is currently unavailable."
@@ -115,7 +115,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return "File too large for transcription (\(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))). Maximum size is 25MB."
         case .transcriptionUnsupportedFormat(let format):
             return "Unsupported file format for transcription: \(format)"
-            
+
         // Analysis Errors
         case .analysisServiceUnavailable:
             return "Analysis service is currently unavailable."
@@ -131,7 +131,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Insufficient content for meaningful analysis."
         case .analysisQuotaExceeded:
             return "Analysis quota exceeded. Please try again later."
-            
+
         // Storage Errors
         case .storagePermissionDenied:
             return "Storage permission is required to save recordings."
@@ -147,7 +147,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Failed to read file: \(reason)"
         case .storageDeleteFailed(let reason):
             return "Failed to delete file: \(reason)"
-            
+
         // Network Errors
         case .networkUnavailable:
             return "Network connection unavailable. Please check your internet connection."
@@ -165,7 +165,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Access forbidden. You don't have permission to perform this action."
         case .networkRateLimited:
             return "Too many requests. Please wait and try again."
-            
+
         // Configuration Errors
         case .configurationMissing(let key):
             return "Missing configuration: \(key)"
@@ -177,7 +177,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Invalid API key. Please check your API key in settings."
         case .endpointUnavailable(let endpoint):
             return "Service endpoint unavailable: \(endpoint)"
-            
+
         // Data Errors
         case .dataCorrupted(let details):
             return "Data corruption detected: \(details)"
@@ -189,7 +189,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Failed to encode data: \(reason)"
         case .dataMigrationFailed(let reason):
             return "Data migration failed: \(reason)"
-            
+
         // User Interface Errors
         case .uiStateInconsistent(let details):
             return "Inconsistent UI state: \(details)"
@@ -197,7 +197,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Operation was cancelled by user."
         case .uiFeatureUnavailable(let feature):
             return "Feature unavailable: \(feature)"
-            
+
         // System Errors
         case .systemMemoryLow:
             return "System memory is low. Please close other apps and try again."
@@ -207,13 +207,13 @@ public enum SonoraError: LocalizedError, Equatable {
             return "System resource unavailable: \(resource)"
         case .systemVersionUnsupported(let version):
             return "Unsupported system version: \(version)"
-            
+
         // Unknown Errors
         case .unknown(let reason):
             return "An unknown error occurred: \(reason)"
         }
     }
-    
+
     public var failureReason: String? {
         switch self {
         case .audioPermissionDenied:
@@ -230,7 +230,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return nil
         }
     }
-    
+
     public var recoverySuggestion: String? {
         switch self {
         case .audioPermissionDenied:
@@ -255,9 +255,9 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Please try again. If the problem persists, contact support."
         }
     }
-    
+
     // MARK: - Error Categories
-    
+
     /// Category of the error for grouping and handling
     public var category: SonoraErrorCategory {
         switch self {
@@ -283,7 +283,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return .unknown
         }
     }
-    
+
     /// Whether this error is recoverable by retrying
     public var isRetryable: Bool {
         switch self {
@@ -297,7 +297,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return false
         }
     }
-    
+
     /// Severity level of the error
     public var severity: SonoraErrorSeverity {
         switch self {
@@ -329,7 +329,7 @@ public enum SonoraErrorCategory: String, CaseIterable {
     case userInterface
     case system
     case unknown
-    
+
     public var displayName: String {
         switch self {
         case .audio: return "Audio"
@@ -344,7 +344,7 @@ public enum SonoraErrorCategory: String, CaseIterable {
         case .unknown: return "Unknown"
         }
     }
-    
+
     public var iconName: String {
         switch self {
         case .audio: return "waveform"
@@ -367,11 +367,11 @@ public enum SonoraErrorSeverity: String, CaseIterable, Comparable {
     case warning
     case error
     case critical
-    
+
     public var displayName: String {
         rawValue.capitalized
     }
-    
+
     public var iconName: String {
         switch self {
         case .info: return "info.circle.fill"
@@ -380,7 +380,7 @@ public enum SonoraErrorSeverity: String, CaseIterable, Comparable {
         case .critical: return "exclamationmark.octagon.fill"
         }
     }
-    
+
     public var color: String {
         switch self {
         case .info: return "blue"
@@ -389,7 +389,7 @@ public enum SonoraErrorSeverity: String, CaseIterable, Comparable {
         case .critical: return "purple"
         }
     }
-    
+
     public static func < (lhs: SonoraErrorSeverity, rhs: SonoraErrorSeverity) -> Bool {
         let order: [SonoraErrorSeverity] = [.info, .warning, .error, .critical]
         guard let lhsIndex = order.firstIndex(of: lhs),

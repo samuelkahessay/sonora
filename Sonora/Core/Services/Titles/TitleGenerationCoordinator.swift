@@ -13,7 +13,7 @@ private actor TitleStreamingFlag {
 }
 
 @MainActor
-final class TitleGenerationCoordinator: ObservableObject, Sendable {
+final class TitleGenerationCoordinator: ObservableObject {
     @Published private(set) var stateByMemo: [UUID: TitleGenerationState] = [:]
     @Published private(set) var metrics: TitlePipelineMetrics = TitlePipelineMetrics()
 
@@ -25,7 +25,7 @@ final class TitleGenerationCoordinator: ObservableObject, Sendable {
 
     private var jobsCancellable: AnyCancellable?
     private var memoCancellable: AnyCancellable?
-    private var currentTask: Task<Void, Never>? = nil
+    private var currentTask: Task<Void, Never>?
     private var successStateByMemo: [UUID: String] = [:]
     private var streamingTasks: [UUID: Task<Void, Never>] = [:]
 

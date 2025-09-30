@@ -28,7 +28,7 @@ public struct OperationProgress: Sendable {
     // New optional fields for step-aware progress
     public let totalSteps: Int?
     public let currentStepIndex: Int?
-    
+
     public init(
         percentage: Double,
         currentStep: String,
@@ -44,16 +44,16 @@ public struct OperationProgress: Sendable {
         self.totalSteps = totalSteps
         self.currentStepIndex = currentStepIndex
     }
-    
+
     /// Progress as percentage string (e.g., "75%")
     public var percentageString: String {
         return "\(Int(percentage * 100))%"
     }
-    
+
     /// Estimated time remaining as human-readable string
     public var etaString: String? {
         guard let eta = estimatedTimeRemaining else { return nil }
-        
+
         if eta < 60 {
             return "\(Int(eta))s remaining"
         } else if eta < 3600 {
@@ -72,17 +72,17 @@ public enum DetailedOperationStatus: Sendable {
     case queued                          // In queue, waiting to start
     case waitingForResources            // Waiting for system resources
     case waitingForConflictResolution   // Blocked by conflicting operation
-    
+
     // Active substates  
     case initializing                   // Starting up
     case processing(OperationProgress?) // Actively running with optional progress
     case finalizing                     // Completing/cleaning up
-    
+
     // Terminal states
     case completed(Date)                // Successfully finished
     case failed(String, Date)          // Failed with error description
     case cancelled(Date)               // Cancelled by user or system
-    
+
     /// Convert to basic OperationStatus for compatibility
     public var basicStatus: OperationStatus {
         switch self {
@@ -98,12 +98,12 @@ public enum DetailedOperationStatus: Sendable {
             return .cancelled
         }
     }
-    
+
     /// Whether operation is still in progress
     public var isInProgress: Bool {
         return basicStatus.isInProgress
     }
-    
+
     /// Human-readable status description
     public var displayName: String {
         switch self {
@@ -130,7 +130,7 @@ public enum DetailedOperationStatus: Sendable {
             return "Cancelled"
         }
     }
-    
+
     /// Icon name for UI display
     public var iconName: String {
         switch self {
@@ -146,7 +146,7 @@ public enum DetailedOperationStatus: Sendable {
             return "minus.circle.fill"
         }
     }
-    
+
     /// Color for UI display
     public var statusColor: StatusColor {
         switch self {
@@ -236,7 +236,7 @@ public struct OperationStatusUpdate: Sendable {
     public let previousStatus: DetailedOperationStatus?
     public let currentStatus: DetailedOperationStatus
     public let timestamp: Date
-    
+
     public init(
         operationId: UUID,
         memoId: UUID,
@@ -266,10 +266,10 @@ public protocol OperationStatusDelegate: AnyObject, Sendable {
 /// Grouping operations for UI presentation
 public enum OperationGroup: CaseIterable, Sendable {
     case recording
-    case transcription  
+    case transcription
     case analysis
     case all
-    
+
     public var displayName: String {
         switch self {
         case .recording: return "Recording"
@@ -278,7 +278,7 @@ public enum OperationGroup: CaseIterable, Sendable {
         case .all: return "All Operations"
         }
     }
-    
+
     public var operationCategories: Set<OperationCategory> {
         switch self {
         case .recording: return [.recording]
@@ -296,7 +296,7 @@ public enum OperationFilter: CaseIterable, Sendable {
     case completed
     case failed
     case all
-    
+
     public var displayName: String {
         switch self {
         case .active: return "Active"
@@ -306,7 +306,7 @@ public enum OperationFilter: CaseIterable, Sendable {
         case .all: return "All"
         }
     }
-    
+
     public var statusFilter: Set<OperationStatus> {
         switch self {
         case .active: return [.active]
@@ -327,7 +327,7 @@ public struct OperationSummary: Sendable {
     public let userFriendlyDescription: String
     public let canBeCancelled: Bool
     public let estimatedCompletion: Date?
-    
+
     public init(
         operation: Operation,
         detailedStatus: DetailedOperationStatus? = nil
@@ -338,7 +338,7 @@ public struct OperationSummary: Sendable {
         self.canBeCancelled = operation.status.isInProgress
         self.estimatedCompletion = Self.calculateEstimatedCompletion(operation)
     }
-    
+
     private static func mapToDetailedStatus(_ operation: Operation) -> DetailedOperationStatus {
         switch operation.status {
         case .pending:
@@ -354,7 +354,7 @@ public struct OperationSummary: Sendable {
             return .cancelled(operation.completedAt ?? Date())
         }
     }
-    
+
     private static func generateUserFriendlyDescription(_ operation: Operation) -> String {
         switch operation.type {
         case .recording:
@@ -387,14 +387,14 @@ public struct OperationSummary: Sendable {
             }
         }
     }
-    
+
     private static func calculateEstimatedCompletion(_ operation: Operation) -> Date? {
         guard operation.status == .active else { return nil }
-        
+
         // Simple estimation based on operation type and current duration
         let currentDuration = operation.executionDuration ?? 0
         let estimatedTotalDuration: TimeInterval
-        
+
         switch operation.type.category {
         case .recording:
             return nil // Recording duration is user-controlled
@@ -403,7 +403,7 @@ public struct OperationSummary: Sendable {
         case .analysis:
             estimatedTotalDuration = 15.0 // Average analysis time
         }
-        
+
         let remainingTime = max(0, estimatedTotalDuration - currentDuration)
         return Date().addingTimeInterval(remainingTime)
     }
@@ -419,11 +419,11 @@ public struct SystemOperationMetrics: Sendable {
     public let systemLoadPercentage: Double // 0.0 to 1.0
     public let maxConcurrentOperations: Int
     public let averageOperationDuration: TimeInterval?
-    
+
     public var isSystemBusy: Bool {
         return systemLoadPercentage > 0.8
     }
-    
+
     public var loadDescription: String {
         switch systemLoadPercentage {
         case 0.0..<0.3:
@@ -436,11 +436,11 @@ public struct SystemOperationMetrics: Sendable {
             return "At Capacity"
         }
     }
-    
+
     public var availableSlots: Int {
         return max(0, maxConcurrentOperations - activeOperations)
     }
-    
+
     public var description: String {
         return """
         System Metrics:
@@ -452,7 +452,7 @@ public struct SystemOperationMetrics: Sendable {
         - Average Duration: \(averageOperationDuration.map { String(format: "%.1fs", $0) } ?? "N/A")
         """
     }
-    
+
     public init(
         totalOperations: Int,
         activeOperations: Int,

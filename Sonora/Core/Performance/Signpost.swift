@@ -1,7 +1,5 @@
 import Foundation
 import os
-import os.signpost
-
 @MainActor
 enum Signpost {
     @available(iOS 15.0, *)

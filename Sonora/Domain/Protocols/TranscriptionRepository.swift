@@ -3,12 +3,12 @@ import Combine
 
 /// State change event for transcription updates
 @MainActor
-struct TranscriptionStateChange: Sendable {
+struct TranscriptionStateChange {
     let memoId: UUID
     let previousState: TranscriptionState?
     let currentState: TranscriptionState
     let timestamp: Date
-    
+
     init(memoId: UUID, previousState: TranscriptionState?, currentState: TranscriptionState) {
         self.memoId = memoId
         self.previousState = previousState
@@ -21,10 +21,10 @@ struct TranscriptionStateChange: Sendable {
 protocol TranscriptionRepository: ObservableObject {
     var objectWillChange: ObservableObjectPublisher { get }
     var transcriptionStates: [String: TranscriptionState] { get set }
-    
+
     /// Publisher for transcription state changes - Swift 6 compliant event-driven updates
     var stateChangesPublisher: AnyPublisher<TranscriptionStateChange, Never> { get }
-    
+
     func saveTranscriptionState(_ state: TranscriptionState, for memoId: UUID)
     func getTranscriptionState(for memoId: UUID) -> TranscriptionState
     func deleteTranscriptionData(for memoId: UUID)
@@ -35,7 +35,7 @@ protocol TranscriptionRepository: ObservableObject {
     func clearTranscriptionCache()
     /// Batched retrieval for a set of memos to avoid N+1 fetches
     func getTranscriptionStates(for memoIds: [UUID]) -> [UUID: TranscriptionState]
-    
+
     /// Convenience method to get state changes for a specific memo
     func stateChangesPublisher(for memoId: UUID) -> AnyPublisher<TranscriptionStateChange, Never>
 }

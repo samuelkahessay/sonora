@@ -2,15 +2,15 @@ import SwiftUI
 
 /// First recording prompt component with personalized greeting
 struct FirstRecordingPromptView: View {
-    
+
     // MARK: - Properties
     let userName: String
     let onStartRecording: () -> Void
-    
+
     // MARK: - State
     @State private var isAnimating: Bool = false
     @State private var pulseScale: CGFloat = 1.0
-    
+
     // MARK: - Body
     var body: some View {
         ScrollView {
@@ -19,7 +19,7 @@ struct FirstRecordingPromptView: View {
                 VStack(spacing: Spacing.lg) {
                     // Animated microphone icon
                     animatedMicrophoneIcon
-                    
+
                     // Personalized title and greeting
                     VStack(spacing: Spacing.md) {
                         Text("Ready to Start")
@@ -28,20 +28,20 @@ struct FirstRecordingPromptView: View {
                             .foregroundColor(.semantic(.textPrimary))
                             .multilineTextAlignment(.center)
                             .accessibilityAddTraits(.isHeader)
-                        
+
                         personalizedGreeting
                     }
                 }
                 .padding(.top, Spacing.xl)
-                
+
                 // Encouragement section
                 encouragementSection
-                
+
                 // Recording tips
                 recordingTips
-                
+
                 Spacer(minLength: Spacing.xl)
-                
+
                 // Action button
                 VStack(spacing: Spacing.md) {
                     // Start Recording button (primary)
@@ -59,7 +59,7 @@ struct FirstRecordingPromptView: View {
                     .buttonBorderShape(.capsule)
                     .accessibilityLabel("Start your first recording")
                     .accessibilityHint("Double tap to start recording your first voice memo")
-                    
+
                 }
             }
             .padding(.horizontal, Spacing.xl)
@@ -75,9 +75,9 @@ struct FirstRecordingPromptView: View {
             stopAnimations()
         }
     }
-    
+
     // MARK: - Animated Microphone Icon
-    
+
     @ViewBuilder
     private var animatedMicrophoneIcon: some View {
         ZStack {
@@ -92,12 +92,12 @@ struct FirstRecordingPromptView: View {
                     .repeatForever(autoreverses: false),
                     value: isAnimating
                 )
-            
+
             // Inner circle background
             Circle()
                 .fill(Color.semantic(.brandPrimary).opacity(0.1))
                 .frame(width: 80, height: 80)
-            
+
             // Microphone icon
             Image(systemName: "mic.badge.plus")
                 .font(.system(size: 32, weight: .medium))
@@ -107,9 +107,9 @@ struct FirstRecordingPromptView: View {
         }
         .accessibilityHidden(true)
     }
-    
+
     // MARK: - Personalized Greeting
-    
+
     @ViewBuilder
     private var personalizedGreeting: some View {
         VStack(spacing: Spacing.sm) {
@@ -118,7 +118,7 @@ struct FirstRecordingPromptView: View {
                 .fontWeight(.medium)
                 .foregroundColor(.semantic(.textPrimary))
                 .multilineTextAlignment(.center)
-            
+
             Text("Let's create your first voice memo together.")
                 .font(.body)
                 .foregroundColor(.semantic(.textSecondary))
@@ -127,9 +127,9 @@ struct FirstRecordingPromptView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Personalized greeting: How was your day, \(userName)? Let's create your first voice memo together.")
     }
-    
+
     // MARK: - Encouragement Section
-    
+
     @ViewBuilder
     private var encouragementSection: some View {
         VStack(spacing: Spacing.md) {
@@ -138,7 +138,7 @@ struct FirstRecordingPromptView: View {
                 .fontWeight(.medium)
                 .foregroundColor(.semantic(.textPrimary))
                 .multilineTextAlignment(.center)
-            
+
             Text("There's no wrong way to start. Share a thought, describe your day, or voice an idea. Sonora will help you discover insights you might have missed.")
                 .font(.system(.body, design: .serif))
                 .foregroundColor(.semantic(.textSecondary))
@@ -149,9 +149,9 @@ struct FirstRecordingPromptView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Encouragement: Just speak naturally. There's no wrong way to start.")
     }
-    
+
     // MARK: - Recording Tips
-    
+
     @ViewBuilder
     private var recordingTips: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -160,14 +160,14 @@ struct FirstRecordingPromptView: View {
                     .font(.title3)
                     .foregroundColor(.semantic(.info))
                     .accessibilityHidden(true)
-                
+
                 Text("Quick Tips")
                     .font(.subheadline)
                     .fontDesign(.default)
                     .fontWeight(.semibold)
                     .foregroundColor(.semantic(.textPrimary))
             }
-            
+
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 tipRow(text: "Speak for a minimum of 30 seconds")
             }
@@ -181,7 +181,7 @@ struct FirstRecordingPromptView: View {
         .padding(.horizontal, Spacing.md)
         .accessibilityElement(children: .contain)
     }
-    
+
     @ViewBuilder
     private func tipRow(text: String) -> some View {
         HStack(alignment: .top, spacing: Spacing.sm) {
@@ -189,7 +189,7 @@ struct FirstRecordingPromptView: View {
                 .font(.body)
                 .foregroundColor(.semantic(.info))
                 .accessibilityHidden(true)
-            
+
             Text(text)
                 .font(.subheadline)
                 .fontDesign(.default)
@@ -199,16 +199,16 @@ struct FirstRecordingPromptView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Tip: \(text)")
     }
-    
+
     // MARK: - Animation Methods
-    
+
     private func startAnimations() {
         isAnimating = true
-        
+
         // Start pulse animation for the recording button
         // Native look: remove pulsing CTA
     }
-    
+
     private func stopAnimations() {
         isAnimating = false
         pulseScale = 1.0

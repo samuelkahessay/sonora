@@ -72,4 +72,3 @@ public struct RecordingPrompt: Identifiable, Equatable, Hashable, Sendable {
         self.metadata = metadata
     }
 }
-

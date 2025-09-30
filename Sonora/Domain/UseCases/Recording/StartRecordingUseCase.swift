@@ -10,12 +10,12 @@ protocol StartRecordingUseCaseProtocol {
 
 @MainActor
 final class StartRecordingUseCase: StartRecordingUseCaseProtocol {
-    
+
     // MARK: - Dependencies
     private let audioRepository: any AudioRepository
     private let operationCoordinator: any OperationCoordinatorProtocol
     private let logger: any LoggerProtocol
-    
+
     // MARK: - Initialization
     init(
         audioRepository: any AudioRepository,
@@ -26,9 +26,7 @@ final class StartRecordingUseCase: StartRecordingUseCaseProtocol {
         self.operationCoordinator = operationCoordinator
         self.logger = logger
     }
-    
-    
-    
+
     // MARK: - Use Case Execution
     func execute(capSeconds: TimeInterval?) async throws -> UUID? {
         // Pre-checks (already on MainActor)
@@ -68,7 +66,7 @@ enum RecordingError: LocalizedError {
     case audioSessionFailed(String)
     case backgroundTaskFailed
     case backgroundRecordingNotSupported
-    
+
     var errorDescription: String? {
         switch self {
         case .alreadyRecording:

@@ -18,4 +18,3 @@ public final class ResetDailyUsageIfNeededUseCase: ResetDailyUsageIfNeededUseCas
         await usageRepository.resetIfDayChanged(now: now)
     }
 }
-

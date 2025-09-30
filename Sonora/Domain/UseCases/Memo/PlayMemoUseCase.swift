@@ -7,56 +7,56 @@ protocol PlayMemoUseCaseProtocol: Sendable {
 }
 
 final class PlayMemoUseCase: PlayMemoUseCaseProtocol, @unchecked Sendable {
-    
+
     // MARK: - Dependencies
     private let memoRepository: any MemoRepository
-    
+
     // MARK: - Initialization
     init(memoRepository: any MemoRepository) {
         self.memoRepository = memoRepository
     }
-    
+
     // MARK: - Use Case Execution
     @MainActor
     func execute(memo: Memo) async throws {
         print("▶️ PlayMemoUseCase: Starting playback for memo: \(memo.filename)")
-        
+
         do {
             // Validate memo exists in repository
             try validateMemoExists(memo)
-            
+
             // Validate file system state
             try validateFileSystemState(memo)
-            
+
             // Execute playback via repository
             memoRepository.playMemo(memo)
-            
+
             // Verify playback started successfully
             try verifyPlaybackStarted(memo)
-            
+
             print("✅ PlayMemoUseCase: Successfully initiated playback for memo: \(memo.filename)")
-            
+
         } catch let repositoryError as RepositoryError {
             print("❌ PlayMemoUseCase: Repository error - \(repositoryError.localizedDescription)")
             throw repositoryError.asSonoraError
-            
+
         } catch let serviceError as ServiceError {
             print("❌ PlayMemoUseCase: Service error - \(serviceError.localizedDescription)")
             throw serviceError.asSonoraError
-            
+
         } catch let error as NSError {
             print("❌ PlayMemoUseCase: System error - \(error.localizedDescription)")
             let mappedError = ErrorMapping.mapError(error)
             throw mappedError
-            
+
         } catch {
             print("❌ PlayMemoUseCase: Unknown error - \(error.localizedDescription)")
             throw SonoraError.audioRecordingFailed("Failed to play memo: \(error.localizedDescription)")
         }
     }
-    
+
     // MARK: - Private Methods
-    
+
     /// Validates that the memo exists in the repository
     @MainActor
     private func validateMemoExists(_ memo: Memo) throws {
@@ -64,10 +64,10 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol, @unchecked Sendable {
             print("⚠️ PlayMemoUseCase: Memo not found in repository: \(memo.filename)")
             throw RepositoryError.resourceNotFound("Memo with ID \(memo.id) not found")
         }
-        
+
         print("🔍 PlayMemoUseCase: Memo validated and found in repository")
     }
-    
+
     /// Validates file system state before attempting playback
     private func validateFileSystemState(_ memo: Memo) throws {
         // Check if file exists
@@ -75,33 +75,33 @@ final class PlayMemoUseCase: PlayMemoUseCaseProtocol, @unchecked Sendable {
             print("⚠️ PlayMemoUseCase: Audio file not found: \(memo.fileURL.path)")
             throw RepositoryError.fileNotFound(memo.fileURL.path)
         }
-        
+
         // Check if file is readable
         guard FileManager.default.isReadableFile(atPath: memo.fileURL.path) else {
             throw RepositoryError.permissionDenied("Cannot read audio file: \(memo.fileURL.path)")
         }
-        
+
         // Check file size
         do {
             let fileAttributes = try FileManager.default.attributesOfItem(atPath: memo.fileURL.path)
             let fileSize = fileAttributes[.size] as? Int64 ?? 0
-            
+
             guard fileSize > 0 else {
                 throw RepositoryError.fileCorrupted("Audio file is empty: \(memo.filename)")
             }
-            
+
             print("🔍 PlayMemoUseCase: File system validation completed - Size: \(ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file))")
-            
+
         } catch let error as RepositoryError {
             throw error
         } catch {
             throw RepositoryError.fileReadFailed("Cannot read file attributes: \(error.localizedDescription)")
         }
     }
-    
+
     // Audio integrity validation is handled in the Data layer 
     // to avoid AVFoundation dependency in the Domain layer.
-    
+
     /// Verifies that playback started successfully
     @MainActor
     private func verifyPlaybackStarted(_ memo: Memo) throws {

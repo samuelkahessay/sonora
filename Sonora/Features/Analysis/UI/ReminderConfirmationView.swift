@@ -20,12 +20,12 @@ struct ReminderConfirmationView: View {
     @SwiftUI.Environment(\.dismiss) private var dismiss: DismissAction
 
     @State private var lists: [CalendarDTO] = []
-    @State private var selectedList: CalendarDTO? = nil
+    @State private var selectedList: CalendarDTO?
     @State private var selectedIds: Set<String> = []
     @State private var editable: [String: EditableReminder] = [:]
     @State private var isLoading: Bool = false
-    @State private var errorMessage: String? = nil
-    @State private var editingId: String? = nil
+    @State private var errorMessage: String?
+    @State private var editingId: String?
 
     var body: some View {
         NavigationView {
@@ -129,8 +129,7 @@ struct ReminderConfirmationView: View {
                 for r in selected { mapping[r.id] = list }
                 let results = try await container.createReminderUseCase().execute(reminders: selected, listMapping: mapping)
                 let failures = results.values.filter { if case .failure = $0 { true } else { false } }
-                if failures.isEmpty { HapticManager.shared.playSuccess(); dismiss() }
-                else { HapticManager.shared.playWarning(); errorMessage = "Some reminders could not be created (\(failures.count))." }
+                if failures.isEmpty { HapticManager.shared.playSuccess(); dismiss() } else { HapticManager.shared.playWarning(); errorMessage = "Some reminders could not be created (\(failures.count))." }
             } catch {
                 HapticManager.shared.playError(); errorMessage = error.localizedDescription
             }

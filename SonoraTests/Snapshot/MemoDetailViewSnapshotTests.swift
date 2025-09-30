@@ -24,4 +24,3 @@ final class MemoDetailViewSnapshotTests: SnapshotTestCase {
         assertSnapshot(view, name: "MemoDetailView", appearance: .dark)
     }
 }
-

@@ -3,11 +3,11 @@ import Foundation
 /// Abstract base class providing common functionality for all Use Cases
 /// Centralizes logging, correlation ID generation, and standard error handling
 open class BaseUseCase: @unchecked Sendable {
-    
+
     // MARK: - Dependencies
     internal let logger: any LoggerProtocol
     internal let correlationIdGenerator: @Sendable () -> String
-    
+
     // MARK: - Initialization
     public init(
         logger: any LoggerProtocol = Logger.shared,
@@ -16,14 +16,14 @@ open class BaseUseCase: @unchecked Sendable {
         self.logger = logger
         self.correlationIdGenerator = correlationIdGenerator
     }
-    
+
     // MARK: - Common Functionality
-    
+
     /// Generate a new correlation ID for tracking operations
     internal func generateCorrelationId() -> String {
         return correlationIdGenerator()
     }
-    
+
     /// Create standardized log context with correlation ID
     internal func createLogContext(
         correlationId: String,
@@ -31,7 +31,7 @@ open class BaseUseCase: @unchecked Sendable {
     ) -> LogContext {
         return LogContext(correlationId: correlationId, additionalInfo: additionalInfo)
     }
-    
+
     /// Standard input validation with logging
     internal func validateNonEmptyString(
         _ value: String,
@@ -43,7 +43,7 @@ open class BaseUseCase: @unchecked Sendable {
             throw ValidationError.emptyField(fieldName)
         }
     }
-    
+
     /// Standard UUID validation with logging
     internal func validateUUID(
         _ uuid: UUID?,
@@ -55,7 +55,7 @@ open class BaseUseCase: @unchecked Sendable {
             throw ValidationError.invalidUUID(fieldName)
         }
     }
-    
+
     /// Standard minimum length validation
     internal func validateMinimumLength(
         _ value: String,
@@ -64,12 +64,12 @@ open class BaseUseCase: @unchecked Sendable {
         context: LogContext
     ) throws {
         guard value.count >= minimumLength else {
-            logger.error("\(fieldName) validation failed: too short (\(value.count) chars, minimum \(minimumLength))", 
+            logger.error("\(fieldName) validation failed: too short (\(value.count) chars, minimum \(minimumLength))",
                         category: .useCase, context: context, error: nil)
             throw ValidationError.fieldTooShort(fieldName, minimum: minimumLength, actual: value.count)
         }
     }
-    
+
     /// Log the start of a use case execution
     internal func logExecutionStart(
         operation: String,
@@ -77,7 +77,7 @@ open class BaseUseCase: @unchecked Sendable {
     ) {
         logger.info("Starting \(operation)", category: .useCase, context: context)
     }
-    
+
     /// Log successful completion of a use case
     internal func logExecutionSuccess(
         operation: String,
@@ -88,7 +88,7 @@ open class BaseUseCase: @unchecked Sendable {
         let logContext = LogContext(correlationId: context.correlationId, additionalInfo: mergedInfo)
         logger.info("\(operation) completed successfully", category: .useCase, context: logContext)
     }
-    
+
     /// Log and wrap execution errors
     internal func logAndWrapError(
         operation: String,
@@ -96,7 +96,7 @@ open class BaseUseCase: @unchecked Sendable {
         error: Error
     ) -> Error {
         logger.error("\(operation) failed", category: .useCase, context: context, error: error)
-        
+
         // Return specialized error based on type
         if error is ValidationError {
             return error
@@ -113,7 +113,7 @@ public enum ValidationError: LocalizedError, Sendable {
     case emptyField(String)
     case invalidUUID(String)
     case fieldTooShort(String, minimum: Int, actual: Int)
-    
+
     public var errorDescription: String? {
         switch self {
         case .emptyField(let field):
@@ -129,7 +129,7 @@ public enum ValidationError: LocalizedError, Sendable {
 /// General use case execution errors
 public enum UseCaseError: LocalizedError, Sendable {
     case executionFailed(operation: String, underlyingError: Error)
-    
+
     public var errorDescription: String? {
         switch self {
         case .executionFailed(let operation, let underlyingError):
@@ -137,4 +137,3 @@ public enum UseCaseError: LocalizedError, Sendable {
         }
     }
 }
-

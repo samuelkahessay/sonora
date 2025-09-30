@@ -32,4 +32,3 @@ struct PromptPlaceholderCard: View {
         .accessibilityHidden(true)
     }
 }
-
