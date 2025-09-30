@@ -209,7 +209,7 @@ public final class GetDynamicPromptUseCase: GetDynamicPromptUseCaseProtocol, @un
 
     private func stableHash(_ s: String) -> UInt64 {
         // djb2
-        var hash: UInt64 = 5381
+        var hash: UInt64 = 5_381
         for byte in s.utf8 { hash = ((hash << 5) &+ hash) &+ UInt64(byte) }
         return hash
     }

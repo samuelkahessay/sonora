@@ -1,5 +1,5 @@
-import Foundation
 @preconcurrency import Combine
+import Foundation
 
 @MainActor
 final class LiveActivityEventHandler {

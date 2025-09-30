@@ -229,6 +229,6 @@ public protocol AppEventType {
 
 extension AppEvent: AppEventType {
     public static var eventTypeIdentifier: ObjectIdentifier {
-        return ObjectIdentifier(AppEvent.self)
+        ObjectIdentifier(AppEvent.self)
     }
 }

@@ -219,21 +219,18 @@ struct FirstRecordingPromptView: View {
 
 #Preview("First Recording - Sam") {
     FirstRecordingPromptView(
-        userName: "Sam",
-        onStartRecording: { print("Start recording tapped") }
-    )
+        userName: "Sam"
+    )        { print("Start recording tapped") }
 }
 
 #Preview("First Recording - Friend") {
     FirstRecordingPromptView(
-        userName: "friend",
-        onStartRecording: { print("Start recording tapped") }
-    )
+        userName: "friend"
+    )        { print("Start recording tapped") }
 }
 
 #Preview("First Recording - Long Name") {
     FirstRecordingPromptView(
-        userName: "Alexandra",
-        onStartRecording: { print("Start recording tapped") }
-    )
+        userName: "Alexandra"
+    )        { print("Start recording tapped") }
 }

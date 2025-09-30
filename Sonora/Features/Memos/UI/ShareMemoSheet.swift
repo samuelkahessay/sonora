@@ -5,8 +5,8 @@
 //  Advanced share sheet with toggle options for memo content
 //
 
-import SwiftUI
 import Foundation
+import SwiftUI
 
 struct ShareMemoSheet: View {
     let memo: Memo

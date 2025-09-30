@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 /// Protocol defining the interface for Live Activity management
 /// Abstraction for ActivityKit-backed Live Activities without coupling Domain to ActivityKit.

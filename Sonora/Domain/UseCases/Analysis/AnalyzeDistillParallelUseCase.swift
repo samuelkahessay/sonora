@@ -15,7 +15,7 @@ public struct DistillProgressUpdate: Sendable, Equatable {
     public let latestComponent: AnalysisMode?
 
     public var progress: Double {
-        return Double(completedComponents) / Double(totalComponents)
+        Double(completedComponents) / Double(totalComponents)
     }
 }
 
@@ -215,7 +215,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             group.addTask { [self] in
                 do {
                     let det = try await detectUseCase.execute(transcript: transcript, memoId: memoId)
-                    let latencyMs = Int(det.detectionMetadata.processingTime * 1000)
+                    let latencyMs = Int(det.detectionMetadata.processingTime * 1_000)
                     return (nil, .detections(det.events, det.reminders), latencyMs, TokenUsage(input: 0, output: 0))
                 } catch {
                     logger.warning("Detection error; continuing without detections", category: .analysis, context: context, error: error)
@@ -278,7 +278,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     }
 
     private func checkComponentCache(mode: AnalysisMode, memoId: UUID) async -> (data: DistillComponentData, latency_ms: Int, tokens: TokenUsage)? {
-        return await MainActor.run {
+        await MainActor.run {
             switch mode {
             case .distillSummary:
                 if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillSummaryData.self) {

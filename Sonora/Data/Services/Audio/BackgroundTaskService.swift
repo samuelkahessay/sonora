@@ -6,9 +6,9 @@
 //  Handles iOS background task lifecycle to continue recording when app enters background
 //
 
+import Combine
 import Foundation
 import UIKit
-import Combine
 
 /// Protocol defining background task management operations
 @MainActor

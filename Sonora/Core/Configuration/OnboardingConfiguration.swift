@@ -38,7 +38,7 @@ final class OnboardingConfiguration: ObservableObject {
 
     /// Check if onboarding should be shown based on completion status and version
     func shouldShowOnboardingFlow() -> Bool {
-        return !hasCompletedOnboarding || needsOnboardingUpdate()
+        !hasCompletedOnboarding || needsOnboardingUpdate()
     }
 
     /// Mark onboarding as completed

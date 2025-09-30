@@ -6,9 +6,9 @@
 //  Handles recorder lifecycle, configuration, and delegate callbacks
 //
 
-import Foundation
 import AVFoundation
 import Combine
+import Foundation
 import UIKit
 
 /// Protocol defining audio recording operations
@@ -73,19 +73,19 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
             /// Voice-optimized sample rate from configuration (default: 22050 Hz)
             /// Perfect for voice content - captures full speech frequency range (300-3400 Hz fundamental + harmonics)
             static var sampleRate: Double {
-                return config.voiceOptimizedSampleRate
+                config.voiceOptimizedSampleRate
             }
 
             /// Optimal bit rate for voice content from configuration (default: 64000 bps)
             /// Provides excellent clarity while minimizing file size
             static var bitRate: Int {
-                return config.audioBitRate
+                config.audioBitRate
             }
 
             /// Voice-optimized quality setting from configuration (default: 0.7)
             /// Calibrated specifically for speech clarity and compression balance
             static var quality: Float {
-                return config.voiceOptimizedQuality
+                config.voiceOptimizedQuality
             }
 
             /// Adaptive quality based on current system conditions
@@ -124,12 +124,12 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
 
     /// Creates and configures a new AVAudioRecorder instance with 3-tier fallback
     func createRecorder(url: URL, sampleRate: Double, channels: Int, quality: Float) throws -> AVAudioRecorder {
-        return try createRecorderWithFallback(url: url, sampleRate: sampleRate, channels: channels, quality: quality)
+        try createRecorderWithFallback(url: url, sampleRate: sampleRate, channels: channels, quality: quality)
     }
 
     /// Creates and configures a new AVAudioRecorder using high-level recording settings
     func createRecorder(url: URL, settings: AudioRecordingSettings) throws -> AVAudioRecorder {
-        return try createRecorderWithFallback(
+        try createRecorderWithFallback(
             url: url,
             sampleRate: settings.sampleRate,
             channels: settings.channels,
@@ -208,7 +208,7 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
             if let override = bitRateOverride {
                 settings[AVEncoderBitRateKey] = override
                 print("🎙️ AudioRecordingService: Using override bitrate: \(override) bps")
-            } else if sampleRate <= 22050.0 {
+            } else if sampleRate <= 22_050.0 {
                 let optimizedBitRate = AudioConfiguration.VoiceOptimized.adaptiveBitRate()
                 settings[AVEncoderBitRateKey] = optimizedBitRate
                 print("🎙️ AudioRecordingService: Using voice-optimized bitrate: \(optimizedBitRate) bps")
@@ -341,7 +341,7 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
 
     /// Checks if a recorder is currently recording
     func isRecorderActive() -> Bool {
-        return audioRecorder?.isRecording ?? false
+        audioRecorder?.isRecording ?? false
     }
 
     // MARK: - Private Methods

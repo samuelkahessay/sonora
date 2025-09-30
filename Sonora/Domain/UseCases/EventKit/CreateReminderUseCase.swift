@@ -214,7 +214,7 @@ final class CreateReminderUseCase: CreateReminderUseCaseProtocol, @unchecked Sen
         }
 
         // Validate source text length (for notes field)
-        guard reminder.sourceText.count <= 1000 else {
+        guard reminder.sourceText.count <= 1_000 else {
             throw EventKitError.invalidEventData(field: "source text exceeds maximum length (1000)")
         }
     }

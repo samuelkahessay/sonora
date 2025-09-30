@@ -53,7 +53,7 @@ final class RequestMicrophonePermissionUseCase: RequestMicrophonePermissionUseCa
     /// Get current permission status without requesting
     /// This is a synchronous read of the current state
     func getCurrentStatus() -> MicrophonePermissionStatus {
-        return MicrophonePermissionStatus.current()
+        MicrophonePermissionStatus.current()
     }
 
     // MARK: - Private Methods

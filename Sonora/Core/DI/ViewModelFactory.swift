@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 /// Protocol for creating ViewModels with proper dependency injection
 /// Eliminates direct DIContainer access from ViewModels
@@ -53,7 +53,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
     }
 
     func createPromptViewModel() -> PromptViewModel {
-        return PromptViewModel(
+        PromptViewModel(
             getDynamic: container.getDynamicPromptUseCase(),
             getCategory: container.getPromptCategoryUseCase()
         )
@@ -164,7 +164,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
     }
 
     func createOnboardingViewModel() -> OnboardingViewModel {
-        return OnboardingViewModel(
+        OnboardingViewModel(
             onboardingConfiguration: OnboardingConfiguration.shared
         )
     }
@@ -177,6 +177,6 @@ extension DIContainer {
     /// Get the ViewModelFactory instance
     @MainActor
     func viewModelFactory() -> ViewModelFactory {
-        return DefaultViewModelFactory(container: self)
+        DefaultViewModelFactory(container: self)
     }
 }

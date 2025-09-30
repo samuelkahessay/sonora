@@ -76,7 +76,7 @@ enum DetectionContextBuilder {
             "remind", "reminder", "follow up", "follow-up", "due", "deadline", "push",
             "circle back", "circle-back"
         ]
-        return phrases.contains(where: { lower.contains($0) })
+        return phrases.contains { lower.contains($0) }
     }
 
     private static func containsRelativeDatePhrase(_ text: String) -> Bool {

@@ -1,5 +1,5 @@
-import Foundation
 import AVFoundation
+import Foundation
 
 // Language fallback configuration
 struct LanguageFallbackConfig {
@@ -150,7 +150,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
                     return DefaultVADSplittingService(config: VADConfig(silenceThreshold: -50.0,
                                                                         minSpeechDuration: 0.4,
                                                                         minSilenceGap: 0.25,
-                                                                        windowSize: 1024))
+                                                                        windowSize: 1_024))
                 }
                 return vadService
             }()
@@ -470,7 +470,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
         for (i, chunk) in chunks.enumerated() {
             let stepFraction = Double(i) / Double(chunks.count)
             let current = baseFraction + fractionBudget * stepFraction
-            await updateProgress(operationId: operationId, fraction: current, step: "Transcribing chunk...", index: i+1, total: chunks.count)
+            await updateProgress(operationId: operationId, fraction: current, step: "Transcribing chunk...", index: i + 1, total: chunks.count)
 
             do {
                 let text = try await transcriptionAPI.transcribe(url: chunk.url)
@@ -488,7 +488,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
 
     private func aggregateResults(_ results: [ChunkTranscriptionResult]) -> String {
         // Keep original order and join non-empty texts with a single space
-        return results
+        results
             .sorted { $0.segment.startTime < $1.segment.startTime }
             .map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
@@ -584,7 +584,7 @@ final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
             }
         }
 
-        let detectedLang: String? = overrideLanguage ?? langWeights.max(by: { $0.value < $1.value })?.key
+        let detectedLang: String? = overrideLanguage ?? langWeights.max { $0.value < $1.value }?.key
         let avgConf: Double? = confs.isEmpty ? nil : (confs.reduce(0, +) / Double(confs.count))
         let avgLP: Double? = logProbs.isEmpty ? nil : (logProbs.reduce(0, +) / Double(logProbs.count))
 

@@ -43,12 +43,12 @@ final class PerformanceMetricsService: ObservableObject {
     func mark() -> Date { Date() }
 
     func recordDuration(name: String, start: Date, extras: [String: String] = [:]) {
-        let ms = Int(Date().timeIntervalSince(start) * 1000)
+        let ms = Int(Date().timeIntervalSince(start) * 1_000)
         logEvent(name: name, durationMs: ms, extras: extras)
     }
 
     func recordStartupCompleted() {
-        let ms = Int(Date().timeIntervalSince(appStartTime) * 1000)
+        let ms = Int(Date().timeIntervalSince(appStartTime) * 1_000)
         logEvent(name: "AppStartup", durationMs: ms)
     }
 
@@ -110,7 +110,7 @@ final class PerformanceMetricsService: ObservableObject {
             }
         }
         if kerr == KERN_SUCCESS {
-            return Double(info.resident_size) / 1024.0 / 1024.0
+            return Double(info.resident_size) / 1_024.0 / 1_024.0
         } else {
             return 0.0
         }

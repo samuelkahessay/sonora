@@ -190,12 +190,12 @@ public final class EventHandlerRegistry {
 
     /// Get list of registered handler names
     public var registeredHandlerNames: [String] {
-        return Array(registeredHandlers.keys).sorted()
+        Array(registeredHandlers.keys).sorted()
     }
 
     /// Get list of active handler names
     public var activeHandlerNames: [String] {
-        return handlerStatus.compactMap { key, value in
+        handlerStatus.compactMap { key, value in
             value ? key : nil
         }.sorted()
     }
@@ -238,7 +238,7 @@ public final class EventHandlerRegistry {
 
     /// Get specific handler instance (for debugging)
     public func getHandler<T>(_ handlerName: String, as type: T.Type) -> T? {
-        return registeredHandlers[handlerName] as? T
+        registeredHandlers[handlerName] as? T
     }
 
     /// Test event flow by publishing a test event
@@ -278,7 +278,7 @@ public final class EventHandlerRegistry {
 
     /// Get registry performance metrics
     public var performanceMetrics: String {
-        return """
+        """
         EventHandlerRegistry Performance:
         - Registration overhead: Minimal (one-time setup)
         - Memory usage: \(registeredHandlers.count) handler references

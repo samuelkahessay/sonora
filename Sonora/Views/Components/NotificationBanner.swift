@@ -94,10 +94,10 @@ struct NotificationBanner: View {
                 HStack(spacing: Spacing.xs) {
                     // Primary action button (if provided)
                     if let primaryAction = onPrimaryAction {
-                        Button(primaryTitle ?? "Retry", action: {
+                        Button(primaryTitle ?? "Retry") {
                             HapticManager.shared.playSelection()
                             primaryAction()
-                        })
+                        }
                         .font(.caption.weight(.medium))
                         .buttonStyle(.bordered)
                         .controlSize(.mini)

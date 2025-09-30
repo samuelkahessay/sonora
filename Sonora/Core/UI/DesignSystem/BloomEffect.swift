@@ -26,7 +26,7 @@ extension View {
 // Single-overlay, event-driven pulse to prevent modifier stacking issues
 private struct BloomEffectEvent: ViewModifier {
     @Binding var triggerEvent: BloomEvent
-    @State private var lastSeenId: UUID = UUID()
+    @State private var lastSeenId = UUID()
     @State private var progress: CGFloat = 0
     @State private var currentStyle: BloomStyle = .expand
 

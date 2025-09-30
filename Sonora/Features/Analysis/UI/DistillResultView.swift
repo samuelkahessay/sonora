@@ -92,11 +92,11 @@ struct DistillResultView: View {
     }
 
     private var effectiveSummary: String? {
-        return data?.summary ?? partialData?.summary
+        data?.summary ?? partialData?.summary
     }
 
     private var effectiveReflectionQuestions: [String]? {
-        return data?.reflection_questions ?? partialData?.reflectionQuestions
+        data?.reflection_questions ?? partialData?.reflectionQuestions
     }
 
     private var dedupedDetectionResults: ([EventsData.DetectedEvent], [RemindersData.DetectedReminder]) {
@@ -261,9 +261,8 @@ struct DistillResultView: View {
         VStack(alignment: .leading, spacing: 12) {
             if shouldShowPermissionExplainer {
                 PermissionExplainerCard(
-                    permissions: permissionService,
-                    onOpenSettings: { DIContainer.shared.systemNavigator().openSettings(completion: nil) }
-                )
+                    permissions: permissionService
+                )                    { DIContainer.shared.systemNavigator().openSettings(completion: nil) }
             }
             HStack(spacing: 10) {
                 Image(systemName: "calendar.badge.clock")
@@ -396,7 +395,7 @@ struct DistillResultView: View {
     private var detectionItemsFiltered: [ActionItemDetectionUI] {
         detectionItems
             .filter { !dismissedDetections.contains($0.id) && !addedDetections.contains($0.id) }
-            .sorted(by: { lhs, rhs in
+            .sorted { lhs, rhs in
                 if lhs.confidence != rhs.confidence {
                     return order(lhs.confidence) < order(rhs.confidence)
                 }
@@ -405,7 +404,7 @@ struct DistillResultView: View {
                     return ld < rd
                 }
                 return false
-            })
+            }
     }
     private func order(_ c: ActionItemConfidence) -> Int { c == .high ? 0 : (c == .medium ? 1 : 2) }
     private var reviewCount: Int { detectionItemsFiltered.count }
@@ -511,7 +510,7 @@ struct DistillResultView: View {
     // Key used to persist "handled" detections.
     // Use the detection's own stable sourceId (UUID from detection payload) for uniqueness.
     private func detectionKey(for ui: ActionItemDetectionUI) -> String {
-        return ui.sourceId
+        ui.sourceId
     }
 
     @MainActor

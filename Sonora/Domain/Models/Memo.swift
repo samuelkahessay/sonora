@@ -60,7 +60,7 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
 
     /// File size in bytes
     public var fileSizeBytes: Int64? {
-        try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize.map(Int64.init) ?? nil
+        try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize.map(Int64.init)
     }
 
     /// Human-readable file size
@@ -107,8 +107,8 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
     // MARK: - Business Logic Methods
 
     /// Creates a copy with updated transcription status
-    public func withTranscriptionStatus(_ status: DomainTranscriptionStatus) -> Memo {
-        Memo(
+    public func withTranscriptionStatus(_ status: DomainTranscriptionStatus) -> Self {
+        Self(
             id: id,
             filename: filename,
             fileURL: fileURL,
@@ -123,9 +123,9 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
     }
 
     /// Creates a copy with a custom title
-    public func withCustomTitle(_ title: String?) -> Memo {
+    public func withCustomTitle(_ title: String?) -> Self {
         let newShareableFileName = title != nil ? FileNameSanitizer.sanitize(title!) : nil
-        return Memo(
+        return Self(
             id: id,
             filename: filename,
             fileURL: fileURL,
@@ -140,11 +140,11 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
     }
 
     /// Creates a copy with added analysis result
-    public func withAnalysisResult(_ result: DomainAnalysisResult) -> Memo {
+    public func withAnalysisResult(_ result: DomainAnalysisResult) -> Self {
         var updatedResults = analysisResults
         updatedResults.append(result)
 
-        return Memo(
+        return Self(
             id: id,
             filename: filename,
             fileURL: fileURL,
@@ -159,8 +159,8 @@ public struct Memo: Identifiable, Equatable, Hashable, Sendable {
     }
 
     /// Creates a copy with an updated auto-title state
-    public func withAutoTitleState(_ state: TitleGenerationState) -> Memo {
-        Memo(
+    public func withAutoTitleState(_ state: TitleGenerationState) -> Self {
+        Self(
             id: id,
             filename: filename,
             fileURL: fileURL,

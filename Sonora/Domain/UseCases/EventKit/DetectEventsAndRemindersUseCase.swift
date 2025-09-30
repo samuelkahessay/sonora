@@ -202,7 +202,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         eventThreshold: Float,
         reminderThreshold: Float
     ) async throws -> DetectionResult {
-        return try await performCloudDetection(
+        try await performCloudDetection(
             transcript: transcript,
             memoId: memoId,
             context: context,
@@ -274,14 +274,14 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         // include the strongest candidates at a relaxed bound to aid recall.
         if filteredEvents == nil, !eventsEnvelope.data.events.isEmpty {
             let fallback = eventsEnvelope.data.events
-                .sorted(by: { $0.confidence > $1.confidence })
+                .sorted { $0.confidence > $1.confidence }
                 .prefix(2)
                 .filter { $0.confidence >= max(0.40, eventThreshold - 0.25) }
             if !fallback.isEmpty { filteredEvents = EventsData(events: Array(fallback)) }
         }
         if filteredReminders == nil, !remindersEnvelope.data.reminders.isEmpty {
             let fallback = remindersEnvelope.data.reminders
-                .sorted(by: { $0.confidence > $1.confidence })
+                .sorted { $0.confidence > $1.confidence }
                 .prefix(3)
                 .filter { $0.confidence >= max(0.40, reminderThreshold - 0.25) }
             if !fallback.isEmpty { filteredReminders = RemindersData(reminders: Array(fallback)) }
@@ -494,8 +494,8 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         for memoId: UUID,
         mode: AnalysisMode
     ) async -> T? {
-        return await MainActor.run {
-            return analysisRepository.getAnalysisResult(
+        await MainActor.run {
+            analysisRepository.getAnalysisResult(
                 for: memoId,
                 mode: mode,
                 responseType: T.self

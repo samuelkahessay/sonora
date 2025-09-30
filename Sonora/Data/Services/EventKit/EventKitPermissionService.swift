@@ -1,5 +1,5 @@
-import Foundation
 @preconcurrency import EventKit
+import Foundation
 
 /// Service for managing EventKit permissions with caching and state management
 @MainActor
@@ -283,17 +283,17 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
 
     /// Check if both calendar and reminder permissions are granted
     var hasAllPermissions: Bool {
-        return calendarPermissionState.isAuthorized && reminderPermissionState.isAuthorized
+        calendarPermissionState.isAuthorized && reminderPermissionState.isAuthorized
     }
 
     /// Check if any EventKit permissions are granted
     var hasAnyPermissions: Bool {
-        return calendarPermissionState.isAuthorized || reminderPermissionState.isAuthorized
+        calendarPermissionState.isAuthorized || reminderPermissionState.isAuthorized
     }
 
     /// Get comprehensive permission status for debugging
     var detailedStatus: String {
-        return """
+        """
         EventKit Permissions Status:
         - Calendar: \(calendarPermissionState.displayText) (\(calendarPermissionState.rawValue))
         - Reminders: \(reminderPermissionState.displayText) (\(reminderPermissionState.rawValue))
@@ -305,7 +305,7 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
 
     /// Get analytics-friendly permission data
     var analyticsData: [String: Any] {
-        return [
+        [
             "calendar_permission": calendarPermissionState.rawValue,
             "reminder_permission": reminderPermissionState.rawValue,
             "has_all_permissions": hasAllPermissions,

@@ -63,36 +63,36 @@ class AnalysisService: ObservableObject, AnalysisServiceProtocol, @unchecked Sen
 
     // Convenience methods for each analysis type
     func analyzeDistill(transcript: String) async throws -> AnalyzeEnvelope<DistillData> {
-        return try await analyze(mode: .distill, transcript: transcript, responseType: DistillData.self)
+        try await analyze(mode: .distill, transcript: transcript, responseType: DistillData.self)
     }
 
     func analyzeAnalysis(transcript: String) async throws -> AnalyzeEnvelope<AnalysisData> {
-        return try await analyze(mode: .analysis, transcript: transcript, responseType: AnalysisData.self)
+        try await analyze(mode: .analysis, transcript: transcript, responseType: AnalysisData.self)
     }
 
     func analyzeThemes(transcript: String) async throws -> AnalyzeEnvelope<ThemesData> {
-        return try await analyze(mode: .themes, transcript: transcript, responseType: ThemesData.self)
+        try await analyze(mode: .themes, transcript: transcript, responseType: ThemesData.self)
     }
 
     func analyzeTodos(transcript: String) async throws -> AnalyzeEnvelope<TodosData> {
-        return try await analyze(mode: .todos, transcript: transcript, responseType: TodosData.self)
+        try await analyze(mode: .todos, transcript: transcript, responseType: TodosData.self)
     }
 
     // MARK: - Distill Component Methods for Parallel Processing
 
     func analyzeDistillSummary(transcript: String) async throws -> AnalyzeEnvelope<DistillSummaryData> {
-        return try await analyze(mode: .distillSummary, transcript: transcript, responseType: DistillSummaryData.self)
+        try await analyze(mode: .distillSummary, transcript: transcript, responseType: DistillSummaryData.self)
     }
 
     func analyzeDistillActions(transcript: String) async throws -> AnalyzeEnvelope<DistillActionsData> {
-        return try await analyze(mode: .distillActions, transcript: transcript, responseType: DistillActionsData.self)
+        try await analyze(mode: .distillActions, transcript: transcript, responseType: DistillActionsData.self)
     }
 
     func analyzeDistillThemes(transcript: String) async throws -> AnalyzeEnvelope<DistillThemesData> {
-        return try await analyze(mode: .distillThemes, transcript: transcript, responseType: DistillThemesData.self)
+        try await analyze(mode: .distillThemes, transcript: transcript, responseType: DistillThemesData.self)
     }
 
     func analyzeDistillReflection(transcript: String) async throws -> AnalyzeEnvelope<DistillReflectionData> {
-        return try await analyze(mode: .distillReflection, transcript: transcript, responseType: DistillReflectionData.self)
+        try await analyze(mode: .distillReflection, transcript: transcript, responseType: DistillReflectionData.self)
     }
 }

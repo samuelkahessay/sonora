@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 import SwiftData
 protocol Resolver {
     func resolve<T>(_ type: T.Type) -> T?
@@ -151,23 +151,23 @@ final class DIContainer: ObservableObject, Resolver {
     private func setupRepositories() {
         // Register focused audio services
         register(AudioSessionService.self) { _ in
-            return AudioSessionService()
+            AudioSessionService()
         }
 
         register(AudioRecordingService.self) { _ in
-            return AudioRecordingService()
+            AudioRecordingService()
         }
 
         register(BackgroundTaskService.self) { _ in
-            return BackgroundTaskService()
+            BackgroundTaskService()
         }
 
         register(AudioPermissionService.self) { _ in
-            return AudioPermissionService()
+            AudioPermissionService()
         }
 
         register(RecordingTimerService.self) { _ in
-            return RecordingTimerService()
+            RecordingTimerService()
         }
 
         // Register BackgroundAudioService with orchestrated services
@@ -188,7 +188,7 @@ final class DIContainer: ObservableObject, Resolver {
 
         // Register SystemNavigator
         register((any SystemNavigator).self) { _ in
-            return SystemNavigatorImpl() as any SystemNavigator
+            SystemNavigatorImpl() as any SystemNavigator
         }
 
         // Register AudioRepository 
@@ -199,23 +199,23 @@ final class DIContainer: ObservableObject, Resolver {
 
         // Register RecordingUsageRepository (UserDefaults-backed)
         register((any RecordingUsageRepository).self) { _ in
-            return RecordingUsageRepositoryImpl() as any RecordingUsageRepository
+            RecordingUsageRepositoryImpl() as any RecordingUsageRepository
         }
 
         // Register StoreKit service for subscriptions
         register((any StoreKitServiceProtocol).self) { _ in
-            return StoreKitService() as any StoreKitServiceProtocol
+            StoreKitService() as any StoreKitServiceProtocol
         }
 
         // Register RecordingQuotaPolicy (protocol-first)
         register((any RecordingQuotaPolicyProtocol).self) { resolver in
             let sk = resolver.resolve((any StoreKitServiceProtocol).self) ?? (StoreKitService() as any StoreKitServiceProtocol)
-            return DefaultRecordingQuotaPolicy(isProProvider: { sk.isPro }) as any RecordingQuotaPolicyProtocol
+            return DefaultRecordingQuotaPolicy { sk.isPro }as any RecordingQuotaPolicyProtocol
         }
 
         // Register LiveActivityService
         register((any LiveActivityServiceProtocol).self) { _ in
-            return LiveActivityService() as any LiveActivityServiceProtocol
+            LiveActivityService() as any LiveActivityServiceProtocol
         }
 
         // Register Prompt Catalog & Providers
@@ -225,10 +225,10 @@ final class DIContainer: ObservableObject, Resolver {
             return fileCatalog
         }
         register((any DateProvider).self) { _ in
-            return DefaultDateProvider() as any DateProvider
+            DefaultDateProvider() as any DateProvider
         }
         register((any LocalizationProvider).self) { _ in
-            return DefaultLocalizationProvider() as any LocalizationProvider
+            DefaultLocalizationProvider() as any LocalizationProvider
         }
     }
 

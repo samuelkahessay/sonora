@@ -1,6 +1,6 @@
-import Foundation
 import AVFoundation
 @preconcurrency import Combine
+import Foundation
 
 final class AudioPlayerProxy: NSObject, AVAudioPlayerDelegate {
     var onFinish: (() -> Void)?
@@ -189,7 +189,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     }
 
     func isAudioPlaying(for memo: Memo) -> Bool {
-        return playingMemo?.id == memo.id && isPlaying
+        playingMemo?.id == memo.id && isPlaying
     }
 
     // MARK: - Recording Functionality (BackgroundAudioService Integration)
@@ -216,7 +216,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
 
     /// Backward-compatible start method
     func startRecording() async throws -> UUID {
-        return try await startRecording(allowedCap: nil)
+        try await startRecording(allowedCap: nil)
     }
 
     /// Stop the current recording
@@ -237,12 +237,12 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
 
     /// Check if currently recording
     var isRecording: Bool {
-        return backgroundAudioService.isRecording
+        backgroundAudioService.isRecording
     }
 
     /// Get current recording time
     var recordingTime: TimeInterval {
-        return backgroundAudioService.recordingTime
+        backgroundAudioService.recordingTime
     }
 
     /// Pause state
@@ -255,32 +255,32 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
 
     /// Check if microphone permission is granted
     var hasMicrophonePermission: Bool {
-        return backgroundAudioService.hasPermission
+        backgroundAudioService.hasPermission
     }
 
     /// Check if background task is active
     var isBackgroundTaskActive: Bool {
-        return backgroundAudioService.backgroundTaskActive
+        backgroundAudioService.backgroundTaskActive
     }
 
     /// Whether the recording was stopped automatically (e.g., by a limit)
     var recordingStoppedAutomatically: Bool {
-        return backgroundAudioService.recordingStoppedAutomatically
+        backgroundAudioService.recordingStoppedAutomatically
     }
 
     /// Message describing why the recording stopped automatically
     var autoStopMessage: String? {
-        return backgroundAudioService.autoStopMessage
+        backgroundAudioService.autoStopMessage
     }
 
     /// Whether a countdown is active before auto-stop
     var isInCountdown: Bool {
-        return backgroundAudioService.isInCountdown
+        backgroundAudioService.isInCountdown
     }
 
     /// Remaining time in countdown (if any)
     var remainingTime: TimeInterval {
-        return backgroundAudioService.remainingTime
+        backgroundAudioService.remainingTime
     }
 
     // MARK: - Recording Callbacks
@@ -379,7 +379,7 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
 
     /// Get comprehensive debug information about audio state
     var debugInfo: String {
-        return """
+        """
         AudioRepositoryImpl Debug Info:
         Playback:
         - Playing Memo: \(playingMemo?.filename ?? "None")

@@ -29,7 +29,7 @@ enum AnalysisGuardrails {
         guard !analysis.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
         guard analysis.summary.count <= 10_000 else { return false }
         guard analysis.key_points.count <= 100 else { return false }
-        return analysis.key_points.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 2000 }
+        return analysis.key_points.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 2_000 }
     }
 
     static func validate(themes: ThemesData) -> Bool {
@@ -38,7 +38,7 @@ enum AnalysisGuardrails {
             if t.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
             if t.name.count > 500 { return false }
             if t.evidence.count > 100 { return false }
-            if !t.evidence.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 2000 }) { return false }
+            if !t.evidence.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 2_000 }) { return false }
         }
         // sentiment is already validated by type on server; be permissive here
         return true
@@ -48,8 +48,8 @@ enum AnalysisGuardrails {
         guard todos.todos.count <= 200 else { return false }
         for td in todos.todos {
             if td.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
-            if td.text.count > 2000 { return false }
-            if let due = td.due, due.count > 1000 { return false }
+            if td.text.count > 2_000 { return false }
+            if let due = td.due, due.count > 1_000 { return false }
         }
         return true
     }
@@ -64,13 +64,13 @@ enum AnalysisGuardrails {
             guard actionItems.count <= 50 else { return false }
             for item in actionItems {
                 if item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
-                if item.text.count > 2000 { return false }
+                if item.text.count > 2_000 { return false }
             }
         }
 
         // Validate reflection questions
-        guard distill.reflection_questions.count > 0 && distill.reflection_questions.count <= 5 else { return false }
-        guard distill.reflection_questions.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 1000 }) else { return false }
+        guard !distill.reflection_questions.isEmpty && distill.reflection_questions.count <= 5 else { return false }
+        guard distill.reflection_questions.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 1_000 }) else { return false }
 
         return true
     }

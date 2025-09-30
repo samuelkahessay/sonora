@@ -390,8 +390,8 @@ public enum SonoraErrorSeverity: String, CaseIterable, Comparable {
         }
     }
 
-    public static func < (lhs: SonoraErrorSeverity, rhs: SonoraErrorSeverity) -> Bool {
-        let order: [SonoraErrorSeverity] = [.info, .warning, .error, .critical]
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        let order: [Self] = [.info, .warning, .error, .critical]
         guard let lhsIndex = order.firstIndex(of: lhs),
               let rhsIndex = order.firstIndex(of: rhs) else {
             return false

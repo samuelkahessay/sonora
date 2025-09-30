@@ -11,11 +11,11 @@
 //  (Playback is handled by MemoRepository for memo viewing)
 //
 
-import Foundation
-import AVFoundation
 import AVFAudio
-import UIKit
+import AVFoundation
 import Combine
+import Foundation
+import UIKit
 
 /// Orchestrating service that coordinates all audio operations through focused services
 @MainActor
@@ -218,7 +218,7 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
 
     /// Requests microphone permissions
     func requestMicrophonePermission() async -> Bool {
-        return await permissionService.requestPermission()
+        await permissionService.requestPermission()
     }
 
     // MARK: - Service Binding

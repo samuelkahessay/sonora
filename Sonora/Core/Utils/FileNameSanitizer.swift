@@ -134,11 +134,11 @@ struct FileNameSanitizer {
 
         for ch in intermediate { // iterate by grapheme cluster
             let scalars = ch.unicodeScalars
-            let hasEmojiScalar = scalars.contains(where: { scalar in
+            let hasEmojiScalar = scalars.contains { scalar in
                 let props = scalar.properties
                 // Replace only true emoji presentations or emoji scalars that are not ASCII
                 return props.isEmojiPresentation || (props.isEmoji && scalar.value >= 0x80)
-            })
+            }
             if hasEmojiScalar {
                 output.append("emoji")
             } else {

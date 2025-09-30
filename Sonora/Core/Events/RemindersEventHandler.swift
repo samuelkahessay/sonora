@@ -105,7 +105,7 @@ final class RemindersEventHandler {
 
     // MARK: - Debug
     var integrationStatus: String {
-        return """
+        """
         Reminders Integration Status:
         - Enabled: \(isEnabled)
         - Reminder Permission: \(permissionService.reminderPermissionState.displayText)

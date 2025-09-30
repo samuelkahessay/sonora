@@ -224,7 +224,7 @@ final class OnboardingViewModel: ObservableObject, ErrorHandling {
 extension OnboardingViewModel {
 
     var debugInfo: String {
-        return """
+        """
         OnboardingViewModel Debug Info:
         - currentPage: \(currentPage.rawValue) (\(currentPageIndex)/\(totalPages))
         - canGoNext: \(canGoNext)

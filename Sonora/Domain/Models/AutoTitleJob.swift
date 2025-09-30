@@ -55,8 +55,8 @@ public struct AutoTitleJob: Identifiable, Equatable, Sendable {
         lastError: String? = nil,
         nextRetryAt: Date?? = nil,
         failureReason: FailureReason?? = nil
-    ) -> AutoTitleJob {
-        AutoTitleJob(
+    ) -> Self {
+        Self(
             memoId: memoId,
             status: status ?? self.status,
             createdAt: createdAt,

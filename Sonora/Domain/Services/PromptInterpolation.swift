@@ -39,7 +39,7 @@ enum PromptInterpolation {
     }
 
     private static func collapseWhitespace(_ s: String) -> String {
-        let comps = s.split(whereSeparator: { $0.isWhitespace })
+        let comps = s.split { $0.isWhitespace }
         return comps.joined(separator: " ")
     }
 }

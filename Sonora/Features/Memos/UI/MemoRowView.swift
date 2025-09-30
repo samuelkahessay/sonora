@@ -195,7 +195,7 @@ struct MemoRowView: View {
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
-            }
+        }
         .scaleEffect(viewModel.isEditMode && viewModel.isMemoSelected(memo) ? 0.98 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.isMemoSelected(memo))
         .accessibilityElement(children: .combine)

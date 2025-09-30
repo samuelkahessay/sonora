@@ -186,10 +186,10 @@ struct UnifiedStateView: View {
                 // Secondary action button
                 if let secondaryTitle = state.secondaryActionTitle,
                    let secondaryAction = onSecondaryAction {
-                    Button(secondaryTitle, action: {
+                    Button(secondaryTitle) {
                         HapticManager.shared.playSelection()
                         secondaryAction()
-                    })
+                    }
                     .buttonStyle(.bordered)
                     .foregroundColor(.semantic(.textSecondary))
                     .accessibilityLabel(secondaryTitle)

@@ -22,15 +22,15 @@ public final class BuildConfiguration {
         case testing = "Testing"
 
         var isDebug: Bool {
-            return self == .debug || self == .testing
+            self == .debug || self == .testing
         }
 
         var isRelease: Bool {
-            return self == .release
+            self == .release
         }
 
         var displayName: String {
-            return rawValue
+            rawValue
         }
     }
 
@@ -61,66 +61,66 @@ public final class BuildConfiguration {
 
     /// Whether the app is running in debug mode
     public var isDebug: Bool {
-        return buildType.isDebug
+        buildType.isDebug
     }
 
     /// Whether the app is running in release mode
     public var isRelease: Bool {
-        return buildType.isRelease
+        buildType.isRelease
     }
 
     /// Whether the app is running in testing mode
     public var isTesting: Bool {
-        return buildType == .testing || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        buildType == .testing || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
 
     /// Whether the app is running from App Store
     public var isAppStore: Bool {
-        return distributionType == .appStore
+        distributionType == .appStore
     }
 
     /// Whether the app is running from TestFlight
     public var isTestFlight: Bool {
-        return distributionType == .testFlight
+        distributionType == .testFlight
     }
 
     /// Whether the app is running in development
     public var isDevelopment: Bool {
-        return distributionType == .development
+        distributionType == .development
     }
 
     // MARK: - Bundle Information
 
     /// App bundle identifier
     public var bundleIdentifier: String {
-        return Bundle.main.bundleIdentifier ?? "unknown"
+        Bundle.main.bundleIdentifier ?? "unknown"
     }
 
     /// App version string (Marketing Version)
     public var appVersion: String {
-        return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
     }
 
     /// App build number (Bundle Version)
     public var buildNumber: String {
-        return Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
     }
 
     /// Full version string (version + build)
     public var fullVersionString: String {
-        return "\(appVersion) (\(buildNumber))"
+        "\(appVersion) (\(buildNumber))"
     }
 
     /// App display name
     public var appDisplayName: String {
-        return Bundle.main.infoDictionary?["CFBundleDisplayName"] as? String ??
+        Bundle.main.infoDictionary?["CFBundleDisplayName"] as? String ??
                Bundle.main.infoDictionary?["CFBundleName"] as? String ??
                "Sonora"
     }
 
     /// Bundle executable name
     public var executableName: String {
-        return Bundle.main.infoDictionary?["CFBundleExecutable"] as? String ?? "Unknown"
+        Bundle.main.infoDictionary?["CFBundleExecutable"] as? String ?? "Unknown"
     }
 
     // MARK: - Bundle Identifier Validation
@@ -136,17 +136,17 @@ public final class BuildConfiguration {
 
     /// Whether current bundle ID matches production
     public var isProductionBundleID: Bool {
-        return bundleIdentifier == productionBundleID
+        bundleIdentifier == productionBundleID
     }
 
     /// Whether current bundle ID is a test bundle
     public var isTestBundleID: Bool {
-        return bundleIdentifier == testBundleID || bundleIdentifier == uiTestBundleID
+        bundleIdentifier == testBundleID || bundleIdentifier == uiTestBundleID
     }
 
     /// Whether bundle ID suggests development build
     public var isDevelopmentBundleID: Bool {
-        return bundleIdentifier.contains(".dev") ||
+        bundleIdentifier.contains(".dev") ||
                bundleIdentifier.contains(".debug") ||
                bundleIdentifier.contains(".staging") ||
                bundleIdentifier != productionBundleID
@@ -178,18 +178,18 @@ public final class BuildConfiguration {
     /// Device name (user-defined)
     @MainActor
     public var deviceName: String {
-        return UIDevice.current.name
+        UIDevice.current.name
     }
 
     /// Device system name
     @MainActor
     public var systemName: String {
-        return UIDevice.current.systemName
+        UIDevice.current.systemName
     }
 
     /// Whether device supports Dynamic Island
     public var supportsDynamicIsland: Bool {
-        return deviceModel.hasPrefix("iPhone15") || // iPhone 14 Pro series
+        deviceModel.hasPrefix("iPhone15") || // iPhone 14 Pro series
                deviceModel.hasPrefix("iPhone16")    // iPhone 15 Pro series and newer
     }
 
@@ -206,13 +206,13 @@ public final class BuildConfiguration {
 
     /// Development team identifier
     public var developmentTeam: String? {
-        return Bundle.main.infoDictionary?["DTSDKBuild"] as? String
+        Bundle.main.infoDictionary?["DTSDKBuild"] as? String
     }
 
     /// Code signing identity
     public var codeSigningIdentity: String? {
         // Attempt to read from embedded provisioning profile
-        return getProvisioningProfileInfo()!["TeamIdentifier"] as? String
+        getProvisioningProfileInfo()!["TeamIdentifier"] as? String
     }
 
     /// Whether app is code signed with development certificate
@@ -230,7 +230,7 @@ public final class BuildConfiguration {
 
     /// Whether app is code signed with distribution certificate
     public var isDistributionSigned: Bool {
-        return !isDevelopmentSigned && !isDevelopment
+        !isDevelopmentSigned && !isDevelopment
     }
 
     // MARK: - Build Detection Logic
@@ -366,7 +366,7 @@ public final class BuildConfiguration {
 
     /// Get configuration summary for debugging
     public var debugDescription: String {
-        return """
+        """
         Build Configuration:
         - Type: \(buildType.displayName)
         - Distribution: \(distributionType.displayName)

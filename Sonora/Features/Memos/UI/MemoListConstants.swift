@@ -17,7 +17,7 @@ enum MemoListColors {
     /// - Returns: Slightly grey background in dark mode, clear in light mode
     static func rowBackground(for colorScheme: ColorScheme) -> Color {
         // Avoid extra gutters/rounded backgrounds in both modes
-        return .clear
+        .clear
     }
 
     /// Container background color that adapts to color scheme  

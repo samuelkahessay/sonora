@@ -112,11 +112,9 @@ struct NameEntryView: View {
 // MARK: - Previews
 
 #Preview("Name Entry - Empty") {
-    NameEntryView(
-        onContinue: { name in
+    NameEntryView        { name in
             print("Continue with name: '\(name)'")
         }
-    )
 }
 
 #Preview("Name Entry - With Text") {
@@ -124,11 +122,9 @@ struct NameEntryView: View {
         @State private var name = "Sam"
 
         var body: some View {
-            NameEntryView(
-                onContinue: { name in
+            NameEntryView                { name in
                     print("Continue with name: '\(name)'")
                 }
-            )
         }
     }
 

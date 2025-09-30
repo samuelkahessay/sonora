@@ -27,7 +27,7 @@ struct SonicBloomRecordButton: View {
     @State private var isAnimating: Bool = false
     @State private var bloomScale: CGFloat = 1.0
     @State private var pulseOpacity: Double = 0.0
-    @State private var bloomEvent: BloomEvent = BloomEvent(id: UUID(), style: .expand)
+    @State private var bloomEvent = BloomEvent(id: UUID(), style: .expand)
 
     // Constants
     private let buttonSize: CGFloat = 180

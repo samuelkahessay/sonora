@@ -1,6 +1,6 @@
-import Foundation
-import Combine
 import AVFoundation
+import Combine
+import Foundation
 import SwiftData
 
 // Previous file-based metadata/index removed in SwiftData migration
@@ -75,11 +75,11 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
 
     private func memoDirectoryPath(for memoId: UUID) -> URL {
-        return memosDirectoryPath.appendingPathComponent(memoId.uuidString)
+        memosDirectoryPath.appendingPathComponent(memoId.uuidString)
     }
 
     private func audioFilePath(for memoId: UUID) -> URL {
-        return memoDirectoryPath(for: memoId).appendingPathComponent("audio.m4a")
+        memoDirectoryPath(for: memoId).appendingPathComponent("audio.m4a")
     }
 
     // SwiftData-backed: no sidecar metadata file
@@ -213,7 +213,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     // MARK: - File Helpers
 
     private func fileExists(at url: URL) -> Bool {
-        return FileManager.default.fileExists(atPath: url.path)
+        FileManager.default.fileExists(atPath: url.path)
     }
 
     // MARK: - SwiftData Helpers

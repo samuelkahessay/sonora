@@ -71,7 +71,7 @@ struct RecordingViewState: Equatable {
 
         /// Formatted remaining time for countdown
         var formattedRemainingTime: String {
-            return "\(Int(ceil(remainingTime)))"
+            "\(Int(ceil(remainingTime)))"
         }
     }
 
@@ -87,8 +87,8 @@ struct RecordingViewState: Equatable {
         var systemMetrics: SystemOperationMetrics?
 
         // Custom Equatable since DetailedOperationStatus and SystemOperationMetrics may not be Equatable
-        static func == (lhs: OperationState, rhs: OperationState) -> Bool {
-            return lhs.queuePosition == rhs.queuePosition
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.queuePosition == rhs.queuePosition
             // Note: Simplified comparison for complex operation status types
         }
     }
@@ -97,19 +97,19 @@ struct RecordingViewState: Equatable {
     struct UIState: Equatable {
         var error: SonoraError?
 
-        static func == (lhs: UIState, rhs: UIState) -> Bool {
-            return lhs.error?.localizedDescription == rhs.error?.localizedDescription
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.error?.localizedDescription == rhs.error?.localizedDescription
         }
     }
 
     // MARK: - State Properties
 
-    var recording: RecordingState = RecordingState()
-    var permission: PermissionState = PermissionState()
-    var countdown: CountdownState = CountdownState()
-    var alert: AlertState = AlertState()
-    var operations: OperationState = OperationState()
-    var ui: UIState = UIState()
+    var recording = RecordingState()
+    var permission = PermissionState()
+    var countdown = CountdownState()
+    var alert = AlertState()
+    var operations = OperationState()
+    var ui = UIState()
 
     /// Quota state (daily remaining and service type)
     struct QuotaState: Equatable {
@@ -128,7 +128,7 @@ struct RecordingViewState: Equatable {
         // NOTE: Former user-facing daily quota string removed; monthly gating is handled elsewhere.
     }
 
-    var quota: QuotaState = QuotaState()
+    var quota = QuotaState()
 
     // MARK: - Convenience Computed Properties
 
@@ -187,7 +187,7 @@ struct RecordingViewState: Equatable {
 
     /// Whether the recording system is ready for user input
     var isReadyForRecording: Bool {
-        return permission.hasPermission &&
+        permission.hasPermission &&
                !permission.isRequestingPermission &&
                operations.recordingOperationStatus == nil
     }

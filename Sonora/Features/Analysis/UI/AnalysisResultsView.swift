@@ -76,7 +76,7 @@ struct AnalysisResultsView: View {
                         RemindersResultView(data: data)
                     }
                 }
-            }
+        }
         .padding()
     }
 

@@ -111,11 +111,10 @@ struct RecordingView: View {
                                 onPrimaryAction: {
                                     viewModel.showingPaywall = true
                                 },
-                                primaryTitle: "Upgrade",
-                                onDismiss: {
+                                primaryTitle: "Upgrade"
+                            )                                {
                                     viewModel.quotaBlocked = false
                                 }
-                            )
                         }
                         promptContent
                         .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
@@ -129,12 +128,11 @@ struct RecordingView: View {
                                 // Sonic Bloom recording button with brand identity
                                 SonicBloomRecordButton(
                                     progress: viewModel.recordingProgress,
-                                    isRecording: viewModel.isRecording,
-                                    action: {
+                                    isRecording: viewModel.isRecording
+                                )                                    {
                                         HapticManager.shared.playRecordingFeedback(isStarting: !viewModel.isRecording)
                                         viewModel.toggleRecording()
                                     }
-                                )
                                 .disabled(viewModel.state.isRecordButtonDisabled)
                                 .accessibilityLabel(getRecordButtonAccessibilityLabel())
                                 .accessibilityHint(getRecordButtonAccessibilityHint())

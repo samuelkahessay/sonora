@@ -1,6 +1,6 @@
 // Moved to Features/Memos/ViewModels
-import Foundation
 import Combine
+import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -214,7 +214,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             transcriptionRepository.stateChangesPublisher.map { _ in () }.prepend(()) /* Trigger on any transcription change */,
             memoRepository.memosPublisher.map { [weak self] _ in
                 // Get current playback state
-                return (self?.memoRepository.playingMemo, self?.memoRepository.isPlaying ?? false)
+                (self?.memoRepository.playingMemo, self?.memoRepository.isPlaying ?? false)
             }
         )
         .receive(on: RunLoop.main)
@@ -503,7 +503,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
 
     /// Get transcription state for a memo
     func getTranscriptionState(for memo: Memo) -> TranscriptionState {
-        return getTranscriptionStateUseCase.execute(memo: memo)
+        getTranscriptionStateUseCase.execute(memo: memo)
     }
 
     // MARK: - Rename Methods
@@ -522,7 +522,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
 
     /// Check if a memo is currently being edited
     func isEditing(memo: Memo) -> Bool {
-        return editingMemoId == memo.id
+        editingMemoId == memo.id
     }
 
     /// Rename a memo with the given title
@@ -671,7 +671,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
 
     /// Check if memo is currently playing
     func isMemoPaying(_ memo: Memo) -> Bool {
-        return playingMemo?.id == memo.id && isPlaying
+        playingMemo?.id == memo.id && isPlaying
     }
 
     /// Get transcription action button text for a memo
@@ -850,7 +850,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
 
     /// Check if a memo is selected
     func isMemoSelected(_ memo: Memo) -> Bool {
-        return selectionState.selectedMemoIds.contains(memo.id)
+        selectionState.selectedMemoIds.contains(memo.id)
     }
 }
 
@@ -883,7 +883,7 @@ extension MemoListViewModel {
 
     /// Get unified memo state for a specific memo (preferred method)
     func memoWithState(for memo: Memo) -> MemoWithState? {
-        return memosWithState.first(where: { $0.memo.id == memo.id })
+        memosWithState.first { $0.memo.id == memo.id }
     }
 }
 
@@ -907,21 +907,21 @@ struct MemoListUIState: Equatable {
     }
 
     /// Create updated state with new error
-    func with(error: SonoraError?) -> MemoListUIState {
+    func with(error: SonoraError?) -> Self {
         var updated = self
         updated.error = error
         return updated
     }
 
     /// Create updated state with loading status
-    func with(isLoading: Bool) -> MemoListUIState {
+    func with(isLoading: Bool) -> Self {
         var updated = self
         updated.isLoading = isLoading
         return updated
     }
 
     /// Create updated state with editing memo ID
-    func with(editingMemoId: UUID?) -> MemoListUIState {
+    func with(editingMemoId: UUID?) -> Self {
         var updated = self
         updated.editingMemoId = editingMemoId
         return updated
@@ -973,11 +973,11 @@ struct TranscriptionDisplayState: Equatable {
 
     /// Get transcription state for memo ID
     func state(for memoId: UUID) -> TranscriptionState? {
-        return states[memoId.uuidString]
+        states[memoId.uuidString]
     }
 
     /// Create updated state with new transcription state
-    func with(state: TranscriptionState, for memoId: UUID) -> TranscriptionDisplayState {
+    func with(state: TranscriptionState, for memoId: UUID) -> Self {
         var updated = self
         updated.states[memoId.uuidString] = state
         return updated
@@ -1001,7 +1001,7 @@ struct PlaybackState: Equatable {
 
     /// Whether a specific memo is currently playing
     func isPlaying(memo: Memo) -> Bool {
-        return playingMemo?.id == memo.id && isPlaying
+        playingMemo?.id == memo.id && isPlaying
     }
 
     /// Get appropriate play button icon for a memo
@@ -1084,7 +1084,7 @@ extension MemoListViewModel {
 
     /// Get debug information about the current state
     var debugInfo: String {
-        return """
+        """
         MemoListViewModel State:
         - memos count: \(memos.count)
         - isEmpty: \(isEmpty)

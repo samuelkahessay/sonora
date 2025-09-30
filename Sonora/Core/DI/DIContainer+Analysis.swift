@@ -7,7 +7,7 @@ extension DIContainer {
     /// Create a transcription service based on current user preferences
     @MainActor
     func createTranscriptionService() -> any TranscriptionAPI {
-        return transcriptionServiceFactory().createTranscriptionService()
+        transcriptionServiceFactory().createTranscriptionService()
     }
 
     /// Get analysis service

@@ -136,7 +136,7 @@ struct MemoEmptyStateView: View {
 enum TimeOfDay {
     case morning, afternoon, evening, lateNight
 
-    static var current: TimeOfDay {
+    static var current: Self {
         let hour = Calendar.current.component(.hour, from: Date())
         switch hour {
         case 5..<12:

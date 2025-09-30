@@ -61,7 +61,7 @@ final class PromptUsageRepositoryImpl: PromptUsageRepository {
     }
 
     func lastUsedAt(for promptId: String) throws -> Date? {
-        return fetchRecord(for: promptId)?.lastUsedAt
+        fetchRecord(for: promptId)?.lastUsedAt
     }
 
     func recentlyShownPromptIds(since date: Date) throws -> Set<String> {
@@ -75,6 +75,6 @@ final class PromptUsageRepositoryImpl: PromptUsageRepository {
     }
 
     func lastShownAt(for promptId: String) throws -> Date? {
-        return fetchRecord(for: promptId)?.lastShownAt
+        fetchRecord(for: promptId)?.lastShownAt
     }
 }

@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 /// State change event for transcription updates
 @MainActor

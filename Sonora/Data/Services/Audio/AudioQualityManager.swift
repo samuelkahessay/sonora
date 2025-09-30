@@ -6,9 +6,9 @@
 //  Optimizes recording settings based on content type, system conditions, and user preferences
 //
 
+import AVFoundation
 import Foundation
 import UIKit
-import AVFoundation
 
 /// Protocol defining audio quality management operations
 @MainActor
@@ -109,7 +109,7 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
 
     /// Returns current quality management metrics
     func getQualityMetrics() -> AudioQualityMetrics {
-        return qualityMetrics
+        qualityMetrics
     }
 
     // MARK: - Private Implementation
@@ -128,7 +128,7 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
         case .highQuality:
             return AudioRecordingSettings(
                 sampleRate: config.highQualitySampleRate,
-                bitRate: contentType == .music ? 192000 : 128000,
+                bitRate: contentType == .music ? 192_000 : 128_000,
                 quality: config.recordingQuality,
                 channels: contentType == .music ? 2 : 1,
                 format: .mpeg4AAC
@@ -136,8 +136,8 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
 
         case .balanced:
             return AudioRecordingSettings(
-                sampleRate: contentType == .voice ? 22050.0 : 44100.0,
-                bitRate: contentType == .voice ? 64000 : 96000,
+                sampleRate: contentType == .voice ? 22_050.0 : 44_100.0,
+                bitRate: contentType == .voice ? 64_000 : 96_000,
                 quality: 0.75,
                 channels: 1,
                 format: .mpeg4AAC
@@ -145,8 +145,8 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
 
         case .batterySaver:
             return AudioRecordingSettings(
-                sampleRate: 16000.0, // Minimal acceptable for voice
-                bitRate: 32000,
+                sampleRate: 16_000.0, // Minimal acceptable for voice
+                bitRate: 32_000,
                 quality: 0.5,
                 channels: 1,
                 format: .mpeg4AAC
@@ -164,7 +164,7 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
         if conditions.batteryLevel >= 0 && conditions.batteryLevel < 0.2 {
             // Low battery: reduce quality significantly
             adaptedSettings.quality *= 0.7
-            adaptedSettings.bitRate = max(32000, Int(Double(adaptedSettings.bitRate) * 0.6))
+            adaptedSettings.bitRate = max(32_000, Int(Double(adaptedSettings.bitRate) * 0.6))
             qualityMetrics.batteryOptimizations += 1
         } else if conditions.batteryLevel >= 0 && conditions.batteryLevel < 0.4 {
             // Medium battery: moderate reduction
@@ -181,10 +181,10 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
 
         case .critical:
             adaptedSettings.quality *= 0.6
-            adaptedSettings.bitRate = max(32000, Int(Double(adaptedSettings.bitRate) * 0.5))
+            adaptedSettings.bitRate = max(32_000, Int(Double(adaptedSettings.bitRate) * 0.5))
             // Switch to lower sample rate if possible
-            if adaptedSettings.sampleRate > 22050 {
-                adaptedSettings.sampleRate = 22050.0
+            if adaptedSettings.sampleRate > 22_050 {
+                adaptedSettings.sampleRate = 22_050.0
             }
             qualityMetrics.thermalOptimizations += 1
 
@@ -195,7 +195,7 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
         // Available storage adaptation
         if conditions.availableStorageGB < 1.0 {
             // Very low storage: aggressive compression
-            adaptedSettings.bitRate = max(24000, Int(Double(adaptedSettings.bitRate) * 0.4))
+            adaptedSettings.bitRate = max(24_000, Int(Double(adaptedSettings.bitRate) * 0.4))
             adaptedSettings.quality *= 0.6
             qualityMetrics.storageOptimizations += 1
         } else if conditions.availableStorageGB < 5.0 {
@@ -207,15 +207,15 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
         // Memory pressure adaptation
         if conditions.isUnderMemoryPressure {
             // Reduce sample rate to lower memory usage during recording
-            if adaptedSettings.sampleRate > 22050 {
-                adaptedSettings.sampleRate = 22050.0
+            if adaptedSettings.sampleRate > 22_050 {
+                adaptedSettings.sampleRate = 22_050.0
             }
             qualityMetrics.memoryOptimizations += 1
         }
 
         // Ensure minimum quality thresholds
         adaptedSettings.quality = max(0.3, min(1.0, adaptedSettings.quality))
-        adaptedSettings.bitRate = max(16000, min(320000, adaptedSettings.bitRate))
+        adaptedSettings.bitRate = max(16_000, min(320_000, adaptedSettings.bitRate))
 
         return adaptedSettings
     }
@@ -223,7 +223,7 @@ final class AudioQualityManager: AudioQualityManagerProtocol, ObservableObject, 
     private func getCustomSettings(for contentType: AudioContentType) -> AudioRecordingSettings {
         // Custom settings could be loaded from UserDefaults or a configuration file
         // For now, return balanced settings as default
-        return getProfileBaseSettings(for: contentType)
+        getProfileBaseSettings(for: contentType)
     }
 }
 
@@ -283,12 +283,12 @@ public struct AudioRecordingSettings: Sendable {
     /// Estimated file size per minute of recording (in MB)
     var estimatedFileSizePerMinute: Double {
         // Approximate calculation: (bitRate * 60 seconds) / 8 / 1024 / 1024
-        return Double(bitRate) * 60.0 / 8.0 / 1024.0 / 1024.0
+        Double(bitRate) * 60.0 / 8.0 / 1_024.0 / 1_024.0
     }
 
     /// Battery usage impact (relative scale: 1.0 = normal, >1.0 = higher usage)
     var batteryImpactFactor: Double {
-        let baseFactor = sampleRate > 22050 ? 1.2 : 1.0
+        let baseFactor = sampleRate > 22_050 ? 1.2 : 1.0
         let qualityFactor = quality > 0.8 ? 1.15 : (quality < 0.5 ? 0.85 : 1.0)
         return baseFactor * qualityFactor
     }
@@ -339,7 +339,7 @@ private class SystemConditionMonitor: @unchecked Sendable {
         do {
             let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
             if let freeSpace = systemAttributes[.systemFreeSize] as? NSNumber {
-                return freeSpace.doubleValue / (1024.0 * 1024.0 * 1024.0) // Convert to GB
+                return freeSpace.doubleValue / (1_024.0 * 1_024.0 * 1_024.0) // Convert to GB
             }
         } catch {
             print("🎚️ AudioQualityManager: Failed to get storage info: \(error)")
@@ -358,7 +358,7 @@ private class SystemConditionMonitor: @unchecked Sendable {
         }
 
         if result == KERN_SUCCESS {
-            let memoryUsage = Double(info.resident_size) / 1024.0 / 1024.0 // MB
+            let memoryUsage = Double(info.resident_size) / 1_024.0 / 1_024.0 // MB
             return memoryUsage > 150.0 // Consider >150MB as memory pressure
         }
 
@@ -400,6 +400,6 @@ public struct AudioQualityMetrics: Sendable {
 
     /// Total number of system-condition optimizations performed
     var totalOptimizations: Int {
-        return batteryOptimizations + thermalOptimizations + storageOptimizations + memoryOptimizations
+        batteryOptimizations + thermalOptimizations + storageOptimizations + memoryOptimizations
     }
 }

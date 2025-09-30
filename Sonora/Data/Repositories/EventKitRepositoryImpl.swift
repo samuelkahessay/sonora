@@ -1,7 +1,7 @@
 // MARK: - EventKit Concurrency Helpers (Best Practices Approach)
 
-import Foundation
 @preconcurrency import EventKit
+import Foundation
 
 // NOTE: Avoid adding retroactive Sendable conformances to EventKit types.
 // All EventKit interactions in this repository are @MainActor-isolated.
@@ -456,7 +456,7 @@ final class EventKitRepositoryImpl: EventKitRepository {
 
     // MARK: - Conflict Detection
     func detectConflicts(for event: EventsData.DetectedEvent) async throws -> [ExistingEventDTO] {
-        return checkForConflictsOnMainActor(event: event).map {
+        checkForConflictsOnMainActor(event: event).map {
             ExistingEventDTO(
                 identifier: $0.eventIdentifier,
                 title: $0.title,
@@ -475,7 +475,7 @@ final class EventKitRepositoryImpl: EventKitRepository {
             return []
         }
 
-        let endDate = event.endDate ?? startDate.addingTimeInterval(3600) // Default 1 hour
+        let endDate = event.endDate ?? startDate.addingTimeInterval(3_600) // Default 1 hour
 
         logger.debug("Checking for conflicts: \(event.title) from \(startDate) to \(endDate)",
                     category: .eventkit,
@@ -610,12 +610,12 @@ final class EventKitRepositoryImpl: EventKitRepository {
 
         if let startDate = event.startDate {
             ekEvent.startDate = startDate
-            ekEvent.endDate = event.endDate ?? startDate.addingTimeInterval(3600) // 1 hour default
+            ekEvent.endDate = event.endDate ?? startDate.addingTimeInterval(3_600) // 1 hour default
         } else {
             // If no date specified, create all-day event for tomorrow
             let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
             ekEvent.startDate = Calendar.current.startOfDay(for: tomorrow)
-            ekEvent.endDate = Calendar.current.startOfDay(for: tomorrow).addingTimeInterval(86400) // Full day
+            ekEvent.endDate = Calendar.current.startOfDay(for: tomorrow).addingTimeInterval(86_400) // Full day
             ekEvent.isAllDay = true
         }
 
@@ -679,7 +679,7 @@ extension EventKitRepositoryImpl {
         }
         guard let comps = cg.components else { return nil }
         // Ensure at least 3 components
-        let r = Int((comps.count > 0 ? comps[0] : 0) * 255.0)
+        let r = Int((!comps.isEmpty ? comps[0] : 0) * 255.0)
         let g = Int((comps.count > 1 ? comps[1] : 0) * 255.0)
         let b = Int((comps.count > 2 ? comps[2] : 0) * 255.0)
         return String(format: "#%02X%02X%02X", r, g, b)

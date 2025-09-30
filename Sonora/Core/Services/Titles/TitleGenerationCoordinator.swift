@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 private enum TitleCoordinatorError: Error {
     case transcriptUnavailable
@@ -15,7 +15,7 @@ private actor TitleStreamingFlag {
 @MainActor
 final class TitleGenerationCoordinator: ObservableObject {
     @Published private(set) var stateByMemo: [UUID: TitleGenerationState] = [:]
-    @Published private(set) var metrics: TitlePipelineMetrics = TitlePipelineMetrics()
+    @Published private(set) var metrics = TitlePipelineMetrics()
 
     private let titleService: any TitleServiceProtocol
     private let memoRepository: any MemoRepository
@@ -248,8 +248,8 @@ final class TitleGenerationCoordinator: ObservableObject {
             let streamingFlag = TitleStreamingFlag()
             let title = try await titleService.generateTitle(
                 transcript: slice,
-                languageHint: languageHint,
-                progress: { [weak self] update in
+                languageHint: languageHint
+            )                { [weak self] update in
                     guard let self, !update.isFinal else { return }
                     Task { @MainActor in
                         guard !update.text.isEmpty else { return }
@@ -259,7 +259,6 @@ final class TitleGenerationCoordinator: ObservableObject {
                         self.stateByMemo[memoId] = .streaming(update.text)
                     }
                 }
-            )
 
             if let title {
                 let didReceiveStreamingUpdate = await streamingFlag.isMarked()
@@ -283,7 +282,7 @@ final class TitleGenerationCoordinator: ObservableObject {
     }
 
     private func slice(transcript: String) -> String {
-        let maxFirst = 1500
+        let maxFirst = 1_500
         let maxLast = 400
         if transcript.count <= maxFirst { return transcript }
         let firstPart = String(transcript.prefix(maxFirst))
@@ -372,7 +371,7 @@ final class TitleGenerationCoordinator: ObservableObject {
             }
         }
 
-        let latestFailure = failures.max(by: { $0.updatedAt < $1.updatedAt })
+        let latestFailure = failures.max { $0.updatedAt < $1.updatedAt }
 
         return TitlePipelineMetrics(
             inProgressCount: queuedOrProcessing,

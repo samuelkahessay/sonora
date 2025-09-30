@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 /// Simple in-memory event bus for app-wide event distribution
 /// Provides type-safe publish/subscribe pattern with automatic cleanup
@@ -278,7 +278,7 @@ public final class EventBus: ObservableObject {
     public func publisher(
         for eventType: AppEvent.Type = AppEvent.self
     ) -> AnyPublisher<AppEvent, Never> {
-        return Future<AppEvent, Never> { [weak self] promise in
+        Future<AppEvent, Never> { [weak self] promise in
             guard let self = self else { return }
 
             _ = self.subscribe(to: eventType) { event in
@@ -295,17 +295,17 @@ public final class EventBus: ObservableObject {
 
     /// Check if there are any active subscriptions
     public var hasActiveSubscriptions: Bool {
-        return !activeSubscriptionIds.isEmpty
+        !activeSubscriptionIds.isEmpty
     }
 
     /// Get count of subscribers for debugging
     public var subscriberCount: Int {
-        return activeSubscriptionIds.count
+        activeSubscriptionIds.count
     }
 
     /// Get subscription statistics for debugging
     public var subscriptionStats: String {
-        return """
+        """
         EventBus Subscription Statistics:
         - Active subscriptions: \(activeSubscriptionIds.count)
         - Event types with subscribers: \(subscriptions.keys.count)

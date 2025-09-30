@@ -102,10 +102,10 @@ struct ActionItemDetectionCard: View {
                 Picker("Type", selection: Binding(
                     get: { model.kind },
                     set: { newKind in model.kind = newKind }
-                ), content: {
+                )) {
                     Text("Event").tag(ActionItemDetectionKind.event)
                     Text("Reminder").tag(ActionItemDetectionKind.reminder)
-                })
+                }
                 .pickerStyle(.segmented)
 
                 TextField("Title", text: Binding(

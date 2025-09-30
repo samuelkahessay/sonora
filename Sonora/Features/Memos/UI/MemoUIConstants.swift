@@ -50,13 +50,13 @@ enum TranscriptionStateKey: String {
     static func key(for state: TranscriptionState) -> String {
         switch state {
         case .notStarted:
-            return TranscriptionStateKey.notStarted.rawValue
+            return Self.notStarted.rawValue
         case .inProgress:
-            return TranscriptionStateKey.inProgress.rawValue
+            return Self.inProgress.rawValue
         case .completed:
-            return TranscriptionStateKey.completed.rawValue
+            return Self.completed.rawValue
         case .failed:
-            return TranscriptionStateKey.failed.rawValue
+            return Self.failed.rawValue
         }
     }
 }

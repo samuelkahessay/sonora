@@ -24,10 +24,10 @@ public struct PromptRotationToken: Sendable, Equatable, Hashable {
         self.nextIndex = nextIndex
     }
 
-    public func advancing() -> PromptRotationToken {
+    public func advancing() -> Self {
         guard !candidateIds.isEmpty else { return self }
         let idx = (nextIndex + 1) % candidateIds.count
-        return PromptRotationToken(createdAt: createdAt, candidateIds: candidateIds, nextIndex: idx)
+        return Self(createdAt: createdAt, candidateIds: candidateIds, nextIndex: idx)
     }
 }
 

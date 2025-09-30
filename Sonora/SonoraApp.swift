@@ -5,10 +5,10 @@
 //  Created by Samuel Kahessay on 2025-08-23.
 //
 
-import SwiftUI
-import SwiftData
-import UIKit
 import CoreSpotlight
+import SwiftData
+import SwiftUI
+import UIKit
 
 @main
 struct SonoraApp: App {

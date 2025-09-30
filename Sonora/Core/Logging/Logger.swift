@@ -10,8 +10,8 @@ public enum LogLevel: Int, CaseIterable, Comparable, Sendable {
     case error = 4
     case critical = 5
 
-    public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
-        return lhs.rawValue < rhs.rawValue
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.rawValue < rhs.rawValue
     }
 
     var displayName: String {
@@ -148,7 +148,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
     private let dedupeWindow: TimeInterval = 0.4
 
     // MARK: - Privacy & Performance
-    private let maxMessageLength = 1000
+    private let maxMessageLength = 1_000
     private let sanitizationCache = NSCache<NSString, NSString>()
     private let sanitizationQueue = DispatchQueue(label: "com.sonora.logger.sanitization", qos: .utility)
     private let sensitivePatterns: [NSRegularExpression] = {
@@ -171,7 +171,7 @@ public final class Logger: LoggerProtocol, @unchecked Sendable {
 
         // Configure sanitization cache
         sanitizationCache.countLimit = 500 // Reasonable cache size
-        sanitizationCache.totalCostLimit = 1024 * 1024 // 1MB cache limit
+        sanitizationCache.totalCostLimit = 1_024 * 1_024 // 1MB cache limit
 
         #if DEBUG
         currentLogLevel = .verbose
@@ -455,14 +455,14 @@ public final class PerformanceTimer {
 
     public func finish(additionalInfo: String? = nil) -> TimeInterval {
         let duration = CFAbsoluteTimeGetCurrent() - startTime
-        let durationMs = duration * 1000
+        let durationMs = duration * 1_000
 
         var message = "Completed: \(operation) in \(String(format: "%.2f", durationMs))ms"
         if let info = additionalInfo {
             message += " - \(info)"
         }
 
-        let level: LogLevel = durationMs > 1000 ? .warning : .info
+        let level: LogLevel = durationMs > 1_000 ? .warning : .info
         logger.log(level: level, category: category, message: message, context: LogContext(), error: nil)
 
         return duration

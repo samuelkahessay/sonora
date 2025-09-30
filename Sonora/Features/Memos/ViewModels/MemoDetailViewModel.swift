@@ -1,6 +1,6 @@
 // Moved to Features/Memos/ViewModels
-import Foundation
 import Combine
+import Foundation
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -466,7 +466,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
                         isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Analysis completed (cached: \(envelope.latency_ms < 1000))")
+                        print("📝 MemoDetailViewModel: Analysis completed (cached: \(envelope.latency_ms < 1_000))")
                     }
 
                 case .themes:
@@ -475,7 +475,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
                         isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Themes analysis completed (cached: \(envelope.latency_ms < 1000))")
+                        print("📝 MemoDetailViewModel: Themes analysis completed (cached: \(envelope.latency_ms < 1_000))")
                     }
 
                 case .todos:
@@ -484,7 +484,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                         analysisResult = envelope.data
                         analysisEnvelope = envelope
                         isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Todos analysis completed (cached: \(envelope.latency_ms < 1000))")
+                        print("📝 MemoDetailViewModel: Todos analysis completed (cached: \(envelope.latency_ms < 1_000))")
                     }
 
                 case .events:
@@ -631,9 +631,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
 
                         let wasCached = duration < 1.0
                         analysisCacheStatus = wasCached ? "✅ Loaded from cache" : "🚀 Parallel execution"
-                        analysisPerformanceInfo = "Parallel: \(envelope.latency_ms)ms, Total: \(Int(duration * 1000))ms"
+                        analysisPerformanceInfo = "Parallel: \(envelope.latency_ms)ms, Total: \(Int(duration * 1_000))ms"
 
-                        print("📝 MemoDetailViewModel: Parallel Distill analysis completed in \(Int(duration * 1000))ms")
+                        print("📝 MemoDetailViewModel: Parallel Distill analysis completed in \(Int(duration * 1_000))ms")
                     }
 
                     PerformanceMetricsService.shared.recordDuration(
@@ -687,11 +687,11 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                 isAnalyzing = false
 
                 // Determine cache status based on response time and latency
-                let wasCached = duration < 1.0 || envelope.latency_ms < 1000
+                let wasCached = duration < 1.0 || envelope.latency_ms < 1_000
                 analysisCacheStatus = wasCached ? "✅ Loaded from cache" : "🌐 Fresh from API"
                 analysisPerformanceInfo = wasCached ?
-                    "Response: \(Int(duration * 1000))ms" :
-                    "API: \(envelope.latency_ms)ms, Total: \(Int(duration * 1000))ms"
+                    "Response: \(Int(duration * 1_000))ms" :
+                    "API: \(envelope.latency_ms)ms, Total: \(Int(duration * 1_000))ms"
 
                 print("📝 MemoDetailViewModel: Regular Distill analysis completed (cached: \(wasCached))")
             }
@@ -848,7 +848,7 @@ extension MemoDetailViewModel {
 
     /// Get debug information about the current state
     var debugInfo: String {
-        return """
+        """
         MemoDetailViewModel State:
         - currentMemo: \(currentMemo?.filename ?? "none")
         - transcriptionState: \(state.transcription.state.statusText)

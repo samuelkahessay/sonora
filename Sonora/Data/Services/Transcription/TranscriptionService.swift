@@ -1,5 +1,5 @@
-import Foundation
 import AVFoundation
+import Foundation
 
 final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
     private let config = AppConfiguration.shared

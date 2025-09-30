@@ -13,7 +13,7 @@ final class HandleNewRecordingUseCase: HandleNewRecordingUseCaseProtocol, @unche
     private let eventBus: any EventBusProtocol
 
     // MARK: - Configuration
-    private let maxFileSizeBytes: Int64 = 100 * 1024 * 1024 // 100MB
+    private let maxFileSizeBytes: Int64 = 100 * 1_024 * 1_024 // 100MB
     private let supportedFormats: Set<String> = ["m4a", "mp3", "wav", "aiff"]
 
     // MARK: - Initialization

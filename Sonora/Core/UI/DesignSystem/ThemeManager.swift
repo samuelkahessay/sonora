@@ -1,5 +1,5 @@
-import SwiftUI
 import Combine
+import SwiftUI
 
 enum ThemeMode: String, CaseIterable, Identifiable, Codable {
     case system = "system"
@@ -23,7 +23,7 @@ final class ThemeManager: ObservableObject {
         reducedMotion: Bool? = nil,
         accentColor: Color? = nil
     ) {
-        let stored = ThemeManager.loadSettings()
+        let stored = Self.loadSettings()
         self.mode = mode ?? stored.mode
         self.useGlassEffects = useGlassEffects ?? stored.useGlassEffects
         self.reducedMotion = reducedMotion ?? stored.reducedMotion

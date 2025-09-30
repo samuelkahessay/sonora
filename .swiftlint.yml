@@ -1,8 +1,47 @@
 disabled_rules:
-  - trailing_whitespace
   - todo
 
-opt_in_rules: []
+opt_in_rules:
+  - attributes
+  - closure_end_indentation
+  - closure_spacing
+  - collection_alignment
+  - contains_over_first_not_nil
+  - empty_count
+  - explicit_init
+  - fatal_error_message
+  - first_where
+  - implicit_return
+  - joined_default_parameter
+  - let_var_whitespace
+  - modifier_order
+  - number_separator
+  - operator_usage_whitespace
+  - pattern_matching_keywords
+  - prefer_self_in_static_references
+  - prefer_zero_over_explicit_init
+  - redundant_nil_coalescing
+  - implicit_optional_initialization
+  - redundant_type_annotation
+  - sorted_imports
+  - strict_fileprivate
+  - switch_case_on_newline
+  - trailing_closure
+  - unneeded_parentheses_in_closure_argument
+  # explicit_self is analyzer-only in this SwiftLint; configured below
+
+analyzer_rules:
+  - unused_import
+  - explicit_self
+
+force_cast:
+  severity: error
+
+force_try:
+  severity: error
+
+force_unwrapping:
+  severity: warning
 
 identifier_name:
   allowed_symbols: "_"
@@ -17,6 +56,18 @@ identifier_name:
     - y
     - dx
     - dy
+    - i
+    - j
+    - k
+    - v
+    - d
+    - p
+    - r
+    - e
+    - h
+    - m
+    - s
+    - t
     - to
     - up
     - on

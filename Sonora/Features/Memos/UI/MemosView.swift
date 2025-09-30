@@ -113,9 +113,8 @@ struct MemosView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                     MemoListTopBarView(
                         isEmpty: viewModel.isEmpty,
-                        isEditMode: viewModel.isEditMode,
-                        onToggleEdit: { viewModel.toggleEditMode() }
-                    )
+                        isEditMode: viewModel.isEditMode
+                    )                        { viewModel.toggleEditMode() }
             }
         }
         // Present Settings without affecting the memos navigation stack

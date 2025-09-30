@@ -5,8 +5,8 @@
 //  Created by Samuel Kahessay on 2025-01-26.
 //
 
-import Foundation
 import Combine
+import Foundation
 #if canImport(ActivityKit)
 @preconcurrency import ActivityKit
 #endif

@@ -78,8 +78,8 @@ struct MemoDetailViewState: Equatable {
         var partialDistillData: PartialDistillData?
 
         // Custom Equatable: intentionally ignore `result` and `envelope`
-        static func == (lhs: AnalysisState, rhs: AnalysisState) -> Bool {
-            return lhs.selectedMode == rhs.selectedMode
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.selectedMode == rhs.selectedMode
             && lhs.isAnalyzing == rhs.isAnalyzing
             && lhs.error == rhs.error
             && lhs.cacheStatus == rhs.cacheStatus
@@ -136,14 +136,14 @@ struct MemoDetailViewState: Equatable {
 
     // MARK: - State Properties
 
-    var audio: AudioState = AudioState()
-    var transcription: TranscriptionProcessingState = TranscriptionProcessingState()
-    var analysis: AnalysisState = AnalysisState()
-    var language: LanguageState = LanguageState()
-    var titleEditing: TitleEditingState = TitleEditingState()
-    var share: ShareState = ShareState()
-    var operations: OperationState = OperationState()
-    var ui: UIState = UIState()
+    var audio = AudioState()
+    var transcription = TranscriptionProcessingState()
+    var analysis = AnalysisState()
+    var language = LanguageState()
+    var titleEditing = TitleEditingState()
+    var share = ShareState()
+    var operations = OperationState()
+    var ui = UIState()
 
     // MARK: - Convenience Computed Properties
 

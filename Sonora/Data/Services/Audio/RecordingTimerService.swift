@@ -6,8 +6,8 @@
 //  Handles recording duration tracking, countdown display, and auto-stop functionality
 //
 
-import Foundation
 import Combine
+import Foundation
 
 /// Protocol defining recording timer operations
 @MainActor
@@ -64,7 +64,7 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
 
     /// Dynamic update interval based on countdown state (Swift 6 compliant)
     private var updateInterval: TimeInterval {
-        return isInCountdown ? TimerConfiguration.countdownUpdateInterval : TimerConfiguration.normalUpdateInterval
+        isInCountdown ? TimerConfiguration.countdownUpdateInterval : TimerConfiguration.normalUpdateInterval
     }
 
     // MARK: - Callbacks
@@ -142,7 +142,7 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
 
     /// Gets formatted recording time string
     func getFormattedRecordingTime() -> String {
-        return formatDuration(recordingTime)
+        formatDuration(recordingTime)
     }
 
     /// Gets formatted remaining time string
@@ -164,7 +164,7 @@ final class RecordingTimerService: RecordingTimerServiceProtocol, @unchecked Sen
         while !Task.isCancelled {
             // Get current update interval on MainActor (since isInCountdown is @Published)
             let currentInterval = await MainActor.run { [weak self] in
-                return self?.updateInterval ?? TimerConfiguration.normalUpdateInterval
+                self?.updateInterval ?? TimerConfiguration.normalUpdateInterval
             }
 
             do {

@@ -1,6 +1,6 @@
 // Moved to Features/Memos/UI
-import SwiftUI
 import AVFoundation
+import SwiftUI
 import UIKit
 
 struct MemoDetailView: View {
@@ -58,9 +58,8 @@ struct MemoDetailView: View {
                         NotificationBanner(
                             type: .warning,
                             message: err,
-                            onPrimaryAction: viewModel.canRetryTranscription ? { viewModel.retryTranscription() } : nil,
-                            onDismiss: { dismissTranscriptionErrorBanner = true }
-                        )
+                            onPrimaryAction: viewModel.canRetryTranscription ? { viewModel.retryTranscription() } : nil
+                        )                            { dismissTranscriptionErrorBanner = true }
                         .padding(.horizontal)
                     }
 
@@ -334,12 +333,11 @@ struct MemoDetailView: View {
                         get: { isScrubbing ? scrubValue : viewModel.currentTime },
                         set: { scrubValue = $0 }
                     ),
-                    in: 0...(max(viewModel.totalDuration, 0.001)),
-                    onEditingChanged: { editing in
+                    in: 0...(max(viewModel.totalDuration, 0.001))
+                )                    { editing in
                         isScrubbing = editing
                         if !editing { viewModel.seek(to: scrubValue) }
                     }
-                )
                 .tint(.semantic(.brandPrimary))
                 .accessibilityLabel("Playback position")
                 .accessibilityValue("\(Int((isScrubbing ? scrubValue : viewModel.currentTime) / max(viewModel.totalDuration, 1) * 100)) percent")

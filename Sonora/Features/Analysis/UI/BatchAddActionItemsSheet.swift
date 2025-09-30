@@ -170,7 +170,7 @@ struct BatchAddActionItemsSheet: View {
                 selectedCalendar?.id ?? calendars.first?.id ?? ""
             },
             set: { newId in
-                selectedCalendar = calendars.first(where: { $0.id == newId })
+                selectedCalendar = calendars.first { $0.id == newId }
             }
         )
     }
@@ -181,7 +181,7 @@ struct BatchAddActionItemsSheet: View {
                 selectedReminderList?.id ?? reminderLists.first?.id ?? ""
             },
             set: { newId in
-                selectedReminderList = reminderLists.first(where: { $0.id == newId })
+                selectedReminderList = reminderLists.first { $0.id == newId }
             }
         )
     }

@@ -1,5 +1,5 @@
-import Foundation
 import AVFoundation
+import Foundation
 import Network
 
 /// Utilities for mapping common iOS system errors to Sonora error types
@@ -183,23 +183,23 @@ public final class ErrorMapping {
 
     private static func mapAudioSessionError(_ error: NSError) -> SonoraError {
         switch error.code {
-        case 560030004: // cannotInterruptOthers
+        case 560_030_004: // cannotInterruptOthers
             return .audioSessionSetupFailed("Cannot interrupt other audio")
-        case 560557106: // cannotStartPlaying
+        case 560_557_106: // cannotStartPlaying
             return .audioSessionSetupFailed("Cannot start playing")
-        case 560557109: // cannotStartRecording
+        case 560_557_109: // cannotStartRecording
             return .audioRecordingFailed("Cannot start recording")
-        case 560030737: // sessionNotActive
+        case 560_030_737: // sessionNotActive
             return .audioSessionSetupFailed("Session not active")
-        case 560557105: // incompatibleCategory
+        case 560_557_105: // incompatibleCategory
             return .audioSessionSetupFailed("Incompatible category")
-        case 560030966: // mediaServicesFailed
+        case 560_030_966: // mediaServicesFailed
             return .audioSessionSetupFailed("Media services failed")
-        case 560030963: // mediaServicesWereReset
+        case 560_030_963: // mediaServicesWereReset
             return .audioSessionSetupFailed("Media services were reset")
-        case 560030305: // isBusy
+        case 560_030_305: // isBusy
             return .audioSessionSetupFailed("Audio session is busy")
-        case 560030001: // insufficientPriority
+        case 560_030_001: // insufficientPriority
             return .audioSessionSetupFailed("Insufficient priority")
         default:
             return .audioSessionSetupFailed("Audio session error: \(error.localizedDescription)")
@@ -208,19 +208,19 @@ public final class ErrorMapping {
 
     private static func mapOSStatusError(_ error: NSError) -> SonoraError {
         switch Int32(error.code) {
-        case -66681: // kAudioServicesUnsupportedPropertyError
+        case -66_681: // kAudioServicesUnsupportedPropertyError
             return .audioFormatUnsupported("Unsupported audio property")
-        case -66682: // kAudioServicesBadPropertySizeError
+        case -66_682: // kAudioServicesBadPropertySizeError
             return .audioRecordingFailed("Bad audio property size")
-        case -66683: // kAudioServicesSystemSoundUnspecifiedError
+        case -66_683: // kAudioServicesSystemSoundUnspecifiedError
             return .audioRecordingFailed("Unspecified audio system error")
-        case -66684: // kAudioServicesSystemSoundClientTimedOutError
+        case -66_684: // kAudioServicesSystemSoundClientTimedOutError
             return .audioRecordingFailed("Audio system timed out")
-        case -25293: // errSecAuthFailed
+        case -25_293: // errSecAuthFailed
             return .networkUnauthorized
         case -128: // errSecUserCanceled
             return .uiOperationCancelled
-        case -25291: // errSecNotAvailable
+        case -25_291: // errSecNotAvailable
             return .systemResourceUnavailable("Security service not available")
         default:
             return .unknown("OS Status error: \(error.code)")
@@ -394,7 +394,7 @@ public final class ErrorMapping {
     @available(iOS 12.0, *)
     public static func mapNetworkError(_ error: Error) -> SonoraError {
         // Simple fallback to avoid complex NWError handling
-        return ErrorMapping.mapError(error)
+        Self.mapError(error)
     }
 
     // MARK: - Core Data Error Mapping (if needed in future)
@@ -405,9 +405,9 @@ public final class ErrorMapping {
         if let nsError = error as NSError? {
             switch nsError.domain {
             case "NSCocoaErrorDomain":
-                if nsError.code >= 1550 && nsError.code <= 1690 { // Core Data validation errors
+                if nsError.code >= 1_550 && nsError.code <= 1_690 { // Core Data validation errors
                     return .dataFormatInvalid("Core Data validation failed: \(nsError.localizedDescription)")
-                } else if nsError.code >= 130000 && nsError.code <= 135000 { // Core Data migration errors
+                } else if nsError.code >= 130_000 && nsError.code <= 135_000 { // Core Data migration errors
                     return .dataMigrationFailed("Core Data migration failed: \(nsError.localizedDescription)")
                 } else {
                     return .dataCorrupted("Core Data error: \(nsError.localizedDescription)")

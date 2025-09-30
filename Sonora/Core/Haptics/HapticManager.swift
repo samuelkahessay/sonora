@@ -1,5 +1,5 @@
-import UIKit
 import Foundation
+import UIKit
 
 /// Centralized haptic feedback management for accessibility and user experience
 @MainActor

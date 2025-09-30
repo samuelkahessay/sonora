@@ -1,5 +1,5 @@
-import Foundation
 import AVFoundation
+import Foundation
 
 /// Specific error types for service layer operations
 public enum ServiceError: LocalizedError, Equatable {
@@ -510,8 +510,8 @@ public enum ServiceErrorSeverity: String, CaseIterable, Comparable {
         }
     }
 
-    public static func < (lhs: ServiceErrorSeverity, rhs: ServiceErrorSeverity) -> Bool {
-        let order: [ServiceErrorSeverity] = [.info, .warning, .error, .critical]
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        let order: [Self] = [.info, .warning, .error, .critical]
         guard let lhsIndex = order.firstIndex(of: lhs),
               let rhsIndex = order.firstIndex(of: rhs) else {
             return false

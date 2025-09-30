@@ -58,7 +58,7 @@ public struct TranscriptionMetadata: Codable, Sendable {
 
 public extension TranscriptionMetadata {
     func merging(_ other: TranscriptionMetadata) -> TranscriptionMetadata {
-        return TranscriptionMetadata(
+        TranscriptionMetadata(
             memoId: other.memoId ?? memoId,
             state: other.state ?? state,
             text: other.text ?? text,

@@ -33,7 +33,7 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
 
     /// Compute dynamic thresholds based on device RAM (with sensible floors)
     private func dynamicThresholds() -> (pressure: Double, critical: Double) {
-        let totalMB = Double(ProcessInfo.processInfo.physicalMemory) / (1024.0 * 1024.0)
+        let totalMB = Double(ProcessInfo.processInfo.physicalMemory) / (1_024.0 * 1_024.0)
         // Pressure at ~8% of RAM, Critical at ~15% of RAM, bounded by floors
         let pressure = max(DetectionConfig.minPressureMB, totalMB * 0.08)
         let critical = max(DetectionConfig.minCriticalMB, totalMB * 0.15)
@@ -224,7 +224,7 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
         }
 
         if result == KERN_SUCCESS {
-            return Double(info.resident_size) / 1024.0 / 1024.0 // Convert to MB
+            return Double(info.resident_size) / 1_024.0 / 1_024.0 // Convert to MB
         }
 
         return 0.0
@@ -234,7 +234,7 @@ final class MemoryPressureDetector: MemoryPressureDetectorProtocol, ObservableOb
         do {
             let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
             if let freeSpace = systemAttributes[.systemFreeSize] as? NSNumber {
-                return freeSpace.doubleValue / (1024.0 * 1024.0 * 1024.0) // Convert to GB
+                return freeSpace.doubleValue / (1_024.0 * 1_024.0 * 1_024.0) // Convert to GB
             }
         } catch {
             logger.warning("🧠 MemoryPressureDetector: Failed to get storage info",

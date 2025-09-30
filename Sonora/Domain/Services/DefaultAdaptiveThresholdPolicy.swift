@@ -35,7 +35,7 @@ struct DefaultAdaptiveThresholdPolicy: AdaptiveThresholdPolicy, Sendable {
         if context.imperativeVerbDensity > 0.02 { reminder -= 0.08 }
 
         // Very long or dense transcripts can produce many candidates; tighten slightly
-        if context.transcriptLength > 1500 || context.avgSentenceLength > 120 {
+        if context.transcriptLength > 1_500 || context.avgSentenceLength > 120 {
             event += 0.05
             reminder += 0.05
         }

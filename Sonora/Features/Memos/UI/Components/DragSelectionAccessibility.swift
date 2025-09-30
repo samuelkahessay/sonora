@@ -154,7 +154,7 @@ extension View {
     /// Generate accessibility value
     private func accessibilityValue(for memo: Memo) -> String {
         // Could include transcription status or other dynamic information
-        return ""
+        ""
     }
 }
 

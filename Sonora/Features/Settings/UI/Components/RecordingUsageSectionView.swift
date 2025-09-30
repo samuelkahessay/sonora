@@ -1,5 +1,5 @@
-import SwiftUI
 import Combine
+import SwiftUI
 
 @MainActor
 final class MonthlyUsageSectionViewModel: ObservableObject {
@@ -37,7 +37,7 @@ final class MonthlyUsageSectionViewModel: ObservableObject {
 
     var monthMinutesUsed: Int { Int((monthSeconds / 60.0).rounded(.toNearestOrEven)) }
     var monthCapMinutes: Int { 60 }
-    var progress: Double { min(1.0, max(0.0, monthSeconds / 3600.0)) }
+    var progress: Double { min(1.0, max(0.0, monthSeconds / 3_600.0)) }
 }
 
 struct MonthlyRecordingUsageSectionView: View {

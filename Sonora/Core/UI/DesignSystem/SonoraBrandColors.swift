@@ -170,5 +170,5 @@ struct SonoraBrandTheme {
     }
 
     /// Default Sonora brand theme (light)
-    static let `default` = SonoraBrandTheme()
+    static let `default` = Self()
 }

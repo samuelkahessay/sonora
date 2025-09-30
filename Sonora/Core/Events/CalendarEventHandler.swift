@@ -105,7 +105,7 @@ final class CalendarEventHandler {
 
     // MARK: - Debug
     var integrationStatus: String {
-        return """
+        """
         Calendar Integration Status:
         - Enabled: \(isEnabled)
         - Calendar Permission: \(permissionService.calendarPermissionState.displayText)

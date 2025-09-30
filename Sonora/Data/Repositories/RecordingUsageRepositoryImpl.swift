@@ -1,5 +1,5 @@
-import Foundation
 @preconcurrency import Combine
+import Foundation
 
 /// UserDefaults-backed implementation of RecordingUsageRepository
 /// Stores usage seconds per local day (yyyy-MM-dd), publishes today's usage.
@@ -131,11 +131,11 @@ final class RecordingUsageRepositoryImpl: RecordingUsageRepository, @unchecked S
     }
 
     private static func makeDayKey(_ date: Date, formatter: DateFormatter) -> String {
-        return formatter.string(from: date)
+        formatter.string(from: date)
     }
 
     private static func storageKey(for dayKey: String) -> String {
-        return "recording_usage_" + dayKey
+        "recording_usage_" + dayKey
     }
 
     private static func makeMonthKey(_ date: Date, formatter: DateFormatter, calendar: Calendar) -> String {
@@ -147,6 +147,6 @@ final class RecordingUsageRepositoryImpl: RecordingUsageRepository, @unchecked S
     }
 
     private static func storageMonthKey(for monthKey: String) -> String {
-        return "recording_usage_month_" + monthKey
+        "recording_usage_month_" + monthKey
     }
 }

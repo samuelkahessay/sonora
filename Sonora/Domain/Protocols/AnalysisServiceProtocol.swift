@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 protocol AnalysisServiceProtocol: ObservableObject, Sendable {
     func analyze<T: Codable & Sendable>(mode: AnalysisMode, transcript: String, responseType: T.Type) async throws -> AnalyzeEnvelope<T>

@@ -1,5 +1,5 @@
-import Foundation
 import AVFoundation
+import Foundation
 import UIKit
 import UserNotifications
 
@@ -372,17 +372,17 @@ public final class MemoEventHandler {
 
     /// Get current memo count tracked by this handler
     public var currentMemoCount: Int {
-        return memoCount
+        memoCount
     }
 
     /// Get recent events from audit trail
     public func getRecentEvents(limit: Int = 10) -> [(Date, AppEvent)] {
-        return Array(eventAuditTrail.suffix(limit))
+        Array(eventAuditTrail.suffix(limit))
     }
 
     /// Get handler statistics for debugging
     public var handlerStatistics: String {
-        return """
+        """
         MemoEventHandler Statistics:
         - Total memos tracked: \(memoCount)
         - Pending transcriptions: \(transcriptionStartTime.count)

@@ -46,10 +46,10 @@ struct SonoraMemocCard: View {
 
     private var hasInsights: Bool {
         // Check if memo has analysis results with insights
-        memo.analysisResults.contains(where: { result in
+        memo.analysisResults.contains { result in
             if let content = result.content { return !content.isEmpty }
             return false
-        })
+        }
     }
 
     // MARK: - View Body

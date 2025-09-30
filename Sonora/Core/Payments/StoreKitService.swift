@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 #if canImport(StoreKit)
 import StoreKit
 #endif
@@ -25,7 +25,7 @@ public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable
         static let proFlag = "storekit.isPro.cached"
         static let proTs = "storekit.isPro.cached.ts"
     }
-    private let cacheTTL: TimeInterval = 3600 // 1 hour
+    private let cacheTTL: TimeInterval = 3_600 // 1 hour
 
     // MARK: - State
     private let userDefaults: UserDefaults

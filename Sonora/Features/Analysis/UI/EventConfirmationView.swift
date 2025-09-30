@@ -205,7 +205,7 @@ struct CalendarSelectionView: View {
                 .fontWeight(.semibold)
             Picker("Calendar", selection: Binding(
                 get: { selectedCalendar?.id ?? "" },
-                set: { newId in selectedCalendar = calendars.first(where: { $0.id == newId }) }
+                set: { newId in selectedCalendar = calendars.first { $0.id == newId }}
             )) {
                 ForEach(calendars, id: \.id) { cal in
                     HStack(spacing: 8) {
@@ -250,7 +250,7 @@ struct EventEditView: View {
                         ), displayedComponents: [.date, .hourAndMinute])
 
                         DatePicker("End", selection: Binding(
-                            get: { event.endDate ?? (event.startDate ?? Date()).addingTimeInterval(3600) },
+                            get: { event.endDate ?? (event.startDate ?? Date()).addingTimeInterval(3_600) },
                             set: { event.endDate = $0 }
                         ), displayedComponents: [.date, .hourAndMinute])
                     }

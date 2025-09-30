@@ -33,7 +33,7 @@ final class PromptFileLoader {
 
         var results: [RecordingPrompt] = []
         let decoder = JSONDecoder()
-        let lines = content.split(whereSeparator: { $0.isNewline })
+        let lines = content.split { $0.isNewline }
         for (idx, rawLine) in lines.enumerated() {
             let lineNum = idx + 1
             let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -11,7 +11,7 @@ enum ActionItemConfidence: String, Sendable, Equatable {
     case medium
     case low
 
-    static func from(_ value: Float) -> ActionItemConfidence {
+    static func from(_ value: Float) -> Self {
         switch value {
         case 0.8...1.0: return .high
         case 0.6..<0.8: return .medium

@@ -1,5 +1,5 @@
-import Foundation
 import AVFoundation
+import Foundation
 
 enum AudioReadiness {
     /// Ensure an audio file is ready for reading by AVFoundation.

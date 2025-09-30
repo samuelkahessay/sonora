@@ -418,7 +418,7 @@ public actor OperationCoordinator {
     }
 
     public func getOperation(_ operationId: UUID) async -> Operation? {
-        return operations[operationId]
+        operations[operationId]
     }
 
     /// Start queued operations in priority order when capacity/conflicts allow
@@ -726,17 +726,17 @@ public actor OperationCoordinator {
 
     /// Get all operations (active and completed) for a memo
     public func getAllOperations(for memoId: UUID) async -> [Operation] {
-        return operations.values.filter { $0.type.memoId == memoId }
+        operations.values.filter { $0.type.memoId == memoId }
     }
 
     /// Get all active operations system-wide
     public func getAllActiveOperations() async -> [Operation] {
-        return operations.values.filter { $0.status == .active }
+        operations.values.filter { $0.status == .active }
     }
 
     /// Get all operations with specified status system-wide
     public func getOperationsByStatus(_ status: OperationStatus) async -> [Operation] {
-        return operations.values.filter { $0.status == status }
+        operations.values.filter { $0.status == status }
     }
 
     /// Get operations filtered by type and optionally by status
@@ -770,12 +770,12 @@ public actor OperationCoordinator {
 
     /// Check if any recording is active for a memo
     public func isRecordingActive(for memoId: UUID) async -> Bool {
-        return await isOperationActive(.recording(memoId: memoId))
+        await isOperationActive(.recording(memoId: memoId))
     }
 
     /// Check if transcription is active for a memo
     public func isTranscriptionActive(for memoId: UUID) async -> Bool {
-        return await isOperationActive(.transcription(memoId: memoId))
+        await isOperationActive(.transcription(memoId: memoId))
     }
 
     /// Get current system metrics
@@ -887,17 +887,17 @@ public extension OperationCoordinator {
 
     /// Register and start a recording operation
     func startRecording(for memoId: UUID) async -> UUID? {
-        return await registerOperation(.recording(memoId: memoId))
+        await registerOperation(.recording(memoId: memoId))
     }
 
     /// Register and start a transcription operation
     func startTranscription(for memoId: UUID) async -> UUID? {
-        return await registerOperation(.transcription(memoId: memoId))
+        await registerOperation(.transcription(memoId: memoId))
     }
 
     /// Register and start an analysis operation
     func startAnalysis(for memoId: UUID, type: AnalysisMode) async -> UUID? {
-        return await registerOperation(.analysis(memoId: memoId, analysisType: type))
+        await registerOperation(.analysis(memoId: memoId, analysisType: type))
     }
 
     /// Check if a memo can start transcription (no recording active)

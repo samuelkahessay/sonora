@@ -80,13 +80,12 @@ struct ErrorBannerModifier: ViewModifier {
             if let error = error {
                 NotificationBanner.error(
                     error,
-                    onRetry: onRetry,
-                    onDismiss: {
+                    onRetry: onRetry
+                )                    {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             self.error = nil
                         }
                     }
-                )
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 

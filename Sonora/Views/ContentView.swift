@@ -5,12 +5,12 @@
 //  Created by Samuel Kahessay on 2025-08-23.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct ContentView: View {
     @State private var selectedTab: Int = 0
-    @State private var memosPath: NavigationPath = NavigationPath()
+    @State private var memosPath = NavigationPath()
     @StateObject private var onboardingConfiguration = OnboardingConfiguration.shared
     @StateObject private var titleCoordinator = DIContainer.shared.titleGenerationCoordinator()
     @SwiftUI.Environment(\.scenePhase) private var scenePhase

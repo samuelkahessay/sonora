@@ -1,5 +1,5 @@
-import Foundation
 import AVFoundation
+import Foundation
 
 extension Memo {
     /// Duration of the memo's audio file in seconds.

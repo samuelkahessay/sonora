@@ -4,9 +4,9 @@ import Foundation
 struct ExportOptions: OptionSet {
     let rawValue: Int
 
-    static let memos       = ExportOptions(rawValue: 1 << 0)
-    static let transcripts = ExportOptions(rawValue: 1 << 1)
-    static let analysis    = ExportOptions(rawValue: 1 << 2)
+    static let memos       = Self(rawValue: 1 << 0)
+    static let transcripts = Self(rawValue: 1 << 1)
+    static let analysis    = Self(rawValue: 1 << 2)
 }
 
 @MainActor

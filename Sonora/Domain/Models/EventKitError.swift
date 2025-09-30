@@ -171,12 +171,12 @@ extension EventKitError {
     public static func fromAuthorizationStatus(_ status: Any, type: EventKitType) -> EventKitError? {
         // This will be implemented when we add EventKit import
         // For now, return nil to avoid import issues during compilation
-        return nil
+        nil
     }
 
     /// Create an event creation error with context
     public static func eventCreationError(title: String, underlying: Error) -> EventKitError {
-        return .eventCreationFailed(underlying: NSError(
+        .eventCreationFailed(underlying: NSError(
             domain: "EventKitError",
             code: -1,
             userInfo: [
@@ -188,7 +188,7 @@ extension EventKitError {
 
     /// Create a reminder creation error with context  
     public static func reminderCreationError(title: String, underlying: Error) -> EventKitError {
-        return .reminderCreationFailed(underlying: NSError(
+        .reminderCreationFailed(underlying: NSError(
             domain: "EventKitError",
             code: -2,
             userInfo: [

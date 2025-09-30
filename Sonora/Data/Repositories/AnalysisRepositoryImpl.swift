@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 import SwiftData
 
 @MainActor
@@ -16,7 +16,7 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
     }
 
     private func cacheKey(for memoId: UUID, mode: AnalysisMode) -> String {
-        return "\(memoId.uuidString)_\(mode.rawValue)"
+        "\(memoId.uuidString)_\(mode.rawValue)"
     }
 
     func saveAnalysisResult<T: Codable>(_ result: AnalyzeEnvelope<T>, for memoId: UUID, mode: AnalysisMode) {

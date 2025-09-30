@@ -23,15 +23,15 @@ public final class Environment: @unchecked Sendable {
         case testing = "Testing"
 
         var isDebug: Bool {
-            return self == .debug || self == .testing
+            self == .debug || self == .testing
         }
 
         var isRelease: Bool {
-            return self == .release
+            self == .release
         }
 
         var displayName: String {
-            return rawValue
+            rawValue
         }
     }
 
@@ -40,17 +40,17 @@ public final class Environment: @unchecked Sendable {
 
     /// Whether the app is running in debug mode
     public var isDebug: Bool {
-        return buildConfiguration.isDebug
+        buildConfiguration.isDebug
     }
 
     /// Whether the app is running in release mode
     public var isRelease: Bool {
-        return buildConfiguration.isRelease
+        buildConfiguration.isRelease
     }
 
     /// Whether the app is running in testing mode
     public var isTesting: Bool {
-        return buildConfiguration == .testing || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        buildConfiguration == .testing || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
 
     // MARK: - Logging Configuration
@@ -81,7 +81,7 @@ public final class Environment: @unchecked Sendable {
 
     /// Maximum log file size in bytes (10MB default)
     /// Can be overridden with SONORA_MAX_LOG_FILE_SIZE environment variable
-    public private(set) var maxLogFileSize: Int64 = 10 * 1024 * 1024
+    public private(set) var maxLogFileSize: Int64 = 10 * 1_024 * 1_024
 
     /// Whether to include file and line information in logs
     /// Can be overridden with SONORA_LOG_INCLUDE_LOCATION environment variable
@@ -163,32 +163,32 @@ public final class Environment: @unchecked Sendable {
 
     /// Whether the app is running from App Store
     public var isAppStore: Bool {
-        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "receipt"
+        Bundle.main.appStoreReceiptURL?.lastPathComponent == "receipt"
     }
 
     /// Whether the app is running from TestFlight
     public var isTestFlight: Bool {
-        return Bundle.main.appStoreReceiptURL?.path.contains("sandboxReceipt") == true
+        Bundle.main.appStoreReceiptURL?.path.contains("sandboxReceipt") == true
     }
 
     /// Whether the app is running in development (not App Store or TestFlight)
     public var isDevelopment: Bool {
-        return !isAppStore && !isTestFlight
+        !isAppStore && !isTestFlight
     }
 
     /// App version string
     public var appVersion: String {
-        return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
     }
 
     /// App build number
     public var buildNumber: String {
-        return Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
     }
 
     /// Full version string (version + build)
     public var fullVersionString: String {
-        return "\(appVersion) (\(buildNumber))"
+        "\(appVersion) (\(buildNumber))"
     }
 
     // MARK: - Device Information
@@ -213,7 +213,7 @@ public final class Environment: @unchecked Sendable {
 
     /// Whether device supports Dynamic Island
     public var supportsDynamicIsland: Bool {
-        return deviceModel.hasPrefix("iPhone15") || // iPhone 14 Pro series
+        deviceModel.hasPrefix("iPhone15") || // iPhone 14 Pro series
                deviceModel.hasPrefix("iPhone16")    // iPhone 15 Pro series and newer
     }
 
@@ -268,7 +268,7 @@ public final class Environment: @unchecked Sendable {
 
         if let sizeString = ProcessInfo.processInfo.environment["SONORA_MAX_LOG_FILE_SIZE"],
            let size = Int64(sizeString) {
-            maxLogFileSize = max(1024 * 1024, size) // Minimum 1MB
+            maxLogFileSize = max(1_024 * 1_024, size) // Minimum 1MB
         }
 
         if let locationString = ProcessInfo.processInfo.environment["SONORA_LOG_INCLUDE_LOCATION"],
@@ -420,7 +420,7 @@ public final class Environment: @unchecked Sendable {
 
     /// Get environment information for debugging
     public var debugDescription: String {
-        return """
+        """
         Environment Configuration:
         - Build: \(buildConfiguration.displayName)
         - Version: \(fullVersionString)

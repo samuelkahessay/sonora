@@ -22,5 +22,5 @@ struct ExportRequest: Equatable {
         self.scope = scope
     }
 
-    static let fullBackup = ExportRequest(components: Set(ExportComponent.allCases), scope: .all)
+    static let fullBackup = Self(components: Set(ExportComponent.allCases), scope: .all)
 }

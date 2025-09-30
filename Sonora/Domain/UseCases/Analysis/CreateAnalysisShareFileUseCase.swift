@@ -183,7 +183,7 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
 
                 """
             }()
-            let body = sections.map { $0.text }.joined(separator: "")
+            let body = sections.map { $0.text }.joined()
             let content = header + body
 
             // Export to file

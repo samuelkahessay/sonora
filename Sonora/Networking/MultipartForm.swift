@@ -45,7 +45,7 @@ struct MultipartForm {
 
     /// Writes the multipart body to a temporary file to avoid loading large audio chunks into memory.
     /// - Returns: The file URL and the resulting file length, if available.
-    func writeBodyToTemporaryFile(bufferSize: Int = 256 * 1024) throws -> (url: URL, length: UInt64?) {
+    func writeBodyToTemporaryFile(bufferSize: Int = 256 * 1_024) throws -> (url: URL, length: UInt64?) {
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("multipart-\(UUID().uuidString)", isDirectory: false)
 

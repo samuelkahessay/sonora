@@ -1,6 +1,6 @@
 // Moved to Features/Analysis/UI
-import SwiftUI
 import Foundation
+import SwiftUI
 
 struct AnalysisSectionView: View {
     let transcript: String
@@ -45,8 +45,8 @@ struct AnalysisSectionView: View {
                 DistillCTAButton(
                     isAnalyzing: isAnalyzing,
                     hasCachedResult: hasCached,
-                    hasShownCachedResult: hasShown,
-                    action: {
+                    hasShownCachedResult: hasShown
+                )                    {
                         HapticManager.shared.playSelection()
                         if hasCached {
                             if !hasShown {
@@ -56,7 +56,6 @@ struct AnalysisSectionView: View {
                             viewModel.performAnalysis(mode: .distill, transcript: transcript)
                         }
                     }
-                )
                 .buttonStyle(PressableCardButtonStyle())
                 .contentShape(RoundedRectangle(cornerRadius: DistillLayout.buttonCornerRadius, style: .continuous))
                 .disabled(isAnalyzing || (hasCached && hasShown))

@@ -10,8 +10,8 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
     case distillReflection = "distill-reflection"
 
     // UI-visible analysis modes (excludes internal component modes)
-    public static var uiVisibleCases: [AnalysisMode] {
-        return [.distill, .analysis, .themes, .todos, .events, .reminders]
+    public static var uiVisibleCases: [Self] {
+        [.distill, .analysis, .themes, .todos, .events, .reminders]
     }
 
     var displayName: String {

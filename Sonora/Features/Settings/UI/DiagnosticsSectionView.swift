@@ -4,7 +4,7 @@ import SwiftUI
 /// Shows live metrics and provides quick actions for core managers
 struct DiagnosticsSectionView: View {
     @State private var qualityMetrics: AudioQualityMetrics = .init()
-    @State private var currentVoiceSettings: AudioRecordingSettings = AudioRecordingSettings(sampleRate: 22050, bitRate: 64000, quality: 0.7, channels: 1, format: .mpeg4AAC)
+    @State private var currentVoiceSettings = AudioRecordingSettings(sampleRate: 22_050, bitRate: 64_000, quality: 0.7, channels: 1, format: .mpeg4AAC)
     @State private var currentProfileName: String = ""
     @State private var adaptiveEnabled: Bool = true
 

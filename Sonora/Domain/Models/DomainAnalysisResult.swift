@@ -66,8 +66,8 @@ public struct DomainAnalysisResult: Identifiable, Codable, Equatable, Hashable, 
     // MARK: - Business Logic Methods
 
     /// Creates a copy with updated status
-    public func withStatus(_ newStatus: DomainAnalysisStatus) -> DomainAnalysisResult {
-        DomainAnalysisResult(
+    public func withStatus(_ newStatus: DomainAnalysisStatus) -> Self {
+        Self(
             id: id,
             type: type,
             status: newStatus,
@@ -79,8 +79,8 @@ public struct DomainAnalysisResult: Identifiable, Codable, Equatable, Hashable, 
     }
 
     /// Creates a copy with updated content
-    public func withContent(_ newContent: DomainAnalysisContent) -> DomainAnalysisResult {
-        DomainAnalysisResult(
+    public func withContent(_ newContent: DomainAnalysisContent) -> Self {
+        Self(
             id: id,
             type: type,
             status: .completed,
@@ -92,8 +92,8 @@ public struct DomainAnalysisResult: Identifiable, Codable, Equatable, Hashable, 
     }
 
     /// Creates a copy with updated metadata
-    public func withMetadata(_ newMetadata: DomainAnalysisMetadata) -> DomainAnalysisResult {
-        DomainAnalysisResult(
+    public func withMetadata(_ newMetadata: DomainAnalysisMetadata) -> Self {
+        Self(
             id: id,
             type: type,
             status: status,
@@ -356,10 +356,10 @@ public struct DomainAnalysisMetadata: Codable, Equatable, Hashable, Sendable {
     /// Human-readable processing time
     public var formattedProcessingTime: String? {
         guard let ms = processingTimeMs else { return nil }
-        if ms < 1000 {
+        if ms < 1_000 {
             return "\(ms)ms"
         } else {
-            let seconds = Double(ms) / 1000.0
+            let seconds = Double(ms) / 1_000.0
             return String(format: "%.1fs", seconds)
         }
     }

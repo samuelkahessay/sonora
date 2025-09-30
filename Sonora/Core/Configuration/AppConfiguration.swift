@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 /// Centralized application configuration management
 /// Provides type-safe access to all app configuration values with environment variable support
@@ -17,14 +17,14 @@ public final class AppConfiguration: ObservableObject {
     // MARK: - Build Configuration Dependency
 
     private var buildConfig: BuildConfiguration {
-        return BuildConfiguration.shared
+        BuildConfiguration.shared
     }
 
     // MARK: - API Configuration
 
     /// Base URL for the Sonora API
     /// Can be overridden with SONORA_API_URL environment variable
-    public private(set) var apiBaseURL: URL = URL(string: "https://sonora.fly.dev")!
+    public private(set) var apiBaseURL = URL(string: "https://sonora.fly.dev")!
 
     /// API request timeout for analysis operations (in seconds)
     /// Can be overridden with SONORA_ANALYSIS_TIMEOUT environment variable
@@ -51,7 +51,7 @@ public final class AppConfiguration: ObservableObject {
 
     /// Maximum file size for recordings in bytes (50MB default)
     /// Can be overridden with SONORA_MAX_FILE_SIZE environment variable
-    public private(set) var maxRecordingFileSize: Int64 = 50 * 1024 * 1024
+    public private(set) var maxRecordingFileSize: Int64 = 50 * 1_024 * 1_024
 
     /// Recording quality setting (0.0 to 1.0, where 1.0 is highest quality)
     /// Can be overridden with SONORA_RECORDING_QUALITY environment variable
@@ -63,7 +63,7 @@ public final class AppConfiguration: ObservableObject {
     /// Sample rate for audio recordings
     /// Can be overridden with SONORA_SAMPLE_RATE environment variable
     /// Voice-optimized default: 22050 Hz (perfect for voice content)
-    public private(set) var audioSampleRate: Double = 22050.0
+    public private(set) var audioSampleRate: Double = 22_050.0
 
     /// Number of audio channels (1 = mono, 2 = stereo)
     /// Can be overridden with SONORA_AUDIO_CHANNELS environment variable
@@ -72,7 +72,7 @@ public final class AppConfiguration: ObservableObject {
     /// Audio bit rate for voice recordings (bits per second)
     /// Can be overridden with SONORA_AUDIO_BITRATE environment variable
     /// Voice-optimized default: 64000 bps for optimal clarity/size balance
-    public private(set) var audioBitRate: Int = 64000
+    public private(set) var audioBitRate: Int = 64_000
 
     /// Voice-optimized audio quality (0.0 to 1.0)
     /// Can be overridden with SONORA_VOICE_QUALITY environment variable
@@ -125,7 +125,7 @@ public final class AppConfiguration: ObservableObject {
 
     /// Maximum transcript length for analysis (characters)
     /// Can be overridden with SONORA_MAX_TRANSCRIPT_LENGTH environment variable
-    public private(set) var maximumTranscriptLength: Int = 50000
+    public private(set) var maximumTranscriptLength: Int = 50_000
 
     // MARK: - Live Activity Configuration
 
@@ -153,7 +153,7 @@ public final class AppConfiguration: ObservableObject {
 
     /// Time to live for cached analysis results in seconds (24 hours default)
     /// Can be overridden with SONORA_CACHE_TTL environment variable
-    public private(set) var analysisCacheTTL: TimeInterval = 86400.0
+    public private(set) var analysisCacheTTL: TimeInterval = 86_400.0
 
     /// Whether to persist analysis cache to disk
     /// Can be overridden with SONORA_DISK_CACHE_ENABLED environment variable
@@ -182,7 +182,7 @@ public final class AppConfiguration: ObservableObject {
     /// Returns the effective recording cap in seconds based on the user's selected transcription service.
     /// Daily quota is enforced elsewhere; there is no global per-session cap.
     public var effectiveRecordingCapSeconds: TimeInterval? {
-        return nil // no fixed per-session limit; use remaining daily quota if needed
+        nil // no fixed per-session limit; use remaining daily quota if needed
     }
 
     // MARK: - Voice Optimization Methods
@@ -218,13 +218,13 @@ public final class AppConfiguration: ObservableObject {
     /// - Parameter batteryLevel: Current battery level (0.0 to 1.0), -1 if unknown
     /// - Returns: Optimized bit rate for the given conditions
     public func getOptimalBitRate(for contentType: AudioContentType = .voice, batteryLevel: Float = -1) -> Int {
-        let baseBitRate = contentType == .voice ? audioBitRate : 128000
+        let baseBitRate = contentType == .voice ? audioBitRate : 128_000
 
         guard enableAdaptiveAudioQuality else { return baseBitRate }
 
         // Reduce bit rate on low battery or thermal pressure
         if (batteryLevel >= 0 && batteryLevel < 0.2) || ProcessInfo.processInfo.thermalState.rawValue >= 2 {
-            return max(32000, Int(Double(baseBitRate) * 0.75))
+            return max(32_000, Int(Double(baseBitRate) * 0.75))
         }
 
         return baseBitRate
@@ -234,12 +234,12 @@ public final class AppConfiguration: ObservableObject {
     /// This sample rate is perfect for voice content as it captures frequencies up to 11 kHz,
     /// which covers the full range of human speech (300-3400 Hz fundamental, harmonics up to 8 kHz)
     public var voiceOptimizedSampleRate: Double {
-        return 22050.0
+        22_050.0
     }
 
     /// Returns high-quality sample rate for music or mixed content (44100 Hz)
     public var highQualitySampleRate: Double {
-        return 44100.0
+        44_100.0
     }
 
     // MARK: - Search / Spotlight
@@ -307,10 +307,10 @@ public final class AppConfiguration: ObservableObject {
         // Recording Configuration - Legacy parameter (no per-session cap enforced)
         maxRecordingDuration = 180.0
         if buildConfig.isDebug {
-            maxRecordingFileSize = 100 * 1024 * 1024 // 100MB
+            maxRecordingFileSize = 100 * 1_024 * 1_024 // 100MB
             recordingQuality = 1.0 // Highest quality for development
         } else {
-            maxRecordingFileSize = 50 * 1024 * 1024 // 50MB
+            maxRecordingFileSize = 50 * 1_024 * 1_024 // 50MB
             recordingQuality = 0.8 // Balanced quality
         }
 
@@ -356,10 +356,10 @@ public final class AppConfiguration: ObservableObject {
         // Cache Configuration - Build-specific caching
         if buildConfig.isDebug {
             memoryCacheMaxSize = 100 // Larger cache for development
-            analysisCacheTTL = 43200.0 // 12 hours for debugging
+            analysisCacheTTL = 43_200.0 // 12 hours for debugging
         } else {
             memoryCacheMaxSize = 50 // Standard cache size
-            analysisCacheTTL = 86400.0 // 24 hours for production
+            analysisCacheTTL = 86_400.0 // 24 hours for production
         }
 
         diskCacheEnabled = true // Always enable disk cache
@@ -443,7 +443,7 @@ public final class AppConfiguration: ObservableObject {
 
         if let bitRateString = ProcessInfo.processInfo.environment["SONORA_AUDIO_BITRATE"],
            let bitRate = Int(bitRateString) {
-            audioBitRate = max(32000, min(320000, bitRate))
+            audioBitRate = max(32_000, min(320_000, bitRate))
             print("🔧 AppConfiguration: Audio bit rate overridden to \(audioBitRate)")
         }
 
@@ -589,7 +589,7 @@ public final class AppConfiguration: ObservableObject {
         print("   Max Network Retries: \(maxNetworkRetries)")
         print("   Live Activity Updates: \(liveActivityUpdateInterval)s")
         print("   Memory Cache Size: \(memoryCacheMaxSize)")
-        print("   Cache TTL: \(Int(analysisCacheTTL / 3600))h")
+        print("   Cache TTL: \(Int(analysisCacheTTL / 3_600))h")
         print("   Disk Cache: \(diskCacheEnabled)")
     }
 
@@ -618,7 +618,7 @@ public final class AppConfiguration: ObservableObject {
 
     /// Validate if transcript length is within acceptable bounds
     public func isValidTranscriptLength(_ length: Int) -> Bool {
-        return length >= minimumTranscriptLength && length <= maximumTranscriptLength
+        length >= minimumTranscriptLength && length <= maximumTranscriptLength
     }
 
     /// Get formatted file size limit for display
@@ -631,8 +631,8 @@ public final class AppConfiguration: ObservableObject {
 
     /// Get formatted recording duration limit for display
     public var formattedMaxDuration: String {
-        let hours = Int(maxRecordingDuration) / 3600
-        let minutes = Int(maxRecordingDuration) % 3600 / 60
+        let hours = Int(maxRecordingDuration) / 3_600
+        let minutes = Int(maxRecordingDuration) % 3_600 / 60
 
         if hours > 0 {
             return "\(hours)h \(minutes)m"
@@ -643,12 +643,12 @@ public final class AppConfiguration: ObservableObject {
 
     /// Get build-specific configuration suffix
     public var buildConfigurationSuffix: String {
-        return buildConfig.configurationSuffix
+        buildConfig.configurationSuffix
     }
 
     /// Get current build information for debugging
     public var buildInformation: String {
-        return """
+        """
         Build Information:
         - Type: \(buildConfig.buildType.displayName)
         - Distribution: \(buildConfig.distributionType.displayName)
@@ -702,7 +702,7 @@ public final class AppConfiguration: ObservableObject {
             warnings.append("Very short maximum recording duration configured")
         }
 
-        if maxRecordingFileSize < 10 * 1024 * 1024 { // Less than 10MB
+        if maxRecordingFileSize < 10 * 1_024 * 1_024 { // Less than 10MB
             warnings.append("Very small maximum file size configured")
         }
 
@@ -734,9 +734,9 @@ public enum AudioContentType: String, CaseIterable, Sendable {
     public var recommendedSampleRate: Double {
         switch self {
         case .voice:
-            return 22050.0
+            return 22_050.0
         case .music, .mixed:
-            return 44100.0
+            return 44_100.0
         }
     }
 
@@ -744,11 +744,11 @@ public enum AudioContentType: String, CaseIterable, Sendable {
     public var recommendedBitRate: Int {
         switch self {
         case .voice:
-            return 64000
+            return 64_000
         case .music:
-            return 128000
+            return 128_000
         case .mixed:
-            return 96000
+            return 96_000
         }
     }
 }

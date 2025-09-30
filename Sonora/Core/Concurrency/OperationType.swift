@@ -43,7 +43,7 @@ public enum OperationCategory: String, CaseIterable, Sendable {
     case analysis = "analysis"
 
     /// Operations that cannot run simultaneously with this category
-    public var conflictsWith: Set<OperationCategory> {
+    public var conflictsWith: Set<Self> {
         switch self {
         case .recording:
             // Recording conflicts with transcription on same memo
@@ -67,12 +67,12 @@ public enum OperationPriority: Int, Comparable, CaseIterable, Sendable {
     case medium = 1     // Transcription operations
     case high = 2       // Recording operations (user-interactive)
 
-    public static func < (lhs: OperationPriority, rhs: OperationPriority) -> Bool {
-        return lhs.rawValue < rhs.rawValue
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.rawValue < rhs.rawValue
     }
 
     /// Get priority for operation type
-    public static func priority(for operationType: OperationType) -> OperationPriority {
+    public static func priority(for operationType: OperationType) -> Self {
         switch operationType.category {
         case .recording:
             return .high        // Recording is user-interactive, highest priority
@@ -112,11 +112,11 @@ public enum OperationStatus: String, CaseIterable, Sendable {
 
     /// Whether this status indicates the operation finished (regardless of success)
     public var isFinished: Bool {
-        return !isInProgress
+        !isInProgress
     }
 
     public var displayName: String {
-        return rawValue.capitalized
+        rawValue.capitalized
     }
 }
 
@@ -154,11 +154,11 @@ public struct Operation: Hashable, CustomStringConvertible, Sendable {
 
     /// Total time since creation
     public var totalDuration: TimeInterval {
-        return Date().timeIntervalSince(createdAt)
+        Date().timeIntervalSince(createdAt)
     }
 
     public var description: String {
-        return "Operation(id: \(id), type: \(type), status: \(status.displayName), priority: \(priority.displayName))"
+        "Operation(id: \(id), type: \(type), status: \(status.displayName), priority: \(priority.displayName))"
     }
 
     // MARK: - Hashable Implementation
@@ -166,8 +166,8 @@ public struct Operation: Hashable, CustomStringConvertible, Sendable {
         hasher.combine(id)
     }
 
-    public static func == (lhs: Operation, rhs: Operation) -> Bool {
-        return lhs.id == rhs.id
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
@@ -188,7 +188,7 @@ public struct OperationConflict: Sendable {
     public static func detectConflict(
         existing: Operation,
         proposed: OperationType
-    ) -> OperationConflict? {
+    ) -> Self? {
         // Only check conflicts on the same memo
         guard existing.type.memoId == proposed.memoId else {
             return nil
@@ -220,7 +220,7 @@ public struct OperationConflict: Sendable {
             strategy = .queue
         }
 
-        return OperationConflict(
+        return Self(
             conflictingOperation: existing,
             requestedOperation: proposed,
             resolutionStrategy: strategy
@@ -244,7 +244,7 @@ public struct OperationMetrics: Sendable {
     }
 
     public var description: String {
-        return """
+        """
         OperationMetrics:
         - Total: \(totalOperations)
         - Active: \(activeOperations)

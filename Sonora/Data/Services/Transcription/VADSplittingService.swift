@@ -1,6 +1,6 @@
-import Foundation
-@preconcurrency import AVFoundation
 import Accelerate
+@preconcurrency import AVFoundation
+import Foundation
 
 // MARK: - Voice Activity Types
 
@@ -24,7 +24,7 @@ struct VADConfig: Sendable {
         silenceThreshold: Float = -45.0,
         minSpeechDuration: TimeInterval = 0.5,
         minSilenceGap: TimeInterval = 0.3,
-        windowSize: Int = 1024
+        windowSize: Int = 1_024
     ) {
         self.silenceThreshold = silenceThreshold
         self.minSpeechDuration = minSpeechDuration
@@ -98,7 +98,7 @@ final class DefaultVADSplittingService: VADSplittingService, @unchecked Sendable
         }
 
         // Source read buffer and output (window-sized) buffer
-        let srcReadCapacity: AVAudioFrameCount = 4096
+        let srcReadCapacity: AVAudioFrameCount = 4_096
         let srcBuffer = AVAudioPCMBuffer(pcmFormat: srcFormat, frameCapacity: srcReadCapacity)!
 
         let windowFrames = AVAudioFrameCount(config.windowSize)
@@ -120,7 +120,7 @@ final class DefaultVADSplittingService: VADSplittingService, @unchecked Sendable
             }
 
             var convError: NSError?
-            let status = converter.convert(to: outBuffer, error: &convError, withInputFrom: { requestedPackets, outStatus in
+            let status = converter.convert(to: outBuffer, error: &convError) { requestedPackets, outStatus in
                 if finished.withLock({ $0 }) {
                     outStatus.pointee = .noDataNow
                     return nil
@@ -140,7 +140,7 @@ final class DefaultVADSplittingService: VADSplittingService, @unchecked Sendable
                 }
                 outStatus.pointee = .haveData
                 return srcBuffer
-            })
+            }
 
             if status == .error {
                 throw VADError.conversionFailed(convError?.localizedDescription ?? "unknown")

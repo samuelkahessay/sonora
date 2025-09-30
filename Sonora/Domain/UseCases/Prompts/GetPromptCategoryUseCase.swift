@@ -91,13 +91,13 @@ public final class GetPromptCategoryUseCase: GetPromptCategoryUseCaseProtocol, @
         let weekPart = dateProvider.weekPart(for: dateProvider.now).rawValue
         logger.info("Prompt used", category: .useCase, context: LogContext(additionalInfo: ["id": promptId, "dayPart": dayPart, "weekPart": weekPart]))
         // Category lookup for logging/event: resolve from catalog (best-effort)
-        let cat = catalog.allPrompts().first(where: { $0.id == promptId })?.category.rawValue ?? "unknown"
+        let cat = catalog.allPrompts().first { $0.id == promptId }?.category.rawValue ?? "unknown"
         eventBus.publish(.promptUsed(id: promptId, category: cat, dayPart: dayPart, weekPart: weekPart, action: "accept"))
     }
 
     // MARK: - Helpers
     private func stableHash(_ s: String) -> UInt64 {
-        var hash: UInt64 = 5381
+        var hash: UInt64 = 5_381
         for byte in s.utf8 { hash = ((hash << 5) &+ hash) &+ UInt64(byte) }
         return hash
     }

@@ -1,6 +1,6 @@
 // Moved into Features/Recording/ViewModels
-import Foundation
 import Combine
+import Foundation
 import SwiftUI
 
 /// ViewModel for handling audio recording functionality
@@ -608,7 +608,7 @@ extension RecordingViewModel {
 
     /// Get debug information about the current state
     var debugInfo: String {
-        return """
+        """
         RecordingViewModel State:
         - isRecording: \(isRecording)
         - recordingTime: \(formattedRecordingTime)

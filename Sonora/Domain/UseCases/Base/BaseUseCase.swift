@@ -21,7 +21,7 @@ open class BaseUseCase: @unchecked Sendable {
 
     /// Generate a new correlation ID for tracking operations
     internal func generateCorrelationId() -> String {
-        return correlationIdGenerator()
+        correlationIdGenerator()
     }
 
     /// Create standardized log context with correlation ID
@@ -29,7 +29,7 @@ open class BaseUseCase: @unchecked Sendable {
         correlationId: String,
         additionalInfo: [String: Any] = [:]
     ) -> LogContext {
-        return LogContext(correlationId: correlationId, additionalInfo: additionalInfo)
+        LogContext(correlationId: correlationId, additionalInfo: additionalInfo)
     }
 
     /// Standard input validation with logging

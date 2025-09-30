@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 /// Enhanced operation status system for comprehensive UI visibility
 /// Provides real-time updates, progress tracking, and user-friendly status information
@@ -47,7 +47,7 @@ public struct OperationProgress: Sendable {
 
     /// Progress as percentage string (e.g., "75%")
     public var percentageString: String {
-        return "\(Int(percentage * 100))%"
+        "\(Int(percentage * 100))%"
     }
 
     /// Estimated time remaining as human-readable string
@@ -56,10 +56,10 @@ public struct OperationProgress: Sendable {
 
         if eta < 60 {
             return "\(Int(eta))s remaining"
-        } else if eta < 3600 {
+        } else if eta < 3_600 {
             return "\(Int(eta / 60))m remaining"
         } else {
-            return "\(Int(eta / 3600))h remaining"
+            return "\(Int(eta / 3_600))h remaining"
         }
     }
 }
@@ -101,7 +101,7 @@ public enum DetailedOperationStatus: Sendable {
 
     /// Whether operation is still in progress
     public var isInProgress: Bool {
-        return basicStatus.isInProgress
+        basicStatus.isInProgress
     }
 
     /// Human-readable status description
@@ -421,7 +421,7 @@ public struct SystemOperationMetrics: Sendable {
     public let averageOperationDuration: TimeInterval?
 
     public var isSystemBusy: Bool {
-        return systemLoadPercentage > 0.8
+        systemLoadPercentage > 0.8
     }
 
     public var loadDescription: String {
@@ -438,11 +438,11 @@ public struct SystemOperationMetrics: Sendable {
     }
 
     public var availableSlots: Int {
-        return max(0, maxConcurrentOperations - activeOperations)
+        max(0, maxConcurrentOperations - activeOperations)
     }
 
     public var description: String {
-        return """
+        """
         System Metrics:
         - Total Operations: \(totalOperations)
         - Active Operations: \(activeOperations)

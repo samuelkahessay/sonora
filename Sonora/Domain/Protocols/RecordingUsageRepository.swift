@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 /// Repository for tracking per-day recording usage (in seconds)
 /// Domain-facing protocol; implementations live in Data layer.

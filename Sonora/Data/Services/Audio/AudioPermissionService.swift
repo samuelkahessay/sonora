@@ -6,9 +6,9 @@
 //  Handles microphone permission requests and status monitoring
 //
 
-import Foundation
 import AVFoundation
 import Combine
+import Foundation
 
 // MicrophonePermissionStatus is defined in Core/Permissions/MicrophonePermissionStatus.swift
 
@@ -62,7 +62,7 @@ final class AudioPermissionService: AudioPermissionServiceProtocol, @unchecked S
 
     /// Gets the current permission status without updating state
     func getCurrentPermissionStatus() -> MicrophonePermissionStatus {
-        return MicrophonePermissionStatus.current()
+        MicrophonePermissionStatus.current()
     }
 
     /// Requests permission if needed, returns current status
@@ -80,7 +80,7 @@ final class AudioPermissionService: AudioPermissionServiceProtocol, @unchecked S
 
     /// Checks if permission is available for recording
     func canRecord() -> Bool {
-        return getCurrentPermissionStatus().allowsRecording
+        getCurrentPermissionStatus().allowsRecording
     }
 
     // MARK: - Private Methods
