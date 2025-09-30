@@ -20,6 +20,17 @@ struct DefaultAdaptiveThresholdPolicy: AdaptiveThresholdPolicy, Sendable {
         // Calendar phrasing indicates intent; allow a bit more leniency for reminders
         if context.hasCalendarPhrases { reminder -= 0.10 }
 
+        // Relative date cues typically imply actionable follow-ups with time pressure
+        if context.hasRelativeDatePhrases {
+            reminder -= 0.05
+            event -= 0.03
+        }
+
+        // Weekend references often imply social or time-bound gatherings
+        if context.hasWeekendReferences {
+            event -= 0.05
+        }
+
         // High imperative density often correlates with todo-like content; favor reminders
         if context.imperativeVerbDensity > 0.02 { reminder -= 0.08 }
 

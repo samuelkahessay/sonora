@@ -15,4 +15,11 @@ final class DetectionContextBuilderTests: XCTestCase {
         let ctx = DetectionContextBuilder.build(memoId: UUID(), transcript: text)
         XCTAssertGreaterThan(ctx.imperativeVerbDensity, 0.0)
     }
+
+    func testDetectsRelativeDatePhrases() {
+        let text = "Let's regroup next weekend and wrap it up in a few days."
+        let ctx = DetectionContextBuilder.build(memoId: UUID(), transcript: text)
+        XCTAssertTrue(ctx.hasRelativeDatePhrases)
+        XCTAssertTrue(ctx.hasWeekendReferences)
+    }
 }

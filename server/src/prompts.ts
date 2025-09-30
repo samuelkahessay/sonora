@@ -53,14 +53,20 @@ export function buildPrompt(mode: string, transcript: string): { system: string;
       break;
     case 'events':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
-        `Extract concrete calendar events explicitly implied by the transcript.\n` +
-        `Return only meetings, appointments, or time-bound sessions where the user must be available at a specific moment.\n` +
-        `Include when there is an explicit time/day AND it sounds like a meeting/call/review/sync or otherwise involves another person or location.\n` +
-        `If something is just a personal task/errand ("pick up milk", "text Ethan"), skip it entirely so it can appear as a reminder instead.\n` +
-        `Do not create both an event and a reminder for the same sentence. Errands belong in reminders, meetings belong here.\n` +
-        `Be liberal in recognizing time expressions like "next Tuesday at 2pm", "Friday EOD", "tomorrow morning", or explicit dates. If end time is missing, infer a 30–60 minute window or leave endDate null.\n` +
-        `If only a day is given (e.g., "next Tuesday"), set startDate to the day's start in local time and leave endDate null.\n` +
-        `Always include the exact source phrase(s) in sourceText. Generate stable UUIDs for id.\n` +
+        `Task: return only calendar-worthy commitments (meetings, appointments, interviews, travel) that require the user to be somewhere or with someone at a specific time.\n` +
+        `Decision guide:\n` +
+        `1) Does the utterance include a clear gathering with another person, place, or agenda? If not, ignore it here.\n` +
+        `2) Is there an explicit or strongly implied time window (absolute date, weekday + time, parts of day like "tomorrow morning", or relative slot like "next week on Wednesday")? If timing is missing, ignore.\n` +
+        `3) When unsure whether it is an event or a solo task, prefer skipping it here so a reminder can cover it. Never emit both an event and a reminder for the same language.\n` +
+        `How to populate fields:\n` +
+        `- startDate: ISO8601 in UTC using the transcript's intended local day/time. For vague ranges like "next week", choose the most specific day mentioned; if only a weekday is given, use that day's start at 09:00 local; if only a part of day ("tomorrow afternoon"), set 15:00 local unless the phrase suggests otherwise.\n` +
+        `- endDate: preserve supplied duration; otherwise leave null unless a range like "2-3pm" is stated.\n` +
+        `- participants: include people or teams named; omit duplicates.\n` +
+        `Confidence rubric (set confidence field accordingly):\n` +
+        `- 0.85–1.0 High when intent AND timing are explicit.\n` +
+        `- 0.60–0.84 Medium when one element is inferred (e.g., time from "tomorrow morning").\n` +
+        `- 0.40–0.59 Low when the event is likely but phrasing is hedged or optional; below 0.40 omit entirely.\n` +
+        `Always include sourceText with the exact span used to justify the event. Generate stable UUIDs for id.\n` +
         `Return JSON: {"events":[{` +
         `"id":"uuid",` +
         `"title":"Meeting with ...",` +
@@ -74,11 +80,19 @@ export function buildPrompt(mode: string, transcript: string): { system: string;
       break;
     case 'reminders':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
-        `Extract concrete to-dos and reminders (e.g., "text Ethan to confirm", "push landing page by Friday EOD").\n` +
-        `Only include personal follow-ups, errands, prep work, or self-directed tasks. If something sounds like a meeting, call, or scheduled session with others, skip it so it can live in the events array instead.\n` +
-        `Use natural language date/time cues (today/tomorrow/weekend/evening/EOD). Infer dueDate if clear; otherwise leave null.\n` +
-        `Never duplicate an item that is already a calendar event.\n` +
-        `Always include the exact source phrase(s) in sourceText. Generate stable UUIDs for id.\n` +
+        `Task: extract only personal follow-ups, prep, or errands the speaker must complete themselves. Meetings or gatherings belong in events, not reminders.\n` +
+        `Decision guide:\n` +
+        `1) Look for action verbs aimed at the speaker (email, call, send, finish, book, pick up, confirm).\n` +
+        `2) If another person or location is involved BUT it is a scheduled meeting, skip here (it should be an event).\n` +
+        `3) Prefer skipping when phrasing is hypothetical or a question ("should I...").\n` +
+        `How to populate fields:\n` +
+        `- dueDate: convert relative phrases using ISO8601 UTC. Examples: today → today's date at 17:00 local, tomorrow morning → tomorrow at 09:00, this weekend → upcoming Saturday 10:00, next week → upcoming Monday 09:00. If no timing, leave null.\n` +
+        `- priority: High when urgency words appear ("ASAP", "today", "urgent"), Low when optional or exploratory, otherwise Medium.\n` +
+        `Confidence rubric:\n` +
+        `- 0.85–1.0 High when verb + responsible party + timing are explicit.\n` +
+        `- 0.60–0.84 Medium when timing is inferred or optional wording like "probably" appears.\n` +
+        `- 0.40–0.59 Low when intent is tentative; below 0.40 omit the reminder.\n` +
+        `Always include exact sourceText and ensure no reminder duplicates an emitted event. Generate stable UUIDs for id.\n` +
         `Return JSON: {"reminders":[{` +
         `"id":"uuid",` +
         `"title":"...",` +

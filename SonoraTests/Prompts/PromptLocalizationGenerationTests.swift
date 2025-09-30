@@ -3,47 +3,54 @@ import XCTest
 
 final class PromptLocalizationGenerationTests: XCTestCase {
     func testCatalogLocalizationStringsAreGenerated() throws {
-        let definitions = PromptCatalogStatic.promptDefinitions()
-        XCTAssertFalse(definitions.isEmpty, "Prompt catalog should not be empty")
-        let expectedKeys = Set(definitions.map { $0.prompt.localizationKey })
+        struct FilePrompt: Decodable { let id: String; let text: String }
 
+        // Locate the NDJSON in the repo for expected values
         let repoRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent() // Prompts
             .deletingLastPathComponent() // SonoraTests
             .deletingLastPathComponent()
-        let stringsURL = repoRoot
-            .appendingPathComponent("Sonora")
-            .appendingPathComponent("Localizable.strings")
 
-        let content = try String(contentsOf: stringsURL, encoding: .utf8)
-        guard
-            let beginRange = content.range(of: "/* === AUTO-GENERATED PROMPTS BEGIN === */"),
-            let endRange = content.range(of: "/* === AUTO-GENERATED PROMPTS END === */"),
-            beginRange.upperBound < endRange.lowerBound
-        else {
-            XCTFail("Localization file missing auto-generated prompt markers: \(stringsURL.path)")
-            return
+        let promptsURL = repoRoot
+            .appendingPathComponent("Sonora")
+            .appendingPathComponent("Resources")
+            .appendingPathComponent("prompts.ndjson")
+
+        let fileContents = try String(contentsOf: promptsURL, encoding: .utf8)
+        let decoder = JSONDecoder()
+
+        // Build expected (key, text) pairs by mirroring PromptFileLoader's mapping
+        let expected: [(key: String, text: String)] = fileContents
+            .split(whereSeparator: { $0.isNewline })
+            .compactMap { rawLine -> (String, String)? in
+                let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !line.isEmpty, !line.hasPrefix("#"), !line.hasPrefix("//") else { return nil }
+                guard let data = line.data(using: .utf8),
+                      let prompt = try? decoder.decode(FilePrompt.self, from: data) else { return nil }
+                let parts = prompt.id.split(separator: "_")
+                guard parts.count >= 2 else { return nil }
+                let category = parts.first!.lowercased()
+                let slug = parts.dropFirst().joined(separator: "-").lowercased()
+                return ("prompt.\(category).\(slug)", prompt.text)
+            }
+
+        XCTAssertFalse(expected.isEmpty, "Prompt catalog should not be empty")
+
+        // Verify provider resolves each key to the file-backed text
+        let provider = DefaultLocalizationProvider()
+        var mismatches: [(String, String, String)] = [] // (key, expected, actual)
+        for (key, expectedText) in expected {
+            let actual = provider.localizedString(key, locale: Locale(identifier: "en_US"))
+            if actual != expectedText {
+                mismatches.append((key, expectedText, actual))
+            }
         }
 
-        let generatedSection = content[beginRange.upperBound..<endRange.lowerBound]
-        let foundKeys = Set(generatedSection.split(separator: "\n").compactMap { line -> String? in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard trimmed.hasPrefix("\"") else { return nil }
-            let parts = trimmed.split(separator: "\"", omittingEmptySubsequences: true)
-            return parts.first
-        })
-
-        if expectedKeys != foundKeys {
-            let missing = expectedKeys.subtracting(foundKeys)
-            let extra = foundKeys.subtracting(expectedKeys)
-            var message = "Prompt localization block is out of date. Run ./ci_scripts/generate_prompt_strings.sh\n"
-            if !missing.isEmpty {
-                message += "Missing keys: \(missing.sorted()).\n"
-            }
-            if !extra.isEmpty {
-                message += "Unexpected keys: \(extra.sorted()).\n"
-            }
-            XCTFail(message)
+        if !mismatches.isEmpty {
+            let preview = mismatches.prefix(10)
+                .map { "\($0.0) => expected=\($0.1) actual=\($0.2)" }
+                .joined(separator: "\n")
+            XCTFail("\(mismatches.count) prompt localization mismatches found.\n\(preview)")
         }
     }
 }

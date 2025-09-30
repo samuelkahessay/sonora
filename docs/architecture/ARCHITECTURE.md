@@ -178,7 +178,7 @@ Layers and types:
 - Data
   - SwiftData model: `PromptUsageRecord` (unique `promptId`, `lastShownAt`, `lastUsedAt`, `useCount`, `isFavorite`)
   - Repository: `PromptUsageRepositoryImpl` (SwiftData, @MainActor)
-  - Catalog: `PromptCatalogStatic` (48 prompts; static, code‑based catalog)
+  - Catalog: File‑backed via `PromptFileCatalog` loading `Sonora/Resources/prompts.ndjson`
 - Core
   - Providers: `DateProvider` (locale/timezone aware day/week parts), `LocalizationProvider`
   - DI: `DIContainer` registers providers, catalog, repository, and factories for both use cases
@@ -195,7 +195,7 @@ Behavior:
   to guarantee variety (min 10 candidates) with a short 3‑minute cooldown for recently
   shown prompts and a rotation token to avoid in‑session repeats. `AppEvent.promptShown`
   uses `source = "inspire"` in this mode; default dynamic selection uses `source = "dynamic"`.
-- Localization keys: `daypart.*`, `weekpart.*`, and `prompt.<category>.<slug>` in `Localizable.strings`; prompt entries are generated via `./ci_scripts/generate_prompt_strings.sh` from `PromptCatalogStatic`
+- Localization keys: `daypart.*`, `weekpart.*`, and `prompt.<category>.<slug>` resolved by `DefaultLocalizationProvider` from `prompts.ndjson` (NDJSON is the single source of truth; no generator script required)
 - Feature flag: `FeatureFlags.usePrompts`
 
 Events & logging:
@@ -214,7 +214,7 @@ Testing:
 
 Files:
 - Domain: `Sonora/Domain/Models/RecordingPrompt.swift`, `InterpolatedPrompt.swift`, `Domain/Protocols/*`, `Domain/UseCases/Prompts/*`, `Domain/Services/PromptInterpolation.swift`
-- Data: `Sonora/Data/Models/SwiftData/PromptUsageRecord.swift`, `Data/Repositories/Prompts/PromptUsageRepositoryImpl.swift`, `Data/Services/Prompts/PromptCatalogStatic.swift`
+- Data: `Sonora/Data/Models/SwiftData/PromptUsageRecord.swift`, `Data/Repositories/Prompts/PromptUsageRepositoryImpl.swift`, `Data/Services/Prompts/PromptFileCatalog.swift`, `Sonora/Resources/prompts.ndjson`
 - Core: `Core/Providers/DateProvider.swift`, `Core/Providers/LocalizationProvider.swift`, `Core/DI/DIContainer.swift` (prompt wiring)
 - Presentation: `Features/Recording/ViewModels/PromptViewModel.swift`, `Features/Recording/UI/Components/{DynamicPromptCard, FallbackPromptCard, InspireMeSheet}.swift`, `Features/Recording/UI/RecordingView.swift`
 

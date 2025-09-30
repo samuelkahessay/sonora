@@ -1,3 +1,4 @@
+#if canImport(SwiftData)
 import XCTest
 import SwiftData
 @testable import Sonora
@@ -52,3 +53,4 @@ enum ModelConfigurationInit {
         return ModelConfiguration(isStoredInMemoryOnly: true)
     }
 }
+#endif

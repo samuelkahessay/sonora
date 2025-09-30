@@ -8,6 +8,8 @@ struct DetectionContext: Sendable {
     let sentenceCount: Int
     let hasDatesOrTimes: Bool
     let hasCalendarPhrases: Bool
+    let hasRelativeDatePhrases: Bool
+    let hasWeekendReferences: Bool
     let imperativeVerbDensity: Double // 0.0 – 1.0 (approximate)
     let localeIdentifier: String
     let avgSentenceLength: Double
@@ -28,6 +30,8 @@ enum DetectionContextBuilder {
         // Very lightweight regex signals (pure Swift, no frameworks)
         let hasDatesTimes = Self.containsDateOrTime(trimmed)
         let hasCalendar = Self.containsCalendarPhrase(trimmed)
+        let hasRelative = Self.containsRelativeDatePhrase(trimmed)
+        let hasWeekend = Self.containsWeekendReference(trimmed)
         let impDensity = Self.estimateImperativeDensity(trimmed)
 
         return DetectionContext(
@@ -36,6 +40,8 @@ enum DetectionContextBuilder {
             sentenceCount: sentenceCount,
             hasDatesOrTimes: hasDatesTimes,
             hasCalendarPhrases: hasCalendar,
+            hasRelativeDatePhrases: hasRelative,
+            hasWeekendReferences: hasWeekend,
             imperativeVerbDensity: impDensity,
             localeIdentifier: locale.identifier,
             avgSentenceLength: avgSentenceLen
@@ -71,6 +77,32 @@ enum DetectionContextBuilder {
             "circle back", "circle-back"
         ]
         return phrases.contains(where: { lower.contains($0) })
+    }
+
+    private static func containsRelativeDatePhrase(_ text: String) -> Bool {
+        let lower = text.lowercased()
+        let phrases = [
+            "next week", "this weekend", "next weekend", "later this week",
+            "earlier this week", "over the weekend", "coming weekend",
+            "before the weekend", "by the weekend", "in a few days",
+            "in a couple days", "in a couple of days", "in a few weeks"
+        ]
+        if phrases.contains(where: { lower.contains($0) }) { return true }
+
+        let dayPattern = #"in\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+days"#
+        if lower.range(of: dayPattern, options: .regularExpression) != nil { return true }
+
+        let weekPattern = #"in\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+weeks"#
+        if lower.range(of: weekPattern, options: .regularExpression) != nil { return true }
+
+        return false
+    }
+
+    private static func containsWeekendReference(_ text: String) -> Bool {
+        let lower = text.lowercased()
+        if lower.contains("weekend") { return true }
+        if lower.contains("saturday") || lower.contains("sunday") { return true }
+        return false
     }
 
     private static func estimateImperativeDensity(_ text: String) -> Double {

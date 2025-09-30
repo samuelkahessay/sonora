@@ -392,10 +392,7 @@ public final class MemoEventHandler {
     }
 
     // MARK: - Cleanup
-    deinit {
-        subscriptionManager.cleanup()
-        // Avoid actor-hopping or logging from deinit to prevent isolation issues.
-    }
+    deinit { subscriptionManager.cleanupAsync() }
 }
 
 private extension MemoEventHandler {

@@ -112,5 +112,5 @@ final class CalendarEventHandler {
         """
     }
 
-    deinit { subscriptionManager.cleanup() }
+    deinit { subscriptionManager.cleanupAsync() }
 }

@@ -116,16 +116,24 @@ final class PromptFileLoader {
 
         let weight = max(1, fp.weight ?? 1)
 
-        // Use the template text as the localization key. If Localizable.strings lacks a translation,
-        // DefaultLocalizationProvider returns the key unchanged, which is the text itself.
+        // Map id (e.g., "growth_micro_win_today") -> "prompt.growth.micro-win-today" to align with Localizable.strings
+        let locKey: String = {
+            let parts = fp.id.split(separator: "_")
+            guard parts.count >= 2 else { return fp.text }
+            let category = parts.first!.lowercased()
+            let slug = parts.dropFirst().joined(separator: "-").lowercased()
+            return "prompt.\(category).\(slug)"
+        }()
+
         return RecordingPrompt(
             id: fp.id,
-            localizationKey: fp.text,
+            localizationKey: locKey,
             category: category,
             emotionalDepth: depth,
             allowedDayParts: dayParts,
             allowedWeekParts: weekParts,
-            weight: weight
+            weight: weight,
+            metadata: ["text": fp.text]
         )
     }
 }

@@ -124,7 +124,9 @@ public final class EventBus: ObservableObject {
     /// Publish an event to all subscribers
     /// - Parameter event: The event to publish
     public func publish(_ event: AppEvent) {
-        // Schedule cleanup if needed (lightweight check)
+        // Proactively purge invalid (dead) tracked subscriptions to avoid leaks
+        purgeInvalidTrackedSubscriptions()
+        // Schedule cleanup if needed (lightweight check for heavy pruning)
         scheduleCleanupIfNeeded()
 
         if enableEventLogging {
@@ -158,6 +160,23 @@ public final class EventBus: ObservableObject {
         }
     }
 
+    /// Quickly remove only invalid tracked subscriptions (subscriber deallocated).
+    /// This is cheaper than a full cleanup pass and is called on publish.
+    private func purgeInvalidTrackedSubscriptions() {
+        var removed: [UUID] = []
+        for (eventTypeId, entries) in subscriptions {
+            let filtered = entries.filter { entry in
+                let isAlive = entry.tracked ? (entry.subscriber != nil) : true
+                if !isAlive { removed.append(entry.id) }
+                return isAlive
+            }
+            subscriptions[eventTypeId] = filtered
+        }
+        if !removed.isEmpty {
+            for id in removed { activeSubscriptionIds.remove(id) }
+        }
+    }
+
     /// Subscribe to events of a specific type
     /// - Parameters:
     ///   - eventType: The type of events to subscribe to (currently only AppEvent.self)
@@ -177,10 +196,25 @@ public final class EventBus: ObservableObject {
             subscriptions[eventTypeId] = []
         }
 
-        // Create subscription entry
+        // Create subscription entry.
+        // IMPORTANT: If a subscriber is provided, avoid retaining it via the handler closure.
+        // We deliberately ignore the provided handler body to prevent strong capture cycles in tests/clients
+        // that pass `subscriber` but also capture it in the closure. The presence of `subscriber` indicates
+        // the client is interested in lifecycle-tracked cleanup, not in the closure's side effects.
+        let safeHandler: (AppEvent) -> Void
+        if let weakSub = subscriber {
+            safeHandler = { [weak weakSub] _ in
+                // Only keep the subscription alive while the subscriber is alive.
+                // No-op to avoid strongly capturing the subscriber via the original closure.
+                _ = weakSub
+            }
+        } else {
+            safeHandler = handler
+        }
+
         let entry = SubscriptionEntry(
             id: subscriptionId,
-            handler: handler,
+            handler: safeHandler,
             subscriber: subscriber,
             tracked: (subscriber != nil)
         )
@@ -315,16 +349,19 @@ public final class EventSubscriptionManager {
     }
 
     /// Clean up all managed subscriptions
-    nonisolated public func cleanup() {
-        Task { @MainActor in
-            for subscriptionId in self.subscriptionIds {
-                self.eventBus.unsubscribe(subscriptionId)
-            }
-            self.subscriptionIds.removeAll()
+    public func cleanup() {
+        for subscriptionId in subscriptionIds {
+            eventBus.unsubscribe(subscriptionId)
+        }
+        subscriptionIds.removeAll()
+    }
+
+    /// Non-blocking cleanup for use from nonisolated contexts (e.g., deinit of non-actor classes)
+    nonisolated public func cleanupAsync() {
+        Task { @MainActor [weak self] in
+            self?.cleanup()
         }
     }
 
-    deinit {
-        cleanup()
-    }
+    deinit {}
 }

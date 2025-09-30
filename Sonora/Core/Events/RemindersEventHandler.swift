@@ -112,5 +112,5 @@ final class RemindersEventHandler {
         """
     }
 
-    deinit { subscriptionManager.cleanup() }
+    deinit { subscriptionManager.cleanupAsync() }
 }

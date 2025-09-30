@@ -97,4 +97,70 @@ final class TemporalRefinerTests: XCTestCase {
             XCTFail("Expected event end date")
         }
     }
+
+    func testRefinesReminderForNextWeekDefaultsToMorning() {
+        let transcript = "Remember to follow up with the vendor next week."
+        let calendar = Calendar.current
+
+        var comps = DateComponents()
+        comps.year = 2025
+        comps.month = 9
+        comps.day = 29 // Monday
+        comps.hour = 10
+        let now = calendar.date(from: comps) ?? Date()
+
+        let reminder = RemindersData.DetectedReminder(
+            title: "Follow up with vendor",
+            dueDate: nil,
+            priority: .medium,
+            confidence: 0.7,
+            sourceText: transcript,
+            memoId: UUID()
+        )
+
+        let refined = TemporalRefiner.refine(remindersData: RemindersData(reminders: [reminder]), transcript: transcript, now: now)
+        guard let due = refined?.reminders.first?.dueDate else {
+            XCTFail("Expected generated due date")
+            return
+        }
+
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .weekday], from: due)
+        XCTAssertEqual(components.weekday, 2) // Monday
+        XCTAssertEqual(components.hour, 9)
+        XCTAssertEqual(components.minute, 0)
+    }
+
+    func testRefinesEventForThisWeekendDefaultsToLateMorning() {
+        let transcript = "Let's catch up this weekend."
+        let calendar = Calendar.current
+
+        var comps = DateComponents()
+        comps.year = 2025
+        comps.month = 9
+        comps.day = 24 // Wednesday
+        comps.hour = 11
+        let now = calendar.date(from: comps) ?? Date()
+
+        let event = EventsData.DetectedEvent(
+            title: "Weekend catch up",
+            startDate: nil,
+            endDate: nil,
+            location: nil,
+            participants: ["Alex"],
+            confidence: 0.65,
+            sourceText: transcript,
+            memoId: UUID()
+        )
+
+        let refined = TemporalRefiner.refine(eventsData: EventsData(events: [event]), transcript: transcript, now: now)
+        guard let scheduled = refined?.events.first?.startDate else {
+            XCTFail("Expected start date")
+            return
+        }
+
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .weekday], from: scheduled)
+        XCTAssertEqual(components.weekday, 7) // Saturday
+        XCTAssertEqual(components.hour, 10)
+        XCTAssertEqual(components.minute, 0)
+    }
 }

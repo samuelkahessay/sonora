@@ -126,7 +126,5 @@ final class LiveActivityEventHandler {
         }
     }
 
-    deinit {
-        subscriptionManager.cleanup()
-    }
+    deinit { subscriptionManager.cleanupAsync() }
 }

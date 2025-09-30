@@ -56,6 +56,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
 
     // MARK: - Configuration
     // Legacy static thresholds remain as a safety floor; adaptive policy refines per-context
+    private let nearMissMargin: Float = 0.10
     private var legacyEventThreshold: Float { Float(UserDefaults.standard.object(forKey: "eventConfidenceThreshold") as? Double ?? 0.45) }
     private var legacyReminderThreshold: Float { Float(UserDefaults.standard.object(forKey: "reminderConfidenceThreshold") as? Double ?? 0.45) }
 
@@ -239,8 +240,35 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         let eventsEnvelope = try await eventsResult
         let remindersEnvelope = try await remindersResult
         print("🗓️ [Detect] raw counts events=\(eventsEnvelope.data.events.count) reminders=\(remindersEnvelope.data.reminders.count)")
-        var filteredEvents = filterEventsByConfidence(eventsEnvelope.data, threshold: eventThreshold)
-        var filteredReminders = filterRemindersByConfidence(remindersEnvelope.data, threshold: reminderThreshold)
+        let eventFilterOutcome = filterEventsByConfidence(
+            eventsEnvelope.data,
+            threshold: eventThreshold,
+            nearMissMargin: nearMissMargin
+        )
+        var filteredEvents = eventFilterOutcome.accepted
+        logNearMisses(
+            kind: "events",
+            nearMisses: eventFilterOutcome.nearMisses,
+            threshold: eventThreshold,
+            memoId: memoId,
+            correlationId: context.correlationId,
+            transcript: transcript
+        )
+
+        let reminderFilterOutcome = filterRemindersByConfidence(
+            remindersEnvelope.data,
+            threshold: reminderThreshold,
+            nearMissMargin: nearMissMargin
+        )
+        var filteredReminders = reminderFilterOutcome.accepted
+        logNearMisses(
+            kind: "reminders",
+            nearMisses: reminderFilterOutcome.nearMisses,
+            threshold: reminderThreshold,
+            memoId: memoId,
+            correlationId: context.correlationId,
+            transcript: transcript
+        )
 
         // Smart fallback: if nothing passes thresholds but raw contains items,
         // include the strongest candidates at a relaxed bound to aid recall.
@@ -278,34 +306,152 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
 
     // MARK: - Result Processing
 
-    private func filterEventsByConfidence(_ eventsData: EventsData?, threshold: Float) -> EventsData? {
-        guard let eventsData = eventsData else { return nil }
-        let filteredEvents = eventsData.events.filter { event in
-            event.confidence >= threshold
+    private func filterEventsByConfidence(
+        _ eventsData: EventsData?,
+        threshold: Float,
+        nearMissMargin: Float
+    ) -> (accepted: EventsData?, nearMisses: [NearMissInfo]) {
+        guard let eventsData = eventsData else { return (nil, []) }
+
+        var accepted: [EventsData.DetectedEvent] = []
+        var nearMisses: [NearMissInfo] = []
+        let lowerBound = max(0, threshold - nearMissMargin)
+
+        for event in eventsData.events {
+            if event.confidence >= threshold {
+                accepted.append(event)
+            } else if event.confidence >= lowerBound {
+                nearMisses.append(
+                    NearMissInfo(
+                        id: event.id,
+                        title: event.title,
+                        confidence: event.confidence,
+                        sourceText: event.sourceText,
+                        startDate: event.startDate,
+                        endDate: event.endDate,
+                        dueDate: nil,
+                        memoId: event.memoId
+                    )
+                )
+            }
         }
 
         logger.debug(
-            "Filtered events by confidence: \(eventsData.events.count) → \(filteredEvents.count) (threshold: \(threshold))",
+            "Filtered events by confidence: \(eventsData.events.count) → \(accepted.count) (threshold: \(threshold))",
             category: .analysis,
             context: nil
         )
 
-        return filteredEvents.isEmpty ? nil : EventsData(events: filteredEvents)
+        let acceptedData = accepted.isEmpty ? nil : EventsData(events: accepted)
+        return (acceptedData, nearMisses)
     }
 
-    private func filterRemindersByConfidence(_ remindersData: RemindersData?, threshold: Float) -> RemindersData? {
-        guard let remindersData = remindersData else { return nil }
-        let filteredReminders = remindersData.reminders.filter { reminder in
-            reminder.confidence >= threshold
+    private func filterRemindersByConfidence(
+        _ remindersData: RemindersData?,
+        threshold: Float,
+        nearMissMargin: Float
+    ) -> (accepted: RemindersData?, nearMisses: [NearMissInfo]) {
+        guard let remindersData = remindersData else { return (nil, []) }
+
+        var accepted: [RemindersData.DetectedReminder] = []
+        var nearMisses: [NearMissInfo] = []
+        let lowerBound = max(0, threshold - nearMissMargin)
+
+        for reminder in remindersData.reminders {
+            if reminder.confidence >= threshold {
+                accepted.append(reminder)
+            } else if reminder.confidence >= lowerBound {
+                nearMisses.append(
+                    NearMissInfo(
+                        id: reminder.id,
+                        title: reminder.title,
+                        confidence: reminder.confidence,
+                        sourceText: reminder.sourceText,
+                        startDate: nil,
+                        endDate: nil,
+                        dueDate: reminder.dueDate,
+                        memoId: reminder.memoId
+                    )
+                )
+            }
         }
 
         logger.debug(
-            "Filtered reminders by confidence: \(remindersData.reminders.count) → \(filteredReminders.count) (threshold: \(threshold))",
+            "Filtered reminders by confidence: \(remindersData.reminders.count) → \(accepted.count) (threshold: \(threshold))",
             category: .analysis,
             context: nil
         )
 
-        return filteredReminders.isEmpty ? nil : RemindersData(reminders: filteredReminders)
+        let acceptedData = accepted.isEmpty ? nil : RemindersData(reminders: accepted)
+        return (acceptedData, nearMisses)
+    }
+
+    private func logNearMisses(
+        kind: String,
+        nearMisses: [NearMissInfo],
+        threshold: Float,
+        memoId: UUID,
+        correlationId: String?,
+        transcript: String
+    ) {
+        guard !nearMisses.isEmpty else { return }
+
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        isoFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+        let lowerBound = max(0, threshold - nearMissMargin)
+        let candidates: [[String: Any]] = nearMisses.map { info in
+            var payload: [String: Any] = [
+                "id": info.id,
+                "title": info.title,
+                "confidence": Double(info.confidence),
+                "delta": Double(max(0, threshold - info.confidence)),
+                "sourceText": info.sourceText.isEmpty ? String(transcript.prefix(160)) : info.sourceText
+            ]
+            if let start = info.startDate {
+                payload["startDate"] = isoFormatter.string(from: start)
+            }
+            if let end = info.endDate {
+                payload["endDate"] = isoFormatter.string(from: end)
+            }
+            if let due = info.dueDate {
+                payload["dueDate"] = isoFormatter.string(from: due)
+            }
+            if let memo = info.memoId {
+                payload["candidateMemoId"] = memo.uuidString
+            }
+            return payload
+        }
+
+        let info: [String: Any] = [
+            "memoId": memoId.uuidString,
+            "mode": kind,
+            "threshold": Double(threshold),
+            "nearMissLowerBound": Double(lowerBound),
+            "candidateCount": nearMisses.count,
+            "candidates": candidates
+        ]
+
+        logger.info(
+            "Detection.NearMiss",
+            category: .detection,
+            context: LogContext(
+                correlationId: correlationId,
+                additionalInfo: info
+            )
+        )
+    }
+
+    private struct NearMissInfo: Sendable {
+        let id: String
+        let title: String
+        let confidence: Float
+        let sourceText: String
+        let startDate: Date?
+        let endDate: Date?
+        let dueDate: Date?
+        let memoId: UUID?
     }
 
     private func createMetadata(

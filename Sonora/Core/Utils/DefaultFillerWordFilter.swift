@@ -15,7 +15,6 @@ final class DefaultFillerWordFilter: FillerWordFiltering {
         "i mean",
         "sort of",
         "kind of",
-        "actually",
         "basically",
         "literally",
         "anyway"
@@ -44,6 +43,10 @@ final class DefaultFillerWordFilter: FillerWordFiltering {
         normalized = normalized.replacingOccurrences(of: " \n", with: "\n", options: .regularExpression)
         normalized = normalized.replacingOccurrences(of: "\n ", with: "\n", options: .regularExpression)
         normalized = normalized.trimmingCharacters(in: .whitespaces)
+
+        // If removal would erase all semantic content (only punctuation/whitespace remains), preserve original
+        let lettersAndDigits = normalized.replacingOccurrences(of: "[^A-Za-z0-9]+", with: "", options: .regularExpression)
+        if lettersAndDigits.isEmpty { return text }
         return normalized
     }
 

@@ -2,6 +2,21 @@ import Foundation
 
 /// Utility to refine detected reminder times using temporal phrases in the source text.
 enum TemporalRefiner {
+    enum TimeResolution {
+        case explicitTime
+        case relativeNamedDay
+        case relativeDays
+        case weekend
+        case week
+        case partOfDay
+    }
+
+    private struct RelativeReference {
+        let anchorDate: Date
+        let defaultHour: Int?
+        let resolution: TimeResolution
+    }
+
     /// Refine reminder due dates when the transcript/sourceText contains explicit time phrases
     /// like "6 pm" that may have been lost upstream (defaulting to noon, etc.).
     /// - Parameters:
@@ -16,42 +31,34 @@ enum TemporalRefiner {
         var refined: [RemindersData.DetectedReminder] = []
         let calendar = Calendar.current
 
-        for r in remindersData.reminders {
-            let contextText = r.sourceText.isEmpty ? transcript : r.sourceText
-            var newDue = r.dueDate
+        for reminder in remindersData.reminders {
+            let contextText = reminder.sourceText.isEmpty ? transcript : reminder.sourceText
+            var newDue = reminder.dueDate
 
-            // Find the first temporal match in the context text
             if let match = firstTemporalMatch(in: contextText) {
                 let matchString = (contextText as NSString).substring(with: match.range)
                 let explicitTime = extractExplicitTime(from: matchString)
-                let matchedDate = match.date // May be noon if no time phrase
+                let matchedDate = match.date
+                let relative = resolveRelativeReference(in: matchString, now: now, calendar: calendar)
 
-                // If we have an explicit time in text, prefer its time-of-day
                 if let (h, m) = explicitTime {
                     if let due = newDue {
                         let comps = calendar.dateComponents([.hour, .minute], from: due)
-                        // Only override "default" times (noon or midnight) to avoid clobbering good upstream times
                         let isDefaultNoon = comps.hour == 12 && comps.minute == 0
                         let isDefaultMidnight = comps.hour == 0 && comps.minute == 0
                         if isDefaultNoon || isDefaultMidnight {
                             newDue = calendar.date(bySettingHour: h, minute: m, second: 0, of: due)
                         }
-                    } else if let offset = dayOffset(in: matchString) {
-                        let base = calendar.startOfDay(for: calendar.date(byAdding: .day, value: offset, to: now) ?? now)
-                        newDue = calendar.date(bySettingHour: h, minute: m, second: 0, of: base)
+                    } else if let relative = relative {
+                        let base = calendar.startOfDay(for: relative.anchorDate)
+                        newDue = calendar.date(bySettingHour: h, minute: m, second: 0, of: base) ?? base
+                    } else if let md = matchedDate {
+                        newDue = md
                     } else {
-                        // If upstream didn't provide a date but we have an explicit time, try to use detector's date
-                        // (if present), otherwise fall back to today at the detected time.
-                        if let md = matchedDate {
-                            newDue = md
-                        } else {
-                            let base = calendar.startOfDay(for: now)
-                            newDue = calendar.date(bySettingHour: h, minute: m, second: 0, of: base)
-                        }
+                        let base = calendar.startOfDay(for: now)
+                        newDue = calendar.date(bySettingHour: h, minute: m, second: 0, of: base) ?? base
                     }
                 } else if let due = newDue, let md = matchedDate {
-                    // No explicit time phrase, but detector has a date (may still be noon).
-                    // If upstream due is default noon, and detector's date has a non-noon time, adopt it.
                     let dueComps = calendar.dateComponents([.hour, .minute], from: due)
                     let mdComps = calendar.dateComponents([.hour, .minute], from: md)
                     let isDueDefaultNoon = dueComps.hour == 12 && dueComps.minute == 0
@@ -61,27 +68,43 @@ enum TemporalRefiner {
                     }
                 }
 
-                // Align date to relative indicators (today/tomorrow) if clearly specified
-                if let offset = dayOffset(in: matchString), let due = newDue {
-                    let expectedDay = calendar.startOfDay(for: calendar.date(byAdding: .day, value: offset, to: now) ?? now)
-                    let dueDay = calendar.startOfDay(for: due)
-                    if dueDay != expectedDay {
+                if let relative = relative {
+                    if let due = newDue {
+                        let expectedDay = calendar.startOfDay(for: relative.anchorDate)
+                        let dueDay = calendar.startOfDay(for: due)
                         let comps = calendar.dateComponents([.hour, .minute], from: due)
-                        newDue = calendar.date(bySettingHour: comps.hour ?? 12, minute: comps.minute ?? 0, second: 0, of: expectedDay)
+                        let defaultHour = relative.defaultHour ?? comps.hour ?? 12
+                        let defaultMinute = comps.minute ?? 0
+                        if dueDay != expectedDay {
+                            newDue = calendar.date(bySettingHour: defaultHour, minute: defaultMinute, second: 0, of: expectedDay) ?? expectedDay
+                        } else if let relHour = relative.defaultHour {
+                            let isDefaultNoon = comps.hour == 12 && comps.minute == 0
+                            let isDefaultMidnight = comps.hour == 0 && comps.minute == 0
+                            if isDefaultNoon || isDefaultMidnight {
+                                newDue = calendar.date(bySettingHour: relHour, minute: defaultMinute, second: 0, of: expectedDay) ?? expectedDay
+                            }
+                        }
+                    } else {
+                        let defaultHour = relative.defaultHour ?? 17
+                        let base = calendar.startOfDay(for: relative.anchorDate)
+                        newDue = calendar.date(bySettingHour: defaultHour, minute: 0, second: 0, of: base) ?? base
                     }
                 }
+            } else if let relative = resolveRelativeReference(in: contextText, now: now, calendar: calendar), newDue == nil {
+                let defaultHour = relative.defaultHour ?? 17
+                let base = calendar.startOfDay(for: relative.anchorDate)
+                newDue = calendar.date(bySettingHour: defaultHour, minute: 0, second: 0, of: base) ?? base
             }
 
-            // Append possibly refined reminder
             refined.append(
                 RemindersData.DetectedReminder(
-                    id: r.id,
-                    title: r.title,
+                    id: reminder.id,
+                    title: reminder.title,
                     dueDate: newDue,
-                    priority: r.priority,
-                    confidence: r.confidence,
-                    sourceText: r.sourceText,
-                    memoId: r.memoId
+                    priority: reminder.priority,
+                    confidence: reminder.confidence,
+                    sourceText: reminder.sourceText,
+                    memoId: reminder.memoId
                 )
             )
         }
@@ -97,15 +120,16 @@ enum TemporalRefiner {
         var refined: [EventsData.DetectedEvent] = []
         let calendar = Calendar.current
 
-        for e in eventsData.events {
-            let contextText = e.sourceText.isEmpty ? transcript : e.sourceText
-            var newStart = e.startDate
-            var newEnd = e.endDate
+        for event in eventsData.events {
+            let contextText = event.sourceText.isEmpty ? transcript : event.sourceText
+            var newStart = event.startDate
+            var newEnd = event.endDate
 
             if let match = firstTemporalMatch(in: contextText) {
                 let matchString = (contextText as NSString).substring(with: match.range)
                 let explicitTime = extractExplicitTime(from: matchString)
                 let matchedDate = match.date
+                let relative = resolveRelativeReference(in: matchString, now: now, calendar: calendar)
 
                 if let (h, m) = explicitTime {
                     if let start = newStart {
@@ -119,20 +143,21 @@ enum TemporalRefiner {
                                 newEnd = adjustedStart.addingTimeInterval(duration)
                             }
                         }
-                    } else if let offset = dayOffset(in: matchString) {
-                        let base = calendar.startOfDay(for: calendar.date(byAdding: .day, value: offset, to: now) ?? now)
-                        newStart = calendar.date(bySettingHour: h, minute: m, second: 0, of: base)
-                        if let duration = durationBetween(start: e.startDate, end: newEnd), let adjustedStart = newStart {
+                    } else if let relative = relative {
+                        let base = calendar.startOfDay(for: relative.anchorDate)
+                        newStart = calendar.date(bySettingHour: h, minute: m, second: 0, of: base) ?? base
+                        if let duration = durationBetween(start: event.startDate, end: newEnd), let adjustedStart = newStart {
+                            newEnd = adjustedStart.addingTimeInterval(duration)
+                        }
+                    } else if let md = matchedDate {
+                        newStart = md
+                        if let duration = durationBetween(start: event.startDate, end: newEnd), let adjustedStart = newStart {
                             newEnd = adjustedStart.addingTimeInterval(duration)
                         }
                     } else {
-                        if let md = matchedDate {
-                            newStart = md
-                        } else {
-                            let base = calendar.startOfDay(for: now)
-                            newStart = calendar.date(bySettingHour: h, minute: m, second: 0, of: base)
-                        }
-                        if let duration = durationBetween(start: e.startDate, end: newEnd), let adjustedStart = newStart {
+                        let base = calendar.startOfDay(for: now)
+                        newStart = calendar.date(bySettingHour: h, minute: m, second: 0, of: base) ?? base
+                        if let duration = durationBetween(start: event.startDate, end: newEnd), let adjustedStart = newStart {
                             newEnd = adjustedStart.addingTimeInterval(duration)
                         }
                     }
@@ -150,31 +175,58 @@ enum TemporalRefiner {
                     }
                 }
 
-                if let offset = dayOffset(in: matchString), let start = newStart {
-                    let expectedDay = calendar.startOfDay(for: calendar.date(byAdding: .day, value: offset, to: now) ?? now)
+                if let relative = relative, let start = newStart {
+                    let expectedDay = calendar.startOfDay(for: relative.anchorDate)
                     let startDay = calendar.startOfDay(for: start)
+                    var startComps = calendar.dateComponents([.hour, .minute], from: start)
+                    let minute = startComps.minute ?? 0
                     if startDay != expectedDay {
-                        let comps = calendar.dateComponents([.hour, .minute], from: start)
+                        let hour = relative.defaultHour ?? startComps.hour ?? 12
                         let originalStart = start
-                        newStart = calendar.date(bySettingHour: comps.hour ?? 12, minute: comps.minute ?? 0, second: 0, of: expectedDay)
+                        newStart = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: expectedDay) ?? expectedDay
                         if let duration = durationBetween(start: originalStart, end: newEnd), let adjustedStart = newStart {
                             newEnd = adjustedStart.addingTimeInterval(duration)
                         }
+                    } else if let relHour = relative.defaultHour {
+                        let isDefaultNoon = startComps.hour == 12 && startComps.minute == 0
+                        let isDefaultMidnight = startComps.hour == 0 && startComps.minute == 0
+                        if isDefaultNoon || isDefaultMidnight {
+                            let originalStart = start
+                            startComps.hour = relHour
+                            newStart = calendar.date(bySettingHour: relHour, minute: minute, second: 0, of: start) ?? start
+                            if let duration = durationBetween(start: originalStart, end: newEnd), let adjustedStart = newStart {
+                                newEnd = adjustedStart.addingTimeInterval(duration)
+                            }
+                        }
                     }
+                } else if let relative = relative, newStart == nil {
+                    let defaultHour = relative.defaultHour ?? 9
+                    let base = calendar.startOfDay(for: relative.anchorDate)
+                    newStart = calendar.date(bySettingHour: defaultHour, minute: 0, second: 0, of: base) ?? base
+                    if let duration = durationBetween(start: event.startDate, end: newEnd), let adjustedStart = newStart {
+                        newEnd = adjustedStart.addingTimeInterval(duration)
+                    }
+                }
+            } else if let relative = resolveRelativeReference(in: contextText, now: now, calendar: calendar), newStart == nil {
+                let defaultHour = relative.defaultHour ?? 9
+                let base = calendar.startOfDay(for: relative.anchorDate)
+                newStart = calendar.date(bySettingHour: defaultHour, minute: 0, second: 0, of: base) ?? base
+                if let duration = durationBetween(start: event.startDate, end: newEnd), let adjustedStart = newStart {
+                    newEnd = adjustedStart.addingTimeInterval(duration)
                 }
             }
 
             refined.append(
                 EventsData.DetectedEvent(
-                    id: e.id,
-                    title: e.title,
+                    id: event.id,
+                    title: event.title,
                     startDate: newStart,
                     endDate: newEnd,
-                    location: e.location,
-                    participants: e.participants,
-                    confidence: e.confidence,
-                    sourceText: e.sourceText,
-                    memoId: e.memoId
+                    location: event.location,
+                    participants: event.participants,
+                    confidence: event.confidence,
+                    sourceText: event.sourceText,
+                    memoId: event.memoId
                 )
             )
         }
@@ -230,13 +282,177 @@ enum TemporalRefiner {
         return (hour, minute, isPM)
     }
 
-    /// Returns 0 for today, 1 for tomorrow when clearly indicated in the text.
-    private static func dayOffset(in text: String) -> Int? {
+    private static func resolveRelativeReference(
+        in text: String,
+        now: Date,
+        calendar: Calendar
+    ) -> RelativeReference? {
         let lower = text.lowercased()
-        if lower.contains("tomorrow") { return 1 }
-        if lower.contains("today") { return 0 }
-        if lower.contains("tonight") { return 0 }
+
+        if lower.contains("tomorrow") {
+            let day = calendar.date(byAdding: .day, value: 1, to: now) ?? now
+            return RelativeReference(
+                anchorDate: calendar.startOfDay(for: day),
+                defaultHour: nil,
+                resolution: .relativeNamedDay
+            )
+        }
+
+        if lower.contains("tonight") {
+            return RelativeReference(
+                anchorDate: calendar.startOfDay(for: now),
+                defaultHour: 20,
+                resolution: .partOfDay
+            )
+        }
+
+        if lower.contains("today") {
+            return RelativeReference(
+                anchorDate: calendar.startOfDay(for: now),
+                defaultHour: nil,
+                resolution: .relativeNamedDay
+            )
+        }
+
+        if lower.contains("next weekend") {
+            let weekend = upcomingWeekendStart(after: now, calendar: calendar, includeCurrent: false)
+            return RelativeReference(anchorDate: weekend, defaultHour: 10, resolution: .weekend)
+        }
+
+        if lower.contains("this weekend") || lower.contains("the weekend") || lower.contains("weekend") {
+            let weekend = upcomingWeekendStart(after: now, calendar: calendar, includeCurrent: true)
+            return RelativeReference(anchorDate: weekend, defaultHour: 10, resolution: .weekend)
+        }
+
+        if lower.contains("next week") {
+            let weekStart = nextWeekStart(after: now, calendar: calendar)
+            return RelativeReference(anchorDate: weekStart, defaultHour: 9, resolution: .week)
+        }
+
+        if let days = parseRelativeDays(lower) {
+            let date = calendar.date(byAdding: .day, value: days, to: now) ?? now
+            return RelativeReference(
+                anchorDate: calendar.startOfDay(for: date),
+                defaultHour: nil,
+                resolution: .relativeDays
+            )
+        }
+
+        if let weeks = parseRelativeWeeks(lower) {
+            let date = calendar.date(byAdding: .day, value: weeks * 7, to: now) ?? now
+            return RelativeReference(
+                anchorDate: calendar.startOfDay(for: date),
+                defaultHour: nil,
+                resolution: .week
+            )
+        }
+
         return nil
+    }
+
+    private static func parseRelativeDays(_ text: String) -> Int? {
+        if let regex = try? NSRegularExpression(pattern: #"in\s+(\d+)\s+day[s]?"#, options: []) {
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            if let match = regex.firstMatch(in: text, options: [], range: range), match.numberOfRanges > 1 {
+                let numberRange = match.range(at: 1)
+                if let substring = Range(numberRange, in: text), let value = Int(text[substring]) {
+                    return value
+                }
+            }
+        }
+
+        if let regex = try? NSRegularExpression(pattern: #"in\s+(one|two|three|four|five|six|seven|eight|nine|ten)\s+day[s]?"#, options: []) {
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            if let match = regex.firstMatch(in: text, options: [], range: range), match.numberOfRanges > 1 {
+                let wordRange = match.range(at: 1)
+                if let substring = Range(wordRange, in: text), let value = wordNumberValue(String(text[substring])) {
+                    return value
+                }
+            }
+        }
+
+        if text.contains("in a few days") || text.contains("in few days") { return 3 }
+        if text.contains("in a couple days") || text.contains("in a couple of days") { return 2 }
+
+        return nil
+    }
+
+    private static func parseRelativeWeeks(_ text: String) -> Int? {
+        if let regex = try? NSRegularExpression(pattern: #"in\s+(\d+)\s+week[s]?"#, options: []) {
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            if let match = regex.firstMatch(in: text, options: [], range: range), match.numberOfRanges > 1 {
+                let numberRange = match.range(at: 1)
+                if let substring = Range(numberRange, in: text), let value = Int(text[substring]) {
+                    return value
+                }
+            }
+        }
+
+        if let regex = try? NSRegularExpression(pattern: #"in\s+(one|two|three|four|five|six|seven|eight|nine|ten)\s+week[s]?"#, options: []) {
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            if let match = regex.firstMatch(in: text, options: [], range: range), match.numberOfRanges > 1 {
+                let wordRange = match.range(at: 1)
+                if let substring = Range(wordRange, in: text), let value = wordNumberValue(String(text[substring])) {
+                    return value
+                }
+            }
+        }
+
+        if text.contains("in a few weeks") { return 3 }
+        if text.contains("in a couple weeks") || text.contains("in a couple of weeks") { return 2 }
+
+        return nil
+    }
+
+    private static func wordNumberValue(_ word: String) -> Int? {
+        switch word {
+        case "one": return 1
+        case "two": return 2
+        case "three": return 3
+        case "four": return 4
+        case "five": return 5
+        case "six": return 6
+        case "seven": return 7
+        case "eight": return 8
+        case "nine": return 9
+        case "ten": return 10
+        default: return nil
+        }
+    }
+
+    private static func upcomingWeekendStart(after now: Date, calendar: Calendar, includeCurrent: Bool) -> Date {
+        let startOfDay = calendar.startOfDay(for: now)
+
+        if includeCurrent, calendar.isDateInWeekend(now) {
+            let weekday = calendar.component(.weekday, from: now)
+            if weekday == 7 { // Saturday
+                return startOfDay
+            } else {
+                return calendar.date(byAdding: .day, value: -1, to: startOfDay) ?? startOfDay
+            }
+        }
+
+        let nextSaturday = calendar.nextDate(
+            after: now,
+            matching: DateComponents(weekday: 7),
+            matchingPolicy: .nextTimePreservingSmallerComponents,
+            direction: .forward
+        ) ?? now
+        let candidate = calendar.startOfDay(for: nextSaturday)
+        if includeCurrent {
+            return candidate
+        }
+        return calendar.date(byAdding: .day, value: 7, to: candidate) ?? candidate
+    }
+
+    private static func nextWeekStart(after now: Date, calendar: Calendar) -> Date {
+        let nextMonday = calendar.nextDate(
+            after: now,
+            matching: DateComponents(weekday: 2),
+            matchingPolicy: .nextTimePreservingSmallerComponents,
+            direction: .forward
+        ) ?? now
+        return calendar.startOfDay(for: nextMonday)
     }
 
     private static func durationBetween(start: Date?, end: Date?) -> TimeInterval? {

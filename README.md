@@ -218,7 +218,7 @@ Sonora/
 │       ├── Moderation/ (2 services)      # 🛡️ Content safety
 │       │   ├── ModerationService.swift, NoopModerationService.swift
 │       ├── Prompts/ (1 service)          # 📝 Prompt management
-│       │   └── PromptCatalogStatic.swift
+│       │   └── PromptFileCatalog.swift
 │       └── System/ (2 services)          # 🔧 System integration
 │           ├── SystemNavigatorImpl.swift, LiveActivityService.swift
 ├── Views/                         # 🎨 SwiftUI view components
@@ -275,7 +275,7 @@ Guidelines:
 
 - Domain: `RecordingPrompt`, `InterpolatedPrompt`, `PromptCatalog`, `PromptUsageRepository`
 - Use Cases: `GetDynamicPromptUseCase`, `GetPromptCategoryUseCase`
-- Data: `PromptUsageRecord` (SwiftData), `PromptUsageRepositoryImpl`, `PromptCatalogStatic` (48 prompts)
+- Data: `PromptUsageRecord` (SwiftData), `PromptUsageRepositoryImpl`, `PromptFileCatalog` (file‑backed NDJSON)
 - Core: `DateProvider`, `LocalizationProvider` (DI via `DIContainer`)
 - UI: `PromptViewModel`, `DynamicPromptCard` (+ fallback), `InspireMeSheet` integrated in `RecordingView`
 - Behavior: 7‑day no‑repeat, weighted selection, stable daily tiebreak; tokens `[Name]`, `[DayPart]`, `[WeekPart]`

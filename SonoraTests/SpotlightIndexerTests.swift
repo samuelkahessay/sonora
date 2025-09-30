@@ -1,6 +1,7 @@
 import XCTest
 @testable import Sonora
 
+@MainActor
 final class SpotlightIndexerTests: XCTestCase {
     final class MockIndexer: SpotlightIndexing {
         var indexed: [UUID] = []
@@ -11,6 +12,8 @@ final class SpotlightIndexerTests: XCTestCase {
     }
 
     func test_index_called_on_memoCreated_and_transcriptionCompleted() async {
+        // Ensure Spotlight indexing is enabled for this test
+        AppConfiguration.shared.searchIndexingEnabled = true
         let mock = MockIndexer()
         let bus = EventBus.shared
         let handler = SpotlightEventHandler(logger: Logger.shared, eventBus: bus, indexer: mock)
@@ -25,6 +28,7 @@ final class SpotlightIndexerTests: XCTestCase {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { exp.fulfill() }
         await fulfillment(of: [exp], timeout: 1.0)
 
-        XCTAssertTrue(mock.indexed.contains(memo.id))
+        let didIndex = await MainActor.run { mock.indexed.contains(memo.id) }
+        XCTAssertTrue(didIndex)
     }
 }
