@@ -216,23 +216,23 @@ struct SonoraInsightCard: View {
     /// Trigger the complete crystallization sequence
     private func triggerCrystallizationSequence() {
         // Phase 1: Card emergence
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+        withAnimation(SonoraDesignSystem.Animation.crystallizationSpring) {
             cardScale = 1.0
         }
 
         // Phase 2: Crystallization pattern (starts after card appears)
-        withAnimation(.easeInOut(duration: 1.5).delay(0.2)) {
+        withAnimation(SonoraDesignSystem.Animation.textReveal) {
             crystallizationProgress = 1.0
         }
 
         // Phase 3: Text revelation (starts during crystallization)
-        withAnimation(.easeOut(duration: 0.8).delay(1.0)) {
+        withAnimation(SonoraDesignSystem.Animation.glowFade) {
             textOpacity = 1.0
         }
 
         // Phase 4: Subtle glow for highlighted insights
         if isHighlighted {
-            withAnimation(.easeInOut(duration: 1.0).delay(1.5)) {
+            withAnimation(SonoraDesignSystem.Animation.highlightPulse) {
                 glowIntensity = 1.0
             }
         }

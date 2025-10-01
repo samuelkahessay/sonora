@@ -65,36 +65,10 @@ internal struct ActionItemsHostSectionView: View {
                 .padding(SonoraDesignSystem.Spacing.sm)
                 .background(Color.semantic(.fillSecondary))
                 .cornerRadius(SonoraDesignSystem.Spacing.cardRadius)
-                .animation(.easeInOut(duration: 0.25), value: addedRecords.count)
+                .animation(SonoraDesignSystem.Animation.cardTransition, value: addedRecords.count)
             }
 
-            if !visibleItems.isEmpty {
-                LazyVStack(spacing: sectionSpacing) {
-                    ForEach(visibleItems) { m in
-                        ActionItemDetectionCard(
-                            model: m,
-                            isPro: isPro,
-                            onEvent: { itemEvent in onEvent(.item(itemEvent)) }
-                        )
-                        .id(m.id)
-                    }
-                }
-                .animation(.easeInOut(duration: 0.25), value: visibleItems.count)
-            } else if isDetectionPending {
-                HStack(spacing: itemSpacing) {
-                    LoadingIndicator(size: .small)
-                    Text("Detecting events & reminders…")
-                        .font(SonoraDesignSystem.Typography.metadata)
-                        .foregroundColor(.semantic(.textSecondary))
-                }
-                .padding(.vertical, 4)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Detecting events and reminders")
-            } else if addedRecords.isEmpty {
-                Text("No events or reminders detected")
-                    .font(SonoraDesignSystem.Typography.metadata)
-                    .foregroundColor(.semantic(.textSecondary))
-            }
+            contentView
         }
         .sheet(isPresented: $showBatchSheet) {
             BatchAddActionItemsSheet(
@@ -127,5 +101,53 @@ internal struct ActionItemsHostSectionView: View {
         let selected = Set(visibleItems.map { $0.id })
         batchInclude = selected
         onEvent(.openBatch(selected: selected))
+    }
+
+    // MARK: - Content Views
+
+    @ViewBuilder
+    private var contentView: some View {
+        if !visibleItems.isEmpty {
+            itemsList
+        } else if isDetectionPending {
+            loadingState
+        } else if addedRecords.isEmpty {
+            emptyState
+        }
+    }
+
+    @ViewBuilder
+    private var itemsList: some View {
+        LazyVStack(spacing: sectionSpacing) {
+            ForEach(visibleItems) { m in
+                ActionItemDetectionCard(
+                    model: m,
+                    isPro: isPro,
+                    onEvent: { itemEvent in onEvent(.item(itemEvent)) }
+                )
+                .id(m.id)
+            }
+        }
+        .animation(SonoraDesignSystem.Animation.cardTransition, value: visibleItems.count)
+    }
+
+    @ViewBuilder
+    private var loadingState: some View {
+        HStack(spacing: itemSpacing) {
+            LoadingIndicator(size: .small)
+            Text("Detecting events & reminders…")
+                .font(SonoraDesignSystem.Typography.metadata)
+                .foregroundColor(.semantic(.textSecondary))
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Detecting events and reminders")
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        Text("No events or reminders detected")
+            .font(SonoraDesignSystem.Typography.metadata)
+            .foregroundColor(.semantic(.textSecondary))
     }
 }

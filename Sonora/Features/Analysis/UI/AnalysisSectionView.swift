@@ -77,7 +77,7 @@ struct AnalysisSectionView: View {
                 .padding()
                 .background(Color.semantic(.brandPrimary).opacity(0.05))
                 .cornerRadius(8)
-                .animation(.easeInOut(duration: 0.35), value: loaderMessageIndex)
+                .animation(SonoraDesignSystem.Animation.loaderMessage, value: loaderMessageIndex)
             }
 
             // Results with AI disclaimer (only when there are results)
@@ -90,13 +90,13 @@ struct AnalysisSectionView: View {
                         DistillResultView(partialData: partialData, progress: progress, memoId: viewModel.memoId)
                             // Avoid scale transitions that can cause visual overlap with siblings
                             .transition(.opacity)
-                            .animation(.easeInOut(duration: 0.3), value: progress.completedComponents)
+                            .animation(SonoraDesignSystem.Animation.progressUpdate, value: progress.completedComponents)
 
                         // Show disclaimer when any partial results are present
                         if progress.completedComponents > 0 {
                             AIDisclaimerView.analysis()
                                 .transition(.opacity)
-                                .animation(.easeIn(duration: 0.3), value: progress.completedComponents)
+                                .animation(SonoraDesignSystem.Animation.progressUpdate, value: progress.completedComponents)
                         }
                     } else if let payload = viewModel.analysisPayload {
                         AnalysisResultsView(
@@ -202,7 +202,7 @@ private struct PressableCardButtonStyle: ButtonStyle {
         configuration.label
             .opacity(configuration.isPressed ? 0.9 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+            .animation(SonoraDesignSystem.Animation.buttonPress, value: configuration.isPressed)
     }
 }
 

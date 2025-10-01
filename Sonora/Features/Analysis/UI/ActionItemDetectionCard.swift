@@ -117,9 +117,27 @@ struct ActionItemDetectionCard: View {
                 .accessibilityLabel("Item title")
 
                 if model.kind == .event {
-                    eventDateControls
+                    EventDateControl(
+                        date: Binding(
+                            get: { model.suggestedDate },
+                            set: { model.suggestedDate = $0 }
+                        ),
+                        isAllDay: Binding(
+                            get: { model.isAllDay },
+                            set: { model.isAllDay = $0 }
+                        )
+                    )
                 } else {
-                    reminderDateControls
+                    ReminderDateControl(
+                        date: Binding(
+                            get: { model.suggestedDate },
+                            set: { model.suggestedDate = $0 }
+                        ),
+                        isAllDay: Binding(
+                            get: { model.isAllDay },
+                            set: { model.isAllDay = $0 }
+                        )
+                    )
                 }
 
                 primaryAddButton
@@ -130,62 +148,6 @@ struct ActionItemDetectionCard: View {
         }
     }
 
-    @ViewBuilder private var eventDateControls: some View {
-        VStack(alignment: .leading, spacing: controlSpacing) {
-            DatePicker(
-                "Event Date",
-                selection: Binding(
-                    get: { model.suggestedDate ?? Date() },
-                    set: { model.suggestedDate = $0 }
-                ),
-                displayedComponents: model.isAllDay ? [.date] : [.date, .hourAndMinute]
-            )
-            .datePickerStyle(.compact)
-
-            Toggle("All-day", isOn: Binding(
-                get: { model.isAllDay },
-                set: { model.isAllDay = $0 }
-            ))
-        }
-        .onAppear {
-            if model.suggestedDate == nil {
-                model.suggestedDate = Date()
-            }
-        }
-    }
-
-    @ViewBuilder private var reminderDateControls: some View {
-        VStack(alignment: .leading, spacing: controlSpacing) {
-            Toggle("Include date", isOn: Binding(
-                get: { model.suggestedDate != nil },
-                set: { include in
-                    if include {
-                        if model.suggestedDate == nil { model.suggestedDate = Date() }
-                    } else {
-                        model.suggestedDate = nil
-                        model.isAllDay = false
-                    }
-                }
-            ))
-
-            if model.suggestedDate != nil {
-                DatePicker(
-                    "Reminder Date",
-                    selection: Binding(
-                        get: { model.suggestedDate ?? Date() },
-                        set: { model.suggestedDate = $0 }
-                    ),
-                    displayedComponents: model.isAllDay ? [.date] : [.date, .hourAndMinute]
-                )
-                .datePickerStyle(.compact)
-
-                Toggle("All-day", isOn: Binding(
-                    get: { model.isAllDay },
-                    set: { model.isAllDay = $0 }
-                ))
-            }
-        }
-    }
 
     private var addButtonTitle: String {
         model.kind == .reminder ? "Add to Reminders" : "Add to Calendar"

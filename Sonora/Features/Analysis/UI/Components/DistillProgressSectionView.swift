@@ -37,6 +37,6 @@ internal struct DistillProgressSectionView: View {
         .padding(SonoraDesignSystem.Spacing.md_sm)
         .background(Color.semantic(.brandPrimary).opacity(0.05))
         .cornerRadius(SonoraDesignSystem.Spacing.cardRadius)
-        .animation(.easeInOut(duration: 0.3), value: progress.completedComponents)
+        .animation(SonoraDesignSystem.Animation.progressUpdate, value: progress.completedComponents)
     }
 }

@@ -165,6 +165,37 @@ enum SonoraDesignSystem {
             .easeInOut(duration: 2.0)
             .repeatForever(autoreverses: true)
 
+        // MARK: - Component-Specific Animations
+
+        /// Card list transitions (adding/removing items)
+        static let cardTransition = SwiftUI.Animation.easeInOut(duration: 0.25)
+
+        /// Progress indicator updates
+        static let progressUpdate = SwiftUI.Animation.easeInOut(duration: 0.3)
+
+        /// Loader message cycling animation
+        static let loaderMessage = SwiftUI.Animation.easeInOut(duration: 0.35)
+
+        /// Button press feedback
+        static let buttonPress = SwiftUI.Animation.easeInOut(duration: 0.15)
+
+        // MARK: - Insight Card Crystallization Sequence
+
+        /// Initial crystallization pattern emergence
+        static let crystallizationSpring = SwiftUI.Animation.spring(
+            response: 0.6,
+            dampingFraction: 0.8
+        )
+
+        /// Text reveal after crystallization
+        static let textReveal = SwiftUI.Animation.easeInOut(duration: 1.5).delay(0.2)
+
+        /// Glow intensity fade
+        static let glowFade = SwiftUI.Animation.easeOut(duration: 0.8).delay(1.0)
+
+        /// Highlight pulse for emphasized insights
+        static let highlightPulse = SwiftUI.Animation.easeInOut(duration: 1.0).delay(1.5)
+
     }
 
     // MARK: - Layout Constraints

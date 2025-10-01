@@ -155,12 +155,21 @@ struct BatchAddActionItemsSheet: View {
     }
 
     private var addButtonDisabled: Bool {
-        let count = selectedItems.count
-        if count == 0 { return true }
-        if hasSelectedEvents && selectedCalendar == nil && calendars.isEmpty == false { return true }
-        if hasSelectedReminders && selectedReminderList == nil && reminderLists.isEmpty == false { return true }
-        if hasSelectedEvents && calendars.isEmpty { return true }
-        if hasSelectedReminders && reminderLists.isEmpty { return true }
+        // Must have at least one item selected
+        guard !selectedItems.isEmpty else { return true }
+
+        // Events require calendar selection
+        if hasSelectedEvents {
+            guard !calendars.isEmpty else { return true }
+            guard selectedCalendar != nil else { return true }
+        }
+
+        // Reminders require list selection
+        if hasSelectedReminders {
+            guard !reminderLists.isEmpty else { return true }
+            guard selectedReminderList != nil else { return true }
+        }
+
         return false
     }
 

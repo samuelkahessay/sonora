@@ -5,7 +5,23 @@ public protocol LocalizationProvider: Sendable {
 }
 
 public struct DefaultLocalizationProvider: LocalizationProvider, Sendable {
-    public init() {}
+    // Cache of prompt localization keys -> source text
+    // Built once to avoid repeatedly reloading the NDJSON file.
+    private let promptTextByKey: [String: String]
+
+    public init() {
+        // Build dictionary once from the file-backed catalog
+        let loader = PromptFileLoader(logger: Logger.shared)
+        let prompts = loader.loadPrompts()
+        var map: [String: String] = [:]
+        map.reserveCapacity(prompts.count)
+        for p in prompts {
+            if let text = p.metadata["text"], !text.isEmpty {
+                map[p.localizationKey] = text
+            }
+        }
+        self.promptTextByKey = map
+    }
 
     public func localizedString(_ key: String, locale: Locale) -> String {
         // Locale not used for bundle selection currently; keep to satisfy protocol.
@@ -13,12 +29,7 @@ public struct DefaultLocalizationProvider: LocalizationProvider, Sendable {
 
         // 1) Prompts: map "prompt.*" keys to ndjson text (source of truth)
         if key.hasPrefix("prompt.") {
-            let catalog = PromptCatalogFile(logger: Logger.shared)
-            if let prompt = catalog.allPrompts().first(where: { $0.localizationKey == key }),
-               let text = prompt.metadata["text"], !text.isEmpty {
-                return text
-            }
-            return key
+            return promptTextByKey[key] ?? key
         }
 
         // 2) Built-in daypart/weekpart defaults (English)
