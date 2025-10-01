@@ -21,20 +21,24 @@ internal struct ActionItemsHostSectionView: View {
     // Unified event handler
     let onEvent: (ActionItemHostEvent) -> Void
 
+    @ScaledMetric private var sectionSpacing: CGFloat = 12
+    @ScaledMetric private var headerSpacing: CGFloat = 10
+    @ScaledMetric private var recordSpacing: CGFloat = 6
+    @ScaledMetric private var itemSpacing: CGFloat = 8
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: sectionSpacing) {
             if shouldShowPermissionExplainer {
                 PermissionExplainerCard(
                     permissions: permissionService
                 ) { DIContainer.shared.systemNavigator().openSettings(completion: nil) }
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: headerSpacing) {
                 Image(systemName: "calendar.badge.clock")
                     .foregroundColor(.semantic(.brandPrimary))
                 Text("Action Items")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                    .font(SonoraDesignSystem.Typography.sectionHeading)
                 Spacer()
                 if reviewCount > 1 {
                     Button("Review & Add All (\(reviewCount))") { openBatchReview() }
@@ -42,26 +46,30 @@ internal struct ActionItemsHostSectionView: View {
                         .controlSize(.small)
                 }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Action Items section, \(reviewCount) items detected")
 
             if !addedRecords.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: recordSpacing) {
                     ForEach(addedRecords) { rec in
-                        HStack(alignment: .top, spacing: 8) {
+                        HStack(alignment: .top, spacing: itemSpacing) {
                             Image(systemName: "checkmark.circle.fill").foregroundColor(.semantic(.success))
                             Text(rec.text)
-                                .font(.footnote)
+                                .font(SonoraDesignSystem.Typography.metadata)
                                 .foregroundColor(.semantic(.textSecondary))
                         }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Added: \(rec.text)")
                     }
                 }
-                .padding(10)
+                .padding(SonoraDesignSystem.Spacing.sm)
                 .background(Color.semantic(.fillSecondary))
-                .cornerRadius(8)
+                .cornerRadius(SonoraDesignSystem.Spacing.cardRadius)
                 .animation(.easeInOut(duration: 0.25), value: addedRecords.count)
             }
 
             if !visibleItems.isEmpty {
-                LazyVStack(spacing: 12) {
+                LazyVStack(spacing: sectionSpacing) {
                     ForEach(visibleItems) { m in
                         ActionItemDetectionCard(
                             model: m,
@@ -73,16 +81,18 @@ internal struct ActionItemsHostSectionView: View {
                 }
                 .animation(.easeInOut(duration: 0.25), value: visibleItems.count)
             } else if isDetectionPending {
-                HStack(spacing: 8) {
+                HStack(spacing: itemSpacing) {
                     LoadingIndicator(size: .small)
                     Text("Detecting events & reminders…")
-                        .font(.caption)
+                        .font(SonoraDesignSystem.Typography.metadata)
                         .foregroundColor(.semantic(.textSecondary))
                 }
                 .padding(.vertical, 4)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Detecting events and reminders")
             } else if addedRecords.isEmpty {
                 Text("No events or reminders detected")
-                    .font(.caption)
+                    .font(SonoraDesignSystem.Typography.metadata)
                     .foregroundColor(.semantic(.textSecondary))
             }
         }

@@ -60,19 +60,18 @@ struct HeaderInfoView<T: Codable & Sendable>: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text(envelope.mode.displayName)
-                    .font(.title2)
-                    .fontWeight(.bold)
+                    .font(SonoraDesignSystem.Typography.headingMedium)
 
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(envelope.model)
-                        .font(.caption)
+                        .font(SonoraDesignSystem.Typography.metadata)
                         .foregroundColor(.semantic(.textSecondary))
                         .accessibilityLabel("AI model: \(envelope.model)")
                         .dynamicTypeSize(...DynamicTypeSize.accessibility2)
                     Text("\(envelope.latency_ms)ms")
-                        .font(.caption)
+                        .font(SonoraDesignSystem.Typography.metadata)
                         .foregroundColor(.semantic(.textSecondary))
                         .accessibilityLabel("Response time: \(envelope.latency_ms) milliseconds")
                         .dynamicTypeSize(...DynamicTypeSize.accessibility2)
@@ -81,7 +80,7 @@ struct HeaderInfoView<T: Codable & Sendable>: View {
 
             HStack {
                 Label("\(envelope.tokens.input + envelope.tokens.output) tokens", systemImage: "textformat")
-                    .font(.caption)
+                    .font(SonoraDesignSystem.Typography.metadata)
                     .foregroundColor(.semantic(.textSecondary))
                     .accessibilityLabel("Total tokens used: \(envelope.tokens.input + envelope.tokens.output)")
                     .dynamicTypeSize(...DynamicTypeSize.accessibility2)
@@ -89,7 +88,7 @@ struct HeaderInfoView<T: Codable & Sendable>: View {
                 Spacer()
 
                 Text("\(envelope.tokens.input) in, \(envelope.tokens.output) out")
-                    .font(.caption)
+                    .font(SonoraDesignSystem.Typography.metadata)
                     .foregroundColor(.semantic(.textSecondary))
                     .accessibilityLabel("Input tokens: \(envelope.tokens.input), Output tokens: \(envelope.tokens.output)")
                     .dynamicTypeSize(...DynamicTypeSize.accessibility2)

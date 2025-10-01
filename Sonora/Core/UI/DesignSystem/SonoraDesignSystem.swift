@@ -27,6 +27,9 @@ enum SonoraDesignSystem {
         /// Small spacing (8pt)
         static let sm: CGFloat = 8
 
+        /// Medium-small spacing (12pt) - for tight card layouts
+        static let md_sm: CGFloat = 12
+
         /// Medium spacing (16pt)
         static let md: CGFloat = 16
 
@@ -41,6 +44,7 @@ enum SonoraDesignSystem {
 
         // Component-specific spacing
         static let cardRadius: CGFloat = 8
+        static let cardPadding: CGFloat = 14  // Standard card internal padding
         static let iconToTextSpacing: CGFloat = 6
     }
 
@@ -104,6 +108,22 @@ enum SonoraDesignSystem {
 
         /// Navigation title styling (system serif headline)
         static let navigationTitle = Font(serifUIFont(for: .headline))
+
+        // MARK: - Component-Specific Fonts
+
+        /// Section headings in analysis/distill results
+        static let sectionHeading = Font.system(.subheadline, design: .default)
+            .weight(.semibold)
+
+        /// Card titles (events, reminders, action items)
+        static let cardTitle = Font.system(.headline, design: .serif)
+            .weight(.semibold)
+
+        /// Metadata and secondary information
+        static let metadata = Font.system(.caption, design: .default)
+
+        /// Body content in cards and sections
+        static let cardBody = Font.system(.callout, design: .default)
     }
 
     // MARK: - Animation System

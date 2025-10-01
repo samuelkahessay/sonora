@@ -6,6 +6,12 @@ struct ActionItemDetectionCard: View {
     let isPro: Bool
     let onEvent: (ActionItemEvent) -> Void
 
+    @ScaledMetric private var cardContentSpacing: CGFloat = 10
+    @ScaledMetric private var titleSubtitleSpacing: CGFloat = 4
+    @ScaledMetric private var buttonSpacing: CGFloat = 12
+    @ScaledMetric private var editorSpacing: CGFloat = 10
+    @ScaledMetric private var controlSpacing: CGFloat = 6
+
     init(
         model: ActionItemDetectionUI,
         isPro: Bool,
@@ -18,17 +24,17 @@ struct ActionItemDetectionCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: cardContentSpacing) {
             quoteChip
             titleSubtitle
             buttonsRow
             editorIfNeeded
         }
-        .padding(14)
+        .padding(SonoraDesignSystem.Spacing.cardPadding)
         .background(Color.semantic(.fillSecondary))
-        .cornerRadius(12)
+        .cornerRadius(SonoraDesignSystem.Spacing.md_sm)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: SonoraDesignSystem.Spacing.md_sm)
                 .stroke(model.isEditing ? Color.semantic(.brandPrimary) : Color.clear, lineWidth: 1.5)
         )
         .overlay(alignment: .topTrailing) {
@@ -47,35 +53,35 @@ struct ActionItemDetectionCard: View {
     @ViewBuilder private var quoteChip: some View {
         if !model.sourceQuote.isEmpty {
             Text("\"\(model.sourceQuote)\"")
-                .font(.caption)
+                .font(SonoraDesignSystem.Typography.metadata)
                 .foregroundColor(.semantic(.textSecondary))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.horizontal, SonoraDesignSystem.Spacing.md_sm)
+                .padding(.vertical, SonoraDesignSystem.Spacing.sm)
                 .background(Color.semantic(.bgSecondary))
-                .cornerRadius(10)
+                .cornerRadius(SonoraDesignSystem.Spacing.sm)
         }
     }
 
     @ViewBuilder private var titleSubtitle: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: titleSubtitleSpacing) {
             Text(model.title)
-                .font(.system(.headline, design: .serif))
-                .fontWeight(.semibold)
+                .font(SonoraDesignSystem.Typography.cardTitle)
                 .foregroundColor(.semantic(.textPrimary))
             if let d = model.suggestedDate {
                 Text("Suggested \(DateFormatter.ai_short.string(from: d))\(model.isAllDay ? " • All day" : "")")
-                    .font(.caption)
+                    .font(SonoraDesignSystem.Typography.metadata)
                     .foregroundColor(.semantic(.textSecondary))
             } else {
                 Text("No specific date mentioned")
-                    .font(.caption)
+                    .font(SonoraDesignSystem.Typography.metadata)
                     .foregroundColor(.semantic(.textSecondary))
             }
         }
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder private var buttonsRow: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: buttonSpacing) {
             if !model.isEditing {
                 primaryAddButton
             }
@@ -92,7 +98,7 @@ struct ActionItemDetectionCard: View {
 
     @ViewBuilder private var editorIfNeeded: some View {
         if model.isEditing {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: editorSpacing) {
                 Picker("Type", selection: Binding(
                     get: { model.kind },
                     set: { newKind in model.kind = newKind }
@@ -101,12 +107,14 @@ struct ActionItemDetectionCard: View {
                     Text("Reminder").tag(ActionItemDetectionKind.reminder)
                 }
                 .pickerStyle(.segmented)
+                .accessibilityLabel("Item type")
 
                 TextField("Title", text: Binding(
                     get: { model.title },
                     set: { model.title = $0 }
                 ))
                 .textFieldStyle(.roundedBorder)
+                .accessibilityLabel("Item title")
 
                 if model.kind == .event {
                     eventDateControls
@@ -123,7 +131,7 @@ struct ActionItemDetectionCard: View {
     }
 
     @ViewBuilder private var eventDateControls: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: controlSpacing) {
             DatePicker(
                 "Event Date",
                 selection: Binding(
@@ -147,7 +155,7 @@ struct ActionItemDetectionCard: View {
     }
 
     @ViewBuilder private var reminderDateControls: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: controlSpacing) {
             Toggle("Include date", isOn: Binding(
                 get: { model.suggestedDate != nil },
                 set: { include in
@@ -188,7 +196,7 @@ struct ActionItemDetectionCard: View {
             onEvent(.add(item: model))
         }, label: {
             if model.isProcessing {
-                HStack(spacing: 8) {
+                HStack(spacing: itemSpacing) {
                     ProgressView()
                     Text("Adding…")
                         .fontWeight(.semibold)
@@ -197,13 +205,17 @@ struct ActionItemDetectionCard: View {
             } else {
                 Text(addButtonTitle)
                     .font(.callout.weight(.semibold))
-                    .padding(.vertical, 10)
+                    .padding(.vertical, cardContentSpacing)
                     .frame(maxWidth: .infinity)
             }
         })
         .buttonStyle(.borderedProminent)
         .disabled(model.isProcessing || (model.kind == .event && model.suggestedDate == nil))
+        .accessibilityLabel(addButtonTitle)
+        .accessibilityHint(model.kind == .event ? "Adds event to calendar" : "Adds reminder to reminders list")
     }
+
+    private var itemSpacing: CGFloat { 8 }
 }
 
 private struct OnChangeSyncModifier<Value: Equatable>: ViewModifier {

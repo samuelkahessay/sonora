@@ -3,34 +3,40 @@ import SwiftUI
 internal struct ReflectionQuestionsSectionView: View {
     let questions: [String]
 
+    @ScaledMetric private var sectionSpacing: CGFloat = 12
+    @ScaledMetric private var headerSpacing: CGFloat = 6
+    @ScaledMetric private var questionSpacing: CGFloat = 10
+    @ScaledMetric private var lineSpacing: CGFloat = 2
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: sectionSpacing) {
+            HStack(spacing: headerSpacing) {
                 Image(systemName: "questionmark.circle")
-                    .font(.subheadline)
+                    .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.warning))
                 Text("Reflection Questions")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                    .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.textPrimary))
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Reflection Questions section, \(questions.count) questions")
 
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: sectionSpacing) {
                 ForEach(Array(questions.enumerated()), id: \.offset) { index, question in
-                    HStack(alignment: .top, spacing: 10) {
+                    HStack(alignment: .top, spacing: questionSpacing) {
                         Text("\(index + 1).")
-                            .font(.callout)
+                            .font(SonoraDesignSystem.Typography.cardBody)
                             .fontWeight(.medium)
                             .foregroundColor(.semantic(.textSecondary))
                             .frame(minWidth: 20)
 
                         Text(question)
-                            .font(.callout)
+                            .font(SonoraDesignSystem.Typography.cardBody)
                             .foregroundColor(.semantic(.textPrimary))
-                            .lineSpacing(2)
+                            .lineSpacing(lineSpacing)
                             .multilineTextAlignment(.leading)
                     }
-                    .padding(12)
+                    .padding(SonoraDesignSystem.Spacing.md_sm)
                     .background(
                         LinearGradient(
                             gradient: Gradient(colors: [
@@ -41,7 +47,9 @@ internal struct ReflectionQuestionsSectionView: View {
                             endPoint: .trailing
                         )
                     )
-                    .cornerRadius(8)
+                    .cornerRadius(SonoraDesignSystem.Spacing.cardRadius)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Question \(index + 1): \(question)")
                 }
             }
         }
