@@ -199,82 +199,134 @@ struct MemosView: View {
                 Section { EmptyView() } header: {
                     AlternativeSelectionControls(viewModel: viewModel)
                 }
-                // Group memos by time periods for contextual headers
-                ForEach(cachedGroupedMemos, id: \.period.rawValue) { section in
-                    Section {
-                        ForEach(section.memos, id: \.id) { memo in
-                            let separatorConfig = separatorConfiguration(for: memo, in: section.memos)
-                            let isFirst = (section.memos.first?.id == memo.id)
-                            let isLast = (section.memos.last?.id == memo.id)
-                            let showTopHairline = !isFirst
-                            let rowContent = MemoRowView(
-                                memo: memo,
-                                viewModel: viewModel,
-                                showTopHairline: showTopHairline,
-                                isFirstInSection: isFirst,
-                                isLastInSection: isLast
-                            )
-                                .dragSelectionAccessibility(
+                if viewModel.usesTimeSections {
+                    // Group memos by time periods for contextual headers
+                    ForEach(cachedGroupedMemos, id: \.period.rawValue) { section in
+                        Section {
+                            ForEach(section.memos, id: \.id) { memo in
+                                let separatorConfig = separatorConfiguration(for: memo, in: section.memos)
+                                let isFirst = (section.memos.first?.id == memo.id)
+                                let isLast = (section.memos.last?.id == memo.id)
+                                let showTopHairline = !isFirst
+                                let rowContent = MemoRowView(
                                     memo: memo,
                                     viewModel: viewModel,
-                                    isSelected: viewModel.isMemoSelected(memo)
+                                    showTopHairline: showTopHairline,
+                                    isFirstInSection: isFirst,
+                                    isLastInSection: isLast
                                 )
+                                    .dragSelectionAccessibility(
+                                        memo: memo,
+                                        viewModel: viewModel,
+                                        isSelected: viewModel.isMemoSelected(memo)
+                                    )
 
-                            if viewModel.isEditMode {
-                                rowContent
-                                    .contentShape(Rectangle())
-                                    .onTapGesture { viewModel.toggleMemoSelection(memo) }
-                                    .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
-                                    .listRowBackground(
-                                        SelectedRowBackground(
-                                            selected: viewModel.isMemoSelected(memo),
-                                            colorScheme: colorScheme
+                                if viewModel.isEditMode {
+                                    rowContent
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { viewModel.toggleMemoSelection(memo) }
+                                        .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
+                                        .listRowBackground(
+                                            SelectedRowBackground(
+                                                selected: viewModel.isMemoSelected(memo),
+                                                colorScheme: colorScheme
+                                            )
                                         )
-                                    )
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        MemoSwipeActionsView(memo: memo, viewModel: viewModel)
-                                    }
-                            } else {
-                                rowContent
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        // Defensive: ensure we pass an up-to-date value
-                                        let latest = DIContainer.shared.memoRepository().getMemo(by: memo.id) ?? memo
-                                        navigationPath.append(latest)
-                                    }
-                                    .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
-                                    .listRowBackground(
-                                        SelectedRowBackground(
-                                            selected: false,
-                                            colorScheme: colorScheme
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                            MemoSwipeActionsView(memo: memo, viewModel: viewModel)
+                                        }
+                                } else {
+                                    rowContent
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            // Defensive: ensure we pass an up-to-date value
+                                            let latest = DIContainer.shared.memoRepository().getMemo(by: memo.id) ?? memo
+                                            navigationPath.append(latest)
+                                        }
+                                        .memoRowListItem(colorScheme: colorScheme, separator: separatorConfig)
+                                        .listRowBackground(
+                                            SelectedRowBackground(
+                                                selected: false,
+                                                colorScheme: colorScheme
+                                            )
                                         )
-                                    )
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        MemoSwipeActionsView(memo: memo, viewModel: viewModel)
-                                    }
-                            }
-                        }
-                        .onDelete { offsets in
-                            HapticManager.shared.playDeletionFeedback()
-                            // Convert section-relative offsets to global memo indices
-                            let memosToDelete = offsets.map { section.memos[$0] }
-                            for memo in memosToDelete {
-                                if let globalIndex = viewModel.memos.firstIndex(where: { $0.id == memo.id }) {
-                                    viewModel.deleteMemo(at: globalIndex)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                            MemoSwipeActionsView(memo: memo, viewModel: viewModel)
+                                        }
                                 }
                             }
+                            .onDelete { offsets in
+                                HapticManager.shared.playDeletionFeedback()
+                                // Convert section-relative offsets to global memo indices
+                                let memosToDelete = offsets.map { section.memos[$0] }
+                                for memo in memosToDelete {
+                                    if let globalIndex = viewModel.memos.firstIndex(where: { $0.id == memo.id }) {
+                                        viewModel.deleteMemo(at: globalIndex)
+                                    }
+                                }
+                            }
+                        } header: {
+                            ContextualSectionHeader(
+                                period: section.period,
+                                memoCount: section.memos.count
+                            )
+                        } footer: {
+                            // Ensure generous visual separation between sections
+                            Color.clear
+                                .frame(height: MemoListConstants.sectionBottomSpacing)
+                                .accessibilityHidden(true)
                         }
-                    } header: {
-                        ContextualSectionHeader(
-                            period: section.period,
-                            memoCount: section.memos.count
-                        )
-                    } footer: {
-                        // Ensure generous visual separation between sections
-                        Color.clear
-                            .frame(height: MemoListConstants.sectionBottomSpacing)
-                            .accessibilityHidden(true)
                     }
+                } else {
+                    // Flat list presentation for non-date sorting modes (A–Z, Duration)
+                    ForEach(viewModel.memos, id: \.id) { memo in
+                        let rowContent = MemoRowView(
+                            memo: memo,
+                            viewModel: viewModel,
+                            showTopHairline: true,
+                            isFirstInSection: false,
+                            isLastInSection: false
+                        )
+                        .dragSelectionAccessibility(
+                            memo: memo,
+                            viewModel: viewModel,
+                            isSelected: viewModel.isMemoSelected(memo)
+                        )
+
+                        if viewModel.isEditMode {
+                            rowContent
+                                .contentShape(Rectangle())
+                                .onTapGesture { viewModel.toggleMemoSelection(memo) }
+                                .memoRowListItem(colorScheme: colorScheme, separator: (.visible, .all))
+                                .listRowBackground(
+                                    SelectedRowBackground(
+                                        selected: viewModel.isMemoSelected(memo),
+                                        colorScheme: colorScheme
+                                    )
+                                )
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    MemoSwipeActionsView(memo: memo, viewModel: viewModel)
+                                }
+                        } else {
+                            rowContent
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    let latest = DIContainer.shared.memoRepository().getMemo(by: memo.id) ?? memo
+                                    navigationPath.append(latest)
+                                }
+                                .memoRowListItem(colorScheme: colorScheme, separator: (.visible, .all))
+                                .listRowBackground(
+                                    SelectedRowBackground(
+                                        selected: false,
+                                        colorScheme: colorScheme
+                                    )
+                                )
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    MemoSwipeActionsView(memo: memo, viewModel: viewModel)
+                                }
+                        }
+                    }
+                    .onDelete(perform: viewModel.deleteMemos)
                 }
             }
             .accessibilityLabel(MemoListConstants.AccessibilityLabels.mainList)

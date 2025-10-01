@@ -33,6 +33,9 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     @Published var isInCountdown = false
     @Published var remainingTime: TimeInterval = 0
     @Published var audioLevel: Double = 0
+    @Published var peakLevel: Double = 0
+    @Published var voiceActivityLevel: Double = 0
+    @Published var frequencyBands = FrequencyBands()
 
     // MARK: - Focused Services
     private let sessionService: AudioSessionService
@@ -242,6 +245,18 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
 
         recordingService.$audioLevel
             .assign(to: \.audioLevel, on: self)
+            .store(in: &cancellables)
+
+        recordingService.$peakLevel
+            .assign(to: \.peakLevel, on: self)
+            .store(in: &cancellables)
+
+        recordingService.$voiceActivityLevel
+            .assign(to: \.voiceActivityLevel, on: self)
+            .store(in: &cancellables)
+
+        recordingService.$frequencyBands
+            .assign(to: \.frequencyBands, on: self)
             .store(in: &cancellables)
 
         // Background task service bindings

@@ -237,6 +237,7 @@ struct EventEditView: View {
             Form {
                 Section(header: Text("Details")) {
                     TextField("Title", text: $event.title)
+                        .textInputAutocapitalization(.words)
                     TextField("Location", text: Binding(
                         get: { event.location ?? "" },
                         set: { event.location = $0.isEmpty ? nil : $0 }

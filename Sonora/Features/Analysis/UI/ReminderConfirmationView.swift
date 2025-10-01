@@ -160,6 +160,7 @@ struct ReminderEditView: View {
             Form {
                 Section(header: Text("Details")) {
                     TextField("Title", text: $reminder.title)
+                        .textInputAutocapitalization(.words)
                 }
                 Section(header: Text("Due Date")) {
                     DatePicker("Due", selection: Binding(get: { reminder.dueDate ?? Date() }, set: { reminder.dueDate = $0 }), displayedComponents: [.date, .hourAndMinute])

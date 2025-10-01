@@ -71,13 +71,28 @@ final class LiveActivityEventHandler {
 
     private func setupRecordingTimeUpdates() {
         // Throttle updates by relying on Combine polling already at 0.1s; ActivityKit handles rate internally.
-        audioRepository.isRecordingPublisher
-            .combineLatest(audioRepository.recordingTimePublisher, audioRepository.audioLevelPublisher)
+        // Combine all audio metrics for rich waveform visualization
+        // Note: combineLatest has a max of 4 publishers, so we chain two groups
+        let basicAudioPublisher = audioRepository.isRecordingPublisher
+            .combineLatest(
+                audioRepository.recordingTimePublisher,
+                audioRepository.audioLevelPublisher,
+                audioRepository.peakLevelPublisher
+            )
+
+        let enhancedAudioPublisher = audioRepository.voiceActivityPublisher
+            .combineLatest(audioRepository.frequencyBandsPublisher)
+
+        basicAudioPublisher
+            .combineLatest(enhancedAudioPublisher)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] isRecording, time, level in
+            .sink { [weak self] basicAudio, enhancedAudio in
                 guard let self = self else { return }
+                let (isRecording, time, level, peakLevel) = basicAudio
+                let (voiceActivity, frequencyBands) = enhancedAudio
+
                 guard isRecording else { return }
-                // Throttle updates to 2 Hz
+                // Throttle updates to 2 Hz (respects ActivityKit budget system)
                 let now = Date()
                 if now.timeIntervalSince(self.lastLiveActivityUpdateAt) < self.minUpdateInterval { return }
                 self.lastLiveActivityUpdateAt = now
@@ -90,11 +105,18 @@ final class LiveActivityEventHandler {
                             let phase = (time.truncatingRemainder(dividingBy: 3.0)) / 3.0
                             effectiveLevel = max(0.0, min(1.0, 0.5 + 0.35 * sin(2 * .pi * phase)))
                         }
+
+                        // Send enhanced audio data to Live Activity
                         try await self.updateUseCase.execute(
                             duration: time,
                             isCountdown: self.audioRepository.isInCountdown,
                             remainingTime: self.audioRepository.isInCountdown ? self.audioRepository.remainingTime : nil,
-                            level: effectiveLevel
+                            level: effectiveLevel,
+                            peakLevel: peakLevel,
+                            voiceActivity: voiceActivity,
+                            frequencyLow: frequencyBands.low,
+                            frequencyMid: frequencyBands.mid,
+                            frequencyHigh: frequencyBands.high
                         )
                     } catch {
                         // Ignore update errors when no activity is active

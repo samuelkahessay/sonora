@@ -15,7 +15,12 @@ public protocol LiveActivityServiceProtocol {
     func updateActivity(duration: TimeInterval,
                         isCountdown: Bool,
                         remainingTime: TimeInterval?,
-                        level: Double?) async throws
+                        level: Double?,
+                        peakLevel: Double?,
+                        voiceActivity: Double?,
+                        frequencyLow: Double?,
+                        frequencyMid: Double?,
+                        frequencyHigh: Double?) async throws
     func endCurrentActivity(dismissalPolicy: ActivityDismissalPolicy) async throws
     func restartActivity(memoTitle: String, startTime: Date) async throws
 }

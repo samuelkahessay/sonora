@@ -101,7 +101,7 @@ struct ActionItemDetectionCard: View {
             VStack(alignment: .leading, spacing: editorSpacing) {
                 Picker("Type", selection: Binding(
                     get: { model.kind },
-                    set: { newKind in model.kind = newKind }
+                    set: { model.kind = $0 }
                 )) {
                     Text("Event").tag(ActionItemDetectionKind.event)
                     Text("Reminder").tag(ActionItemDetectionKind.reminder)
@@ -114,29 +114,18 @@ struct ActionItemDetectionCard: View {
                     set: { model.title = $0 }
                 ))
                 .textFieldStyle(.roundedBorder)
+                .textInputAutocapitalization(.words)
                 .accessibilityLabel("Item title")
 
                 if model.kind == .event {
                     EventDateControl(
-                        date: Binding(
-                            get: { model.suggestedDate },
-                            set: { model.suggestedDate = $0 }
-                        ),
-                        isAllDay: Binding(
-                            get: { model.isAllDay },
-                            set: { model.isAllDay = $0 }
-                        )
+                        date: $model.suggestedDate,
+                        isAllDay: $model.isAllDay
                     )
                 } else {
                     ReminderDateControl(
-                        date: Binding(
-                            get: { model.suggestedDate },
-                            set: { model.suggestedDate = $0 }
-                        ),
-                        isAllDay: Binding(
-                            get: { model.isAllDay },
-                            set: { model.isAllDay = $0 }
-                        )
+                        date: $model.suggestedDate,
+                        isAllDay: $model.isAllDay
                     )
                 }
 

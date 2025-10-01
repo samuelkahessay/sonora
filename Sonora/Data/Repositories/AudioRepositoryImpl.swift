@@ -27,6 +27,9 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     private let permissionStatusSubject = CurrentValueSubject<MicrophonePermissionStatus, Never>(.notDetermined)
     private let countdownSubject = CurrentValueSubject<(Bool, TimeInterval), Never>((false, 0))
     private let audioLevelSubject = CurrentValueSubject<Double, Never>(0)
+    private let peakLevelSubject = CurrentValueSubject<Double, Never>(0)
+    private let voiceActivitySubject = CurrentValueSubject<Double, Never>(0)
+    private let frequencyBandsSubject = CurrentValueSubject<FrequencyBands, Never>(FrequencyBands())
     private let isPausedSubject = CurrentValueSubject<Bool, Never>(false)
 
     // MARK: - AudioRepository Publishers
@@ -35,6 +38,9 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
     var permissionStatusPublisher: AnyPublisher<MicrophonePermissionStatus, Never> { permissionStatusSubject.eraseToAnyPublisher() }
     var countdownPublisher: AnyPublisher<(Bool, TimeInterval), Never> { countdownSubject.eraseToAnyPublisher() }
     var audioLevelPublisher: AnyPublisher<Double, Never> { audioLevelSubject.eraseToAnyPublisher() }
+    var peakLevelPublisher: AnyPublisher<Double, Never> { peakLevelSubject.eraseToAnyPublisher() }
+    var voiceActivityPublisher: AnyPublisher<Double, Never> { voiceActivitySubject.eraseToAnyPublisher() }
+    var frequencyBandsPublisher: AnyPublisher<FrequencyBands, Never> { frequencyBandsSubject.eraseToAnyPublisher() }
     var isPausedPublisher: AnyPublisher<Bool, Never> { isPausedSubject.eraseToAnyPublisher() }
 
     init(backgroundAudioService: BackgroundAudioService) {
@@ -90,6 +96,24 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         backgroundAudioService.$audioLevel
             .sink { [weak self] level in
                 self?.audioLevelSubject.send(level)
+            }
+            .store(in: &cancellables)
+
+        backgroundAudioService.$peakLevel
+            .sink { [weak self] level in
+                self?.peakLevelSubject.send(level)
+            }
+            .store(in: &cancellables)
+
+        backgroundAudioService.$voiceActivityLevel
+            .sink { [weak self] level in
+                self?.voiceActivitySubject.send(level)
+            }
+            .store(in: &cancellables)
+
+        backgroundAudioService.$frequencyBands
+            .sink { [weak self] bands in
+                self?.frequencyBandsSubject.send(bands)
             }
             .store(in: &cancellables)
 

@@ -238,6 +238,7 @@ struct MemoDetailView: View {
                     TextField("Memo Title", text: $viewModel.editedTitle)
                         .font(.system(.title2, design: .serif))
                         .fontWeight(.bold)
+                        .textInputAutocapitalization(.words)
                         .textFieldStyle(.roundedBorder)
                         .focused($isTitleEditingFocused)
                         .onAppear {

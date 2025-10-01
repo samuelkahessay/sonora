@@ -74,6 +74,12 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         memos.isEmpty
     }
 
+    /// Whether UI should present time-based section grouping
+    /// Show sections only for date-based sorting to keep UX coherent.
+    var usesTimeSections: Bool {
+        sortMode == .date
+    }
+
     /// Empty state message for UI
     var emptyStateTitle: String {
         "No Memos Yet"

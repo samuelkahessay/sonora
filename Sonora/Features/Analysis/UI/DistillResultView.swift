@@ -45,7 +45,7 @@ struct DistillResultView: View {
             if let summary = effectiveSummary {
                 DistillSummarySectionView(summary: summary)
             } else if isShowingProgress {
-                SummaryPlaceholderView()
+                SummarySkeleton()
             }
 
             // Action Items Section (host both tasks and detections)
@@ -55,7 +55,7 @@ struct DistillResultView: View {
             if let reflectionQuestions = effectiveReflectionQuestions, !reflectionQuestions.isEmpty {
                 ReflectionQuestionsSectionView(questions: reflectionQuestions)
             } else if isShowingProgress {
-                ReflectionQuestionsPlaceholderView()
+                ReflectionQuestionsSkeleton()
             }
 
             // Copy results action (also triggers smart transcript expand via notification)

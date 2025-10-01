@@ -134,7 +134,15 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
         #endif
     }
 
-    func updateActivity(duration: TimeInterval, isCountdown: Bool, remainingTime: TimeInterval?, level: Double?) async throws {
+    func updateActivity(duration: TimeInterval,
+                        isCountdown: Bool,
+                        remainingTime: TimeInterval?,
+                        level: Double?,
+                        peakLevel: Double? = nil,
+                        voiceActivity: Double? = nil,
+                        frequencyLow: Double? = nil,
+                        frequencyMid: Double? = nil,
+                        frequencyHigh: Double? = nil) async throws {
         guard isActivityActive, let activityId = currentActivityId else {
             throw LiveActivityError.notActive
         }
@@ -170,7 +178,12 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
                 isCountdown: isCountdown,
                 remainingTime: remainingTime,
                 emoji: isCountdown ? "⏳" : "🎤",
-                level: level
+                level: level,
+                peakLevel: peakLevel,
+                voiceActivity: voiceActivity,
+                frequencyLow: frequencyLow,
+                frequencyMid: frequencyMid,
+                frequencyHigh: frequencyHigh
             )
             if #available(iOS 16.2, *) {
                 await activity.update(ActivityContent(state: newState, staleDate: nil))
