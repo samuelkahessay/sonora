@@ -50,6 +50,23 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     /// Legacy memo list for backward compatibility during transition
     @Published var memos: [Memo] = []
 
+    // MARK: - Search / Sort / Filter State
+    @Published var searchText: String = ""
+
+    enum SortMode: String, Sendable {
+        case date
+        case alphabetical
+        case duration
+    }
+    @Published var sortMode: SortMode = .date
+    @Published var filterHasTranscript: Bool = false
+    @Published var filterStartDate: Date?
+    @Published var filterEndDate: Date?
+
+    // Maintains full list and optional search results to derive displayed memos
+    private var allMemos: [Memo] = []
+    private var searchResults: [Memo]?
+
     // MARK: - Computed Properties
 
     /// Whether the memo list is empty
@@ -277,10 +294,33 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             playingMemo: memoRepository.playingMemo,
             isPlaying: memoRepository.isPlaying
         )
+
+        // MARK: - Search binding
+        $searchText
+            .debounce(for: .milliseconds(250), scheduler: RunLoop.main)
+            .removeDuplicates()
+            .sink { [weak self] text in
+                self?.performSearch(with: text)
+            }
+            .store(in: &cancellables)
+
+        // MARK: - Sort and filter bindings
+        $sortMode
+            .sink { [weak self] _ in self?.recomputeDisplayedMemos() }
+            .store(in: &cancellables)
+
+        $filterHasTranscript
+            .sink { [weak self] _ in self?.recomputeDisplayedMemos() }
+            .store(in: &cancellables)
+
+        Publishers.CombineLatest($filterStartDate, $filterEndDate)
+            .sink { [weak self] _, _ in self?.recomputeDisplayedMemos() }
+            .store(in: &cancellables)
     }
 
     private func updateFromRepository() {
-        memos = memoRepository.memos
+        allMemos = memoRepository.memos
+        recomputeDisplayedMemos()
         playbackState = PlaybackState(
             playingMemo: memoRepository.playingMemo,
             isPlaying: memoRepository.isPlaying
@@ -422,6 +462,52 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     /// Refresh memos (same as loadMemos, for pull-to-refresh)
     func refreshMemos() {
         loadMemos()
+    }
+
+    // MARK: - Search / Sort / Filter
+    private func performSearch(with text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            searchResults = nil
+        } else {
+            searchResults = memoRepository.searchMemos(query: trimmed)
+        }
+        recomputeDisplayedMemos()
+    }
+
+    private func recomputeDisplayedMemos() {
+        let base = searchResults ?? allMemos
+        var filtered = base
+
+        // Filters
+        if filterHasTranscript {
+            filtered = filtered.filter { $0.isTranscribed }
+        }
+        if let start = filterStartDate {
+            filtered = filtered.filter { $0.creationDate >= start }
+        }
+        if let end = filterEndDate {
+            filtered = filtered.filter { $0.creationDate <= end }
+        }
+
+        // Sort
+        let sorted: [Memo]
+        switch sortMode {
+        case .date:
+            sorted = filtered.sorted { $0.creationDate > $1.creationDate }
+        case .alphabetical:
+            sorted = filtered.sorted { lhs, rhs in
+                lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+            }
+        case .duration:
+            sorted = filtered.sorted { lhs, rhs in
+                let l = lhs.durationSeconds ?? 0
+                let r = rhs.durationSeconds ?? 0
+                return l > r
+            }
+        }
+
+        memos = sorted
     }
 
     /// Delete memo at specific index

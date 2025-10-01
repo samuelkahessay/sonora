@@ -131,8 +131,8 @@ struct DistillResultView: View {
             calendars: detection.availableCalendars,
             reminderLists: detection.availableReminderLists,
             defaultCalendar: detection.defaultCalendar,
-            defaultReminderList: detection.defaultReminderList,
-            onEvent: { event in
+            defaultReminderList: detection.defaultReminderList
+        ) { event in
                 switch event {
                 case .item(let itemEvent):
                     switch itemEvent {
@@ -152,8 +152,7 @@ struct DistillResultView: View {
                 case .dismissSheet:
                     break
                 }
-            }
-        )
+        }
         .onAppear {
             detection.mergeFrom(events: eventsForUI, reminders: remindersForUI, memoId: memoId)
             coordinator.restoreHandled(for: memoId)

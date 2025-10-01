@@ -122,9 +122,8 @@ internal struct ActionItemsHostSectionView: View {
             ForEach(visibleItems) { m in
                 ActionItemDetectionCard(
                     model: m,
-                    isPro: isPro,
-                    onEvent: { itemEvent in onEvent(.item(itemEvent)) }
-                )
+                    isPro: isPro
+                ) { itemEvent in onEvent(.item(itemEvent)) }
                 .id(m.id)
             }
         }

@@ -325,6 +325,56 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         }
     }
 
+    // MARK: - Search
+    /// Search memos by query across filename, custom title, and full transcript text
+    /// Returns memos sorted by creation date (newest first)
+    func searchMemos(query: String) -> [Memo] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Fast path: empty query returns current list (already sorted)
+        if trimmed.isEmpty { return memos }
+
+        do {
+            let q = trimmed
+            let predicate = #Predicate<MemoModel> { model in
+                (model.customTitle?.localizedStandardContains(q) ?? false)
+                || model.filename.localizedStandardContains(q)
+                || (model.transcription?.fullTranscript.localizedStandardContains(q) ?? false)
+            }
+            let descriptor = FetchDescriptor<MemoModel>(
+                predicate: predicate,
+                sortBy: [SortDescriptor(\.creationDate, order: .reverse)]
+            )
+
+            let models = try context.fetch(descriptor)
+
+            // Batch fetch transcription states to avoid N+1
+            let ids = models.map { $0.id }
+            let states = transcriptionRepository.getTranscriptionStates(for: ids)
+
+            let mapped: [Memo] = models.compactMap { model in
+                let url = audioFilePath(for: model.id)
+                guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+                let state = states[model.id] ?? transcriptionRepository.getTranscriptionState(for: model.id)
+                return Memo(
+                    id: model.id,
+                    filename: model.filename,
+                    fileURL: url,
+                    creationDate: model.creationDate,
+                    durationSeconds: model.duration,
+                    transcriptionStatus: mapToDomainStatus(state),
+                    analysisResults: [],
+                    customTitle: model.customTitle,
+                    shareableFileName: model.shareableFileName,
+                    autoTitleState: autoTitleState(for: model.id)
+                )
+            }
+            return mapped
+        } catch {
+            print("❌ MemoRepository: Search failed with error: \(error)")
+            return []
+        }
+    }
+
     private func saveAndReturn(_ memo: Memo) -> Memo {
         do {
             let memoDirectoryPath = memoDirectoryPath(for: memo.id)

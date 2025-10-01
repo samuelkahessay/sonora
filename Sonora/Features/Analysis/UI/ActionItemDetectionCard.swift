@@ -148,7 +148,6 @@ struct ActionItemDetectionCard: View {
         }
     }
 
-
     private var addButtonTitle: String {
         model.kind == .reminder ? "Add to Reminders" : "Add to Calendar"
     }

@@ -71,7 +71,7 @@ extension OperationCoordinator {
         guard let op = ops.first(where: { $0.id == operationId }), op.status == .pending else {
             return nil
         }
-        let queuedOps = queuedIds.compactMap { id in ops.first { $0.id == id }}
+        let queuedOps = queuedIds.compactMap { id in ops.first { $0.id == id } }
         return queuedOps.firstIndex { $0.id == operationId }
     }
 

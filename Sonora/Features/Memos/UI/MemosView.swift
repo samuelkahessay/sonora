@@ -14,6 +14,7 @@ struct MemosView: View {
     let popToRoot: (() -> Void)?
     @Binding var navigationPath: NavigationPath
     @State private var showSettings: Bool = false
+    @State private var showFilters: Bool = false
 
     init(popToRoot: (() -> Void)? = nil, navigationPath: Binding<NavigationPath>) {
         self.popToRoot = popToRoot
@@ -75,10 +76,8 @@ struct MemosView: View {
 
         return orderedPeriods.compactMap { period in
             guard let memos = sections[period], !memos.isEmpty else { return nil }
-            return MemoSection(
-                period: period,
-                memos: memos.sorted { $0.recordingEndDate > $1.recordingEndDate }
-            )
+            // Preserve the order from viewModel.memos (which already applies selected sort)
+            return MemoSection(period: period, memos: memos)
         }
     }
 
@@ -115,10 +114,41 @@ struct MemosView: View {
                         isEditMode: viewModel.isEditMode
                     ) { viewModel.toggleEditMode() }
             }
+            // Sort menu
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Picker("Sort by", selection: $viewModel.sortMode) {
+                        Text("Date").tag(MemoListViewModel.SortMode.date)
+                        Text("A–Z").tag(MemoListViewModel.SortMode.alphabetical)
+                        Text("Duration").tag(MemoListViewModel.SortMode.duration)
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down.circle")
+                        .imageScale(.large)
+                        .accessibilityLabel("Sort")
+                }
+                .tint(.semantic(.brandPrimary))
+            }
+            // Filters button
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showFilters = true }) {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .imageScale(.large)
+                        .accessibilityLabel("Filters")
+                }
+                .tint(.semantic(.brandPrimary))
+            }
         }
+        .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search memos")
+        .autocorrectionDisabled(true)
+        .textInputAutocapitalization(.never)
         // Present Settings without affecting the memos navigation stack
         .sheet(isPresented: $showSettings) {
             NavigationStack { SettingsView() }
+        }
+        // Filters sheet
+        .sheet(isPresented: $showFilters) {
+            MemoFiltersSheet(viewModel: viewModel, isPresented: $showFilters)
         }
         .errorAlert($viewModel.error) { viewModel.retryLastOperation() }
         .loadingState(isLoading: viewModel.isLoading, message: "Loading memos...")
@@ -417,3 +447,77 @@ struct ContextualSectionHeader: View {
 }
 
 #Preview { MemosView(popToRoot: nil, navigationPath: .constant(NavigationPath())) }
+
+// MARK: - Filters Sheet
+private struct MemoFiltersSheet: View {
+    @ObservedObject var viewModel: MemoListViewModel
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(header: Text("Filters")) {
+                    Toggle("Has transcript", isOn: $viewModel.filterHasTranscript)
+                }
+
+                Section(header: Text("Date range"), footer: footerText) {
+                    // Start date
+                    if let _ = viewModel.filterStartDate {
+                        DatePicker(
+                            "Start",
+                            selection: Binding<Date>(
+                                get: { viewModel.filterStartDate ?? Date() },
+                                set: { viewModel.filterStartDate = $0 }
+                            ),
+                            displayedComponents: .date
+                        )
+                        Button("Clear start date") { viewModel.filterStartDate = nil }
+                            .foregroundColor(.semantic(.brandPrimary))
+                    } else {
+                        Button("Set start date") { viewModel.filterStartDate = Date() }
+                            .foregroundColor(.semantic(.brandPrimary))
+                    }
+
+                    // End date
+                    if let _ = viewModel.filterEndDate {
+                        DatePicker(
+                            "End",
+                            selection: Binding<Date>(
+                                get: { viewModel.filterEndDate ?? Date() },
+                                set: { viewModel.filterEndDate = $0 }
+                            ),
+                            displayedComponents: .date
+                        )
+                        Button("Clear end date") { viewModel.filterEndDate = nil }
+                            .foregroundColor(.semantic(.brandPrimary))
+                    } else {
+                        Button("Set end date") { viewModel.filterEndDate = Date() }
+                            .foregroundColor(.semantic(.brandPrimary))
+                    }
+                }
+            }
+            .navigationTitle("Filters")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Reset") { resetFilters() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { isPresented = false }
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+
+    private var footerText: some View {
+        Text("If both dates are set, memos within the inclusive range are shown.")
+            .font(.footnote)
+            .foregroundColor(.semantic(.textSecondary))
+    }
+
+    private func resetFilters() {
+        viewModel.filterHasTranscript = false
+        viewModel.filterStartDate = nil
+        viewModel.filterEndDate = nil
+    }
+}

@@ -23,6 +23,10 @@ protocol MemoRepository: ObservableObject {
 
     // Persistence
     func loadMemos()
+    /// Search memos by query across filename, customTitle, and transcription text
+    /// - Parameter query: Free text query. Empty string should return all memos.
+    /// - Returns: Matching memos (unsorted or repository default sort)
+    func searchMemos(query: String) -> [Memo]
     func saveMemo(_ memo: Memo)
     func deleteMemo(_ memo: Memo)
     func getMemo(by id: UUID) -> Memo?
