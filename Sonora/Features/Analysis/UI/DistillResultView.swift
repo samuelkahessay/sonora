@@ -103,63 +103,54 @@ struct DistillResultView: View {
         data?.reflection_questions ?? partialData?.reflectionQuestions
     }
 
-    private var dedupedDetectionResults: ([EventsData.DetectedEvent], [RemindersData.DetectedReminder]) {
-        dedupeDetections(
-            events: data?.events ?? partialData?.events ?? [],
-            reminders: data?.reminders ?? partialData?.reminders ?? []
-        )
-    }
-
-    var eventsForUI: [EventsData.DetectedEvent] { dedupedDetectionResults.0 }
-    var remindersForUI: [RemindersData.DetectedReminder] { dedupedDetectionResults.1 }
+    // Use domain-deduplicated results directly
+    var eventsForUI: [EventsData.DetectedEvent] { data?.events ?? partialData?.events ?? [] }
+    var remindersForUI: [RemindersData.DetectedReminder] { data?.reminders ?? partialData?.reminders ?? [] }
 
     // MARK: - Detections (Events + Reminders)
-    @State private var detection = ActionItemDetectionState()
-    @StateObject private var coordinator = ActionItemCoordinator()
+    @StateObject private var viewModelHolder = ViewModelHolder()
 
     // MARK: - Action Items Host Section
     @ViewBuilder
     private var actionItemsHostSection: some View {
         ActionItemsHostSectionView(
-            permissionService: coordinator.permissionService,
-            visibleItems: detection.visibleItems,
-            addedRecords: coordinator.addedRecords,
+            permissionService: viewModelHolder.vm?.permissionService ?? EventKitPermissionService(),
+            visibleItems: viewModelHolder.vm?.visibleItems ?? [],
+            addedRecords: viewModelHolder.vm?.addedRecords ?? [],
             isPro: isPro,
             isDetectionPending: isDetectionPending,
-            showBatchSheet: $detection.showBatchSheet,
-            batchInclude: $detection.batchInclude,
-            calendars: detection.availableCalendars,
-            reminderLists: detection.availableReminderLists,
-            defaultCalendar: detection.defaultCalendar,
-            defaultReminderList: detection.defaultReminderList
+            showBatchSheet: Binding(get: { viewModelHolder.vm?.showBatchSheet ?? false }, set: { viewModelHolder.vm?.showBatchSheet = $0 }),
+            batchInclude: Binding(get: { viewModelHolder.vm?.batchInclude ?? [] }, set: { viewModelHolder.vm?.batchInclude = $0 }),
+            calendars: viewModelHolder.vm?.availableCalendars ?? [],
+            reminderLists: viewModelHolder.vm?.availableReminderLists ?? [],
+            defaultCalendar: viewModelHolder.vm?.defaultCalendar,
+            defaultReminderList: viewModelHolder.vm?.defaultReminderList
         ) { event in
                 switch event {
                 case .item(let itemEvent):
                     switch itemEvent {
                     case .editToggle(let id):
-                        detection.toggleEdit(id)
+                        viewModelHolder.vm?.handleEditToggle(id)
                     case .add(let item):
-                        Task { @MainActor in await addSingle(item) }
+                        Task { @MainActor in await viewModelHolder.vm?.handleAddSingle(item) }
                     case .dismiss(let id):
-                        detection.dismiss(id)
+                        viewModelHolder.vm?.handleDismiss(id)
                     }
                 case .openBatch(let selected):
-                    detection.batchInclude = selected
-                    let reviewItems = detection.visibleItems
-                    Task { @MainActor in await openBatchReview(reviewItems) }
+                    Task { @MainActor in await viewModelHolder.vm?.handleOpenBatch(selected: selected) }
                 case .addSelected(let items, let calendar, let reminderList):
-                    Task { @MainActor in await handleBatchAdd(selected: items, calendar: calendar, reminderList: reminderList) }
+                    Task { @MainActor in await viewModelHolder.vm?.handleAddSelected(items, calendar: calendar, reminderList: reminderList) }
                 case .dismissSheet:
                     break
                 }
         }
-        .onAppear {
-            detection.mergeFrom(events: eventsForUI, reminders: remindersForUI, memoId: memoId)
-            coordinator.restoreHandled(for: memoId)
-        }
+        .onAppear { initializeViewModelIfNeeded() }
         .onChange(of: eventsForUI.count + remindersForUI.count) { _, _ in
-            detection.mergeFrom(events: eventsForUI, reminders: remindersForUI, memoId: memoId)
+            initializeViewModelIfNeeded()
+            viewModelHolder.vm?.mergeIncoming(events: eventsForUI, reminders: remindersForUI)
         }
+        // Simple Undo/Redo controls
+        undoRedoControls
     }
 
     // MARK: - Reflection Questions Section
@@ -170,100 +161,13 @@ struct DistillResultView: View {
     // Filtering and batch helpers consolidated in ActionItemDetectionState
 
     // MARK: - Async wrappers
-    @MainActor
-    private func openBatchReview(_ reviewItems: [ActionItemDetectionUI]) async {
-        do {
-            let res = try await coordinator.loadDestinationsIfNeeded(for: reviewItems, calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
-            if res.didLoadCalendars { detection.availableCalendars = coordinator.availableCalendars; detection.defaultCalendar = coordinator.defaultCalendar; detection.calendarsLoaded = true }
-            if res.didLoadReminderLists { detection.availableReminderLists = coordinator.availableReminderLists; detection.defaultReminderList = coordinator.defaultReminderList; detection.reminderListsLoaded = true }
-            detection.showBatchSheet = true
-        } catch { }
-    }
-
-    @MainActor
-    private func addSingle(_ item: ActionItemDetectionUI) async {
-        detection.update(item)
-        detection.setProcessing(item.id, to: true)
-        defer { detection.setProcessing(item.id, to: false) }
-        do {
-            switch item.kind {
-            case .event:
-                try await coordinator.ensureCalendarPermission()
-                let res = try await coordinator.loadDestinationsIfNeeded(for: [item], calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
-                if res.didLoadCalendars { detection.availableCalendars = coordinator.availableCalendars; detection.defaultCalendar = coordinator.defaultCalendar; detection.calendarsLoaded = true }
-                guard let base = detection.eventSources[item.id] else { throw EventKitError.invalidEventData(field: "event source missing") }
-                let createdId = try await coordinator.createEvent(for: item, base: base, in: detection.defaultCalendar ?? detection.availableCalendars.first)
-                detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .event, identifier: createdId)
-            case .reminder:
-                try await coordinator.ensureReminderPermission()
-                let res = try await coordinator.loadDestinationsIfNeeded(for: [item], calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
-                if res.didLoadReminderLists { detection.availableReminderLists = coordinator.availableReminderLists; detection.defaultReminderList = coordinator.defaultReminderList; detection.reminderListsLoaded = true }
-                guard let base = detection.reminderSources[item.id] else { throw EventKitError.invalidEventData(field: "reminder source missing") }
-                let createdId = try await coordinator.createReminder(for: item, base: base, in: detection.defaultReminderList ?? detection.availableReminderLists.first)
-                detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .reminder, identifier: createdId)
-            }
-            detection.added.insert(item.id)
-            let date: Date? = {
-                if let d = item.suggestedDate { return d }
-                switch item.kind {
-                case .event: return detection.eventSources[item.id]?.startDate
-                case .reminder: return detection.reminderSources[item.id]?.dueDate
-                }
-            }()
-            let rec = coordinator.makeAddedRecord(for: item, date: date)
-            coordinator.upsertAndPersist(record: rec, memoId: item.memoId ?? memoId)
-            HapticManager.shared.playSuccess()
-        } catch {
-            HapticManager.shared.playError()
-        }
-    }
-
-    @MainActor
-    private func handleBatchAdd(selected: [ActionItemDetectionUI], calendar: CalendarDTO?, reminderList: CalendarDTO?) async {
-        guard !selected.isEmpty else { return }
-        selected.forEach { detection.update($0) }
-        let ids = selected.map { $0.id }
-        ids.forEach { detection.setProcessing($0, to: true) }
-        defer { ids.forEach { detection.setProcessing($0, to: false) } }
-
-        let eventItems = selected.filter { $0.kind == .event }
-        let reminderItems = selected.filter { $0.kind == .reminder }
-        do {
-            if !eventItems.isEmpty {
-                try await coordinator.ensureCalendarPermission()
-                let res = try await coordinator.loadDestinationsIfNeeded(for: eventItems, calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
-                if res.didLoadCalendars { detection.availableCalendars = coordinator.availableCalendars; detection.defaultCalendar = coordinator.defaultCalendar; detection.calendarsLoaded = true }
-                let destination = calendar ?? detection.defaultCalendar ?? detection.availableCalendars.first
-                guard let destination else { throw EventKitError.calendarNotFound(identifier: "default") }
-                for item in eventItems {
-                    guard let base = detection.eventSources[item.id] else { continue }
-                    let id = try await coordinator.createEvent(for: item, base: base, in: destination)
-                    detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .event, identifier: id)
-                    detection.added.insert(item.id)
-                    let date = item.suggestedDate ?? base.startDate
-                    let rec = coordinator.makeAddedRecord(for: item, date: date)
-                    coordinator.upsertAndPersist(record: rec, memoId: item.memoId ?? memoId)
-                }
-            }
-            if !reminderItems.isEmpty {
-                try await coordinator.ensureReminderPermission()
-                let res = try await coordinator.loadDestinationsIfNeeded(for: reminderItems, calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
-                if res.didLoadReminderLists { detection.availableReminderLists = coordinator.availableReminderLists; detection.defaultReminderList = coordinator.defaultReminderList; detection.reminderListsLoaded = true }
-                let destination = reminderList ?? detection.defaultReminderList ?? detection.availableReminderLists.first
-                guard let destination else { throw EventKitError.reminderListNotFound(identifier: "default") }
-                for item in reminderItems {
-                    guard let base = detection.reminderSources[item.id] else { continue }
-                    let id = try await coordinator.createReminder(for: item, base: base, in: destination)
-                    detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .reminder, identifier: id)
-                    detection.added.insert(item.id)
-                    let date = item.suggestedDate ?? base.dueDate
-                    let rec = coordinator.makeAddedRecord(for: item, date: date)
-                    coordinator.upsertAndPersist(record: rec, memoId: item.memoId ?? memoId)
-                }
-            }
-            HapticManager.shared.playSuccess()
-        } catch {
-            HapticManager.shared.playError()
+    private func initializeViewModelIfNeeded() {
+        if viewModelHolder.vm == nil {
+            viewModelHolder.vm = ActionItemViewModel(
+                memoId: memoId,
+                initialEvents: eventsForUI,
+                initialReminders: remindersForUI
+            )
         }
     }
 
@@ -308,4 +212,29 @@ struct DistillResultView: View {
         return partialData?.events == nil && partialData?.reminders == nil && !isProgressComplete
     }
 
+}
+
+// Helper to own a @StateObject VM while allowing optional init in body
+private final class ViewModelHolder: ObservableObject {
+    @Published var vm: ActionItemViewModel?
+}
+
+private extension DistillResultView {
+    @ViewBuilder
+    var undoRedoControls: some View {
+        HStack(spacing: 12) {
+            Button("Undo") { Task { @MainActor in await viewModelHolder.vm?.undo() } }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(!(viewModelHolder.vm?.canUndo ?? false))
+            Button("Redo") { Task { @MainActor in await viewModelHolder.vm?.redo() } }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(!(viewModelHolder.vm?.canRedo ?? false))
+            Spacer()
+        }
+        .padding(.top, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Undo or redo last action")
+    }
 }

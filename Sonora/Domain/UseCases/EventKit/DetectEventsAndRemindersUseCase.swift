@@ -298,6 +298,11 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         filteredEvents = TemporalRefiner.refine(eventsData: filteredEvents, transcript: transcript) ?? filteredEvents
         filteredReminders = TemporalRefiner.refine(remindersData: filteredReminders, transcript: transcript) ?? filteredReminders
 
+        // Domain-level deduplication to prevent overlap across events/reminders
+        let deduped = DeduplicationService.dedupe(events: filteredEvents, reminders: filteredReminders)
+        filteredEvents = deduped.events
+        filteredReminders = deduped.reminders
+
         return DetectionResult(
             events: filteredEvents,
             reminders: filteredReminders,
