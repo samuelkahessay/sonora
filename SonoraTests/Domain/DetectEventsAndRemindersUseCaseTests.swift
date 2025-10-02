@@ -94,6 +94,63 @@ final class DetectEventsAndRemindersUseCaseTests: XCTestCase {
         XCTAssertEqual(valueAsDouble(reminderCandidate["confidence"]), Double(nearMissReminder.confidence), accuracy: 0.001)
         XCTAssertEqual(reminderCandidate["dueDate"] as? String, isoString(nearMissReminder.dueDate))
     }
+
+    func testFallbackSelectsTopCandidatesWhenNonePassThreshold() async throws {
+        let memoId = UUID()
+        let transcript = "Scheduling notes with weak confidence"
+
+        // None meet strict threshold (0.80), but fallback should include >= max(0.40, t-0.25)=0.55
+        let e1 = EventsData.DetectedEvent(
+            id: "e1", title: "Discuss roadmap", startDate: Date(), endDate: nil, location: nil, participants: ["P1"], confidence: 0.62, sourceText: "roadmap", memoId: memoId
+        )
+        let e2 = EventsData.DetectedEvent(
+            id: "e2", title: "Sync", startDate: Date(), endDate: nil, location: nil, participants: ["P2"], confidence: 0.61, sourceText: "sync", memoId: memoId
+        )
+        let e3 = EventsData.DetectedEvent(
+            id: "e3", title: "Standup", startDate: Date(), endDate: nil, location: nil, participants: ["P3"], confidence: 0.58, sourceText: "standup", memoId: memoId
+        )
+        let eventsData = EventsData(events: [e1, e2, e3])
+
+        let r1 = RemindersData.DetectedReminder(
+            id: "r1", title: "Email Alice", dueDate: nil, priority: .medium, confidence: 0.62, sourceText: "email", memoId: memoId
+        )
+        let r2 = RemindersData.DetectedReminder(
+            id: "r2", title: "Write notes", dueDate: nil, priority: .low, confidence: 0.57, sourceText: "notes", memoId: memoId
+        )
+        let r3 = RemindersData.DetectedReminder(
+            id: "r3", title: "Book room", dueDate: nil, priority: .high, confidence: 0.56, sourceText: "book", memoId: memoId
+        )
+        let remindersData = RemindersData(reminders: [r1, r2, r3])
+
+        let analysisService = StubAnalysisService(eventsData: eventsData, remindersData: remindersData)
+        let repository = InMemoryAnalysisRepositoryStub()
+        let logger = CapturingLogger()
+        let bus = NoopEventBus()
+        let coordinator = OperationCoordinatorStub()
+        let thresholds = FixedThresholdPolicy(eventThreshold: 0.80, reminderThreshold: 0.80)
+
+        let sut = DetectEventsAndRemindersUseCase(
+            analysisService: analysisService,
+            analysisRepository: repository,
+            logger: logger,
+            eventBus: bus,
+            operationCoordinator: coordinator,
+            thresholdPolicy: thresholds
+        )
+
+        let result = try await sut.execute(transcript: transcript, memoId: memoId)
+
+        // Events fallback picks top 2 by confidence >= 0.55
+        XCTAssertEqual(result.events?.events.count, 2)
+        let eventIds = Set(result.events!.events.map { $0.id })
+        XCTAssertTrue(eventIds.contains("e1"))
+        XCTAssertTrue(eventIds.contains("e2"))
+
+        // Reminders fallback picks top 3 by confidence >= 0.55
+        XCTAssertEqual(result.reminders?.reminders.count, 3)
+        let reminderIds = Set(result.reminders!.reminders.map { $0.id })
+        XCTAssertEqual(reminderIds, Set(["r1", "r2", "r3"]))
+    }
 }
 
 // MARK: - Helpers

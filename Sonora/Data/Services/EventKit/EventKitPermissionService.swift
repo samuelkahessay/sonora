@@ -175,6 +175,9 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
             calendarPermissionState = granted ? .authorized : .denied
             lastCalendarCheck = Date()
 
+            // Stabilize system-reported authorization state to avoid transient reads by callers
+            await stabilizeAuthorization(for: .event, expectAuthorized: granted, timeout: 1.0)
+
             logger.info("Calendar access request completed: \(granted ? "granted" : "denied")",
                        category: .system,
                        context: LogContext())
@@ -228,6 +231,9 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
             // Update state immediately
             reminderPermissionState = granted ? .authorized : .denied
             lastReminderCheck = Date()
+
+            // Stabilize system-reported authorization state to avoid transient reads by callers
+            await stabilizeAuthorization(for: .reminder, expectAuthorized: granted, timeout: 1.0)
 
             logger.info("Reminder access request completed: \(granted ? "granted" : "denied")",
                        category: .system,
@@ -318,6 +324,47 @@ final class EventKitPermissionService: ObservableObject, @unchecked Sendable {
 }
 
 // MARK: - Protocol for Dependency Injection
+
+// MARK: - Authorization Stabilization
+extension EventKitPermissionService {
+    /// Polls authorization status briefly to ensure state has settled after a request.
+    /// Helps avoid race conditions where callers read `.notDetermined` immediately after a request completes.
+    fileprivate func stabilizeAuthorization(for entity: EKEntityType, expectAuthorized: Bool, timeout: TimeInterval) async {
+        let deadline = Date().addingTimeInterval(timeout)
+
+        func mapped() -> PermissionState {
+            mapAuthorizationStatus(EKEventStore.authorizationStatus(for: entity))
+        }
+
+        while Date() < deadline {
+            let state = mapped()
+            if expectAuthorized {
+                if state.isAuthorized { break }
+            } else {
+                if state == .denied || state == .restricted { break }
+            }
+            // Cooperative delay on the main actor
+            do { try await Task.sleep(nanoseconds: 100_000_000) } catch { break }
+        }
+
+        // Update the cached state and last check timestamps
+        let final = mapped()
+        switch entity {
+        case .event:
+            calendarPermissionState = final
+            lastCalendarCheck = Date()
+        case .reminder:
+            reminderPermissionState = final
+            lastReminderCheck = Date()
+        @unknown default:
+            break
+        }
+
+        logger.debug("Authorization stabilized for \(entity == .event ? "events" : "reminders"): \(final.rawValue)",
+                     category: .system,
+                     context: LogContext())
+    }
+}
 
 @MainActor
 protocol EventKitPermissionServiceProtocol: ObservableObject {

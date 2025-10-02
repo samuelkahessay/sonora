@@ -197,14 +197,14 @@ final class EventKitRepositoryImpl: EventKitRepository {
         guard let ekCalendar = eventStore.calendar(withIdentifier: calendar.id) else {
             throw EventKitError.calendarNotFound(identifier: calendar.id)
         }
-        return try createEventOnMainActor(event: event, calendar: ekCalendar, maxRetries: maxRetries)
+        return try await createEventOnMainActor(event: event, calendar: ekCalendar, maxRetries: maxRetries)
     }
 
     private func createEventOnMainActor(
         event: EventsData.DetectedEvent,
         calendar: EKCalendar,
         maxRetries: Int = 3
-    ) throws -> String {
+    ) async throws -> String {
         logger.info("Creating event: \(event.title)",
                    category: .eventkit,
                    context: LogContext(additionalInfo: [
@@ -242,8 +242,8 @@ final class EventKitRepositoryImpl: EventKitRepository {
                               error: error)
 
                 if attempt < maxRetries {
-                    // Brief delay before retry
-                    Thread.sleep(forTimeInterval: 0.1 * Double(attempt))
+                    // Brief non-blocking delay before retry (cooperative on main actor)
+                    try await Task.sleep(nanoseconds: UInt64(0.1 * Double(attempt) * 1_000_000_000))
                 }
             }
         }
@@ -263,16 +263,16 @@ final class EventKitRepositoryImpl: EventKitRepository {
         guard let ekList = eventStore.calendar(withIdentifier: reminderList.id) else {
             throw EventKitError.reminderListNotFound(identifier: reminderList.id)
         }
-        return try createReminderOnMainActor(reminder: reminder,
-                                            reminderList: ekList,
-                                            maxRetries: maxRetries)
+        return try await createReminderOnMainActor(reminder: reminder,
+                                                  reminderList: ekList,
+                                                  maxRetries: maxRetries)
     }
 
     private func createReminderOnMainActor(
         reminder: RemindersData.DetectedReminder,
         reminderList: EKCalendar,
         maxRetries: Int = 3
-    ) throws -> String {
+    ) async throws -> String {
         logger.info("Creating reminder: \(reminder.title)",
                    category: .eventkit,
                    context: LogContext(additionalInfo: [
@@ -328,7 +328,7 @@ final class EventKitRepositoryImpl: EventKitRepository {
                               error: error)
 
                 if attempt < maxRetries {
-                    Thread.sleep(forTimeInterval: 0.1 * Double(attempt))
+                    try await Task.sleep(nanoseconds: UInt64(0.1 * Double(attempt) * 1_000_000_000))
                 }
             }
         }
@@ -349,16 +349,16 @@ final class EventKitRepositoryImpl: EventKitRepository {
             let (key, dto) = pair
             if let cal = eventStore.calendar(withIdentifier: dto.id) { acc[key] = cal }
         }
-        return createEventsOnMainActor(events: events,
-                                       calendarMapping: ekMap,
-                                       maxRetries: maxRetries)
+        return await createEventsOnMainActor(events: events,
+                                             calendarMapping: ekMap,
+                                             maxRetries: maxRetries)
     }
 
     private func createEventsOnMainActor(
         events: [EventsData.DetectedEvent],
         calendarMapping: [String: EKCalendar],
         maxRetries: Int = 3
-    ) -> [String: Result<String, Error>] {
+    ) async -> [String: Result<String, Error>] {
         logger.info("Creating \(events.count) events in batch",
                    category: .eventkit,
                    context: LogContext())
@@ -372,7 +372,7 @@ final class EventKitRepositoryImpl: EventKitRepository {
             }
 
             do {
-                let eventId = try createEventOnMainActor(event: event, calendar: calendar, maxRetries: maxRetries)
+                let eventId = try await createEventOnMainActor(event: event, calendar: calendar, maxRetries: maxRetries)
                 results[event.id] = .success(eventId)
             } catch {
                 results[event.id] = .failure(error)
@@ -403,16 +403,16 @@ final class EventKitRepositoryImpl: EventKitRepository {
             let (key, dto) = pair
             if let list = eventStore.calendar(withIdentifier: dto.id) { acc[key] = list }
         }
-        return createRemindersOnMainActor(reminders: reminders,
-                                          reminderListMapping: ekMap,
-                                          maxRetries: maxRetries)
+        return await createRemindersOnMainActor(reminders: reminders,
+                                                reminderListMapping: ekMap,
+                                                maxRetries: maxRetries)
     }
 
     private func createRemindersOnMainActor(
         reminders: [RemindersData.DetectedReminder],
         reminderListMapping: [String: EKCalendar],
         maxRetries: Int = 3
-    ) -> [String: Result<String, Error>] {
+    ) async -> [String: Result<String, Error>] {
         logger.info("Creating \(reminders.count) reminders in batch",
                    category: .eventkit,
                    context: LogContext())
@@ -426,9 +426,9 @@ final class EventKitRepositoryImpl: EventKitRepository {
             }
 
             do {
-                let reminderId = try createReminderOnMainActor(reminder: reminder,
-                                                             reminderList: reminderList,
-                                                             maxRetries: maxRetries)
+                let reminderId = try await createReminderOnMainActor(reminder: reminder,
+                                                                    reminderList: reminderList,
+                                                                    maxRetries: maxRetries)
                 results[reminder.id] = .success(reminderId)
             } catch {
                 results[reminder.id] = .failure(error)

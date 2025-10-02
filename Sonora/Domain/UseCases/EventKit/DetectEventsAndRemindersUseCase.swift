@@ -239,9 +239,15 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         // Process results and filter by confidence
         let eventsEnvelope = try await eventsResult
         let remindersEnvelope = try await remindersResult
+
+        // Validate server output before thresholding
+        let validatedEvents = DetectionValidator.validateEvents(eventsEnvelope.data)
+        let validatedReminders = DetectionValidator.validateReminders(remindersEnvelope.data)
         print("🗓️ [Detect] raw counts events=\(eventsEnvelope.data.events.count) reminders=\(remindersEnvelope.data.reminders.count)")
+        print("🗓️ [Detect] validated counts events=\(validatedEvents?.events.count ?? 0) reminders=\(validatedReminders?.reminders.count ?? 0)")
+
         let eventFilterOutcome = filterEventsByConfidence(
-            eventsEnvelope.data,
+            validatedEvents,
             threshold: eventThreshold,
             nearMissMargin: nearMissMargin
         )
@@ -256,7 +262,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         )
 
         let reminderFilterOutcome = filterRemindersByConfidence(
-            remindersEnvelope.data,
+            validatedReminders,
             threshold: reminderThreshold,
             nearMissMargin: nearMissMargin
         )

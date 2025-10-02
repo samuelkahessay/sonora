@@ -57,9 +57,9 @@ export function buildPrompt(mode: string, transcript: string): { system: string;
         `Decision guide:\n` +
         `1) Does the utterance include a clear gathering with another person, place, or agenda? If not, ignore it here.\n` +
         `2) Is there an explicit or strongly implied time window (absolute date, weekday + time, parts of day like "tomorrow morning", or relative slot like "next week on Wednesday")? If timing is missing, ignore.\n` +
-        `3) When unsure whether it is an event or a solo task, prefer skipping it here so a reminder can cover it. Never emit both an event and a reminder for the same language.\n` +
-        `How to populate fields:\n` +
-        `- startDate: ISO8601 in UTC using the transcript's intended local day/time. For vague ranges like "next week", choose the most specific day mentioned; if only a weekday is given, use that day's start at 09:00 local; if only a part of day ("tomorrow afternoon"), set 15:00 local unless the phrase suggests otherwise.\n` +
+        `3) When unsure whether it is an event or a solo task, prefer skipping it here so a reminder can cover it. Never emit both an event and a reminder for the same span of text.\n` +
+        `How to populate fields (explicit defaults):\n` +
+        `- startDate: ISO8601 in UTC using local intent. If only a weekday: that day at 09:00. If only a part-of-day: morning=09:00, afternoon=14:00, evening=18:00, tonight=20:00. For "next week", pick the specified weekday if given; otherwise skip.\n` +
         `- endDate: preserve supplied duration; otherwise leave null unless a range like "2-3pm" is stated.\n` +
         `- participants: include people or teams named; omit duplicates.\n` +
         `Confidence rubric (set confidence field accordingly):\n` +
@@ -85,8 +85,8 @@ export function buildPrompt(mode: string, transcript: string): { system: string;
         `1) Look for action verbs aimed at the speaker (email, call, send, finish, book, pick up, confirm).\n` +
         `2) If another person or location is involved BUT it is a scheduled meeting, skip here (it should be an event).\n` +
         `3) Prefer skipping when phrasing is hypothetical or a question ("should I...").\n` +
-        `How to populate fields:\n` +
-        `- dueDate: convert relative phrases using ISO8601 UTC. Examples: today → today's date at 17:00 local, tomorrow morning → tomorrow at 09:00, this weekend → upcoming Saturday 10:00, next week → upcoming Monday 09:00. If no timing, leave null.\n` +
+        `How to populate fields (explicit defaults):\n` +
+        `- dueDate: convert relative phrases using ISO8601 UTC. Use: morning=09:00, afternoon=14:00, evening=18:00. Examples: today → 17:00; tomorrow morning → 09:00 tomorrow; this weekend → upcoming Saturday 10:00; next week → upcoming Monday 09:00. If no timing, leave null.\n` +
         `- priority: High when urgency words appear ("ASAP", "today", "urgent"), Low when optional or exploratory, otherwise Medium.\n` +
         `Confidence rubric:\n` +
         `- 0.85–1.0 High when verb + responsible party + timing are explicit.\n` +

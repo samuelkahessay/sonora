@@ -61,7 +61,7 @@ struct SonoraTests {
         repository.loadMemos()
 
         // Verify the memo was saved and loaded
-        #expect(repository.memos.isEmpty) // At least no crash occurred
+        #expect(!repository.memos.isEmpty)
 
         // Clean up
         try? FileManager.default.removeItem(at: testURL)
