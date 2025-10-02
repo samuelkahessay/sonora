@@ -86,7 +86,10 @@ struct ActionItemDetectionCard: View {
                 primaryAddButton
             }
 
-            Button(action: { onEvent(.editToggle(id: model.id)) }) {
+            Button(action: {
+                model.isEditing.toggle()
+                onEvent(.editToggle(id: model.id))
+            }) {
                 Image(systemName: model.isEditing ? "xmark.circle" : "pencil")
             }
             .buttonStyle(.bordered)

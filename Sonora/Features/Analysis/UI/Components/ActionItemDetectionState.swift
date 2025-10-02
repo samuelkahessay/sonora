@@ -130,12 +130,23 @@ struct ActionItemDetectionState {
     mutating func update(_ updated: ActionItemDetectionUI) {
         // Map back to domain by sourceId
         if let idx = items.firstIndex(where: { $0.sourceId == updated.sourceId }) {
+            let previousKind = items[idx].kind
             items[idx].kind = updated.kind
             items[idx].title = updated.title
             items[idx].suggestedDate = updated.suggestedDate
             items[idx].isAllDay = updated.isAllDay
             items[idx].location = updated.location
             items[idx].priorityLabel = updated.priorityLabel
+
+            // Clear stale source caches when the type flips
+            if previousKind != updated.kind {
+                switch previousKind {
+                case .event:
+                    eventSources.removeValue(forKey: updated.id)
+                case .reminder:
+                    reminderSources.removeValue(forKey: updated.id)
+                }
+            }
         }
     }
 
@@ -195,8 +206,12 @@ struct ActionItemDetectionState {
         let date: Date? = {
             if let d = item.suggestedDate { return d }
             switch item.kind {
-            case .event: return eventSources[item.id]?.startDate
-            case .reminder: return reminderSources[item.id]?.dueDate
+            case .event:
+                if let cached = eventSources[item.id]?.startDate { return cached }
+                return items.first(where: { $0.sourceId == item.sourceId })?.suggestedDate
+            case .reminder:
+                if let cached = reminderSources[item.id]?.dueDate { return cached }
+                return items.first(where: { $0.sourceId == item.sourceId })?.suggestedDate
             }
         }()
         let dateText = date.map { formatShortDate($0) }

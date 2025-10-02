@@ -76,7 +76,7 @@ final class ActionItemViewModel: ObservableObject {
                 try await coordinator.ensureCalendarPermission()
                 let res = try await coordinator.loadDestinationsIfNeeded(for: [item], calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
                 if res.didLoadCalendars { detection.availableCalendars = coordinator.availableCalendars; detection.defaultCalendar = coordinator.defaultCalendar; detection.calendarsLoaded = true }
-                guard let base = detection.eventSources[item.id] else { throw EventKitError.invalidEventData(field: "event source missing") }
+                let base = try resolveEventBase(for: item)
                 // Duplicate check before creation
                 let payload = buildEventPayload(from: item, base: base)
                 let repo = DIContainer.shared.eventKitRepository()
@@ -111,7 +111,7 @@ final class ActionItemViewModel: ObservableObject {
                 let res = try await coordinator.loadDestinationsIfNeeded(for: [item], calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
                 if res.didLoadReminderLists { detection.availableReminderLists = coordinator.availableReminderLists; detection.defaultReminderList = coordinator.defaultReminderList; detection.reminderListsLoaded = true }
 
-                guard let base = detection.reminderSources[item.id] else { throw EventKitError.invalidEventData(field: "reminder source missing") }
+                let base = try resolveReminderBase(for: item)
                 let create: AddReminderCommand.CreateClosure = { [weak self] in
                     guard let self else { throw EventKitError.invalidEventData(field: "vm deallocated") }
                     let id = try await coordinator.createReminder(for: item, base: base, in: self.detection.defaultReminderList ?? self.detection.availableReminderLists.first)
@@ -131,8 +131,10 @@ final class ActionItemViewModel: ObservableObject {
             let date: Date? = {
                 if let d = item.suggestedDate { return d }
                 switch item.kind {
-                case .event: return detection.eventSources[item.id]?.startDate
-                case .reminder: return detection.reminderSources[item.id]?.dueDate
+                case .event:
+                    return detection.eventSources[item.id]?.startDate ?? detection.items.first(where: { $0.sourceId == item.sourceId })?.suggestedDate
+                case .reminder:
+                    return detection.reminderSources[item.id]?.dueDate ?? detection.items.first(where: { $0.sourceId == item.sourceId })?.suggestedDate
                 }
             }()
             let rec = coordinator.makeAddedRecord(for: item, date: date)
@@ -153,7 +155,7 @@ final class ActionItemViewModel: ObservableObject {
             showConflictSheet = false
             do {
                 for item in batch where item.kind == .event {
-                    guard let base = detection.eventSources[item.id] else { continue }
+                    guard let base = try? resolveEventBase(for: item) else { continue }
                     let id = try await coordinator.createEvent(for: item, base: base, in: destination)
                     detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .event, identifier: id)
                     detection.added.insert(item.id)
@@ -228,10 +230,14 @@ final class ActionItemViewModel: ObservableObject {
                 // Duplicate detection across batch; if any duplicates, present sheet to choose
                 var itemsWithDupes: [(ActionItemDetectionUI, [ExistingEventDTO])] = []
                 for item in eventItems {
-                    guard let base = detection.eventSources[item.id] else { continue }
-                    let payload = buildEventPayload(from: item, base: base)
-                    let dups = try await DIContainer.shared.eventKitRepository().findDuplicates(similarTo: payload)
-                    if !dups.isEmpty { itemsWithDupes.append((item, dups)) }
+                    do {
+                        let base = try resolveEventBase(for: item)
+                        let payload = buildEventPayload(from: item, base: base)
+                        let dups = try await DIContainer.shared.eventKitRepository().findDuplicates(similarTo: payload)
+                        if !dups.isEmpty { itemsWithDupes.append((item, dups)) }
+                    } catch {
+                        continue
+                    }
                 }
                 if !itemsWithDupes.isEmpty {
                     // Aggregate duplicates and show a single confirmation
@@ -243,7 +249,7 @@ final class ActionItemViewModel: ObservableObject {
                 }
 
                 for item in eventItems {
-                    guard let base = detection.eventSources[item.id] else { continue }
+                    let base = try resolveEventBase(for: item)
                     let id = try await coordinator.createEvent(for: item, base: base, in: destination)
                     detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .event, identifier: id)
                     detection.added.insert(item.id)
@@ -259,7 +265,7 @@ final class ActionItemViewModel: ObservableObject {
                 let destination = reminderList ?? detection.defaultReminderList ?? detection.availableReminderLists.first
                 guard let destination else { throw EventKitError.reminderListNotFound(identifier: "default") }
                 for item in reminderItems {
-                    guard let base = detection.reminderSources[item.id] else { continue }
+                    let base = try resolveReminderBase(for: item)
                     let id = try await coordinator.createReminder(for: item, base: base, in: destination)
                     detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .reminder, identifier: id)
                     detection.added.insert(item.id)
@@ -294,4 +300,77 @@ final class ActionItemViewModel: ObservableObject {
     }
 
     // Undo/Redo availability removed
+}
+
+// MARK: - Private helpers
+private extension ActionItemViewModel {
+    private func resolveEventBase(for item: ActionItemDetectionUI) throws -> EventsData.DetectedEvent {
+        if let existing = detection.eventSources[item.id] {
+            return existing
+        }
+        guard let fallback = makeEventBase(from: item) else {
+            throw EventKitError.invalidEventData(field: "event source missing")
+        }
+        detection.eventSources[item.id] = fallback
+        detection.reminderSources.removeValue(forKey: item.id)
+        return fallback
+    }
+
+    private func resolveReminderBase(for item: ActionItemDetectionUI) throws -> RemindersData.DetectedReminder {
+        if let existing = detection.reminderSources[item.id] {
+            return existing
+        }
+        guard let fallback = makeReminderBase(from: item) else {
+            throw EventKitError.invalidEventData(field: "reminder source missing")
+        }
+        detection.reminderSources[item.id] = fallback
+        detection.eventSources.removeValue(forKey: item.id)
+        return fallback
+    }
+
+    private func makeEventBase(from item: ActionItemDetectionUI) -> EventsData.DetectedEvent? {
+        guard let domain = detection.items.first(where: { $0.sourceId == item.sourceId }) else { return nil }
+        let startDate = item.suggestedDate ?? domain.suggestedDate
+        let endDate: Date?
+        if let startDate, !(item.isAllDay || domain.isAllDay) {
+            endDate = startDate.addingTimeInterval(3600)
+        } else {
+            endDate = startDate
+        }
+        return EventsData.DetectedEvent(
+            id: domain.sourceId,
+            title: item.title,
+            startDate: startDate,
+            endDate: endDate,
+            location: item.location ?? domain.location,
+            participants: nil,
+            confidence: domain.confidence.approximateValue,
+            sourceText: domain.sourceQuote,
+            memoId: domain.memoId
+        )
+    }
+
+    private func makeReminderBase(from item: ActionItemDetectionUI) -> RemindersData.DetectedReminder? {
+        guard let domain = detection.items.first(where: { $0.sourceId == item.sourceId }) else { return nil }
+        let priority = RemindersData.DetectedReminder.Priority(rawValue: item.priorityLabel ?? domain.priorityLabel ?? RemindersData.DetectedReminder.Priority.medium.rawValue) ?? .medium
+        return RemindersData.DetectedReminder(
+            id: domain.sourceId,
+            title: item.title,
+            dueDate: item.suggestedDate ?? domain.suggestedDate,
+            priority: priority,
+            confidence: domain.confidence.approximateValue,
+            sourceText: domain.sourceQuote,
+            memoId: domain.memoId
+        )
+    }
+}
+
+private extension ActionItemConfidence {
+    var approximateValue: Float {
+        switch self {
+        case .high: return 0.9
+        case .medium: return 0.7
+        case .low: return 0.4
+        }
+    }
 }
