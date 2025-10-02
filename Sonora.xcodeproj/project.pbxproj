@@ -11,6 +11,7 @@
 		0A875D9F2E600B7100245D4A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A875D9E2E600B7100245D4A /* SwiftUI.framework */; };
 		0A875DAC2E600B7300245D4A /* SonoraLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0A875D9A2E600B7100245D4A /* SonoraLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0AA6FA102E63710600C8BF7A /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 0AA6FA0F2E63710600C8BF7A /* ZIPFoundation */; };
+		2890E6242E8EF09A008D4101 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 2890E6232E8EF09A008D4101 /* RevenueCat */; };
 		28AD2BFF2E88D5230037363C /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28AD2BFE2E88D5230037363C /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
@@ -60,10 +61,7 @@
 		0A875D9C2E600B7100245D4A /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		0A875D9E2E600B7100245D4A /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		0A875DB32E600BB900245D4A /* SonoraLiveActivityExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SonoraLiveActivityExtension.entitlements; sourceTree = "<group>"; };
-		28AD2BFC2E88B2790037363C /* SKProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = SKProducts.storekit; path = Sonora/StoreKit/SKProducts.storekit; sourceTree = "<group>"; };
-		28AD2BFD2E88D4780037363C /* SKProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = SKProducts.storekit; path = Sonora/StoreKit/SKProducts.storekit; sourceTree = "<group>"; };
 		28AD2BFE2E88D5230037363C /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
-		28AD2C002E88D8B50037363C /* SKProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = SKProducts.storekit; path = Sonora/StoreKit/SKProducts.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -135,6 +133,7 @@
 			files = (
 				0AA6FA102E63710600C8BF7A /* ZIPFoundation in Frameworks */,
 				28AD2BFF2E88D5230037363C /* StoreKit.framework in Frameworks */,
+				2890E6242E8EF09A008D4101 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -167,9 +166,6 @@
 		0A3974012E5A6CA400F27D16 = {
 			isa = PBXGroup;
 			children = (
-				28AD2BFC2E88B2790037363C /* SKProducts.storekit */,
-				28AD2BFD2E88D4780037363C /* SKProducts.storekit */,
-				28AD2C002E88D8B50037363C /* SKProducts.storekit */,
 				0A875DB32E600BB900245D4A /* SonoraLiveActivityExtension.entitlements */,
 				0A39740C2E5A6CA400F27D16 /* Sonora */,
 				0A39741A2E5A6CA600F27D16 /* SonoraTests */,
@@ -224,6 +220,7 @@
 			name = Sonora;
 			packageProductDependencies = (
 				0AA6FA0F2E63710600C8BF7A /* ZIPFoundation */,
+				2890E6232E8EF09A008D4101 /* RevenueCat */,
 			);
 			productName = Sonora;
 			productReference = 0A39740A2E5A6CA400F27D16 /* Sonora.app */;
@@ -337,6 +334,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				0AA6FA0E2E63710600C8BF7A /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+				2890E6222E8EF09A008D4101 /* XCRemoteSwiftPackageReference "purchases-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0A39740B2E5A6CA400F27D16 /* Products */;
@@ -832,6 +830,14 @@
 				minimumVersion = 0.9.19;
 			};
 		};
+		2890E6222E8EF09A008D4101 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.41.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -839,6 +845,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0AA6FA0E2E63710600C8BF7A /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
 			productName = ZIPFoundation;
+		};
+		2890E6232E8EF09A008D4101 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2890E6222E8EF09A008D4101 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

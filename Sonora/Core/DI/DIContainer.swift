@@ -217,9 +217,9 @@ final class DIContainer: ObservableObject, Resolver {
             RecordingUsageRepositoryImpl() as any RecordingUsageRepository
         }
 
-        // Register StoreKit service for subscriptions
+        // Register subscription service (RevenueCat only)
         register((any StoreKitServiceProtocol).self) { _ in
-            StoreKitService() as any StoreKitServiceProtocol
+            RevenueCatService() as any StoreKitServiceProtocol
         }
 
         // Register RecordingQuotaPolicy (protocol-first)
