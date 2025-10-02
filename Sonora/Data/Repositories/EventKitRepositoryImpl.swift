@@ -667,6 +667,11 @@ final class EventKitRepositoryImpl: EventKitRepository {
             ekEvent.notes = "Original: \(event.sourceText)"
         }
 
+        // Recurrence mapping
+        if let rec = event.recurrence {
+            ekEvent.recurrenceRules = EventKitRecurrenceMapper.rules(from: rec)
+        }
+
         return ekEvent
     }
 
@@ -725,3 +730,4 @@ extension EventKitRepositoryImpl {
 
     // Normalization moved into DuplicateHeuristics
 }
+    // Recurrence mapping now lives in EventKitRecurrenceMapper

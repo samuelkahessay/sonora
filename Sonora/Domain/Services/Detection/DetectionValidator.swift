@@ -25,6 +25,8 @@ struct DetectionValidator {
             // Deduplicate participants
             let participants = ev.participants.map { Array(Set($0.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })) }
 
+            let recurrence = validateRecurrence(ev.recurrence)
+
             return EventsData.DetectedEvent(
                 id: ev.id,
                 title: title,
@@ -34,7 +36,8 @@ struct DetectionValidator {
                 participants: participants,
                 confidence: ev.confidence,
                 sourceText: ev.sourceText,
-                memoId: ev.memoId
+                memoId: ev.memoId,
+                recurrence: recurrence
             )
         }
 
@@ -65,5 +68,45 @@ struct DetectionValidator {
         }
 
         return cleaned.isEmpty ? nil : RemindersData(reminders: cleaned)
+    }
+}
+
+// MARK: - Recurrence validation
+extension DetectionValidator {
+    private static func validateRecurrence(_ rec: EventsData.DetectedEvent.Recurrence?) -> EventsData.DetectedEvent.Recurrence? {
+        guard let rec else { return nil }
+        let allowed = Set(["daily", "weekly", "monthly", "yearly"])
+        guard allowed.contains(rec.frequency.lowercased()) else { return nil }
+
+        let interval = (rec.interval ?? 1)
+        let clampedInterval = max(1, interval)
+
+        var weekdays: [String]? = rec.byWeekday?.compactMap { normalizeWeekday($0) }
+        if weekdays?.isEmpty == true { weekdays = nil }
+
+        let end = rec.end.flatMap { end in
+            let count = end.count.map { max(1, $0) }
+            return EventsData.DetectedEvent.Recurrence.End(until: end.until, count: count)
+        }
+
+        return EventsData.DetectedEvent.Recurrence(
+            frequency: rec.frequency.lowercased(),
+            interval: clampedInterval,
+            byWeekday: weekdays,
+            end: end
+        )
+    }
+
+    private static func normalizeWeekday(_ day: String) -> String? {
+        let map: [String: String] = [
+            "monday": "Mon", "mon": "Mon",
+            "tuesday": "Tue", "tue": "Tue",
+            "wednesday": "Wed", "wed": "Wed",
+            "thursday": "Thu", "thu": "Thu",
+            "friday": "Fri", "fri": "Fri",
+            "saturday": "Sat", "sat": "Sat",
+            "sunday": "Sun", "sun": "Sun"
+        ]
+        return map[day.lowercased()]
     }
 }

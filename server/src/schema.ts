@@ -97,7 +97,20 @@ export const EventsDataSchema = z.object({
     participants: z.array(z.string()).optional(),
     confidence: z.number().min(0).max(1),
     sourceText: z.string(),
-    memoId: z.string().uuid().optional().nullable()
+    memoId: z.string().uuid().optional().nullable(),
+    recurrence: z
+      .object({
+        frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
+        interval: z.number().int().positive().optional(),
+        byWeekday: z.array(z.enum(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])).optional(),
+        end: z
+          .object({
+            until: z.string().datetime().optional(),
+            count: z.number().int().positive().optional()
+          })
+          .optional()
+      })
+      .optional()
   }))
 });
 
@@ -256,10 +269,28 @@ export const EventsJsonSchema = {
             participants: { type: 'array', items: { type: 'string' } },
             confidence: { type: 'number', minimum: 0, maximum: 1 },
             sourceText: { type: 'string' },
-            memoId: { type: ['string', 'null'] }
+            memoId: { type: ['string', 'null'] },
+            recurrence: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                frequency: { type: 'string', enum: ['daily', 'weekly', 'monthly', 'yearly'] },
+                interval: { type: 'integer', minimum: 1 },
+                byWeekday: { type: 'array', items: { type: 'string', enum: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] } },
+                end: {
+                  type: 'object',
+                  properties: {
+                    until: { type: 'string', description: 'ISO 8601 datetime' },
+                    count: { type: 'integer', minimum: 1 }
+                  },
+                  additionalProperties: false
+                }
+              },
+              additionalProperties: false
+            }
           },
           // Responses API requires required[] to include every key in properties.
-          required: ['id', 'title', 'startDate', 'endDate', 'location', 'participants', 'confidence', 'sourceText', 'memoId'],
+          required: ['id', 'title', 'startDate', 'endDate', 'location', 'participants', 'confidence', 'sourceText', 'memoId', 'recurrence'],
           additionalProperties: false
         }
       }

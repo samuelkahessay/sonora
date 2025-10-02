@@ -171,6 +171,35 @@ public struct EventsData: Codable, Sendable {
                 }
             }
         }
+        public struct Recurrence: Codable, Sendable, Equatable {
+            public struct End: Codable, Sendable, Equatable {
+                public let until: Date?
+                public let count: Int?
+
+                public init(until: Date? = nil, count: Int? = nil) {
+                    self.until = until
+                    self.count = count
+                }
+            }
+
+            public let frequency: String       // daily|weekly|monthly|yearly
+            public let interval: Int?          // default 1
+            public let byWeekday: [String]?    // Mon..Sun (weekly only)
+            public let end: End?
+
+            public init(
+                frequency: String,
+                interval: Int? = nil,
+                byWeekday: [String]? = nil,
+                end: End? = nil
+            ) {
+                self.frequency = frequency
+                self.interval = interval
+                self.byWeekday = byWeekday
+                self.end = end
+            }
+        }
+
         public let id: String
         public let title: String
         public let startDate: Date?
@@ -180,6 +209,7 @@ public struct EventsData: Codable, Sendable {
         public let confidence: Float
         public let sourceText: String
         public let memoId: UUID?
+        public let recurrence: Recurrence?
 
         public init(
             id: String = UUID().uuidString,
@@ -190,7 +220,8 @@ public struct EventsData: Codable, Sendable {
             participants: [String]? = nil,
             confidence: Float,
             sourceText: String,
-            memoId: UUID? = nil
+            memoId: UUID? = nil,
+            recurrence: Recurrence? = nil
         ) {
             self.id = id
             self.title = title
@@ -201,6 +232,7 @@ public struct EventsData: Codable, Sendable {
             self.confidence = confidence
             self.sourceText = sourceText
             self.memoId = memoId
+            self.recurrence = recurrence
         }
 
         // Confidence categories for UI

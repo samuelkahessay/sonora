@@ -61,6 +61,7 @@ export function buildPrompt(mode: string, transcript: string): { system: string;
         `How to populate fields (explicit defaults):\n` +
         `- startDate: ISO8601 in UTC using local intent. If only a weekday: that day at 09:00. If only a part-of-day: morning=09:00, afternoon=14:00, evening=18:00, tonight=20:00. For "next week", pick the specified weekday if given; otherwise skip.\n` +
         `- endDate: preserve supplied duration; otherwise leave null unless a range like "2-3pm" is stated.\n` +
+        `- recurrence: if the language clearly indicates a repeating schedule (e.g., "every Monday", "weekly standup"), include a recurrence object with frequency (daily|weekly|monthly|yearly), interval (default 1), byWeekday for weekly (e.g., ["Mon"]) and an optional end { until or count }.\n` +
         `- participants: include people or teams named; omit duplicates.\n` +
         `Confidence rubric (set confidence field accordingly):\n` +
         `- 0.85–1.0 High when intent AND timing are explicit.\n` +
