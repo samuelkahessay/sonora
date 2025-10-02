@@ -149,8 +149,6 @@ struct DistillResultView: View {
             initializeViewModelIfNeeded()
             viewModelHolder.vm?.mergeIncoming(events: eventsForUI, reminders: remindersForUI)
         }
-        // Simple Undo/Redo controls
-        undoRedoControls
         // Conflict sheet when duplicates are found
         .sheet(isPresented: Binding(get: { viewModelHolder.vm?.showConflictSheet ?? false }, set: { viewModelHolder.vm?.showConflictSheet = $0 })) {
             EventConflictResolutionSheet(
@@ -227,22 +225,4 @@ private final class ViewModelHolder: ObservableObject {
     @Published var vm: ActionItemViewModel?
 }
 
-private extension DistillResultView {
-    @ViewBuilder
-    var undoRedoControls: some View {
-        HStack(spacing: 12) {
-            Button("Undo") { Task { @MainActor in await viewModelHolder.vm?.undo() } }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(!(viewModelHolder.vm?.canUndo ?? false))
-            Button("Redo") { Task { @MainActor in await viewModelHolder.vm?.redo() } }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(!(viewModelHolder.vm?.canRedo ?? false))
-            Spacer()
-        }
-        .padding(.top, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Undo or redo last action")
-    }
-}
+private extension DistillResultView { }

@@ -17,11 +17,7 @@ final class ActionItemViewModel: ObservableObject {
     // Permission surface (forwarded from coordinator)
     let permissionService: EventKitPermissionService
 
-    // Undo/Redo
-    private var undoStack: [ReversibleCommand] = []
-    private var redoStack: [ReversibleCommand] = []
-    @Published private(set) var canUndo: Bool = false
-    @Published private(set) var canRedo: Bool = false
+    // Undo/Redo removed
 
     // Conflict handling (duplicates)
     @Published var showConflictSheet: Bool = false
@@ -142,31 +138,7 @@ final class ActionItemViewModel: ObservableObject {
             let rec = coordinator.makeAddedRecord(for: item, date: date)
             coordinator.upsertAndPersist(record: rec, memoId: item.memoId ?? memoId)
 
-            // Push to undo stack
-            if let artifact = detection.createdArtifacts[item.id] {
-                switch artifact.kind {
-                case .event:
-                    let delete: AddEventCommand.DeleteClosure = { id in try await DIContainer.shared.eventKitRepository().deleteEvent(with: id) }
-                    let create: AddEventCommand.CreateClosure = { [weak self] in
-                        guard let self, let base = self.detection.eventSources[item.id] else { throw EventKitError.invalidEventData(field: "event source missing") }
-                        return try await self.coordinator.createEvent(for: item, base: base, in: self.detection.defaultCalendar ?? self.detection.availableCalendars.first)
-                    }
-                    let cmd = AddEventCommand(create: create, delete: delete)
-                    cmd.seedCreatedId(artifact.identifier)
-                    undoStack.append(cmd)
-                case .reminder:
-                    let delete: AddReminderCommand.DeleteClosure = { id in try await DIContainer.shared.eventKitRepository().deleteReminder(with: id) }
-                    let create: AddReminderCommand.CreateClosure = { [weak self] in
-                        guard let self, let base = self.detection.reminderSources[item.id] else { throw EventKitError.invalidEventData(field: "reminder source missing") }
-                        return try await self.coordinator.createReminder(for: item, base: base, in: self.detection.defaultReminderList ?? self.detection.availableReminderLists.first)
-                    }
-                    let cmd = AddReminderCommand(create: create, delete: delete)
-                    cmd.seedCreatedId(artifact.identifier)
-                    undoStack.append(cmd)
-                }
-                redoStack.removeAll()
-                updateUndoRedoAvailability()
-            }
+            // Undo/Redo support removed
 
             HapticManager.shared.playSuccess()
         } catch {
@@ -213,17 +185,6 @@ final class ActionItemViewModel: ObservableObject {
             let date = item.suggestedDate ?? base.startDate
             let rec = coordinator.makeAddedRecord(for: item, date: date)
             coordinator.upsertAndPersist(record: rec, memoId: item.memoId ?? memoId)
-            // seed undo
-            let delete: AddEventCommand.DeleteClosure = { id in try await DIContainer.shared.eventKitRepository().deleteEvent(with: id) }
-            let create: AddEventCommand.CreateClosure = { [weak self] in
-                guard let self else { throw EventKitError.invalidEventData(field: "vm deallocated") }
-                return try await self.coordinator.createEvent(for: item, base: base, in: self.detection.defaultCalendar ?? self.detection.availableCalendars.first)
-            }
-            let cmd = AddEventCommand(create: create, delete: delete)
-            cmd.seedCreatedId(id)
-            undoStack.append(cmd)
-            redoStack.removeAll()
-            updateUndoRedoAvailability()
             HapticManager.shared.playSuccess()
         } catch {
             HapticManager.shared.playError()
@@ -314,18 +275,7 @@ final class ActionItemViewModel: ObservableObject {
         syncOutputs()
     }
 
-    // MARK: - Undo / Redo
-    func undo() async {
-        guard let cmd = undoStack.popLast() else { return }
-        do { try await cmd.undo(); redoStack.append(cmd) } catch { }
-        updateUndoRedoAvailability()
-    }
-
-    func redo() async {
-        guard let cmd = redoStack.popLast() else { return }
-        do { try await cmd.execute(); undoStack.append(cmd) } catch { }
-        updateUndoRedoAvailability()
-    }
+    // Undo/Redo methods removed
 
     // MARK: - Stream updates
     func mergeIncoming(events: [EventsData.DetectedEvent], reminders: [RemindersData.DetectedReminder]) {
@@ -343,8 +293,5 @@ final class ActionItemViewModel: ObservableObject {
         defaultReminderList = detection.defaultReminderList
     }
 
-    private func updateUndoRedoAvailability() {
-        canUndo = !undoStack.isEmpty
-        canRedo = !redoStack.isEmpty
-    }
+    // Undo/Redo availability removed
 }

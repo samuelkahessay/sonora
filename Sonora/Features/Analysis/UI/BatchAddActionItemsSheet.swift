@@ -130,8 +130,12 @@ struct BatchAddActionItemsSheet: View {
                                         .foregroundColor(.secondary)
                                 }
                                 HStack(spacing: 8) {
-                                    Button("Edit") { onEdit(item.id) }
-                                        .buttonStyle(.bordered)
+                                    Button("Edit") {
+                                        // Toggle edit on the underlying item and close the sheet
+                                        onEdit(item.id)
+                                        onDismiss()
+                                    }
+                                    .buttonStyle(.bordered)
                                 }
                             }
                         }
