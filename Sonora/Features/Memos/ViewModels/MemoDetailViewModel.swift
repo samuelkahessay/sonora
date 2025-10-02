@@ -566,6 +566,19 @@ extension MemoDetailViewModel {
             state.audio.duration = memo.duration
         }
 
+        // Sync latest memo metadata (including auto-generated customTitle)
+        if let latest = memoRepository.getMemo(by: memo.id) {
+            // If the title changed (e.g., auto-title completed), update local state
+            let latestDisplay = latest.displayName
+            if latestDisplay != currentMemoTitle {
+                currentMemoTitle = latestDisplay
+            }
+            // Keep an up-to-date reference to the memo
+            if latest != memo {
+                currentMemo = latest
+            }
+        }
+
         // Update language detection + moderation from metadata if available
         if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
             if let lang = meta.detectedLanguage, let score = meta.qualityScore {
