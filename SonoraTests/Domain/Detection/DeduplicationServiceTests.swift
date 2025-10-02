@@ -57,4 +57,3 @@ final class DeduplicationServiceTests: XCTestCase {
         XCTAssertFalse(titles.contains("Design sync"))
     }
 }
-

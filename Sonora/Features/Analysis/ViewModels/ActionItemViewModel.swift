@@ -23,6 +23,14 @@ final class ActionItemViewModel: ObservableObject {
     @Published private(set) var canUndo: Bool = false
     @Published private(set) var canRedo: Bool = false
 
+    // Conflict handling (duplicates)
+    @Published var showConflictSheet: Bool = false
+    @Published private(set) var conflictDuplicates: [ExistingEventDTO] = []
+    private var conflictItem: ActionItemDetectionUI?
+    private var conflictBaseEvent: EventsData.DetectedEvent?
+    private var conflictDestination: CalendarDTO?
+    private var conflictBatchItems: [ActionItemDetectionUI]?
+
     // Internals
     private var detection = ActionItemDetectionState()
     private let coordinator = ActionItemCoordinator()
@@ -72,11 +80,26 @@ final class ActionItemViewModel: ObservableObject {
                 try await coordinator.ensureCalendarPermission()
                 let res = try await coordinator.loadDestinationsIfNeeded(for: [item], calendarsLoaded: detection.calendarsLoaded, reminderListsLoaded: detection.reminderListsLoaded)
                 if res.didLoadCalendars { detection.availableCalendars = coordinator.availableCalendars; detection.defaultCalendar = coordinator.defaultCalendar; detection.calendarsLoaded = true }
-
                 guard let base = detection.eventSources[item.id] else { throw EventKitError.invalidEventData(field: "event source missing") }
+                // Duplicate check before creation
+                let payload = buildEventPayload(from: item, base: base)
+                let repo = DIContainer.shared.eventKitRepository()
+                let dups = try await repo.findDuplicates(similarTo: payload)
+                if !dups.isEmpty {
+                    // Present conflict sheet and return; user will decide
+                    conflictDuplicates = dups
+                    conflictItem = item
+                    conflictBaseEvent = base
+                    conflictDestination = detection.defaultCalendar ?? detection.availableCalendars.first
+                    detection.setProcessing(item.id, to: false)
+                    showConflictSheet = true
+                    syncOutputs()
+                    return
+                }
+
                 let create: AddEventCommand.CreateClosure = { [weak self] in
                     guard let self else { throw EventKitError.invalidEventData(field: "vm deallocated") }
-                    let id = try await coordinator.createEvent(for: item, base: base, in: self.detection.defaultCalendar ?? self.detection.availableCalendars.first)
+                    let id = try await self.coordinator.createEvent(for: item, base: base, in: self.detection.defaultCalendar ?? self.detection.availableCalendars.first)
                     return id
                 }
                 let del: AddEventCommand.DeleteClosure = { id in
@@ -152,6 +175,77 @@ final class ActionItemViewModel: ObservableObject {
         syncOutputs()
     }
 
+    func resolveConflictProceed() async {
+        // Batch proceed
+        if let batch = conflictBatchItems, let destination = conflictDestination {
+            showConflictSheet = false
+            do {
+                for item in batch where item.kind == .event {
+                    guard let base = detection.eventSources[item.id] else { continue }
+                    let id = try await coordinator.createEvent(for: item, base: base, in: destination)
+                    detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .event, identifier: id)
+                    detection.added.insert(item.id)
+                    let date = item.suggestedDate ?? base.startDate
+                    let rec = coordinator.makeAddedRecord(for: item, date: date)
+                    coordinator.upsertAndPersist(record: rec, memoId: item.memoId ?? memoId)
+                }
+                HapticManager.shared.playSuccess()
+            } catch {
+                HapticManager.shared.playError()
+            }
+            conflictBatchItems = nil
+            conflictDestination = nil
+            conflictDuplicates = []
+            syncOutputs()
+            return
+        }
+
+        // Single proceed
+        guard let item = conflictItem, let base = conflictBaseEvent else { showConflictSheet = false; return }
+        showConflictSheet = false
+        detection.setProcessing(item.id, to: true)
+        syncOutputs()
+        defer { detection.setProcessing(item.id, to: false); syncOutputs() }
+        do {
+            let id = try await coordinator.createEvent(for: item, base: base, in: conflictDestination ?? detection.defaultCalendar ?? detection.availableCalendars.first)
+            detection.createdArtifacts[item.id] = DistillCreatedArtifact(kind: .event, identifier: id)
+            detection.added.insert(item.id)
+            let date = item.suggestedDate ?? base.startDate
+            let rec = coordinator.makeAddedRecord(for: item, date: date)
+            coordinator.upsertAndPersist(record: rec, memoId: item.memoId ?? memoId)
+            // seed undo
+            let delete: AddEventCommand.DeleteClosure = { id in try await DIContainer.shared.eventKitRepository().deleteEvent(with: id) }
+            let create: AddEventCommand.CreateClosure = { [weak self] in
+                guard let self else { throw EventKitError.invalidEventData(field: "vm deallocated") }
+                return try await self.coordinator.createEvent(for: item, base: base, in: self.detection.defaultCalendar ?? self.detection.availableCalendars.first)
+            }
+            let cmd = AddEventCommand(create: create, delete: delete)
+            cmd.seedCreatedId(id)
+            undoStack.append(cmd)
+            redoStack.removeAll()
+            updateUndoRedoAvailability()
+            HapticManager.shared.playSuccess()
+        } catch {
+            HapticManager.shared.playError()
+        }
+        conflictItem = nil
+        conflictBaseEvent = nil
+        conflictDestination = nil
+    }
+
+    func resolveConflictSkip() {
+        showConflictSheet = false
+        if conflictBatchItems != nil {
+            conflictBatchItems = nil
+            conflictDestination = nil
+            conflictDuplicates = []
+        } else {
+            conflictItem = nil
+            conflictBaseEvent = nil
+            conflictDestination = nil
+        }
+    }
+
     func handleAddSelected(_ items: [ActionItemDetectionUI], calendar: CalendarDTO?, reminderList: CalendarDTO?) async {
         guard !items.isEmpty else { return }
         items.forEach { detection.update($0) }
@@ -169,6 +263,24 @@ final class ActionItemViewModel: ObservableObject {
                 if res.didLoadCalendars { detection.availableCalendars = coordinator.availableCalendars; detection.defaultCalendar = coordinator.defaultCalendar; detection.calendarsLoaded = true }
                 let destination = calendar ?? detection.defaultCalendar ?? detection.availableCalendars.first
                 guard let destination else { throw EventKitError.calendarNotFound(identifier: "default") }
+
+                // Duplicate detection across batch; if any duplicates, present sheet to choose
+                var itemsWithDupes: [(ActionItemDetectionUI, [ExistingEventDTO])] = []
+                for item in eventItems {
+                    guard let base = detection.eventSources[item.id] else { continue }
+                    let payload = buildEventPayload(from: item, base: base)
+                    let dups = try await DIContainer.shared.eventKitRepository().findDuplicates(similarTo: payload)
+                    if !dups.isEmpty { itemsWithDupes.append((item, dups)) }
+                }
+                if !itemsWithDupes.isEmpty {
+                    // Aggregate duplicates and show a single confirmation
+                    conflictDuplicates = itemsWithDupes.flatMap { $0.1 }
+                    conflictBatchItems = eventItems
+                    conflictDestination = destination
+                    showConflictSheet = true
+                    return
+                }
+
                 for item in eventItems {
                     guard let base = detection.eventSources[item.id] else { continue }
                     let id = try await coordinator.createEvent(for: item, base: base, in: destination)

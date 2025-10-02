@@ -467,6 +467,44 @@ final class EventKitRepositoryImpl: EventKitRepository {
         }
     }
 
+    func findDuplicates(similarTo event: EventsData.DetectedEvent) async throws -> [ExistingEventDTO] {
+        guard let start = event.startDate else { return [] }
+        let window: TimeInterval = 15 * 60
+        let windowStart = start.addingTimeInterval(-window)
+        let windowEnd = (event.endDate ?? start).addingTimeInterval(window)
+
+        let predicate = eventStore.predicateForEvents(withStart: windowStart, end: windowEnd, calendars: nil)
+        let ekCandidates = eventStore.events(matching: predicate)
+        let candidates: [DuplicateHeuristics.SimpleEvent] = ekCandidates.map {
+            .init(title: $0.title, startDate: $0.startDate, endDate: $0.endDate, isAllDay: $0.isAllDay, notes: $0.notes)
+        }
+        let dupes = DuplicateHeuristics.match(target: event, sourceText: event.sourceText, in: candidates)
+
+        // Structured logging for diagnostics
+        if !dupes.isEmpty {
+            let minutesDelta: [Int] = dupes.map { Int(abs($0.startDate.timeIntervalSince(start)) / 60.0) }
+            logger.info(
+                "Duplicate.Match",
+                category: .eventkit,
+                context: LogContext(additionalInfo: [
+                    "targetTitle": event.title,
+                    "candidateCount": dupes.count,
+                    "deltasMin": minutesDelta
+                ])
+            )
+        }
+
+        return dupes.map { dup in
+            ExistingEventDTO(
+                identifier: nil,
+                title: dup.title,
+                startDate: dup.startDate,
+                endDate: dup.endDate,
+                isAllDay: dup.isAllDay
+            )
+        }
+    }
+
     private func checkForConflictsOnMainActor(event: EventsData.DetectedEvent) -> [EKEvent] {
         guard let startDate = event.startDate else {
             logger.debug("No start date for conflict detection: \(event.title)",
@@ -684,4 +722,6 @@ extension EventKitRepositoryImpl {
         let b = Int((comps.count > 2 ? comps[2] : 0) * 255.0)
         return String(format: "#%02X%02X%02X", r, g, b)
     }
+
+    // Normalization moved into DuplicateHeuristics
 }

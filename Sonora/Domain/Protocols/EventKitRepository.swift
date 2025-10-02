@@ -57,6 +57,9 @@ protocol EventKitRepository: Sendable {
     /// Detect conflicts for a proposed event
     func detectConflicts(for event: EventsData.DetectedEvent) async throws -> [ExistingEventDTO]
 
+    /// Find potential duplicates based on title/source and time proximity (±15 minutes, same day)
+    func findDuplicates(similarTo event: EventsData.DetectedEvent) async throws -> [ExistingEventDTO]
+
     /// Suggest the best calendar for an event based on content
     func suggestCalendar(for event: EventsData.DetectedEvent) async throws -> CalendarDTO?
 

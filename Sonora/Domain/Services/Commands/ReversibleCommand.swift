@@ -5,4 +5,3 @@ public protocol ReversibleCommand: Sendable {
     @MainActor func execute() async throws
     @MainActor func undo() async throws
 }
-

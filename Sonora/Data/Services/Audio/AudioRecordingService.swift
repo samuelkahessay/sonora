@@ -553,7 +553,7 @@ final class AudioRecordingService: NSObject, AudioRecordingServiceProtocol, @unc
     /// Applies exponential smoothing to reduce jitter in visualization
     /// Higher factor = more smoothing = slower response
     private func smoothValue(current: Double, new: Double, factor: Double) -> Double {
-        return max(0.0, min(1.0, factor * current + (1.0 - factor) * new))
+        max(0.0, min(1.0, factor * current + (1.0 - factor) * new))
     }
 
     /// Ensures all published audio levels stay within valid 0.0 to 1.0 range

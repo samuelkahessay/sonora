@@ -66,4 +66,3 @@ struct DetectionValidatorTests {
         #expect(validated?.reminders.first?.title == "Email Alice")
     }
 }
-

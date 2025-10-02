@@ -151,6 +151,14 @@ struct DistillResultView: View {
         }
         // Simple Undo/Redo controls
         undoRedoControls
+        // Conflict sheet when duplicates are found
+        .sheet(isPresented: Binding(get: { viewModelHolder.vm?.showConflictSheet ?? false }, set: { viewModelHolder.vm?.showConflictSheet = $0 })) {
+            EventConflictResolutionSheet(
+                duplicates: viewModelHolder.vm?.conflictDuplicates ?? [],
+                onProceed: { Task { @MainActor in await viewModelHolder.vm?.resolveConflictProceed() } },
+                onSkip: { viewModelHolder.vm?.resolveConflictSkip() }
+            )
+        }
     }
 
     // MARK: - Reflection Questions Section

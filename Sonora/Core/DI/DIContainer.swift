@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import SwiftData
+@preconcurrency import EventKit
 protocol Resolver {
     func resolve<T>(_ type: T.Type) -> T?
 }
@@ -68,6 +69,8 @@ final class DIContainer: ObservableObject, Resolver {
     // MARK: - Core Services (Strong References)
     // These services need to stay alive for the app lifetime
     private var _operationCoordinator: (any OperationCoordinatorProtocol)!
+    // Shared EKEventStore instance (single source of truth for EventKit)
+    private var _ekEventStore: EKEventStore?
 
     // MARK: - Service Lifecycle Management
     private var serviceAccessTimes: [String: Date] = [:]
@@ -521,7 +524,7 @@ final class DIContainer: ObservableObject, Resolver {
     func eventKitRepository() -> any EventKitRepository {
         ensureConfigured()
         if _eventKitRepository == nil {
-            _eventKitRepository = EventKitRepositoryImpl(logger: logger())
+            _eventKitRepository = EventKitRepositoryImpl(eventStore: ekEventStore(), logger: logger())
         }
         guard let repo = _eventKitRepository else { fatalError("Failed to init eventKitRepository") }
         return repo
@@ -532,10 +535,19 @@ final class DIContainer: ObservableObject, Resolver {
     func eventKitPermissionService() -> any EventKitPermissionServiceProtocol {
         ensureConfigured()
         if _eventKitPermissionService == nil {
-            _eventKitPermissionService = EventKitPermissionService(logger: logger())
+            _eventKitPermissionService = EventKitPermissionService(eventStore: ekEventStore(), logger: logger())
         }
         guard let svc = _eventKitPermissionService else { fatalError("Failed to init eventKitPermissionService") }
         return svc
+    }
+
+    // MARK: - Shared EKEventStore Access
+    @MainActor
+    private func ekEventStore() -> EKEventStore {
+        if let s = _ekEventStore { return s }
+        let store = EKEventStore()
+        _ekEventStore = store
+        return store
     }
 
     /// Factory: CreateCalendarEventUseCase

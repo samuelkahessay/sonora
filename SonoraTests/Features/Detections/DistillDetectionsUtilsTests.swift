@@ -4,7 +4,7 @@ import XCTest
 final class DistillDetectionsUtilsTests: XCTestCase {
     func testBuildEventPayloadPreservesDurationWhenDateEdited() {
         let baseStart = Date(timeIntervalSince1970: 1_700_000_000)
-        let baseEnd = baseStart.addingTimeInterval(5400) // 90 minutes
+        let baseEnd = baseStart.addingTimeInterval(5_400) // 90 minutes
         let base = EventsData.DetectedEvent(
             id: "e1",
             title: "Design Review",
@@ -17,12 +17,12 @@ final class DistillDetectionsUtilsTests: XCTestCase {
             memoId: nil
         )
         var model = ActionItemDetectionUI.fromDomain(ActionItemDetection.fromEvent(base), id: UUID())
-        let newStart = baseStart.addingTimeInterval(3600)
+        let newStart = baseStart.addingTimeInterval(3_600)
         model.suggestedDate = newStart
 
         let payload = buildEventPayload(from: model, base: base)
         XCTAssertEqual(payload.startDate, newStart)
-        XCTAssertEqual(payload.endDate, newStart.addingTimeInterval(5400))
+        XCTAssertEqual(payload.endDate, newStart.addingTimeInterval(5_400))
         XCTAssertEqual(payload.title, model.title)
         XCTAssertEqual(payload.sourceText, base.sourceText)
         XCTAssertEqual(payload.participants ?? [], ["Alex"])
@@ -49,4 +49,3 @@ final class DistillDetectionsUtilsTests: XCTestCase {
         XCTAssertEqual(payload.sourceText, base.sourceText)
     }
 }
-

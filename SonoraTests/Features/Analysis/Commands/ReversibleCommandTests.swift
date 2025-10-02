@@ -60,4 +60,3 @@ final class ReversibleCommandTests: XCTestCase {
         XCTAssertEqual(store, ["rem-1"]) // re-created
     }
 }
-

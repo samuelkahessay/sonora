@@ -67,4 +67,3 @@ struct DetectionValidator {
         return cleaned.isEmpty ? nil : RemindersData(reminders: cleaned)
     }
 }
-
