@@ -1,7 +1,17 @@
 import SwiftUI
 
+@MainActor
+private final class MainActorBox<Value>: @unchecked Sendable {
+    var value: Value
+
+    init(_ value: Value) {
+        self.value = value
+    }
+}
+
 // MARK: - Binding Helpers
 
+@MainActor
 extension Binding {
     /// Creates a binding that transforms between optional and non-optional values
     ///
@@ -11,13 +21,24 @@ extension Binding {
     /// ```swift
     /// DatePicker("Date", selection: .unwrapping($optionalDate, default: Date()))
     /// ```
-    static func unwrapping<T>(
+    static func unwrapping<T: Sendable>(
         _ binding: Binding<T?>,
         default defaultValue: T
     ) -> Binding<T> {
-        Binding<T>(
-            get: { binding.wrappedValue ?? defaultValue },
-            set: { binding.wrappedValue = $0 }
+        let bindingBox = MainActorBox(binding)
+        let defaultValueBox = MainActorBox(defaultValue)
+
+        return Binding<T>(
+            get: {
+                MainActor.assumeIsolated {
+                    bindingBox.value.wrappedValue ?? defaultValueBox.value
+                }
+            },
+            set: { newValue in
+                MainActor.assumeIsolated {
+                    bindingBox.value.wrappedValue = newValue
+                }
+            }
         )
     }
 
@@ -33,15 +54,24 @@ extension Binding {
         _ binding: Binding<T?>,
         default defaultValue: @autoclosure @escaping () -> T
     ) -> Binding<Bool> {
-        Binding<Bool>(
-            get: { binding.wrappedValue != nil },
+        let bindingBox = MainActorBox(binding)
+        let defaultValueBox = MainActorBox(defaultValue)
+
+        return Binding<Bool>(
+            get: {
+                MainActor.assumeIsolated {
+                    bindingBox.value.wrappedValue != nil
+                }
+            },
             set: { isPresent in
-                if isPresent {
-                    if binding.wrappedValue == nil {
-                        binding.wrappedValue = defaultValue()
+                MainActor.assumeIsolated {
+                    if isPresent {
+                        if bindingBox.value.wrappedValue == nil {
+                            bindingBox.value.wrappedValue = defaultValueBox.value()
+                        }
+                    } else {
+                        bindingBox.value.wrappedValue = nil
                     }
-                } else {
-                    binding.wrappedValue = nil
                 }
             }
         )
@@ -55,11 +85,20 @@ extension Binding {
     /// ```swift
     /// TextField("Title", text: binding.keyPath(\.title))
     /// ```
-    func keyPath<T>(_ keyPath: WritableKeyPath<Value, T>) -> Binding<T> {
-        Binding<T>(
-            get: { self.wrappedValue[keyPath: keyPath] },
+    func keyPath<T: Sendable>(_ keyPath: WritableKeyPath<Value, T>) -> Binding<T> where Value: Sendable {
+        let bindingBox = MainActorBox(self)
+        let keyPathBox = MainActorBox(keyPath)
+
+        return Binding<T>(
+            get: {
+                MainActor.assumeIsolated {
+                    bindingBox.value.wrappedValue[keyPath: keyPathBox.value]
+                }
+            },
             set: { newValue in
-                self.wrappedValue[keyPath: keyPath] = newValue
+                MainActor.assumeIsolated {
+                    bindingBox.value.wrappedValue[keyPath: keyPathBox.value] = newValue
+                }
             }
         )
     }
@@ -75,13 +114,25 @@ extension Binding {
     ///     set: { Int($0) ?? 0 }
     /// ))
     /// ```
-    func map<T>(
+    func map<T: Sendable>(
         get: @escaping (Value) -> T,
         set: @escaping (T) -> Value
-    ) -> Binding<T> {
-        Binding<T>(
-            get: { get(self.wrappedValue) },
-            set: { self.wrappedValue = set($0) }
+    ) -> Binding<T> where Value: Sendable {
+        let bindingBox = MainActorBox(self)
+        let getBox = MainActorBox(get)
+        let setBox = MainActorBox(set)
+
+        return Binding<T>(
+            get: {
+                MainActor.assumeIsolated {
+                    getBox.value(bindingBox.value.wrappedValue)
+                }
+            },
+            set: { newValue in
+                MainActor.assumeIsolated {
+                    bindingBox.value.wrappedValue = setBox.value(newValue)
+                }
+            }
         )
     }
 
@@ -93,9 +144,15 @@ extension Binding {
     /// ```swift
     /// Toggle("Read-only", isOn: binding.constant())
     /// ```
-    func constant() -> Binding<Value> {
-        Binding<Value>(
-            get: { self.wrappedValue },
+    func constant() -> Binding<Value> where Value: Sendable {
+        let bindingBox = MainActorBox(self)
+
+        return Binding<Value>(
+            get: {
+                MainActor.assumeIsolated {
+                    bindingBox.value.wrappedValue
+                }
+            },
             set: { _ in }
         )
     }
@@ -103,7 +160,8 @@ extension Binding {
 
 // MARK: - Binding + Optional
 
-extension Binding where Value: Equatable & ExpressibleByNilLiteral {
+@MainActor
+extension Binding where Value: Equatable & ExpressibleByNilLiteral & Sendable {
     /// Creates a binding that treats nil as a specific sentinel value
     ///
     /// Useful for Picker or segmented controls with optional selection.
@@ -116,10 +174,20 @@ extension Binding where Value: Equatable & ExpressibleByNilLiteral {
     /// }
     /// ```
     func nilAs(_ nilValue: Value) -> Binding<Value> {
-        Binding<Value>(
-            get: { self.wrappedValue ?? nilValue },
+        let bindingBox = MainActorBox(self)
+        let nilValueBox = MainActorBox(nilValue)
+
+        return Binding<Value>(
+            get: {
+                MainActor.assumeIsolated {
+                    let current = bindingBox.value.wrappedValue
+                    return current == nil ? nilValueBox.value : current
+                }
+            },
             set: { newValue in
-                self.wrappedValue = (newValue == nilValue) ? nil : newValue
+                MainActor.assumeIsolated {
+                    bindingBox.value.wrappedValue = (newValue == nilValueBox.value) ? nil : newValue
+                }
             }
         )
     }

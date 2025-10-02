@@ -47,6 +47,8 @@ struct EventConfirmationView: View {
                                 }
                             ))
                             .labelsHidden()
+                            .accessibilityLabel("Include event: \(editableEvents[ev.id]?.title ?? ev.title)")
+                            .accessibilityHint(selectedEventIds.contains(ev.id) ? "Selected" : "Not selected")
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(editableEvents[ev.id]?.title ?? ev.title)
@@ -56,11 +58,13 @@ struct EventConfirmationView: View {
                                     Text(formatDate(date))
                                         .font(.caption)
                                         .foregroundColor(.semantic(.textSecondary))
+                                        .accessibilityLabel("Start date: \(formatDate(date))")
                                 }
                                 if let loc = editableEvents[ev.id]?.location ?? ev.location, !loc.isEmpty {
                                     Text(loc)
                                         .font(.caption)
                                         .foregroundColor(.semantic(.textSecondary))
+                                        .accessibilityLabel("Location: \(loc)")
                                 }
                             }
                             Spacer()
@@ -68,7 +72,9 @@ struct EventConfirmationView: View {
                                 editingEventId = ev.id
                             }
                             .buttonStyle(.bordered)
+                            .accessibilityLabel("Edit event: \(editableEvents[ev.id]?.title ?? ev.title)")
                         }
+                        .accessibilityElement(children: .combine)
                     }
                 }
                 .listStyle(.insetGrouped)
@@ -187,10 +193,7 @@ struct EventConfirmationView: View {
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        date.mediumDateTimeString
     }
 }
 
@@ -232,6 +235,14 @@ struct EventEditView: View {
 
     @State private var hasDate: Bool = false
 
+    private var validationErrors: [ValidationError] {
+        event.validate()
+    }
+
+    private var canSave: Bool {
+        validationErrors.isEmpty
+    }
+
     var body: some View {
         NavigationView {
             Form {
@@ -242,6 +253,29 @@ struct EventEditView: View {
                         get: { event.location ?? "" },
                         set: { event.location = $0.isEmpty ? nil : $0 }
                     ))
+                }
+
+                // Show validation errors if any
+                if !validationErrors.isEmpty {
+                    Section {
+                        ForEach(validationErrors, id: \.self) { error in
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.semantic(.warning))
+                                    .font(.caption)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(error.localizedDescription)
+                                        .font(.caption)
+                                        .foregroundColor(.semantic(.warning))
+                                    if let suggestion = error.recoverySuggestion {
+                                        Text(suggestion)
+                                            .font(.caption2)
+                                            .foregroundColor(.semantic(.textSecondary))
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Section(header: Text("Date & Time")) {
@@ -263,7 +297,10 @@ struct EventEditView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .disabled(!canSave)
+                }
             }
         }
         .onAppear { hasDate = event.startDate != nil }
@@ -332,5 +369,36 @@ struct EditableEvent: Identifiable, Equatable {
             sourceText: sourceText,
             memoId: memoId
         )
+    }
+
+    // MARK: - Validation
+
+    /// Validates the event and returns any errors found
+    func validate() -> [ValidationError] {
+        var errors: [ValidationError] = []
+
+        // Title validation
+        if title.trimmingCharacters(in: .whitespaces).isEmpty {
+            errors.append(.emptyTitle)
+        } else if title.count > 500 {
+            errors.append(.titleTooLong(maxLength: 500))
+        }
+
+        // Location validation
+        if let loc = location, loc.count > 500 {
+            errors.append(.locationTooLong(maxLength: 500))
+        }
+
+        // Date range validation - only validate if both dates are set
+        if let start = startDate, let end = endDate, end <= start {
+            errors.append(.invalidDateRange)
+        }
+
+        return errors
+    }
+
+    /// Returns true if the event passes all validation checks
+    var isValid: Bool {
+        validate().isEmpty
     }
 }

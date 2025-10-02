@@ -241,6 +241,21 @@ final class TitleGenerationCoordinator: ObservableObject {
             throw TitleCoordinatorError.transcriptUnavailable
         }
 
+        // Fast-path: super short transcripts (2–4 words) -> use transcript as title
+        if let shortTitle = shortTranscriptTitleIfEligible(transcript) {
+            await MainActor.run {
+                memoRepository.renameMemo(memo, newTitle: shortTitle)
+                jobRepository.deleteJob(for: memoId)
+                successStateByMemo[memoId] = shortTitle
+                streamingTasks[memoId]?.cancel()
+                streamingTasks[memoId] = nil
+                stateByMemo[memoId] = .success(shortTitle)
+                metrics = metrics(for: jobRepository.fetchAllJobs())
+                logger.info("Auto title adopted from short transcript", category: .system, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "title": shortTitle]))
+            }
+            return
+        }
+
         let slice = slice(transcript: transcript)
         let languageHint = transcriptionRepository.getTranscriptionMetadata(for: memoId)?.detectedLanguage
 
@@ -296,6 +311,9 @@ final class TitleGenerationCoordinator: ObservableObject {
         }
         guard memo.transcriptionStatus.isCompleted else { return false }
         guard let transcript = transcriptionRepository.getTranscriptionText(for: memo.id), !transcript.isEmpty else { return false }
+        // Skip entirely for 0–1 word transcripts to avoid pointless jobs
+        let wordCount = tokenizeWords(transcript).count
+        guard wordCount >= 2 else { return false }
         return true
     }
 
@@ -405,5 +423,25 @@ final class TitleGenerationCoordinator: ObservableObject {
         await MainActor.run {
             streamingTasks[memoId] = nil
         }
+    }
+
+    // MARK: - Short transcript handling helpers
+
+    private func tokenizeWords(_ text: String) -> [String] {
+        text
+            .replacingOccurrences(of: "\n", with: " ")
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+    }
+
+    private func shortTranscriptTitleIfEligible(_ transcript: String) -> String? {
+        let tokens = tokenizeWords(transcript)
+        guard (2...4).contains(tokens.count) else { return nil }
+        // Collapse excess whitespace and trim; keep original word casing to respect user speech content
+        let collapsed = tokens.joined(separator: " ")
+        let trimmed = collapsed.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Avoid adopting obviously non-informative content
+        if trimmed.count < 2 { return nil }
+        return trimmed
     }
 }

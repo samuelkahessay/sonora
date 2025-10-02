@@ -65,45 +65,83 @@ struct RemindersResultView: View {
 private struct ReminderItemView: View {
     let reminder: RemindersData.DetectedReminder
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(reminder.title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Spacer()
-                PriorityBadge(priority: reminder.priority)
-            }
-
-            if let dueDate = reminder.dueDate {
-                HStack {
-                    Image(systemName: "clock")
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                    Text("Due: \(formatDate(dueDate))")
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                }
-            }
-
-            Text(reminder.sourceText)
-                .font(.caption2)
-                .foregroundColor(.semantic(.textTertiary))
-                .italic()
-                .lineLimit(2)
-                .padding(.top, 2)
+    private var priorityColor: Color {
+        switch reminder.priority {
+        case .high: return Color(reminder.priority.color)
+        case .medium: return Color(reminder.priority.color)
+        case .low: return Color(reminder.priority.color)
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
+    }
+
+    private var confidenceOpacity: Double {
+        // Reduce opacity for low-confidence items
+        switch reminder.confidence {
+        case 0.8...1.0: return 1.0
+        case 0.6..<0.8: return 0.9
+        default: return 0.75
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Priority border on left
+            Rectangle()
+                .fill(priorityColor)
+                .frame(width: 4)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .top) {
+                    Text(reminder.title)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.semantic(.textPrimary))
+                        .lineLimit(2)
+                    Spacer()
+                    PriorityBadge(priority: reminder.priority)
+                        .accessibilityLabel("\(reminder.priority.rawValue) priority")
+                }
+
+                if let dueDate = reminder.dueDate {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.semantic(.textSecondary))
+                        Text("Due \(formatDate(dueDate))")
+                            .font(.system(size: 13))
+                            .foregroundColor(.semantic(.textSecondary))
+                    }
+                    .accessibilityLabel("Due \(formatDate(dueDate))")
+                }
+
+                Text(reminder.sourceText)
+                    .font(.system(size: 11))
+                    .foregroundColor(.semantic(.textTertiary))
+                    .italic()
+                    .lineLimit(2)
+                    .lineSpacing(2)
+                    .accessibilityLabel("Source: \(reminder.sourceText)")
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 12)
+        }
         .background(Color.semantic(.bgPrimary))
         .cornerRadius(8)
+        .opacity(confidenceOpacity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        date.mediumDateTimeString
+    }
+
+    private var accessibilityDescription: String {
+        var description = "\(reminder.title). \(reminder.priority.rawValue) priority reminder."
+        if let dueDate = reminder.dueDate {
+            description += " Due \(formatDate(dueDate))."
+        }
+        let confidencePercent = Int(reminder.confidence * 100)
+        description += " Detected with \(confidencePercent)% confidence."
+        return description
     }
 }
 
@@ -112,25 +150,24 @@ private struct PriorityBadge: View {
     let priority: RemindersData.DetectedReminder.Priority
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 4) {
             Image(systemName: priorityIcon)
-                .font(.caption2)
+                .font(.system(size: 10, weight: .semibold))
             Text(priority.rawValue)
-                .font(.caption2)
-                .fontWeight(.medium)
+                .font(.system(size: 11, weight: .semibold))
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(Color(priority.color).opacity(0.2))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color(priority.color).opacity(0.15))
         .foregroundColor(Color(priority.color))
-        .cornerRadius(4)
+        .cornerRadius(6)
     }
 
     private var priorityIcon: String {
         switch priority {
         case .high: return "exclamationmark.circle.fill"
         case .medium: return "minus.circle.fill"
-        case .low: return "arrow.down.circle.fill"
+        case .low: return "checkmark.circle.fill"
         }
     }
 }

@@ -254,17 +254,13 @@ struct SonoraMemocCard: View {
         switch titleCoordinator.state(for: memo.id) {
         case .inProgress:
             let show = memo.customTitle == nil || memo.customTitle?.isEmpty == true
-            if show { print("🧠 UI[List]: showing auto-title spinner for memo=\(memo.id)") }
             return show
         case .streaming:
             let show = memo.customTitle == nil || memo.customTitle?.isEmpty == true
-            if show { print("🧠 UI[List]: streaming auto-title for memo=\(memo.id)") }
             return show
         case .success(let title):
-            print("🧠 UI[List]: received title for memo=\(memo.id) -> \(title)")
             return false
         case .failed:
-            print("🧠 UI[List]: auto-title failed for memo=\(memo.id)")
             return false
         case .idle:
             return false

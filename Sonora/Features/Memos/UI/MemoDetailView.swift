@@ -10,6 +10,7 @@ struct MemoDetailView: View {
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
     @FocusState private var isTitleEditingFocused: Bool
     @State private var scrollOffset: CGFloat = 0
+    @State private var loggedSuccessTitle: String? = nil
 
     enum AccessibleElement {
         case playButton
@@ -122,6 +123,8 @@ struct MemoDetailView: View {
         // Ensure configuration runs reliably on push and when reusing the view
         .task(id: memo.id) {
             viewModel.configure(with: memo)
+            // Reset one-time title log when memo changes
+            loggedSuccessTitle = nil
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AnalysisCopyTriggered"))) { _ in
             isTranscriptExpanded = true
@@ -174,6 +177,13 @@ struct MemoDetailView: View {
         .onChange(of: viewModel.didDeleteMemo) { _, deleted in
             if deleted {
                 _dismiss_tmp()
+            }
+        }
+        // Log auto-title success once per new title to avoid spam
+        .onChange(of: titleCoordinator.state(for: memo.id)) { _, state in
+            if case .success(let title) = state, loggedSuccessTitle != title {
+                print("🧠 UI[Detail]: received title for memo=\(memo.id) -> \(title)")
+                loggedSuccessTitle = title
             }
         }
         .handleErrorFocus($viewModel.error)
@@ -749,7 +759,6 @@ struct MemoDetailView: View {
                 return false
             }()
             let show = !hasCustomTitle
-            if show { print("🧠 UI[Detail]: showing auto-title spinner for memo=\(memo.id)") }
             return show
         case .streaming:
             let hasCustomTitle: Bool = {
@@ -758,13 +767,10 @@ struct MemoDetailView: View {
                 return false
             }()
             let show = !hasCustomTitle
-            if show { print("🧠 UI[Detail]: streaming auto-title for memo=\(memo.id)") }
             return show
         case .success(let title):
-            print("🧠 UI[Detail]: received title for memo=\(memo.id) -> \(title)")
             return false
         case .failed:
-            print("🧠 UI[Detail]: auto-title failed for memo=\(memo.id)")
             return false
         case .idle:
             return false

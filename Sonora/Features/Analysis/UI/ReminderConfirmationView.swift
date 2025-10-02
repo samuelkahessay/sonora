@@ -42,6 +42,8 @@ struct ReminderConfirmationView: View {
                                 set: { v in if v { selectedIds.insert(r.id) } else { selectedIds.remove(r.id) } }
                             ))
                             .labelsHidden()
+                            .accessibilityLabel("Include reminder: \(editable[r.id]?.title ?? r.title)")
+                            .accessibilityHint(selectedIds.contains(r.id) ? "Selected" : "Not selected")
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(editable[r.id]?.title ?? r.title)
@@ -51,15 +53,19 @@ struct ReminderConfirmationView: View {
                                     Text(formatDate(date))
                                         .font(.caption)
                                         .foregroundColor(.semantic(.textSecondary))
+                                        .accessibilityLabel("Due date: \(formatDate(date))")
                                 }
                                 Text("Priority: \((editable[r.id]?.priority ?? r.priority).rawValue)")
                                     .font(.caption)
                                     .foregroundColor(.semantic(.textSecondary))
+                                    .accessibilityLabel("Priority level: \((editable[r.id]?.priority ?? r.priority).rawValue)")
                             }
                             Spacer()
                             Button("Edit") { editingId = r.id }
                                 .buttonStyle(.bordered)
+                                .accessibilityLabel("Edit reminder: \(editable[r.id]?.title ?? r.title)")
                         }
+                        .accessibilityElement(children: .combine)
                     }
                 }
                 .listStyle(.insetGrouped)
@@ -131,9 +137,16 @@ struct ReminderConfirmationView: View {
                 for r in selected { mapping[r.id] = list }
                 let results = try await container.createReminderUseCase().execute(reminders: selected, listMapping: mapping)
                 let failures = results.values.filter { if case .failure = $0 { true } else { false } }
-                if failures.isEmpty { HapticManager.shared.playSuccess(); dismiss() } else { HapticManager.shared.playWarning(); errorMessage = "Some reminders could not be created (\(failures.count))." }
+                if failures.isEmpty {
+                    HapticManager.shared.playSuccess()
+                    dismiss()
+                } else {
+                    HapticManager.shared.playWarning()
+                    errorMessage = "Some reminders could not be created (\(failures.count))."
+                }
             } catch {
-                HapticManager.shared.playError(); errorMessage = error.localizedDescription
+                HapticManager.shared.playError()
+                errorMessage = error.localizedDescription
             }
             isLoading = false
         }
@@ -146,7 +159,7 @@ struct ReminderConfirmationView: View {
     }
 
     private func formatDate(_ date: Date) -> String {
-        let f = DateFormatter(); f.dateStyle = .medium; f.timeStyle = .short; return f.string(from: date)
+        date.mediumDateTimeString
     }
 }
 
@@ -155,6 +168,14 @@ struct ReminderEditView: View {
     @SwiftUI.Environment(\.dismiss)
     private var dismiss: DismissAction
 
+    private var validationErrors: [ValidationError] {
+        reminder.validate()
+    }
+
+    private var canSave: Bool {
+        validationErrors.isEmpty
+    }
+
     var body: some View {
         NavigationView {
             Form {
@@ -162,6 +183,30 @@ struct ReminderEditView: View {
                     TextField("Title", text: $reminder.title)
                         .textInputAutocapitalization(.words)
                 }
+
+                // Show validation errors if any
+                if !validationErrors.isEmpty {
+                    Section {
+                        ForEach(validationErrors, id: \.self) { error in
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.semantic(.warning))
+                                    .font(.caption)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(error.localizedDescription)
+                                        .font(.caption)
+                                        .foregroundColor(.semantic(.warning))
+                                    if let suggestion = error.recoverySuggestion {
+                                        Text(suggestion)
+                                            .font(.caption2)
+                                            .foregroundColor(.semantic(.textSecondary))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Section(header: Text("Due Date")) {
                     DatePicker("Due", selection: Binding(get: { reminder.dueDate ?? Date() }, set: { reminder.dueDate = $0 }), displayedComponents: [.date, .hourAndMinute])
                 }
@@ -177,7 +222,10 @@ struct ReminderEditView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .disabled(!canSave)
+                }
             }
         }
     }
@@ -206,5 +254,31 @@ struct EditableReminder: Identifiable, Equatable {
             sourceText: sourceText,
             memoId: memoId
         )
+    }
+
+    // MARK: - Validation
+
+    /// Validates the reminder and returns any errors found
+    func validate() -> [ValidationError] {
+        var errors: [ValidationError] = []
+
+        // Title validation
+        if title.trimmingCharacters(in: .whitespaces).isEmpty {
+            errors.append(.emptyTitle)
+        } else if title.count > 500 {
+            errors.append(.titleTooLong(maxLength: 500))
+        }
+
+        // Due date validation - only validate if date is set
+        if let date = dueDate, date < Date() {
+            errors.append(.pastDueDate)
+        }
+
+        return errors
+    }
+
+    /// Returns true if the reminder passes all validation checks
+    var isValid: Bool {
+        validate().isEmpty
     }
 }

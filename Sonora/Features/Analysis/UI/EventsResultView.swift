@@ -65,56 +65,91 @@ struct EventsResultView: View {
 private struct EventItemView: View {
     let event: EventsData.DetectedEvent
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(event.title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Spacer()
-            }
-
-            if let startDate = event.startDate {
-                HStack {
-                    Image(systemName: "calendar")
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                    Text(formatDate(startDate))
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                }
-            }
-
-            if let location = event.location {
-                HStack {
-                    Image(systemName: "location")
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                    Text(location)
-                        .font(.caption)
-                        .foregroundColor(.semantic(.textSecondary))
-                        .lineLimit(1)
-                }
-            }
-
-            Text(event.sourceText)
-                .font(.caption2)
-                .foregroundColor(.semantic(.textTertiary))
-                .italic()
-                .lineLimit(2)
-                .padding(.top, 2)
+    private var confidenceColor: Color {
+        switch event.confidenceCategory {
+        case .high: return .green
+        case .medium: return .orange
+        case .low: return .red
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
+    }
+
+    private var confidenceOpacity: Double {
+        // Reduce opacity for low-confidence items
+        switch event.confidence {
+        case 0.8...1.0: return 1.0
+        case 0.6..<0.8: return 0.9
+        default: return 0.75
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Confidence border on left
+            Rectangle()
+                .fill(confidenceColor)
+                .frame(width: 4)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(event.title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.semantic(.textPrimary))
+                    .lineLimit(2)
+
+                if let startDate = event.startDate {
+                    HStack(spacing: 6) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 12))
+                            .foregroundColor(.semantic(.textSecondary))
+                        Text(formatDate(startDate))
+                            .font(.system(size: 13))
+                            .foregroundColor(.semantic(.textSecondary))
+                    }
+                }
+
+                if let location = event.location {
+                    HStack(spacing: 6) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.semantic(.textSecondary))
+                        Text(location)
+                            .font(.system(size: 13))
+                            .foregroundColor(.semantic(.textSecondary))
+                            .lineLimit(1)
+                    }
+                }
+
+                Text(event.sourceText)
+                    .font(.system(size: 11))
+                    .foregroundColor(.semantic(.textTertiary))
+                    .italic()
+                    .lineLimit(2)
+                    .lineSpacing(2)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 12)
+        }
         .background(Color.semantic(.bgPrimary))
         .cornerRadius(8)
+        .opacity(confidenceOpacity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        date.mediumDateTimeString
+    }
+
+    private var accessibilityDescription: String {
+        var description = "\(event.title). Event."
+        if let startDate = event.startDate {
+            description += " Starting \(formatDate(startDate))."
+        }
+        if let location = event.location {
+            description += " At \(location)."
+        }
+        let confidencePercent = Int(event.confidence * 100)
+        description += " Detected with \(confidencePercent)% confidence."
+        return description
     }
 }
 
