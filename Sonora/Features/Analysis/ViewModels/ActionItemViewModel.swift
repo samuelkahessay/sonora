@@ -3,6 +3,7 @@ import SwiftUI
 
 @MainActor
 final class ActionItemViewModel: ObservableObject {
+    private let logger: any LoggerProtocol = Logger.shared
     // External
     @Published private(set) var visibleItems: [ActionItemDetectionUI] = []
     @Published private(set) var addedRecords: [DistillAddedRecord] = []
@@ -32,12 +33,30 @@ final class ActionItemViewModel: ObservableObject {
     private let coordinator = ActionItemCoordinator()
     private let memoId: UUID?
 
-    init(memoId: UUID?, initialEvents: [EventsData.DetectedEvent], initialReminders: [RemindersData.DetectedReminder]) {
+    init(memoId: UUID?, initialEvents: [EventsData.DetectedEvent], initialReminders: [RemindersData.DetectedReminder], logger: any LoggerProtocol = Logger.shared) {
+        // Allow overriding logger in tests; default to shared
+        // NOTE: We set a shadowing local to preserve existing stored property default
+        let _logger = logger
         self.memoId = memoId
         self.permissionService = coordinator.permissionService
         detection.mergeFrom(events: initialEvents, reminders: initialReminders, memoId: memoId)
         coordinator.restoreHandled(for: memoId)
         syncOutputs()
+
+        _logger.info(
+            "ActionItems.Init",
+            category: .viewModel,
+            context: LogContext(additionalInfo: [
+                "memoId": memoId?.uuidString ?? "nil",
+                "incomingEvents": initialEvents.count,
+                "incomingReminders": initialReminders.count,
+                "items": detection.items.count,
+                "visible": visibleItems.count,
+                "dismissed": detection.dismissed.count,
+                "added": detection.added.count,
+                "addedRecords": addedRecords.count
+            ])
+        )
     }
 
     // MARK: - Intents
@@ -285,8 +304,33 @@ final class ActionItemViewModel: ObservableObject {
 
     // MARK: - Stream updates
     func mergeIncoming(events: [EventsData.DetectedEvent], reminders: [RemindersData.DetectedReminder]) {
+        logger.debug(
+            "ActionItems.MergeIncoming.Start",
+            category: .viewModel,
+            context: LogContext(additionalInfo: [
+                "memoId": memoId?.uuidString ?? "nil",
+                "incomingEvents": events.count,
+                "incomingReminders": reminders.count,
+                "preItems": detection.items.count,
+                "preVisible": detection.visibleItems.count,
+                "preDismissed": detection.dismissed.count,
+                "preAdded": detection.added.count
+            ])
+        )
         detection.mergeFrom(events: events, reminders: reminders, memoId: memoId)
         syncOutputs()
+        logger.info(
+            "ActionItems.MergeIncoming.End",
+            category: .viewModel,
+            context: LogContext(additionalInfo: [
+                "memoId": memoId?.uuidString ?? "nil",
+                "postItems": detection.items.count,
+                "postVisible": visibleItems.count,
+                "dismissed": detection.dismissed.count,
+                "added": detection.added.count,
+                "addedRecords": addedRecords.count
+            ])
+        )
     }
 
     // MARK: - Outputs sync

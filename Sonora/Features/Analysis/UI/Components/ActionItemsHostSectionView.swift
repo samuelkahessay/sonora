@@ -70,6 +70,17 @@ internal struct ActionItemsHostSectionView: View {
 
             contentView
         }
+        .onAppear {
+            Logger.shared.info(
+                "ActionItems.HostState",
+                category: .viewModel,
+                context: LogContext(additionalInfo: [
+                    "visible": visibleItems.count,
+                    "addedRecords": addedRecords.count,
+                    "pending": isDetectionPending
+                ])
+            )
+        }
         .sheet(isPresented: $showBatchSheet) {
             BatchAddActionItemsSheet(
                 items: .constant(visibleItems),

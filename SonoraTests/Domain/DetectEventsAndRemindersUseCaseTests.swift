@@ -151,6 +151,93 @@ final class DetectEventsAndRemindersUseCaseTests: XCTestCase {
         let reminderIds = Set(result.reminders!.reminders.map { $0.id })
         XCTAssertEqual(reminderIds, Set(["r1", "r2", "r3"]))
     }
+
+    func testDefaultPolicyAlignsWithHistoricalThresholds() async throws {
+        let memoId = UUID()
+        let transcript = "Schedule a check-in tomorrow at 3pm and send the status report email tonight."
+
+        let eventsData = EventsData(events: [
+            EventsData.DetectedEvent(
+                id: "evt-keep",
+                title: "Check-in",
+                startDate: Date(timeIntervalSinceReferenceDate: 0),
+                endDate: nil,
+                location: "Room 2",
+                participants: ["Alex"],
+                confidence: 0.52,
+                sourceText: "check-in tomorrow at 3pm",
+                memoId: memoId
+            ),
+            EventsData.DetectedEvent(
+                id: "evt-drop",
+                title: "Loose idea",
+                startDate: Date(timeIntervalSinceReferenceDate: 3600),
+                endDate: nil,
+                location: nil,
+                participants: nil,
+                confidence: 0.34,
+                sourceText: "maybe catch up sometime",
+                memoId: memoId
+            )
+        ])
+
+        let remindersData = RemindersData(reminders: [
+            RemindersData.DetectedReminder(
+                id: "rem-keep",
+                title: "Send status report",
+                dueDate: Date(timeIntervalSinceReferenceDate: 7200),
+                priority: .medium,
+                confidence: 0.43,
+                sourceText: "send the status report email tonight",
+                memoId: memoId
+            ),
+            RemindersData.DetectedReminder(
+                id: "rem-drop",
+                title: "Vague thought",
+                dueDate: nil,
+                priority: .low,
+                confidence: 0.31,
+                sourceText: "we should maybe consider something",
+                memoId: memoId
+            )
+        ])
+
+        let analysisService = StubAnalysisService(eventsData: eventsData, remindersData: remindersData)
+        let repository = InMemoryAnalysisRepositoryStub()
+        let logger = CapturingLogger()
+        let bus = NoopEventBus()
+        let coordinator = OperationCoordinatorStub()
+
+        let sut = DetectEventsAndRemindersUseCase(
+            analysisService: analysisService,
+            analysisRepository: repository,
+            logger: logger,
+            eventBus: bus,
+            operationCoordinator: coordinator
+        )
+
+        let result = try await sut.execute(transcript: transcript, memoId: memoId)
+
+        XCTAssertEqual(result.events?.events.count, 1)
+        XCTAssertEqual(result.events?.events.first?.id, "evt-keep")
+        XCTAssertEqual(result.reminders?.reminders.count, 1)
+        XCTAssertEqual(result.reminders?.reminders.first?.id, "rem-keep")
+
+        let statsLogs = logger.entries.filter { $0.message == "Detection.ConfidenceStats" }
+        XCTAssertEqual(statsLogs.count, 2)
+
+        let eventsStats = try XCTUnwrap(statsLogs.first { valueAsString($0.context?.additionalInfo?["mode"]) == "events" })
+        XCTAssertEqual(valueAsDouble(eventsStats.context?.additionalInfo?["threshold"]), 0.45, accuracy: 0.0001)
+        XCTAssertEqual(valueAsInt(eventsStats.context?.additionalInfo?["rawCount"]), 2)
+        XCTAssertEqual(valueAsInt(eventsStats.context?.additionalInfo?["acceptedCount"]), 1)
+        XCTAssertEqual(valueAsInt(eventsStats.context?.additionalInfo?["finalCount"]), 1)
+
+        let remindersStats = try XCTUnwrap(statsLogs.first { valueAsString($0.context?.additionalInfo?["mode"]) == "reminders" })
+        XCTAssertEqual(valueAsDouble(remindersStats.context?.additionalInfo?["threshold"]), 0.40, accuracy: 0.0001)
+        XCTAssertEqual(valueAsInt(remindersStats.context?.additionalInfo?["rawCount"]), 2)
+        XCTAssertEqual(valueAsInt(remindersStats.context?.additionalInfo?["acceptedCount"]), 1)
+        XCTAssertEqual(valueAsInt(remindersStats.context?.additionalInfo?["finalCount"]), 1)
+    }
 }
 
 // MARK: - Helpers

@@ -4,45 +4,10 @@ import Foundation
 /// Pure Swift, no external dependencies. Tunable via weight constants.
 struct DefaultAdaptiveThresholdPolicy: AdaptiveThresholdPolicy, Sendable {
     func thresholds(for context: DetectionContext) -> (event: Float, reminder: Float) {
-        // Base thresholds (slightly lower to improve recall)
-        var event: Double = 0.65
-        var reminder: Double = 0.60
-
-        // Make short/simple content stricter to suppress spurious detections
-        if context.transcriptLength < 80 || context.sentenceCount <= 2 {
-            event += 0.10
-            reminder += 0.10
-        }
-
-        // If explicit date/time present, lower event threshold more aggressively
-        if context.hasDatesOrTimes { event -= 0.15 }
-
-        // Calendar phrasing indicates intent; allow a bit more leniency for reminders
-        if context.hasCalendarPhrases { reminder -= 0.10 }
-
-        // Relative date cues typically imply actionable follow-ups with time pressure
-        if context.hasRelativeDatePhrases {
-            reminder -= 0.05
-            event -= 0.03
-        }
-
-        // Weekend references often imply social or time-bound gatherings
-        if context.hasWeekendReferences {
-            event -= 0.05
-        }
-
-        // High imperative density often correlates with todo-like content; favor reminders
-        if context.imperativeVerbDensity > 0.02 { reminder -= 0.08 }
-
-        // Very long or dense transcripts can produce many candidates; tighten slightly
-        if context.transcriptLength > 1_500 || context.avgSentenceLength > 120 {
-            event += 0.05
-            reminder += 0.05
-        }
-
-        // Clamp bounds
-        let e = Float(min(max(event, 0.45), 0.90))
-        let r = Float(min(max(reminder, 0.45), 0.90))
-        return (e, r)
+        // Align with the historical baseline that previously delivered good balance.
+        // Additional heuristics can be layered back once telemetry confirms the
+        // updated confidence distribution.
+        _ = context // retained for future heuristic tuning
+        return (0.45, 0.40)
     }
 }

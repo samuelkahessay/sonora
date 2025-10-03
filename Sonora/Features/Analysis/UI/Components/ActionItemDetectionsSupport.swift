@@ -1,5 +1,35 @@
 import Foundation
 
+// MARK: - Stable Keys for Detections
+// We need a deterministic key to track handled detections across partial streams.
+// Using model-provided transient IDs (often random UUIDs) causes re-appearance.
+// The stable key combines: kind + normalized source text/title + coarse date.
+
+internal enum DetectionKeyBuilder {
+    private static func normalize(_ text: String) -> String {
+        text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func dateKey(_ date: Date?) -> String {
+        guard let date else { return "" }
+        // Coarse date for stability (minute resolution is enough for our UX)
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.dateFormat = "yyyy-MM-dd HH:mm"
+        return df.string(from: date)
+    }
+
+    static func forUI(kind: ActionItemDetectionKind, sourceQuote: String, fallbackTitle: String, date: Date?) -> String {
+        let base = normalize(sourceQuote.isEmpty ? fallbackTitle : sourceQuote)
+        let when = dateKey(date)
+        return "\(kind.rawValue)|\(base)|\(when)"
+    }
+
+    static func forDomain(_ det: ActionItemDetection) -> String {
+        forUI(kind: det.kind, sourceQuote: det.sourceQuote, fallbackTitle: det.title, date: det.suggestedDate)
+    }
+}
+
 // Support types used by DistillResultView's action item detections
 
 internal struct DistillCreatedArtifact: Equatable {
@@ -15,24 +45,17 @@ internal struct DistillAddedRecord: Identifiable, Equatable {
 // Persistently remember which detections were added (per memo)
 internal struct DistillHandledDetectionsStore {
     struct Entry: Equatable { let id: String; let message: String }
-
-    private var cache: [UUID: [Entry]] = [:]
     private let defaults = UserDefaults.standard
 
     private func storageKey(_ memoId: UUID) -> String { "handledDetections." + memoId.uuidString }
 
     mutating func entries(for memoId: UUID) -> [Entry] {
-        if let cached = cache[memoId] { return cached }
-        guard let raw = defaults.array(forKey: storageKey(memoId)) as? [[String: String]] else {
-            cache[memoId] = []
-            return []
-        }
-        let entries = raw.compactMap { dict -> Entry? in
+        // Always read from UserDefaults to avoid stale caches across instances.
+        guard let raw = defaults.array(forKey: storageKey(memoId)) as? [[String: String]] else { return [] }
+        return raw.compactMap { dict -> Entry? in
             guard let id = dict["id"], let message = dict["message"] else { return nil }
             return Entry(id: id, message: message)
         }
-        cache[memoId] = entries
-        return entries
     }
 
     mutating func add(_ key: String, message: String, for memoId: UUID) {
@@ -42,7 +65,6 @@ internal struct DistillHandledDetectionsStore {
         } else {
             entries.append(Entry(id: key, message: message))
         }
-        cache[memoId] = entries
         defaults.set(entries.map { ["id": $0.id, "message": $0.message] }, forKey: storageKey(memoId))
     }
 
@@ -50,7 +72,6 @@ internal struct DistillHandledDetectionsStore {
         var entries = entries(for: memoId)
         if let idx = entries.firstIndex(where: { $0.id == key }) {
             entries.remove(at: idx)
-            cache[memoId] = entries
             defaults.set(entries.map { ["id": $0.id, "message": $0.message] }, forKey: storageKey(memoId))
         }
     }

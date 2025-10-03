@@ -345,6 +345,14 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         case .detections(let ev, let rem):
             partialData.events = ev?.events
             partialData.reminders = rem?.reminders
+            Logger.shared.debug(
+                "Distill.Partial.Detections",
+                category: .analysis,
+                context: LogContext(additionalInfo: [
+                    "events": ev?.events.count ?? 0,
+                    "reminders": rem?.reminders.count ?? 0
+                ])
+            )
         }
     }
 }

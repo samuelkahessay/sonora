@@ -110,13 +110,27 @@ struct ActionItemDetectionState {
 
         let filtered = mergedItems.filter { det in
             guard let memoId = det.memoId else { return true }
-            return !handledStore.contains(det.sourceId, for: memoId)
+            let key = DetectionKeyBuilder.forDomain(det)
+            return !handledStore.contains(key, for: memoId)
         }
 
         items = filtered
         uiIdBySource = newUiIdBySource.filter { key, _ in filtered.contains { $0.sourceId == key } }
         eventSources = newEventSources
         reminderSources = newReminderSources
+
+        // Diagnostics: log merge outcome and filtering effects
+        let removedByHandled = mergedItems.count - filtered.count
+        let info: [String: Any] = [
+            "memoId": (memoId?.uuidString ?? "nil"),
+            "incomingEvents": events.count,
+            "incomingReminders": reminders.count,
+            "merged": mergedItems.count,
+            "removedByHandled": max(0, removedByHandled),
+            "resultItems": items.count,
+            "visible": visibleItems.count
+        ]
+        Logger.shared.info("ActionItems.State.MergeFrom", category: .viewModel, context: LogContext(additionalInfo: info))
     }
 
     mutating func toggleEdit(_ id: UUID) {
@@ -171,7 +185,16 @@ struct ActionItemDetectionState {
             added.remove(id)
             createdArtifacts.removeValue(forKey: id)
             if let ui = visibleItems.first(where: { $0.id == id }) {
-                let key = ui.sourceId
+                let date: Date? = {
+                    if let d = ui.suggestedDate { return d }
+                    switch ui.kind {
+                    case .event:
+                        return eventSources[ui.id]?.startDate ?? items.first(where: { $0.sourceId == ui.sourceId })?.suggestedDate
+                    case .reminder:
+                        return reminderSources[ui.id]?.dueDate ?? items.first(where: { $0.sourceId == ui.sourceId })?.suggestedDate
+                    }
+                }()
+                let key = DetectionKeyBuilder.forUI(kind: ui.kind, sourceQuote: ui.sourceQuote, fallbackTitle: ui.title, date: date)
                 addedRecords.removeAll { $0.id == key }
                 if let memoId = ui.memoId ?? currentMemoId { handledStore.remove(key, for: memoId) }
             }
@@ -218,7 +241,7 @@ struct ActionItemDetectionState {
         let prefix = item.kind == .event ? "Added event to calendar" : "Added reminder"
         let quotedTitle = "“\(item.title)”"
         let msg: String = dateText.map { "\(prefix) \(quotedTitle) for \($0)" } ?? "\(prefix) \(quotedTitle)"
-        let key = item.sourceId
+        let key = DetectionKeyBuilder.forUI(kind: item.kind, sourceQuote: item.sourceQuote, fallbackTitle: item.title, date: date)
         addedRecords.removeAll { $0.id == key }
         addedRecords.append(DistillAddedRecord(id: key, text: msg))
         if let memoId = item.memoId ?? currentMemoId { handledStore.add(key, message: msg, for: memoId) }

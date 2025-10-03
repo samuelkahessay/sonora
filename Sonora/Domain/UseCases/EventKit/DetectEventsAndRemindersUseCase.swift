@@ -58,7 +58,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
     // Legacy static thresholds remain as a safety floor; adaptive policy refines per-context
     private let nearMissMargin: Float = 0.10
     private var legacyEventThreshold: Float { Float(UserDefaults.standard.object(forKey: "eventConfidenceThreshold") as? Double ?? 0.45) }
-    private var legacyReminderThreshold: Float { Float(UserDefaults.standard.object(forKey: "reminderConfidenceThreshold") as? Double ?? 0.45) }
+    private var legacyReminderThreshold: Float { Float(UserDefaults.standard.object(forKey: "reminderConfidenceThreshold") as? Double ?? 0.40) }
 
     // MARK: - Initialization
     init(
@@ -294,14 +294,84 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         }
         print("🗓️ [Detect] filtered counts events=\(filteredEvents?.events.count ?? 0) reminders=\(filteredReminders?.reminders.count ?? 0)")
 
+        logConfidenceStats(
+            kind: "events",
+            threshold: eventThreshold,
+            rawScores: validatedEvents?.events.map { $0.confidence } ?? [],
+            acceptedCount: eventFilterOutcome.accepted?.events.count ?? 0,
+            finalCount: filteredEvents?.events.count ?? 0,
+            context: context
+        )
+
+        logConfidenceStats(
+            kind: "reminders",
+            threshold: reminderThreshold,
+            rawScores: validatedReminders?.reminders.map { $0.confidence } ?? [],
+            acceptedCount: reminderFilterOutcome.accepted?.reminders.count ?? 0,
+            finalCount: filteredReminders?.reminders.count ?? 0,
+            context: context
+        )
+
         // Temporal refinement: adjust times when explicit phrases like "6 p.m." are present
         filteredEvents = TemporalRefiner.refine(eventsData: filteredEvents, transcript: transcript) ?? filteredEvents
         filteredReminders = TemporalRefiner.refine(remindersData: filteredReminders, transcript: transcript) ?? filteredReminders
 
         // Domain-level deduplication to prevent overlap across events/reminders
+        let preDedupEventCount = filteredEvents?.events.count ?? 0
+        let preDedupReminderCount = filteredReminders?.reminders.count ?? 0
         let deduped = DeduplicationService.dedupe(events: filteredEvents, reminders: filteredReminders)
         filteredEvents = deduped.events
         filteredReminders = deduped.reminders
+
+        // Log post-dedup deltas and small samples for diagnostics
+        let postDedupEventCount = filteredEvents?.events.count ?? 0
+        let postDedupReminderCount = filteredReminders?.reminders.count ?? 0
+        let removedEvents = max(0, preDedupEventCount - postDedupEventCount)
+        let removedReminders = max(0, preDedupReminderCount - postDedupReminderCount)
+
+        func eventSamples(_ data: EventsData?) -> [[String: Any]] {
+            guard let data else { return [] }
+            return Array(data.events.prefix(3)).map { e in
+                [
+                    "id": e.id,
+                    "title": e.title,
+                    "confidence": Double(e.confidence),
+                    "start": e.startDate?.ISO8601Format() ?? "",
+                    "hasLocation": (e.location?.isEmpty == false),
+                    "hasParticipants": !(e.participants?.isEmpty ?? true)
+                ]
+            }
+        }
+        func reminderSamples(_ data: RemindersData?) -> [[String: Any]] {
+            guard let data else { return [] }
+            return Array(data.reminders.prefix(3)).map { r in
+                [
+                    "id": r.id,
+                    "title": r.title,
+                    "confidence": Double(r.confidence),
+                    "due": r.dueDate?.ISO8601Format() ?? "",
+                    "priority": r.priority.rawValue
+                ]
+            }
+        }
+
+        logger.info(
+            "Detection.PostDedup",
+            category: .detection,
+            context: LogContext(
+                correlationId: context.correlationId,
+                additionalInfo: [
+                    "preEvents": preDedupEventCount,
+                    "preReminders": preDedupReminderCount,
+                    "postEvents": postDedupEventCount,
+                    "postReminders": postDedupReminderCount,
+                    "removedEvents": removedEvents,
+                    "removedReminders": removedReminders,
+                    "eventSamples": eventSamples(filteredEvents),
+                    "reminderSamples": reminderSamples(filteredReminders)
+                ].merging(context.additionalInfo ?? [:]) { current, _ in current }
+            )
+        )
 
         return DetectionResult(
             events: filteredEvents,
@@ -452,6 +522,74 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
                 additionalInfo: info
             )
         )
+    }
+
+    private func logConfidenceStats(
+        kind: String,
+        threshold: Float,
+        rawScores: [Float],
+        acceptedCount: Int,
+        finalCount: Int,
+        context: LogContext
+    ) {
+        var info: [String: Any] = [
+            "mode": kind,
+            "threshold": Double(threshold),
+            "rawCount": rawScores.count,
+            "acceptedCount": acceptedCount,
+            "finalCount": finalCount,
+            "fallbackCount": max(0, finalCount - acceptedCount),
+            "histogram": confidenceHistogram(for: rawScores)
+        ]
+
+        if let min = rawScores.min() {
+            info["minScore"] = Double(min)
+        }
+
+        if let max = rawScores.max() {
+            info["maxScore"] = Double(max)
+        }
+
+        if !rawScores.isEmpty {
+            let sum = rawScores.reduce(0, +)
+            info["averageScore"] = Double(sum / Float(rawScores.count))
+        }
+
+        logger.info(
+            "Detection.ConfidenceStats",
+            category: .analysis,
+            context: LogContext(
+                correlationId: context.correlationId,
+                additionalInfo: info.merging(context.additionalInfo ?? [:]) { current, _ in current }
+            )
+        )
+    }
+
+    private func confidenceHistogram(for scores: [Float]) -> [String: Int] {
+        let buckets: [(lower: Float, upper: Float, label: String)] = [
+            (0.0, 0.2, "0.0-0.2"),
+            (0.2, 0.3, "0.2-0.3"),
+            (0.3, 0.4, "0.3-0.4"),
+            (0.4, 0.5, "0.4-0.5"),
+            (0.5, 0.6, "0.5-0.6"),
+            (0.6, 0.7, "0.6-0.7"),
+            (0.7, 0.8, "0.7-0.8"),
+            (0.8, 0.9, "0.8-0.9"),
+            (0.9, 1.01, "0.9-1.0")
+        ]
+
+        var histogram = Dictionary(uniqueKeysWithValues: buckets.map { ($0.label, 0) })
+
+        for score in scores {
+            guard score >= 0 else { continue }
+            if let bucket = buckets.first(where: { score >= $0.lower && score < $0.upper }) {
+                histogram[bucket.label, default: 0] += 1
+            } else if score >= 1.0 { // Handle potential rounding to exactly 1.0
+                histogram["0.9-1.0", default: 0] += 1
+            }
+        }
+
+        return histogram
     }
 
     private struct NearMissInfo: Sendable {

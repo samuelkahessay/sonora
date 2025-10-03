@@ -85,7 +85,8 @@ final class ActionItemCoordinator: ObservableObject {
         let prefix = item.kind == .event ? "Added event to calendar" : "Added reminder"
         let quotedTitle = "“\(item.title)”"
         let text: String = dateText.map { "\(prefix) \(quotedTitle) for \($0)" } ?? "\(prefix) \(quotedTitle)"
-        return DistillAddedRecord(id: item.sourceId, text: text)
+        let key = DetectionKeyBuilder.forUI(kind: item.kind, sourceQuote: item.sourceQuote, fallbackTitle: item.title, date: date)
+        return DistillAddedRecord(id: key, text: text)
     }
 
     func recordHandled(_ record: DistillAddedRecord, for memoId: UUID?) {
@@ -95,7 +96,8 @@ final class ActionItemCoordinator: ObservableObject {
 
     func removeHandled(for item: ActionItemDetectionUI, memoId: UUID?) {
         guard let memoId else { return }
-        handledStore.remove(item.sourceId, for: memoId)
+        let key = DetectionKeyBuilder.forUI(kind: item.kind, sourceQuote: item.sourceQuote, fallbackTitle: item.title, date: item.suggestedDate)
+        handledStore.remove(key, for: memoId)
     }
 
     func restoreHandled(for memoId: UUID?) {
@@ -111,7 +113,17 @@ final class ActionItemCoordinator: ObservableObject {
     }
 
     func removeRecord(for item: ActionItemDetectionUI, memoId: UUID?) {
-        addedRecords.removeAll { $0.id == item.sourceId }
+        let date: Date? = {
+            if let d = item.suggestedDate { return d }
+            switch item.kind {
+            case .event:
+                return nil // Caller may not have base here; this path is rarely used.
+            case .reminder:
+                return nil
+            }
+        }()
+        let key = DetectionKeyBuilder.forUI(kind: item.kind, sourceQuote: item.sourceQuote, fallbackTitle: item.title, date: date)
+        addedRecords.removeAll { $0.id == key }
         removeHandled(for: item, memoId: memoId)
     }
 }

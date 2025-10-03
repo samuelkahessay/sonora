@@ -63,6 +63,19 @@ struct DistillResultView: View {
         }
         .textSelection(.enabled)
         .sheet(isPresented: $showPaywall) { PaywallView() }
+        .onAppear {
+            Logger.shared.debug(
+                "ActionItems.InitVM.TopAppear",
+                category: .viewModel,
+                context: LogContext(additionalInfo: [
+                    "memoId": memoId?.uuidString ?? "nil",
+                    "eventsForUI": eventsForUI.count,
+                    "remindersForUI": remindersForUI.count,
+                    "isDetectionPending": isDetectionPending
+                ])
+            )
+            initializeViewModelIfNeeded()
+        }
     }
 
     // MARK: - Computed Properties
@@ -104,8 +117,36 @@ struct DistillResultView: View {
     }
 
     // Use domain-deduplicated results directly
-    var eventsForUI: [EventsData.DetectedEvent] { data?.events ?? partialData?.events ?? [] }
-    var remindersForUI: [RemindersData.DetectedReminder] { data?.reminders ?? partialData?.reminders ?? [] }
+    var eventsForUI: [EventsData.DetectedEvent] {
+        if let ev = data?.events, !ev.isEmpty { return ev }
+        if let ev = partialData?.events, !ev.isEmpty { return ev }
+        if let id = memoId, let env: AnalyzeEnvelope<EventsData> = container.analysisRepository().getAnalysisResult(for: id, mode: .events, responseType: EventsData.self) {
+            if !env.data.events.isEmpty {
+                Logger.shared.info(
+                    "ActionItems.FallbackRepo",
+                    category: .viewModel,
+                    context: LogContext(additionalInfo: ["memoId": id.uuidString, "mode": "events", "count": env.data.events.count])
+                )
+            }
+            return env.data.events
+        }
+        return []
+    }
+    var remindersForUI: [RemindersData.DetectedReminder] {
+        if let rem = data?.reminders, !rem.isEmpty { return rem }
+        if let rem = partialData?.reminders, !rem.isEmpty { return rem }
+        if let id = memoId, let env: AnalyzeEnvelope<RemindersData> = container.analysisRepository().getAnalysisResult(for: id, mode: .reminders, responseType: RemindersData.self) {
+            if !env.data.reminders.isEmpty {
+                Logger.shared.info(
+                    "ActionItems.FallbackRepo",
+                    category: .viewModel,
+                    context: LogContext(additionalInfo: ["memoId": id.uuidString, "mode": "reminders", "count": env.data.reminders.count])
+                )
+            }
+            return env.data.reminders
+        }
+        return []
+    }
 
     // MARK: - Detections (Events + Reminders)
     @StateObject private var viewModelHolder = ViewModelHolder()
@@ -113,49 +154,43 @@ struct DistillResultView: View {
     // MARK: - Action Items Host Section
     @ViewBuilder
     private var actionItemsHostSection: some View {
-        ActionItemsHostSectionView(
-            permissionService: viewModelHolder.vm?.permissionService ?? EventKitPermissionService(),
-            visibleItems: viewModelHolder.vm?.visibleItems ?? [],
-            addedRecords: viewModelHolder.vm?.addedRecords ?? [],
-            isPro: isPro,
-            isDetectionPending: isDetectionPending,
-            showBatchSheet: Binding(get: { viewModelHolder.vm?.showBatchSheet ?? false }, set: { viewModelHolder.vm?.showBatchSheet = $0 }),
-            batchInclude: Binding(get: { viewModelHolder.vm?.batchInclude ?? [] }, set: { viewModelHolder.vm?.batchInclude = $0 }),
-            calendars: viewModelHolder.vm?.availableCalendars ?? [],
-            reminderLists: viewModelHolder.vm?.availableReminderLists ?? [],
-            defaultCalendar: viewModelHolder.vm?.defaultCalendar,
-            defaultReminderList: viewModelHolder.vm?.defaultReminderList
-        ) { event in
-                switch event {
-                case .item(let itemEvent):
-                    switch itemEvent {
-                    case .editToggle(let id):
-                        viewModelHolder.vm?.handleEditToggle(id)
-                    case .add(let item):
-                        Task { @MainActor in await viewModelHolder.vm?.handleAddSingle(item) }
-                    case .dismiss(let id):
-                        viewModelHolder.vm?.handleDismiss(id)
-                    }
-                case .openBatch(let selected):
-                    Task { @MainActor in await viewModelHolder.vm?.handleOpenBatch(selected: selected) }
-                case .addSelected(let items, let calendar, let reminderList):
-                    Task { @MainActor in await viewModelHolder.vm?.handleAddSelected(items, calendar: calendar, reminderList: reminderList) }
-                case .dismissSheet:
-                    break
-                }
-        }
-        .onAppear { initializeViewModelIfNeeded() }
-        .onChange(of: eventsForUI.count + remindersForUI.count) { _, _ in
-            initializeViewModelIfNeeded()
-            viewModelHolder.vm?.mergeIncoming(events: eventsForUI, reminders: remindersForUI)
-        }
-        // Conflict sheet when duplicates are found
-        .sheet(isPresented: Binding(get: { viewModelHolder.vm?.showConflictSheet ?? false }, set: { viewModelHolder.vm?.showConflictSheet = $0 })) {
-            EventConflictResolutionSheet(
-                duplicates: viewModelHolder.vm?.conflictDuplicates ?? [],
-                onProceed: { Task { @MainActor in await viewModelHolder.vm?.resolveConflictProceed() } },
-                onSkip: { viewModelHolder.vm?.resolveConflictSkip() }
+        if let vm = viewModelHolder.vm {
+            ActionItemsHostObservedSection(
+                vm: vm,
+                isPro: isPro,
+                isDetectionPending: isDetectionPending
             )
+            .onAppear {
+                Logger.shared.info(
+                    "ActionItems.HostAppeared",
+                    category: .viewModel,
+                    context: LogContext(additionalInfo: [
+                        "memoId": memoId?.uuidString ?? "nil",
+                        "eventsForUI": eventsForUI.count,
+                        "remindersForUI": remindersForUI.count,
+                        "isDetectionPending": isDetectionPending
+                    ])
+                )
+            }
+            .onChange(of: eventsForUI.count + remindersForUI.count) { _, _ in
+                vm.mergeIncoming(events: eventsForUI, reminders: remindersForUI)
+            }
+        } else {
+            // Initialize lazily and render nothing until VM exists
+            EmptyView()
+                .onAppear {
+                    Logger.shared.debug(
+                        "ActionItems.InitVM.Request",
+                        category: .viewModel,
+                        context: LogContext(additionalInfo: [
+                            "memoId": memoId?.uuidString ?? "nil",
+                            "eventsForUI": eventsForUI.count,
+                            "remindersForUI": remindersForUI.count,
+                            "isDetectionPending": isDetectionPending
+                        ])
+                    )
+                    initializeViewModelIfNeeded()
+                }
         }
     }
 
@@ -169,10 +204,27 @@ struct DistillResultView: View {
     // MARK: - Async wrappers
     private func initializeViewModelIfNeeded() {
         if viewModelHolder.vm == nil {
+            Logger.shared.debug(
+                "ActionItems.InitVM.Build",
+                category: .viewModel,
+                context: LogContext(additionalInfo: [
+                    "memoId": memoId?.uuidString ?? "nil",
+                    "eventsForUI": eventsForUI.count,
+                    "remindersForUI": remindersForUI.count,
+                    "isDetectionPending": isDetectionPending
+                ])
+            )
             viewModelHolder.vm = ActionItemViewModel(
                 memoId: memoId,
                 initialEvents: eventsForUI,
                 initialReminders: remindersForUI
+            )
+            Logger.shared.info(
+                "ActionItems.InitVM.Built",
+                category: .viewModel,
+                context: LogContext(additionalInfo: [
+                    "memoId": memoId?.uuidString ?? "nil"
+                ])
             )
         }
     }
@@ -226,3 +278,52 @@ private final class ViewModelHolder: ObservableObject {
 }
 
 private extension DistillResultView { }
+
+// MARK: - Observed wrapper to react to VM changes
+private struct ActionItemsHostObservedSection: View {
+    @ObservedObject var vm: ActionItemViewModel
+    let isPro: Bool
+    let isDetectionPending: Bool
+
+    var body: some View {
+        ActionItemsHostSectionView(
+            permissionService: vm.permissionService,
+            visibleItems: vm.visibleItems,
+            addedRecords: vm.addedRecords,
+            isPro: isPro,
+            isDetectionPending: isDetectionPending,
+            showBatchSheet: $vm.showBatchSheet,
+            batchInclude: $vm.batchInclude,
+            calendars: vm.availableCalendars,
+            reminderLists: vm.availableReminderLists,
+            defaultCalendar: vm.defaultCalendar,
+            defaultReminderList: vm.defaultReminderList
+        ) { event in
+            switch event {
+            case .item(let itemEvent):
+                switch itemEvent {
+                case .editToggle(let id):
+                    vm.handleEditToggle(id)
+                case .add(let item):
+                    Task { @MainActor in await vm.handleAddSingle(item) }
+                case .dismiss(let id):
+                    vm.handleDismiss(id)
+                }
+            case .openBatch(let selected):
+                Task { @MainActor in await vm.handleOpenBatch(selected: selected) }
+            case .addSelected(let items, let calendar, let reminderList):
+                Task { @MainActor in await vm.handleAddSelected(items, calendar: calendar, reminderList: reminderList) }
+            case .dismissSheet:
+                break
+            }
+        }
+        // Conflict sheet when duplicates are found
+        .sheet(isPresented: $vm.showConflictSheet) {
+            EventConflictResolutionSheet(
+                duplicates: vm.conflictDuplicates,
+                onProceed: { Task { @MainActor in await vm.resolveConflictProceed() } },
+                onSkip: { vm.resolveConflictSkip() }
+            )
+        }
+    }
+}
