@@ -48,6 +48,8 @@ xcodebuild -resolvePackageDependencies -project Sonora.xcodeproj
 
 ## 🗂️ Project Layout (at a glance)
 
+- Documentation index: `docs/INDEX.md`
+
 - `Sonora/Core/` – DI, concurrency, logging, events, errors
 - `Sonora/Domain/` – models, use cases, protocols (pure Swift)
 - `Sonora/Data/` – repositories and services (implementations, external APIs)

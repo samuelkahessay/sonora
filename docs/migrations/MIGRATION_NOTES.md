@@ -193,7 +193,7 @@ StatusIndicator.operation(status: .active, showText: true)
 ## Developer Onboarding
 
 ### New Team Members
-1. **Read:** `ARCHITECTURE_SIMPLIFIED.md` for current patterns
+1. **Read:** `docs/architecture/ARCHITECTURE.md` for current patterns
 2. **Reference:** Use `StatusIndicator` for all status displays
 3. **Follow:** Established icon sizing and button style patterns
 4. **Test:** Ensure accessibility compliance in all new components
