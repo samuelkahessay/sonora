@@ -4,7 +4,7 @@ import multer from 'multer';
 import { z } from 'zod';
 import fs from 'fs';
 import { FormData, File } from 'undici';
-import { RequestSchema, AnalysisDataSchema, DistillDataSchema, ThemesDataSchema, TodosDataSchema, EventsDataSchema, RemindersDataSchema, ModelSettings, AnalysisJsonSchemas } from './schema.js';
+import { RequestSchema, DistillDataSchema, LiteDistillDataSchema, EventsDataSchema, RemindersDataSchema, ModelSettings, AnalysisJsonSchemas } from './schema.js';
 import { buildPrompt } from './prompts.js';
 import { createChatJSON, createModeration } from './openai.js';
 import { sanitizeTranscript } from './sanitize.js';
@@ -501,14 +501,20 @@ app.post('/analyze', async (req, res) => {
   
   try {
     // Validate request
-    const { mode, transcript } = RequestSchema.parse(req.body);
-    
+    const { mode, transcript, historicalContext } = RequestSchema.parse(req.body);
+
     // Build prompts
-    const { system, user } = buildPrompt(mode, transcript);
-    
+    const { system, user } = buildPrompt(mode, transcript, historicalContext);
+
     // Get GPT-5 settings for this mode
     const settings = ModelSettings[mode as keyof typeof ModelSettings] || { verbosity: 'low', reasoningEffort: 'medium' };
-    const schema = AnalysisJsonSchemas[mode as keyof typeof AnalysisJsonSchemas];
+
+    // Skip strict schema validation for distill mode when historical context is present
+    // This allows patterns field to be included without schema enforcement
+    const hasHistoricalContext = historicalContext && historicalContext.length > 0;
+    const useStrictSchema = !(mode === 'distill' && hasHistoricalContext);
+    const schema = useStrictSchema ? AnalysisJsonSchemas[mode as keyof typeof AnalysisJsonSchemas] : undefined;
+
     const { jsonText, usage } = await createChatJSON({
       system,
       user,
@@ -538,11 +544,11 @@ app.post('/analyze', async (req, res) => {
     let validatedData;
     try {
       switch (mode) {
-        case 'analysis':
-          validatedData = AnalysisDataSchema.parse(parsedData);
-          break;
         case 'distill':
           validatedData = DistillDataSchema.parse(parsedData);
+          break;
+        case 'lite-distill':
+          validatedData = LiteDistillDataSchema.parse(parsedData);
           break;
         case 'distill-summary':
           validatedData = { summary: parsedData.summary };
@@ -555,12 +561,6 @@ app.post('/analyze', async (req, res) => {
           break;
         case 'distill-reflection':
           validatedData = { reflection_questions: parsedData.reflection_questions || [] };
-          break;
-        case 'themes':
-          validatedData = ThemesDataSchema.parse(parsedData);
-          break;
-        case 'todos':
-          validatedData = TodosDataSchema.parse(parsedData);
           break;
         case 'events':
           validatedData = EventsDataSchema.parse(parsedData);
@@ -583,11 +583,11 @@ app.post('/analyze', async (req, res) => {
     try {
       const vd: any = validatedData as any;
       switch (mode) {
-        case 'analysis':
-          textForModeration = `${vd.summary}\n${(vd.key_points || []).join(' \n')}`;
-          break;
         case 'distill':
           textForModeration = `${vd.summary}\n${(vd.action_items || []).map((a: any) => a.text).join(' \n')}\n${(vd.reflection_questions || []).join(' \n')}`;
+          break;
+        case 'lite-distill':
+          textForModeration = `${vd.summary}\n${vd.personalInsight?.observation || ''}\n${(vd.simpleTodos || []).map((t: any) => t.text).join(' \n')}\n${vd.reflectionQuestion || ''}\n${vd.closingNote || ''}`;
           break;
         case 'distill-summary':
           textForModeration = vd.summary || '';
@@ -600,12 +600,6 @@ app.post('/analyze', async (req, res) => {
           break;
         case 'distill-reflection':
           textForModeration = (vd.reflection_questions || []).join(' \n');
-          break;
-        case 'themes':
-          textForModeration = `${vd.sentiment}\n${vd.themes.map((t: any) => `${t.name}: ${(t.evidence || []).join(' ')}`).join(' \n')}`;
-          break;
-        case 'todos':
-          textForModeration = `${vd.todos.map((t: any) => t.text).join(' \n')}`;
           break;
         case 'events':
           textForModeration = `${(vd.events || []).map((e: any) => `${e.title} ${e.location || ''}`).join(' \n')}`;
@@ -718,7 +712,7 @@ app.get('/test-gpt5', async (_req, res) => {
     const overallStartTime = Date.now();
     
     // Test all analysis modes
-    const modes = ['distill', 'distill-summary', 'distill-actions', 'distill-themes', 'distill-reflection', 'analysis', 'themes', 'todos', 'events', 'reminders'] as const;
+    const modes = ['distill', 'lite-distill', 'distill-summary', 'distill-actions', 'distill-themes', 'distill-reflection', 'events', 'reminders'] as const;
     
     for (const mode of modes) {
       const testStartTime = Date.now();
@@ -754,6 +748,9 @@ app.get('/test-gpt5', async (_req, res) => {
             case 'distill':
               validationResult.valid = !!(parsedData.summary && parsedData.key_themes && parsedData.reflection_questions);
               break;
+            case 'lite-distill':
+              validationResult.valid = !!(parsedData.summary && parsedData.keyThemes && parsedData.personalInsight && parsedData.reflectionQuestion && parsedData.closingNote);
+              break;
             case 'distill-summary':
               validationResult.valid = !!(parsedData.summary);
               break;
@@ -765,15 +762,6 @@ app.get('/test-gpt5', async (_req, res) => {
               break;
             case 'distill-reflection':
               validationResult.valid = Array.isArray(parsedData.reflection_questions);
-              break;
-            case 'analysis':
-              validationResult.valid = !!(parsedData.summary && parsedData.key_points);
-              break;
-            case 'themes':
-              validationResult.valid = !!(parsedData.themes && parsedData.sentiment);
-              break;
-            case 'todos':
-              validationResult.valid = !!(parsedData.todos);
               break;
           }
         } catch (jsonError: any) {

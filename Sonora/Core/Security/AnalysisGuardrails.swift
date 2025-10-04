@@ -25,34 +25,6 @@ enum AnalysisGuardrails {
     }
 
     // MARK: - Validation
-    static func validate(analysis: AnalysisData) -> Bool {
-        guard !analysis.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
-        guard analysis.summary.count <= 10_000 else { return false }
-        guard analysis.key_points.count <= 100 else { return false }
-        return analysis.key_points.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 2_000 }
-    }
-
-    static func validate(themes: ThemesData) -> Bool {
-        guard themes.themes.count <= 50 else { return false }
-        for t in themes.themes {
-            if t.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
-            if t.name.count > 500 { return false }
-            if t.evidence.count > 100 { return false }
-            if !t.evidence.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 2_000 }) { return false }
-        }
-        // sentiment is already validated by type on server; be permissive here
-        return true
-    }
-
-    static func validate(todos: TodosData) -> Bool {
-        guard todos.todos.count <= 200 else { return false }
-        for td in todos.todos {
-            if td.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
-            if td.text.count > 2_000 { return false }
-            if let due = td.due, due.count > 1_000 { return false }
-        }
-        return true
-    }
 
     static func validate(distill: DistillData) -> Bool {
         // Validate summary

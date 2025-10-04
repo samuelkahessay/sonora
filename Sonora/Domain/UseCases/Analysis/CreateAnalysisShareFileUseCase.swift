@@ -40,11 +40,10 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
                 var set = Set<AnalysisMode>()
                 for t in types {
                     switch t {
-                    case .distill: set.insert(.distill)
-                    case .summary: set.insert(.analysis) // summaries available in AnalysisData
-                    case .themes: set.insert(.themes)
-                    case .actionItems: set.insert(.todos)
-                    case .keyPoints: set.insert(.analysis)
+                    case .distill, .summary, .actionItems, .keyPoints:
+                        set.insert(.distill)
+                    case .themes:
+                        set.insert(.distillThemes)
                     }
                 }
                 return set
@@ -126,40 +125,6 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
                 }
             }
 
-            // Analysis: summary + key points
-            await addIfAvailable(.analysis, AnalysisData.self) { env in
-                var s = "🔍 ANALYSIS (Updated: \(Self.fmt(env)))\n\n"
-                s += (env.data.summary) + "\n\n"
-                if !env.data.key_points.isEmpty {
-                    s += "🔑 Key Points\n"
-                    env.data.key_points.forEach { s += "• \($0)\n" }
-                    s += "\n"
-                }
-                return s
-            }
-
-            // Themes: themes list
-            await addIfAvailable(.themes, ThemesData.self) { env in
-                var s = "🏷️ THEMES (Updated: \(Self.fmt(env)))\n\n"
-                if !env.data.themes.isEmpty {
-                    env.data.themes.forEach { s += "• \($0.name)\n" }
-                    s += "\n"
-                }
-                return s
-            }
-
-            // Todos: action items
-            await addIfAvailable(.todos, TodosData.self) { env in
-                var s = "✅ TO-DO (Updated: \(Self.fmt(env)))\n\n"
-                let todos = env.data.todos
-                if !todos.isEmpty {
-                    todos.forEach { todo in
-                        if let due = todo.due { s += "• \(todo.text) (due: \(due))\n" } else { s += "• \(todo.text)\n" }
-                    }
-                    s += "\n"
-                }
-                return s
-            }
 
             guard !sections.isEmpty else {
                 logger.useCase("No completed analysis to export", level: .info, context: context)

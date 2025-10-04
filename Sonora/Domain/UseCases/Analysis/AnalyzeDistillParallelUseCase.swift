@@ -24,6 +24,7 @@ public struct PartialDistillData: Sendable, Equatable {
     public var summary: String?
     public var actionItems: [DistillData.ActionItem]?
     public var reflectionQuestions: [String]?
+    public var patterns: [DistillData.Pattern]?
     public var events: [EventsData.DetectedEvent]?
     public var reminders: [RemindersData.DetectedReminder]?
 
@@ -38,6 +39,7 @@ public struct PartialDistillData: Sendable, Equatable {
             summary: summary,
             action_items: actionItems,
             reflection_questions: reflectionQuestions,
+            patterns: patterns,
             events: events,
             reminders: reminders
         )
@@ -49,7 +51,8 @@ extension PartialDistillData {
         // Compare simple fields directly
         guard lhs.summary == rhs.summary,
               lhs.actionItems == rhs.actionItems,
-              lhs.reflectionQuestions == rhs.reflectionQuestions else {
+              lhs.reflectionQuestions == rhs.reflectionQuestions,
+              lhs.patterns == rhs.patterns else {
             return false
         }
         // Compare events/reminders by IDs (domain types are not Equatable)
@@ -66,6 +69,7 @@ enum DistillComponentData: Sendable {
     case actions(DistillActionsData)
     case reflection(DistillReflectionData)
     case detections(EventsData?, RemindersData?)
+    case patterns([DistillData.Pattern]?)
 }
 
 final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol, @unchecked Sendable {
@@ -77,6 +81,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     private let eventBus: any EventBusProtocol
     private let operationCoordinator: any OperationCoordinatorProtocol
     private let detectUseCase: any DetectEventsAndRemindersUseCaseProtocol
+    private let buildHistoricalContextUseCase: any BuildHistoricalContextUseCaseProtocol
 
     // MARK: - Constants
     private let componentModes: [AnalysisMode] = [.distillSummary, .distillActions, .distillReflection]
@@ -88,7 +93,8 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         logger: any LoggerProtocol = Logger.shared,
         eventBus: any EventBusProtocol,
         operationCoordinator: any OperationCoordinatorProtocol,
-        detectUseCase: any DetectEventsAndRemindersUseCaseProtocol
+        detectUseCase: any DetectEventsAndRemindersUseCaseProtocol,
+        buildHistoricalContextUseCase: any BuildHistoricalContextUseCaseProtocol
     ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository
@@ -96,6 +102,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         self.eventBus = eventBus
         self.operationCoordinator = operationCoordinator
         self.detectUseCase = detectUseCase
+        self.buildHistoricalContextUseCase = buildHistoricalContextUseCase
     }
 
     // MARK: - Use Case Execution
@@ -174,8 +181,16 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         let model = "gpt-5-nano"
         var combinedTokens = TokenUsage(input: 0, output: 0)
 
+        // Build historical context for pattern detection
+        let historicalContext = await buildHistoricalContextUseCase.execute(currentMemoId: memoId)
+        let enablePatterns = !historicalContext.isEmpty
+
+        logger.debug("Historical context: \(historicalContext.count) memos, patterns \(enablePatterns ? "enabled" : "disabled")",
+                    category: .analysis, context: context)
+
         // Send initial progress
-        let totalComponents = componentModes.count + 1
+        // Total: summary + actions + reflection + detections + (optional: patterns)
+        let totalComponents = componentModes.count + 1 + (enablePatterns ? 1 : 0)
         let initialPartial = partialData
         await MainActor.run {
             progressHandler(DistillProgressUpdate(
@@ -186,7 +201,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             ))
         }
 
-        logger.analysis("Starting parallel execution of \(componentModes.count) components", context: context)
+        logger.analysis("Starting parallel execution of \(componentModes.count) components + patterns=\(enablePatterns)", context: context)
 
         // Execute all components in parallel using TaskGroup
         try await withThrowingTaskGroup(of: (AnalysisMode?, DistillComponentData, Int, TokenUsage).self) { group in
@@ -220,6 +235,26 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                 } catch {
                     logger.warning("Detection error; continuing without detections", category: .analysis, context: context, error: error)
                     return (nil, .detections(nil, nil), 0, TokenUsage(input: 0, output: 0))
+                }
+            }
+
+            // Add patterns task if historical context is available
+            if enablePatterns {
+                group.addTask { [self] in
+                    do {
+                        logger.debug("Calling full distill mode with historical context for patterns", category: .analysis, context: context)
+                        let envelope = try await analysisService.analyzeDistill(
+                            transcript: transcript,
+                            historicalContext: historicalContext
+                        )
+                        // Extract only patterns from the full distill response
+                        let patterns = envelope.data.patterns
+                        logger.debug("Patterns detected: \(patterns?.count ?? 0)", category: .analysis, context: context)
+                        return (nil, .patterns(patterns), envelope.latency_ms, envelope.tokens)
+                    } catch {
+                        logger.warning("Pattern detection error; continuing without patterns", category: .analysis, context: context, error: error)
+                        return (nil, .patterns(nil), 0, TokenUsage(input: 0, output: 0))
+                    }
                 }
             }
 
@@ -330,6 +365,9 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             case .detections:
                 // No cache persistence for detection bundle in this use case.
                 break
+            case .patterns:
+                // No separate cache for patterns - they're part of the full distill result
+                break
             }
         }
     }
@@ -351,6 +389,15 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                 context: LogContext(additionalInfo: [
                     "events": ev?.events.count ?? 0,
                     "reminders": rem?.reminders.count ?? 0
+                ])
+            )
+        case .patterns(let patterns):
+            partialData.patterns = patterns
+            Logger.shared.debug(
+                "Distill.Partial.Patterns",
+                category: .analysis,
+                context: LogContext(additionalInfo: [
+                    "patterns": patterns?.count ?? 0
                 ])
             )
         }

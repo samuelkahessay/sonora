@@ -306,7 +306,7 @@ private final class StubAnalysisService: ObservableObject, AnalysisServiceProtoc
         )
     }
 
-    func analyze<T>(mode: AnalysisMode, transcript: String, responseType: T.Type) async throws -> AnalyzeEnvelope<T> {
+    func analyze<T>(mode: AnalysisMode, transcript: String, responseType: T.Type, historicalContext: [HistoricalMemoContext]?) async throws -> AnalyzeEnvelope<T> {
         switch mode {
         case .events:
             guard let data = eventsEnvelope.data as? T else { fatalError("Unexpected response type") }
@@ -319,10 +319,10 @@ private final class StubAnalysisService: ObservableObject, AnalysisServiceProtoc
         }
     }
 
+    func analyzeDistill(transcript: String, historicalContext: [HistoricalMemoContext]?) async throws -> AnalyzeEnvelope<DistillData> { fatalError("Not stubbed") }
+
     func analyzeDistill(transcript: String) async throws -> AnalyzeEnvelope<DistillData> { fatalError("Not stubbed") }
-    func analyzeAnalysis(transcript: String) async throws -> AnalyzeEnvelope<AnalysisData> { fatalError("Not stubbed") }
-    func analyzeThemes(transcript: String) async throws -> AnalyzeEnvelope<ThemesData> { fatalError("Not stubbed") }
-    func analyzeTodos(transcript: String) async throws -> AnalyzeEnvelope<TodosData> { fatalError("Not stubbed") }
+    func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData> { fatalError("Not stubbed") }
     func analyzeDistillSummary(transcript: String) async throws -> AnalyzeEnvelope<DistillSummaryData> { fatalError("Not stubbed") }
     func analyzeDistillActions(transcript: String) async throws -> AnalyzeEnvelope<DistillActionsData> { fatalError("Not stubbed") }
     func analyzeDistillThemes(transcript: String) async throws -> AnalyzeEnvelope<DistillThemesData> { fatalError("Not stubbed") }

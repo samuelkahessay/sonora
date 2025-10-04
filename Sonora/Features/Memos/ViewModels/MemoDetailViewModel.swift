@@ -16,16 +16,18 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     internal let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
     internal let analyzeDistillUseCase: AnalyzeDistillUseCaseProtocol
     internal let analyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
-    internal let analyzeContentUseCase: AnalyzeContentUseCaseProtocol
-    internal let analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol
-    internal let analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol
+    internal let analyzeLiteDistillUseCase: AnalyzeLiteDistillUseCaseProtocol
     internal let renameMemoUseCase: RenameMemoUseCaseProtocol
     internal let createTranscriptShareFileUseCase: CreateTranscriptShareFileUseCaseProtocol
     internal let createAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtocol
     internal let deleteMemoUseCase: DeleteMemoUseCaseProtocol
     internal let memoRepository: any MemoRepository // Still needed for state updates
     internal let operationCoordinator: any OperationCoordinatorProtocol
+    internal let storeKitService: StoreKitServiceProtocol
     private var cancellables = Set<AnyCancellable>()
+
+    // MARK: - Subscription State
+    @Published var isProUser: Bool = false
 
     // MARK: - Current Memo
     internal var currentMemo: Memo?
@@ -149,15 +151,14 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
         analyzeDistillUseCase: AnalyzeDistillUseCaseProtocol,
         analyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol,
-        analyzeContentUseCase: AnalyzeContentUseCaseProtocol,
-        analyzeThemesUseCase: AnalyzeThemesUseCaseProtocol,
-        analyzeTodosUseCase: AnalyzeTodosUseCaseProtocol,
+        analyzeLiteDistillUseCase: AnalyzeLiteDistillUseCaseProtocol,
         renameMemoUseCase: RenameMemoUseCaseProtocol,
         createTranscriptShareFileUseCase: CreateTranscriptShareFileUseCaseProtocol,
         createAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtocol,
         deleteMemoUseCase: DeleteMemoUseCaseProtocol,
         memoRepository: any MemoRepository,
-        operationCoordinator: any OperationCoordinatorProtocol
+        operationCoordinator: any OperationCoordinatorProtocol,
+        storeKitService: StoreKitServiceProtocol
     ) {
         self.playMemoUseCase = playMemoUseCase
         self.startTranscriptionUseCase = startTranscriptionUseCase
@@ -165,15 +166,14 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         self.getTranscriptionStateUseCase = getTranscriptionStateUseCase
         self.analyzeDistillUseCase = analyzeDistillUseCase
         self.analyzeDistillParallelUseCase = analyzeDistillParallelUseCase
-        self.analyzeContentUseCase = analyzeContentUseCase
-        self.analyzeThemesUseCase = analyzeThemesUseCase
-        self.analyzeTodosUseCase = analyzeTodosUseCase
+        self.analyzeLiteDistillUseCase = analyzeLiteDistillUseCase
         self.renameMemoUseCase = renameMemoUseCase
         self.createTranscriptShareFileUseCase = createTranscriptShareFileUseCase
         self.createAnalysisShareFileUseCase = createAnalysisShareFileUseCase
         self.deleteMemoUseCase = deleteMemoUseCase
         self.memoRepository = memoRepository
         self.operationCoordinator = operationCoordinator
+        self.storeKitService = storeKitService
 
         setupBindings()
         setupOperationMonitoring()
@@ -358,6 +358,45 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         }
     }
 
+    func performLiteDistill(transcript: String, memoId: UUID) async {
+        print("📝 MemoDetailViewModel: Starting Lite Distill analysis (Free tier)")
+
+        do {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            let envelope = try await analyzeLiteDistillUseCase.execute(transcript: transcript, memoId: memoId)
+            let duration = CFAbsoluteTimeGetCurrent() - startTime
+
+            await MainActor.run {
+                analysisPayload = .liteDistill(envelope.data, envelope)
+                isAnalyzing = false
+
+                // Cache detection (similar to regular Distill)
+                let wasCached = duration < 1.0 || envelope.latency_ms < 1_000
+                analysisCacheStatus = wasCached ? "✅ Loaded from cache" : "🌐 Fresh from API"
+                analysisPerformanceInfo = wasCached ?
+                    "Response: \(Int(duration * 1_000))ms" :
+                    "API: \(envelope.latency_ms)ms, Total: \(Int(duration * 1_000))ms"
+
+                print("📝 MemoDetailViewModel: Lite Distill analysis completed (cached: \(wasCached))")
+            }
+
+            // Record performance metrics for free tier
+            PerformanceMetricsService.shared.recordDuration(
+                name: "LiteDistillTotalDuration",
+                start: Date(timeIntervalSinceNow: -duration),
+                extras: ["tier": "free"]
+            )
+
+        } catch {
+            await MainActor.run {
+                analysisError = error.localizedDescription
+                self.error = ErrorMapping.mapError(error)
+                isAnalyzing = false
+                print("❌ MemoDetailViewModel: Lite Distill analysis failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
     // MARK: - Private Methods
 
     private func updateTranscriptionState(for memo: Memo) {
@@ -508,6 +547,14 @@ extension MemoDetailViewModel {
                 if self.isPlaying != progress.isPlaying {
                     self.isPlaying = progress.isPlaying
                 }
+            }
+            .store(in: &cancellables)
+
+        // Subscribe to Pro subscription status changes
+        storeKitService.isProPublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] isPro in
+                self?.isProUser = isPro
             }
             .store(in: &cancellables)
     }

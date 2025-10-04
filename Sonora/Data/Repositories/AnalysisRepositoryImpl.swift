@@ -193,7 +193,7 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
         if let existing = analysisHistory[memoId] { return existing }
         // Derive from store
         if let items = try? modelContext.fetch(FetchDescriptor<AnalysisResultModel>(predicate: #Predicate { $0.memo?.id == memoId })) {
-            return items.map { (mode: AnalysisMode(rawValue: $0.mode) ?? .analysis, timestamp: $0.timestamp) }
+            return items.map { (mode: AnalysisMode(rawValue: $0.mode) ?? .distill, timestamp: $0.timestamp) }
         }
         return []
     }

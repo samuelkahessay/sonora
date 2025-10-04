@@ -144,11 +144,10 @@ final class DefaultViewModelFactory: ViewModelFactory {
                 logger: logger,
                 eventBus: eventBus,
                 operationCoordinator: operationCoordinator,
-                detectUseCase: container.detectEventsAndRemindersUseCase()
+                detectUseCase: container.detectEventsAndRemindersUseCase(),
+                buildHistoricalContextUseCase: container.buildHistoricalContextUseCase()
             ),
-            analyzeContentUseCase: AnalyzeContentUseCase(analysisService: container.analysisService(), analysisRepository: analysisRepository, logger: logger, eventBus: eventBus),
-            analyzeThemesUseCase: AnalyzeThemesUseCase(analysisService: container.analysisService(), analysisRepository: analysisRepository, logger: logger, eventBus: eventBus),
-            analyzeTodosUseCase: AnalyzeTodosUseCase(analysisService: container.analysisService(), analysisRepository: analysisRepository, logger: logger, eventBus: eventBus),
+            analyzeLiteDistillUseCase: container.analyzeLiteDistillUseCase(),
             renameMemoUseCase: RenameMemoUseCase(memoRepository: memoRepository),
             createTranscriptShareFileUseCase: container.createTranscriptShareFileUseCase(),
             createAnalysisShareFileUseCase: container.createAnalysisShareFileUseCase(),
@@ -159,7 +158,8 @@ final class DefaultViewModelFactory: ViewModelFactory {
                 logger: logger
             ),
             memoRepository: memoRepository,
-            operationCoordinator: operationCoordinator
+            operationCoordinator: operationCoordinator,
+            storeKitService: container.storeKitService()
         )
     }
 

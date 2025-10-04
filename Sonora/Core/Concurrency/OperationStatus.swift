@@ -374,12 +374,8 @@ public struct OperationSummary: Sendable {
                 return "Identifying themes"
             case .distillReflection:
                 return "Creating reflection questions"
-            case .themes:
-                return "Analyzing themes"
-            case .todos:
-                return "Extracting action items"
-            case .analysis:
-                return "Performing detailed analysis"
+            case .liteDistill:
+                return "Generating quick insights"
             case .events:
                 return "Detecting calendar events"
             case .reminders:

@@ -48,6 +48,11 @@ struct DistillResultView: View {
                 SummarySkeleton()
             }
 
+            // Patterns & Connections Section
+            if let patterns = effectivePatterns, !patterns.isEmpty {
+                PatternsSectionView(patterns: patterns)
+            }
+
             // Action Items Section (host both tasks and detections)
             actionItemsHostSection
 
@@ -110,6 +115,10 @@ struct DistillResultView: View {
 
     private var effectiveSummary: String? {
         data?.summary ?? partialData?.summary
+    }
+
+    private var effectivePatterns: [DistillData.Pattern]? {
+        data?.patterns ?? partialData?.patterns
     }
 
     private var effectiveReflectionQuestions: [String]? {
@@ -238,6 +247,22 @@ struct DistillResultView: View {
         var parts: [String] = []
         if let s = effectiveSummary, !s.isEmpty {
             parts.append("Summary:\n" + s)
+        }
+        // Patterns & Connections
+        if let patterns = effectivePatterns, !patterns.isEmpty {
+            var patternLines: [String] = ["Patterns & Connections:"]
+            for (index, pattern) in patterns.enumerated() {
+                patternLines.append("\(index + 1). \(pattern.theme)")
+                patternLines.append("   \(pattern.description)")
+                if let relatedMemos = pattern.relatedMemos, !relatedMemos.isEmpty {
+                    patternLines.append("   Related memos:")
+                    for memo in relatedMemos.prefix(3) {
+                        let timeStr = memo.daysAgo.map { "(\($0) days ago)" } ?? ""
+                        patternLines.append("   • \(memo.title) \(timeStr)")
+                    }
+                }
+            }
+            parts.append(patternLines.joined(separator: "\n"))
         }
         // Key Themes intentionally omitted from Distill (Themes is a separate mode)
         if let questions = effectiveReflectionQuestions, !questions.isEmpty {

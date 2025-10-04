@@ -115,7 +115,7 @@ public final class AppConfiguration: ObservableObject {
 
     /// Timeout for Distill analysis operations
     /// Can be overridden with SONORA_DISTILL_TIMEOUT environment variable
-    public private(set) var distillAnalysisTimeout: TimeInterval = 35.0
+    public private(set) var distillAnalysisTimeout: TimeInterval = 60.0
 
     /// Timeout for content analysis operations
     /// Can be overridden with SONORA_CONTENT_TIMEOUT environment variable
@@ -456,12 +456,8 @@ public final class AppConfiguration: ObservableObject {
         // Distill component modes use shorter timeouts since they're focused
         case .distillSummary, .distillActions, .distillThemes, .distillReflection:
             return min(distillAnalysisTimeout / 2, 15.0) // Half the distill timeout or 15s, whichever is lower
-        case .analysis:
-            return contentAnalysisTimeout
-        case .themes:
-            return themesAnalysisTimeout
-        case .todos:
-            return todosAnalysisTimeout
+        case .liteDistill:
+            return min(distillAnalysisTimeout / 2, 10.0) // Lite Distill is even faster
         case .events:
             return contentAnalysisTimeout // Use same timeout as content analysis
         case .reminders:

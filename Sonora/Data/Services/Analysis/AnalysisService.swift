@@ -3,17 +3,32 @@ import Foundation
 class AnalysisService: ObservableObject, AnalysisServiceProtocol, @unchecked Sendable {
     private let config = AppConfiguration.shared
 
-    func analyze<T: Codable & Sendable>(mode: AnalysisMode, transcript: String, responseType: T.Type) async throws -> AnalyzeEnvelope<T> {
+    func analyze<T: Codable & Sendable>(
+        mode: AnalysisMode,
+        transcript: String,
+        responseType: T.Type,
+        historicalContext: [HistoricalMemoContext]? = nil
+    ) async throws -> AnalyzeEnvelope<T> {
         let analyzeURL = config.apiBaseURL.appendingPathComponent("analyze")
         print("🔧 AnalysisService: Using API URL: \(analyzeURL.absoluteString)")
 
         // Sanitize transcript to reduce prompt injection surface area on server
         let safeTranscript = AnalysisGuardrails.sanitizeTranscriptForLLM(transcript)
 
-        let requestBody = [
+        var requestBody: [String: Any] = [
             "mode": mode.rawValue,
             "transcript": safeTranscript
         ]
+
+        // Include historical context if provided (for pattern detection)
+        if let historicalContext = historicalContext, !historicalContext.isEmpty {
+            // Encode historical context to JSON-compatible array
+            if let encoded = try? JSONEncoder().encode(historicalContext),
+               let jsonArray = try? JSONSerialization.jsonObject(with: encoded) as? [[String: Any]] {
+                requestBody["historicalContext"] = jsonArray
+                print("🔧 AnalysisService: Including \(historicalContext.count) historical memos for pattern detection")
+            }
+        }
 
         var request = URLRequest(url: analyzeURL)
         request.httpMethod = "POST"
@@ -62,37 +77,42 @@ class AnalysisService: ObservableObject, AnalysisServiceProtocol, @unchecked Sen
     }
 
     // Convenience methods for each analysis type
+    func analyzeDistill(
+        transcript: String,
+        historicalContext: [HistoricalMemoContext]?
+    ) async throws -> AnalyzeEnvelope<DistillData> {
+        try await analyze(
+            mode: .distill,
+            transcript: transcript,
+            responseType: DistillData.self,
+            historicalContext: historicalContext
+        )
+    }
+
+    // Backward-compatible method without historical context
     func analyzeDistill(transcript: String) async throws -> AnalyzeEnvelope<DistillData> {
-        try await analyze(mode: .distill, transcript: transcript, responseType: DistillData.self)
-    }
-
-    func analyzeAnalysis(transcript: String) async throws -> AnalyzeEnvelope<AnalysisData> {
-        try await analyze(mode: .analysis, transcript: transcript, responseType: AnalysisData.self)
-    }
-
-    func analyzeThemes(transcript: String) async throws -> AnalyzeEnvelope<ThemesData> {
-        try await analyze(mode: .themes, transcript: transcript, responseType: ThemesData.self)
-    }
-
-    func analyzeTodos(transcript: String) async throws -> AnalyzeEnvelope<TodosData> {
-        try await analyze(mode: .todos, transcript: transcript, responseType: TodosData.self)
+        try await analyzeDistill(transcript: transcript, historicalContext: nil)
     }
 
     // MARK: - Distill Component Methods for Parallel Processing
 
     func analyzeDistillSummary(transcript: String) async throws -> AnalyzeEnvelope<DistillSummaryData> {
-        try await analyze(mode: .distillSummary, transcript: transcript, responseType: DistillSummaryData.self)
+        try await analyze(mode: .distillSummary, transcript: transcript, responseType: DistillSummaryData.self, historicalContext: nil)
     }
 
     func analyzeDistillActions(transcript: String) async throws -> AnalyzeEnvelope<DistillActionsData> {
-        try await analyze(mode: .distillActions, transcript: transcript, responseType: DistillActionsData.self)
+        try await analyze(mode: .distillActions, transcript: transcript, responseType: DistillActionsData.self, historicalContext: nil)
     }
 
     func analyzeDistillThemes(transcript: String) async throws -> AnalyzeEnvelope<DistillThemesData> {
-        try await analyze(mode: .distillThemes, transcript: transcript, responseType: DistillThemesData.self)
+        try await analyze(mode: .distillThemes, transcript: transcript, responseType: DistillThemesData.self, historicalContext: nil)
     }
 
     func analyzeDistillReflection(transcript: String) async throws -> AnalyzeEnvelope<DistillReflectionData> {
-        try await analyze(mode: .distillReflection, transcript: transcript, responseType: DistillReflectionData.self)
+        try await analyze(mode: .distillReflection, transcript: transcript, responseType: DistillReflectionData.self, historicalContext: nil)
+    }
+
+    func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData> {
+        try await analyze(mode: .liteDistill, transcript: transcript, responseType: LiteDistillData.self, historicalContext: nil)
     }
 }

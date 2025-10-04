@@ -271,7 +271,7 @@ struct AnalysisConfig: Sendable {
     static func defaults(build: BuildConfiguration) -> Self {
         if build.isDebug {
             return Self(
-                distillAnalysisTimeout: 35.0,
+                distillAnalysisTimeout: 60.0,
                 contentAnalysisTimeout: 35.0,
                 themesAnalysisTimeout: 30.0,
                 todosAnalysisTimeout: 28.0,
@@ -280,7 +280,7 @@ struct AnalysisConfig: Sendable {
             )
         } else {
             return Self(
-                distillAnalysisTimeout: 35.0,
+                distillAnalysisTimeout: 60.0,
                 contentAnalysisTimeout: 20.0,
                 themesAnalysisTimeout: 18.0,
                 todosAnalysisTimeout: 16.0,

@@ -120,9 +120,9 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
             )
         }
 
-        // Register operation (use generic analysis category)
+        // Register operation (use distill as generic analysis category)
         guard let operationId = await operationCoordinator.registerOperation(
-            .analysis(memoId: memoId, analysisType: .analysis)
+            .analysis(memoId: memoId, analysisType: .distill)
         ) else {
             logger.warning("Event/reminder detection rejected by operation coordinator",
                           category: .analysis,
@@ -228,12 +228,14 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         async let eventsResult: AnalyzeEnvelope<EventsData> = analysisService.analyze(
             mode: .events,
             transcript: transcript,
-            responseType: EventsData.self
+            responseType: EventsData.self,
+            historicalContext: nil
         )
         async let remindersResult: AnalyzeEnvelope<RemindersData> = analysisService.analyze(
             mode: .reminders,
             transcript: transcript,
-            responseType: RemindersData.self
+            responseType: RemindersData.self,
+            historicalContext: nil
         )
 
         // Process results and filter by confidence

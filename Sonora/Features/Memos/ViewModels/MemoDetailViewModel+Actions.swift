@@ -111,38 +111,23 @@ extension MemoDetailViewModel {
             do {
                 switch mode {
                 case .distill:
-                    if isParallelDistillEnabled {
+                    // Route based on subscription tier
+                    if isProUser && isParallelDistillEnabled {
                         await performParallelDistill(transcript: transcript, memoId: memo.id)
-                    } else {
+                    } else if isProUser {
                         await performRegularDistill(transcript: transcript, memoId: memo.id)
+                    } else {
+                        // Free tier → Lite Distill
+                        await performLiteDistill(transcript: transcript, memoId: memo.id)
                     }
 
                 case .distillSummary, .distillActions, .distillThemes, .distillReflection:
                     await performRegularDistill(transcript: transcript, memoId: memo.id)
 
-                case .analysis:
-                    let envelope = try await analyzeContentUseCase.execute(transcript: transcript, memoId: memo.id)
-                    await MainActor.run {
-                        analysisPayload = .analysis(envelope.data, envelope)
-                        isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Analysis completed (cached: \(envelope.latency_ms < 1_000))")
-                    }
-
-                case .themes:
-                    let envelope = try await analyzeThemesUseCase.execute(transcript: transcript, memoId: memo.id)
-                    await MainActor.run {
-                        analysisPayload = .themes(envelope.data, envelope)
-                        isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Themes analysis completed (cached: \(envelope.latency_ms < 1_000))")
-                    }
-
-                case .todos:
-                    let envelope = try await analyzeTodosUseCase.execute(transcript: transcript, memoId: memo.id)
-                    await MainActor.run {
-                        analysisPayload = .todos(envelope.data, envelope)
-                        isAnalyzing = false
-                        print("📝 MemoDetailViewModel: Todos analysis completed (cached: \(envelope.latency_ms < 1_000))")
-                    }
+                case .liteDistill:
+                    // Lite Distill should be handled by .distill case above based on subscription tier
+                    // This case exists for completeness but shouldn't be directly invoked
+                    await performLiteDistill(transcript: transcript, memoId: memo.id)
 
                 case .events:
                     let detection = try await DIContainer.shared.detectEventsAndRemindersUseCase().execute(transcript: transcript, memoId: memo.id)

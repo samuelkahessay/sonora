@@ -65,6 +65,8 @@ final class DIContainer: ObservableObject, Resolver {
     private var _createReminderUseCase: (any CreateReminderUseCaseProtocol)?
     private var _detectEventsAndRemindersUseCase: (any DetectEventsAndRemindersUseCaseProtocol)?
     private var _buildExportBundleUseCase: (any BuildExportBundleUseCaseProtocol)?
+    private var _buildHistoricalContextUseCase: (any BuildHistoricalContextUseCaseProtocol)?
+    private var _analyzeLiteDistillUseCase: (any AnalyzeLiteDistillUseCaseProtocol)?
 
     // MARK: - Core Services (Strong References)
     // These services need to stay alive for the app lifetime
@@ -596,6 +598,37 @@ final class DIContainer: ObservableObject, Resolver {
             )
         }
         guard let uc = _detectEventsAndRemindersUseCase else { fatalError("Failed to init detectEventsAndRemindersUseCase") }
+        return uc
+    }
+
+    @MainActor
+    func buildHistoricalContextUseCase() -> any BuildHistoricalContextUseCaseProtocol {
+        ensureConfigured()
+        if _buildHistoricalContextUseCase == nil {
+            _buildHistoricalContextUseCase = BuildHistoricalContextUseCase(
+                memoRepository: memoRepository(),
+                analysisRepository: analysisRepository(),
+                logger: logger()
+            )
+        }
+        guard let uc = _buildHistoricalContextUseCase else { fatalError("Failed to init buildHistoricalContextUseCase") }
+        return uc
+    }
+
+    /// Factory: AnalyzeLiteDistillUseCase (free tier)
+    @MainActor
+    func analyzeLiteDistillUseCase() -> any AnalyzeLiteDistillUseCaseProtocol {
+        ensureConfigured()
+        if _analyzeLiteDistillUseCase == nil {
+            _analyzeLiteDistillUseCase = AnalyzeLiteDistillUseCase(
+                analysisService: analysisService(),
+                analysisRepository: analysisRepository(),
+                logger: logger(),
+                eventBus: eventBus(),
+                operationCoordinator: operationCoordinator()
+            )
+        }
+        guard let uc = _analyzeLiteDistillUseCase else { fatalError("Failed to init analyzeLiteDistillUseCase") }
         return uc
     }
 
