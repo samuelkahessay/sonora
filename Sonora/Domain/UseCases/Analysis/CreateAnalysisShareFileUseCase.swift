@@ -125,7 +125,6 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
                 }
             }
 
-
             guard !sections.isEmpty else {
                 logger.useCase("No completed analysis to export", level: .info, context: context)
                 throw SonoraError.analysisInsufficientContent

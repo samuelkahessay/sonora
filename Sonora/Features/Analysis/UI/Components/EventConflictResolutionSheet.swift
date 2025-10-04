@@ -47,4 +47,3 @@ struct EventConflictResolutionSheet: View {
         return "\(df.string(from: ev.startDate)) – \(df.string(from: ev.endDate))\(ev.isAllDay ? " • All day" : "")"
     }
 }
-

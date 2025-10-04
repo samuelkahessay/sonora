@@ -38,4 +38,3 @@ enum EventKitRecurrenceMapper {
         return [rule]
     }
 }
-

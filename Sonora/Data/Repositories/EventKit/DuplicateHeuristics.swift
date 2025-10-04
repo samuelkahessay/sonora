@@ -45,4 +45,3 @@ struct DuplicateHeuristics {
         return false
     }
 }
-

@@ -189,9 +189,9 @@ struct ActionItemDetectionState {
                     if let d = ui.suggestedDate { return d }
                     switch ui.kind {
                     case .event:
-                        return eventSources[ui.id]?.startDate ?? items.first(where: { $0.sourceId == ui.sourceId })?.suggestedDate
+                        return eventSources[ui.id]?.startDate ?? items.first { $0.sourceId == ui.sourceId }?.suggestedDate
                     case .reminder:
-                        return reminderSources[ui.id]?.dueDate ?? items.first(where: { $0.sourceId == ui.sourceId })?.suggestedDate
+                        return reminderSources[ui.id]?.dueDate ?? items.first { $0.sourceId == ui.sourceId }?.suggestedDate
                     }
                 }()
                 let key = DetectionKeyBuilder.forUI(kind: ui.kind, sourceQuote: ui.sourceQuote, fallbackTitle: ui.title, date: date)
@@ -231,10 +231,10 @@ struct ActionItemDetectionState {
             switch item.kind {
             case .event:
                 if let cached = eventSources[item.id]?.startDate { return cached }
-                return items.first(where: { $0.sourceId == item.sourceId })?.suggestedDate
+                return items.first { $0.sourceId == item.sourceId }?.suggestedDate
             case .reminder:
                 if let cached = reminderSources[item.id]?.dueDate { return cached }
-                return items.first(where: { $0.sourceId == item.sourceId })?.suggestedDate
+                return items.first { $0.sourceId == item.sourceId }?.suggestedDate
             }
         }()
         let dateText = date.map { formatShortDate($0) }

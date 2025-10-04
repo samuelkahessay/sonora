@@ -1,5 +1,5 @@
-import SwiftUI
 import AVFoundation
+import SwiftUI
 
 struct DebugSectionView: View {
     init() {}
@@ -197,9 +197,9 @@ The meditation practice I started two weeks ago is starting to show results. I'm
 
         let settings: [String: Any] = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 44100.0,
+            AVSampleRateKey: 44_100.0,
             AVNumberOfChannelsKey: 1,
-            AVEncoderBitRateKey: 64000,
+            AVEncoderBitRateKey: 64_000,
             AVEncoderAudioQualityKey: AVAudioQuality.medium.rawValue
         ]
 

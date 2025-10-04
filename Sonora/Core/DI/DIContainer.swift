@@ -1,7 +1,7 @@
 import Combine
+@preconcurrency import EventKit
 import Foundation
 import SwiftData
-@preconcurrency import EventKit
 protocol Resolver {
     func resolve<T>(_ type: T.Type) -> T?
 }

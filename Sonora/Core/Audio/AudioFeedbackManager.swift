@@ -1,5 +1,5 @@
-import Foundation
 import AVFoundation
+import Foundation
 
 /// Centralized audio feedback management for accessibility and voice-first interactions
 /// Provides audio cues to complement haptic feedback, especially useful for users
@@ -105,13 +105,13 @@ enum AudioFeedbackType: CaseIterable {
     var systemSoundID: SystemSoundID? {
         switch self {
         case .success:
-            return 1054 // Acknowledgment sound (short ascending tone)
+            return 1_054 // Acknowledgment sound (short ascending tone)
         case .error:
-            return 1053 // Alert sound (short descending tone)
+            return 1_053 // Alert sound (short descending tone)
         case .question:
-            return 1104 // Message sound (single tone)
+            return 1_104 // Message sound (single tone)
         case .completion:
-            return 1057 // New mail sound (ascending tone)
+            return 1_057 // New mail sound (ascending tone)
         }
     }
 }

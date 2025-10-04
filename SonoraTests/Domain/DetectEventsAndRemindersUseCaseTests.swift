@@ -171,7 +171,7 @@ final class DetectEventsAndRemindersUseCaseTests: XCTestCase {
             EventsData.DetectedEvent(
                 id: "evt-drop",
                 title: "Loose idea",
-                startDate: Date(timeIntervalSinceReferenceDate: 3600),
+                startDate: Date(timeIntervalSinceReferenceDate: 3_600),
                 endDate: nil,
                 location: nil,
                 participants: nil,
@@ -185,7 +185,7 @@ final class DetectEventsAndRemindersUseCaseTests: XCTestCase {
             RemindersData.DetectedReminder(
                 id: "rem-keep",
                 title: "Send status report",
-                dueDate: Date(timeIntervalSinceReferenceDate: 7200),
+                dueDate: Date(timeIntervalSinceReferenceDate: 7_200),
                 priority: .medium,
                 confidence: 0.43,
                 sourceText: "send the status report email tonight",

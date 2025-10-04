@@ -16,7 +16,7 @@ public final class RevenueCatService: NSObject, StoreKitServiceProtocol, @unchec
     private let entitlementId: String
     private let productIdToRcPackageId: [String: String] = [
         "sonora.pro.monthly": "$rc_monthly",
-        "sonora.pro.annual": "$rc_annual",
+        "sonora.pro.annual": "$rc_annual"
     ]
 
     // MARK: - State
@@ -155,4 +155,3 @@ extension RevenueCatService: PurchasesDelegate {
         print("🛒 [RevenueCatService] receivedUpdated customerInfo, isPro=\(active)")
     }
 }
-

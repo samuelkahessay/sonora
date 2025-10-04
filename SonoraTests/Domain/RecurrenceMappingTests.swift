@@ -1,6 +1,6 @@
+@preconcurrency import EventKit
 @testable import Sonora
 import XCTest
-@preconcurrency import EventKit
 
 final class RecurrenceMappingTests: XCTestCase {
     func testWeeklyMonWedMapping() throws {

@@ -151,9 +151,9 @@ final class ActionItemViewModel: ObservableObject {
                 if let d = item.suggestedDate { return d }
                 switch item.kind {
                 case .event:
-                    return detection.eventSources[item.id]?.startDate ?? detection.items.first(where: { $0.sourceId == item.sourceId })?.suggestedDate
+                    return detection.eventSources[item.id]?.startDate ?? detection.items.first { $0.sourceId == item.sourceId }?.suggestedDate
                 case .reminder:
-                    return detection.reminderSources[item.id]?.dueDate ?? detection.items.first(where: { $0.sourceId == item.sourceId })?.suggestedDate
+                    return detection.reminderSources[item.id]?.dueDate ?? detection.items.first { $0.sourceId == item.sourceId }?.suggestedDate
                 }
             }()
             let rec = coordinator.makeAddedRecord(for: item, date: date)
@@ -377,7 +377,7 @@ private extension ActionItemViewModel {
         let startDate = item.suggestedDate ?? domain.suggestedDate
         let endDate: Date?
         if let startDate, !(item.isAllDay || domain.isAllDay) {
-            endDate = startDate.addingTimeInterval(3600)
+            endDate = startDate.addingTimeInterval(3_600)
         } else {
             endDate = startDate
         }

@@ -10,7 +10,7 @@ struct MemoDetailView: View {
     @AccessibilityFocusState private var focusedElement: AccessibleElement?
     @FocusState private var isTitleEditingFocused: Bool
     @State private var scrollOffset: CGFloat = 0
-    @State private var loggedSuccessTitle: String? = nil
+    @State private var loggedSuccessTitle: String?
 
     enum AccessibleElement {
         case playButton
