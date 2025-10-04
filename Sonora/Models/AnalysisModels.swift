@@ -12,6 +12,11 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
     case distillThemes = "distill-themes"
     case distillReflection = "distill-reflection"
 
+    // Pro-tier analysis modes (CBT, wisdom, values)
+    case cognitiveClarityCBT = "cognitive-clarity"
+    case philosophicalEchoes = "philosophical-echoes"
+    case valuesRecognition = "values-recognition"
+
     // UI-visible analysis modes (excludes internal component modes)
     public static var uiVisibleCases: [Self] {
         [.distill, .events, .reminders]
@@ -37,6 +42,9 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
         case .distillActions: return "Actions"
         case .distillThemes: return "Themes"
         case .distillReflection: return "Reflection"
+        case .cognitiveClarityCBT: return "Cognitive Clarity"
+        case .philosophicalEchoes: return "Philosophical Echoes"
+        case .valuesRecognition: return "Values Recognition"
         }
     }
 
@@ -50,6 +58,9 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
         case .distillActions: return "checkmark.circle.fill"
         case .distillThemes: return "tag.circle"
         case .distillReflection: return "questionmark.circle"
+        case .cognitiveClarityCBT: return "brain.head.profile"
+        case .philosophicalEchoes: return "book.closed"
+        case .valuesRecognition: return "heart.circle"
         }
     }
 
@@ -176,6 +187,24 @@ public struct DistillThemesData: Codable, Sendable {
 
 public struct DistillReflectionData: Codable, Sendable {
     public let reflection_questions: [String]
+}
+
+// MARK: - Pro-Tier Analysis Response Data Models
+
+/// Response wrapper for cognitive-clarity analysis (Beck/Ellis CBT patterns)
+public struct CognitiveClarityData: Codable, Sendable {
+    public let cognitivePatterns: [CognitivePattern]
+}
+
+/// Response wrapper for philosophical-echoes analysis (wisdom connections)
+public struct PhilosophicalEchoesData: Codable, Sendable {
+    public let philosophicalEchoes: [PhilosophicalEcho]
+}
+
+/// Response wrapper for values-recognition analysis (core values + tensions)
+public struct ValuesRecognitionData: Codable, Sendable {
+    public let coreValues: [ValuesInsight.DetectedValue]
+    public let tensions: [ValuesInsight.ValueTension]?
 }
 
 // MARK: - EventKit Data Models

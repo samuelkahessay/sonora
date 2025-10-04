@@ -568,6 +568,15 @@ app.post('/analyze', async (req, res) => {
         case 'reminders':
           validatedData = RemindersDataSchema.parse(parsedData);
           break;
+        case 'cognitive-clarity':
+          validatedData = { cognitivePatterns: parsedData.cognitivePatterns || [] };
+          break;
+        case 'philosophical-echoes':
+          validatedData = { philosophicalEchoes: parsedData.philosophicalEchoes || [] };
+          break;
+        case 'values-recognition':
+          validatedData = { coreValues: parsedData.coreValues || [], tensions: parsedData.tensions };
+          break;
         default:
           throw new Error(`Unknown mode: ${mode}`);
       }
@@ -606,6 +615,15 @@ app.post('/analyze', async (req, res) => {
           break;
         case 'reminders':
           textForModeration = `${(vd.reminders || []).map((r: any) => r.title).join(' \n')}`;
+          break;
+        case 'cognitive-clarity':
+          textForModeration = `${(vd.cognitivePatterns || []).map((p: any) => `${p.observation} ${p.reframe || ''}`).join(' \n')}`;
+          break;
+        case 'philosophical-echoes':
+          textForModeration = `${(vd.philosophicalEchoes || []).map((e: any) => `${e.connection} ${e.quote || ''}`).join(' \n')}`;
+          break;
+        case 'values-recognition':
+          textForModeration = `${(vd.coreValues || []).map((v: any) => `${v.name} ${v.evidence}`).join(' \n')}\n${(vd.tensions || []).map((t: any) => t.observation).join(' \n')}`;
           break;
       }
     } catch {}

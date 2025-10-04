@@ -112,6 +112,22 @@ class AnalysisService: ObservableObject, AnalysisServiceProtocol, @unchecked Sen
         try await analyze(mode: .distillReflection, transcript: transcript, responseType: DistillReflectionData.self, historicalContext: nil)
     }
 
+    // MARK: - Pro-Tier Analysis Methods for Parallel Processing
+
+    func analyzeCognitiveClarityCBT(transcript: String) async throws -> AnalyzeEnvelope<CognitiveClarityData> {
+        try await analyze(mode: .cognitiveClarityCBT, transcript: transcript, responseType: CognitiveClarityData.self, historicalContext: nil)
+    }
+
+    func analyzePhilosophicalEchoes(transcript: String) async throws -> AnalyzeEnvelope<PhilosophicalEchoesData> {
+        try await analyze(mode: .philosophicalEchoes, transcript: transcript, responseType: PhilosophicalEchoesData.self, historicalContext: nil)
+    }
+
+    func analyzeValuesRecognition(transcript: String) async throws -> AnalyzeEnvelope<ValuesRecognitionData> {
+        try await analyze(mode: .valuesRecognition, transcript: transcript, responseType: ValuesRecognitionData.self, historicalContext: nil)
+    }
+
+    // MARK: - Free Tier Analysis
+
     func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData> {
         try await analyze(mode: .liteDistill, transcript: transcript, responseType: LiteDistillData.self, historicalContext: nil)
     }

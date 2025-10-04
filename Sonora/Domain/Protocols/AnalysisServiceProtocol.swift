@@ -25,6 +25,11 @@ protocol AnalysisServiceProtocol: ObservableObject, Sendable {
     func analyzeDistillThemes(transcript: String) async throws -> AnalyzeEnvelope<DistillThemesData>
     func analyzeDistillReflection(transcript: String) async throws -> AnalyzeEnvelope<DistillReflectionData>
 
+    // Pro-tier analysis methods for parallel processing
+    func analyzeCognitiveClarityCBT(transcript: String) async throws -> AnalyzeEnvelope<CognitiveClarityData>
+    func analyzePhilosophicalEchoes(transcript: String) async throws -> AnalyzeEnvelope<PhilosophicalEchoesData>
+    func analyzeValuesRecognition(transcript: String) async throws -> AnalyzeEnvelope<ValuesRecognitionData>
+
     // Free tier lite distill
     func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData>
 }

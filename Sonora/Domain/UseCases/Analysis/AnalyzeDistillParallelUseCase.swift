@@ -28,6 +28,11 @@ public struct PartialDistillData: Sendable, Equatable {
     public var events: [EventsData.DetectedEvent]?
     public var reminders: [RemindersData.DetectedReminder]?
 
+    // Pro-tier fields
+    public var cognitivePatterns: [CognitivePattern]?
+    public var philosophicalEchoes: [PhilosophicalEcho]?
+    public var valuesInsights: ValuesInsight?
+
     /// Convert to complete DistillData if all required components are present
     public func toDistillData() -> DistillData? {
         guard let summary = summary,
@@ -41,7 +46,10 @@ public struct PartialDistillData: Sendable, Equatable {
             reflection_questions: reflectionQuestions,
             patterns: patterns,
             events: events,
-            reminders: reminders
+            reminders: reminders,
+            cognitivePatterns: cognitivePatterns,
+            philosophicalEchoes: philosophicalEchoes,
+            valuesInsights: valuesInsights
         )
     }
 }
@@ -52,7 +60,10 @@ extension PartialDistillData {
         guard lhs.summary == rhs.summary,
               lhs.actionItems == rhs.actionItems,
               lhs.reflectionQuestions == rhs.reflectionQuestions,
-              lhs.patterns == rhs.patterns else {
+              lhs.patterns == rhs.patterns,
+              lhs.cognitivePatterns == rhs.cognitivePatterns,
+              lhs.philosophicalEchoes == rhs.philosophicalEchoes,
+              lhs.valuesInsights == rhs.valuesInsights else {
             return false
         }
         // Compare events/reminders by IDs (domain types are not Equatable)
@@ -70,6 +81,10 @@ enum DistillComponentData: Sendable {
     case reflection(DistillReflectionData)
     case detections(EventsData?, RemindersData?)
     case patterns([DistillData.Pattern]?)
+    // Pro-tier components
+    case cognitiveClarity([CognitivePattern]?)
+    case philosophicalEchoes([PhilosophicalEcho]?)
+    case valuesRecognition(ValuesInsight?)
 }
 
 final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol, @unchecked Sendable {
@@ -189,8 +204,8 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                     category: .analysis, context: context)
 
         // Send initial progress
-        // Total: summary + actions + reflection + detections + (optional: patterns)
-        let totalComponents = componentModes.count + 1 + (enablePatterns ? 1 : 0)
+        // Total: summary + actions + reflection + detections + (optional: patterns) + 3 Pro modes
+        let totalComponents = componentModes.count + 1 + (enablePatterns ? 1 : 0) + 3
         let initialPartial = partialData
         await MainActor.run {
             progressHandler(DistillProgressUpdate(
@@ -201,7 +216,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             ))
         }
 
-        logger.analysis("Starting parallel execution of \(componentModes.count) components + patterns=\(enablePatterns)", context: context)
+        logger.analysis("Starting parallel execution of \(componentModes.count) components + patterns=\(enablePatterns) + 3 Pro modes", context: context)
 
         // Execute all components in parallel using TaskGroup
         try await withThrowingTaskGroup(of: (AnalysisMode?, DistillComponentData, Int, TokenUsage).self) { group in
@@ -255,6 +270,48 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                         logger.warning("Pattern detection error; continuing without patterns", category: .analysis, context: context, error: error)
                         return (nil, .patterns(nil), 0, TokenUsage(input: 0, output: 0))
                     }
+                }
+            }
+
+            // Add Pro-tier analysis tasks (Beck/Ellis CBT, wisdom, values)
+            group.addTask { [self] in
+                do {
+                    logger.debug("Executing cognitive-clarity analysis (Beck/Ellis CBT)", category: .analysis, context: context)
+                    let envelope = try await analysisService.analyzeCognitiveClarityCBT(transcript: transcript)
+                    let patterns = envelope.data.cognitivePatterns
+                    logger.debug("Cognitive patterns detected: \(patterns.count)", category: .analysis, context: context)
+                    return (.cognitiveClarityCBT, .cognitiveClarity(patterns.isEmpty ? nil : patterns), envelope.latency_ms, envelope.tokens)
+                } catch {
+                    logger.warning("Cognitive clarity error; continuing without CBT analysis", category: .analysis, context: context, error: error)
+                    return (.cognitiveClarityCBT, .cognitiveClarity(nil), 0, TokenUsage(input: 0, output: 0))
+                }
+            }
+
+            group.addTask { [self] in
+                do {
+                    logger.debug("Executing philosophical-echoes analysis (wisdom connections)", category: .analysis, context: context)
+                    let envelope = try await analysisService.analyzePhilosophicalEchoes(transcript: transcript)
+                    let echoes = envelope.data.philosophicalEchoes
+                    logger.debug("Philosophical echoes detected: \(echoes.count)", category: .analysis, context: context)
+                    return (.philosophicalEchoes, .philosophicalEchoes(echoes.isEmpty ? nil : echoes), envelope.latency_ms, envelope.tokens)
+                } catch {
+                    logger.warning("Philosophical echoes error; continuing without wisdom analysis", category: .analysis, context: context, error: error)
+                    return (.philosophicalEchoes, .philosophicalEchoes(nil), 0, TokenUsage(input: 0, output: 0))
+                }
+            }
+
+            group.addTask { [self] in
+                do {
+                    logger.debug("Executing values-recognition analysis", category: .analysis, context: context)
+                    let envelope = try await analysisService.analyzeValuesRecognition(transcript: transcript)
+                    let coreValues = envelope.data.coreValues
+                    let tensions = envelope.data.tensions
+                    let valuesInsight = ValuesInsight(coreValues: coreValues, tensions: tensions)
+                    logger.debug("Values detected: \(coreValues.count), tensions: \(tensions?.count ?? 0)", category: .analysis, context: context)
+                    return (.valuesRecognition, .valuesRecognition(valuesInsight), envelope.latency_ms, envelope.tokens)
+                } catch {
+                    logger.warning("Values recognition error; continuing without values analysis", category: .analysis, context: context, error: error)
+                    return (.valuesRecognition, .valuesRecognition(nil), 0, TokenUsage(input: 0, output: 0))
                 }
             }
 
@@ -368,6 +425,9 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             case .patterns:
                 // No separate cache for patterns - they're part of the full distill result
                 break
+            case .cognitiveClarity, .philosophicalEchoes, .valuesRecognition:
+                // No separate cache for Pro components - they're part of the full distill result
+                break
             }
         }
     }
@@ -398,6 +458,34 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                 category: .analysis,
                 context: LogContext(additionalInfo: [
                     "patterns": patterns?.count ?? 0
+                ])
+            )
+        case .cognitiveClarity(let patterns):
+            partialData.cognitivePatterns = patterns
+            Logger.shared.debug(
+                "Distill.Partial.CognitivePatterns",
+                category: .analysis,
+                context: LogContext(additionalInfo: [
+                    "cognitivePatterns": patterns?.count ?? 0
+                ])
+            )
+        case .philosophicalEchoes(let echoes):
+            partialData.philosophicalEchoes = echoes
+            Logger.shared.debug(
+                "Distill.Partial.PhilosophicalEchoes",
+                category: .analysis,
+                context: LogContext(additionalInfo: [
+                    "philosophicalEchoes": echoes?.count ?? 0
+                ])
+            )
+        case .valuesRecognition(let insight):
+            partialData.valuesInsights = insight
+            Logger.shared.debug(
+                "Distill.Partial.ValuesInsights",
+                category: .analysis,
+                context: LogContext(additionalInfo: [
+                    "coreValues": insight?.coreValues.count ?? 0,
+                    "tensions": insight?.tensions?.count ?? 0
                 ])
             )
         }
