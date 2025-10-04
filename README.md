@@ -2,6 +2,64 @@
 
 **Sonora** is a sophisticated iOS voice memo application with AI-powered analysis and exemplary Clean Architecture implementation. Built with native SwiftUI and following industry-leading architectural patterns for maximum reliability, testability, and maintainability.
 
+## 🧰 Requirements
+
+- Xcode 16+
+- iOS Simulator: use an installed device profile
+  - iPhone 16 Pro (iOS 18.6)
+  - iPhone 17 Pro (iOS 26)
+
+## 🛠️ Build & Run
+
+### From Xcode
+- Open `Sonora.xcodeproj`.
+- Select the `Sonora` scheme.
+- Run on `iPhone 16 Pro` or `iPhone 17 Pro` simulators.
+
+### From CLI (xcodebuild)
+
+Build the app for a simulator:
+
+```bash
+xcodebuild build \
+  -project Sonora.xcodeproj \
+  -scheme Sonora \
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+```
+
+Run the unit test suite (tests are included in the `Sonora` scheme):
+
+```bash
+xcodebuild test \
+  -project Sonora.xcodeproj \
+  -scheme Sonora \
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+```
+
+Resolve Swift package dependencies after adding/updating packages:
+
+```bash
+xcodebuild -resolvePackageDependencies -project Sonora.xcodeproj
+```
+
+### UI Tests
+- There is no separate shared `SonoraUITests` scheme yet.
+- Run UI tests from Xcode by adding the `SonoraUITests` target to the `Sonora` scheme’s Test action, or create/share a dedicated scheme if needed.
+
+## 🗂️ Project Layout (at a glance)
+
+- `Sonora/Core/` – DI, concurrency, logging, events, errors
+- `Sonora/Domain/` – models, use cases, protocols (pure Swift)
+- `Sonora/Data/` – repositories and services (implementations, external APIs)
+- `Sonora/Features/` – SwiftUI feature modules (Views + ViewModels)
+- `Sonora/Views/` – shared SwiftUI components
+- `Sonora/Models/` – shared models bridging layers
+- `SonoraLiveActivity/` – Live Activity target (attributes in `Sonora/LiveActivity/`)
+- `SonoraTests/` – unit tests (part of `Sonora` scheme)
+- `SonoraUITests/` – UI automation sources (run via Xcode as noted above)
+
+Note: Treat subdirectories as the single source of truth; do not duplicate models across layers.
+
 ## ✨ Modern Design & Features
 
 ### 🎨 **Native SwiftUI Design**
@@ -27,22 +85,27 @@ Sonora combines cutting-edge technology with intuitive design:
 - **AI-Powered Analysis**: Intelligent summaries, themes, todos, and content insights
 - **Thread-safe Operations**: Sophisticated concurrency management with progress tracking
 - **Event-Driven Architecture**: Decoupled, reactive system for scalable feature development
-- **Focused Service Architecture**: 35+ specialized services across 9 categories with orchestration pattern
+- **Focused Service Architecture**: 20+ specialized services across 9 categories with orchestration pattern
 
 ### 🎯 **Key Features**
-- **🎤 Smart Recording**: 60-second limit with elegant 10-second countdown
+- **🎤 Smart Recording**: Smooth 10-second countdown near cap; auto‑stop when remaining monthly quota runs out (no fixed per‑session limit for Pro)
 - **💡 Dynamic Prompts**: Context-aware recording prompts personalized by name, time of day, and week part
 - **📱 Live Activities**: Real-time recording status in Dynamic Island
-- **🧠 AI Analysis Suite**: TLDR summaries, theme extraction, todo identification, content analysis
+- **🧠 AI Analysis Suite**: Distill summaries, theme extraction, todo identification, content analysis
 - **⚡ Advanced Operations**: Queue management, progress tracking, conflict resolution
 - **🔄 Event System**: Reactive architecture for seamless feature integration
 - **🏗️ Clean Architecture**: 97% compliance with protocol-based dependency injection
 - **📊 Operation Metrics**: Real-time system performance and resource monitoring
 - **📅 EventKit Integration**: Smart calendar event and reminder creation from voice transcripts
-- **⏱️ Recording Quotas**: 10-minute daily cloud transcription limit with usage tracking
+- **⏱️ Recording Quotas**: Free tier has a 60‑minute monthly cloud transcription cap with usage tracking; Pro is unlimited
 - **📤 Export System**: Multiple export formats for transcripts, analysis, and data
 - **🛡️ Content Moderation**: AI-powered content safety and filtering
 - **📝 Advanced Prompts**: 48 curated prompts with intelligent interpolation and selection
+- **🧷 Auto Titles**: Automatic memo titles with live typing effect and graceful fallbacks
+- **🔎 Memo Search & Filters**: Search by text; filter by transcript presence and date range
+- **💳 Subscriptions & Paywall**: RevenueCat-backed purchases, restore, and Pro entitlement gating
+- **🔍 Core Spotlight Search**: System-wide memo indexing for Spotlight
+- **🚀 Parallel Transcription & Export**: Concurrent chunk processing and faster archive/export
 
 ### 🔧 **Advanced Features Deep Dive**
 
@@ -54,10 +117,10 @@ Sonora combines cutting-edge technology with intuitive design:
 - **Conflict Detection**: Smart scheduling that checks for existing calendar conflicts
 
 #### **⏱️ Recording Quota Management**
-- **Daily Limits**: 10-minute daily cloud transcription quota with usage tracking
-- **Session Limits**: 3-minute maximum per recording session
-- **Usage Monitoring**: Real-time quota display in settings and recording interface
-- **Reset Logic**: Automatic daily quota reset with timezone awareness
+- **Monthly Limits**: Free tier has a 60‑minute/month cloud transcription cap; Pro is unlimited
+- **Session Caps**: No fixed per‑session cap; if a cap applies, it equals the remaining monthly quota for the session
+- **Usage Monitoring**: Real‑time monthly usage surfaced in UI and used for gating
+- **Reset Logic**: Automatic monthly quota reset
 
 #### **📤 Export System**
 - **Transcript Export**: Multiple formats for sharing transcriptions
@@ -70,7 +133,34 @@ Sonora combines cutting-edge technology with intuitive design:
 - **Smart Interpolation**: Dynamic tokens - [Name], [DayPart], [WeekPart]
 - **Intelligent Selection**: 7-day no-repeat algorithm with weighted selection
 - **Contextual Relevance**: Time-aware and personalized prompt suggestions
-- **Usage Tracking**: Analytics for prompt effectiveness and engagement
+  - **Usage Tracking**: Analytics for prompt effectiveness and engagement
+
+#### **🧷 Auto Titles**
+- **Coordinator-Driven**: `TitleGenerationCoordinator` orchestrates auto-title jobs per memo
+- **Live Typing Effect**: Streams title updates for responsive UX
+- **Fallbacks**: Safe fallbacks on failure with retry logic
+
+#### **🔎 Memo Search & Filters**
+- **Search**: Instant text search across memo titles/transcripts
+- **Filters**: Has transcript, date range, and sort options
+- **Unified State**: ViewModel-managed results with Combine
+
+#### **💳 Subscriptions & Paywall**
+- **RevenueCat Integration**: Purchases, restore, entitlement updates
+- **Pro Gating**: Monthly transcription cap lifted for Pro users
+- **Settings**: Paywall and restore controls in Settings
+  
+See also: `docs/Subscriptions.md`
+
+#### **🔍 Core Spotlight Search**
+- **Indexing**: `SpotlightIndexer` indexes memos for system search
+- **Event-Driven**: Updates on create/rename/delete via EventBus handler
+- **User Control**: Respects diagnostics/settings toggles
+
+#### **🚀 Transcription Performance**
+- **Parallel Chunking**: Task groups transcribe chunks concurrently
+- **Background Uploads**: Background URLSession for resilient uploads
+- **Throughput**: Faster end-to-end transcription and export
 
 ## 🚀 **Release Timeline & Milestones**
 
@@ -78,7 +168,7 @@ Sonora combines cutting-edge technology with intuitive design:
 - **🧪 First Public TestFlight Submission**: September 7, 8:02 PM
 - **✅ First Public TestFlight Acceptance**: September 8, 12:00 PM  
 - **📱 First App Store Submission Review**: September 8, 1:00 PM
-- **⏳ First App Store Submission Acceptance**: TBD
+- **✅ First App Store Submission Acceptance**: September 10, 2025
 
 *From concept to TestFlight in just 18 days - showcasing rapid development with Clean Architecture patterns.*
 
@@ -136,8 +226,13 @@ Sonora/
 │   ├── Events/
 │   │   ├── EventBus.swift              # 📡 Event-driven architecture
 │   │   └── *EventHandler.swift         # 🎯 Reactive event handlers
+│   ├── Spotlight/                      # 🔍 Core Spotlight integration
+│   │   └── SpotlightIndexer.swift      # System indexing and search
 │   ├── Logging/
 │   │   └── Logger.swift                # 📝 Structured logging system
+│   ├── Payments/                       # 💳 Subscriptions & entitlements
+│   │   ├── StoreKitService.swift       # StoreKit-backed implementation
+│   │   └── RevenueCatService.swift     # RevenueCat-backed implementation
 │   └── Errors/
 │       └── *.swift                     # ⚠️ Domain-specific error types
 ├── Domain/                         # Business logic & rules
@@ -145,7 +240,7 @@ Sonora/
 │   │   ├── Recording/ (8 use cases)
 │   │   │   ├── StartRecordingUseCase.swift, StopRecordingUseCase.swift
 │   │   │   ├── CanStartRecordingUseCase.swift, RequestMicrophonePermissionUseCase.swift
-│   │   │   ├── GetRemainingDailyQuotaUseCase.swift, ConsumeRecordingUsageUseCase.swift
+│   │   │   ├── GetRemainingMonthlyQuotaUseCase.swift, ConsumeRecordingUsageUseCase.swift
 │   │   │   ├── ResetDailyUsageIfNeededUseCase.swift, RecordingFlowTestUseCase.swift
 │   │   ├── Transcription/ (5 use cases)
 │   │   │   ├── StartTranscriptionUseCase.swift, GetTranscriptionStateUseCase.swift
@@ -165,6 +260,8 @@ Sonora/
 │   │   ├── LiveActivity/ (3 use cases)
 │   │   │   ├── StartLiveActivityUseCase.swift, UpdateLiveActivityUseCase.swift
 │   │   │   └── EndLiveActivityUseCase.swift
+│   │   ├── Titles/ (1 use case)
+│   │   │   └── GenerateAutoTitleUseCase.swift
 │   │   ├── System/ (1 use case)
 │   │   │   └── DeleteAllUserDataUseCase.swift
 │   │   ├── Prompts/ (2 use cases)
@@ -198,7 +295,7 @@ Sonora/
 │   │   ├── RecordingUsageRepositoryImpl.swift
 │   │   └── Prompts/
 │   │       └── PromptUsageRepositoryImpl.swift
-│   └── Services/                  # 🌐 External API & system integrations (8 categories, ~30 services)
+│   └── Services/                  # 🌐 External API & system integrations (9 categories, 20+ services)
 │       ├── Audio/ (8 services)            # 🎵 Audio recording & playback
 │       │   ├── BackgroundAudioService.swift, AudioSessionService.swift
 │       │   ├── AudioRecordingService.swift, AudioPlaybackService.swift
@@ -210,6 +307,8 @@ Sonora/
 │       │   └── ClientLanguageDetectionService.swift
 │       ├── Analysis/ (1 service)        # 🧠 AI content analysis
 │       │   └── AnalysisService.swift
+│       ├── Title/ (1 service)           # 🏷️ Automatic title generation
+│       │   └── TitleService.swift
 │       ├── EventKit/ (1 service)         # 📅 Calendar integration
 │       │   └── EventKitPermissionService.swift
 │       ├── Export/ (3 services)          # 📤 Data export & sharing
@@ -221,6 +320,9 @@ Sonora/
 │       │   └── PromptFileCatalog.swift
 │       └── System/ (2 services)          # 🔧 System integration
 │           ├── SystemNavigatorImpl.swift, LiveActivityService.swift
+│
+├── Core/Services/Titles/
+│   └── TitleGenerationCoordinator.swift   # 🧷 Auto-title pipeline coordinator
 ├── Views/                         # 🎨 SwiftUI view components
 │   ├── Components/
 │   │   ├── AnalysisResultsView.swift
@@ -280,7 +382,7 @@ Guidelines:
 - UI: `PromptViewModel`, `DynamicPromptCard` (+ fallback), `InspireMeSheet` integrated in `RecordingView`
 - Behavior: 7‑day no‑repeat, weighted selection, stable daily tiebreak; tokens `[Name]`, `[DayPart]`, `[WeekPart]`
 - Events: `promptShown`, `promptUsed`, `promptFavoritedToggled` (privacy‑safe)
-- Feature flag: `FeatureFlags.usePrompts`
+
 
 ### Quick Navigation Guide
 
@@ -313,7 +415,6 @@ Steps:
 - Create Feature ViewModel, inject protocols, expose minimal UI state.
 - Build SwiftUI views in `Features/YourFeature/UI` using native components.
 - Register long-running work with `OperationCoordinator` and publish `AppEvent` for cross-feature reactions.
-| **Testing Documentation** | `docs/testing/` | Test guides & procedures |
 
 ## 🎯 Development Philosophy
 
@@ -387,6 +488,8 @@ final class MemoDetailViewModel: ObservableObject {
     }
 }
 
+```
+
 ## 🧭 How Things Work Together
 
 - Recording: `RecordingViewModel` → `StartRecordingUseCase`/`StopRecordingUseCase` → `AudioRepository` (uses `BackgroundAudioService`).
@@ -403,12 +506,7 @@ final class MemoDetailViewModel: ObservableObject {
   - `transcription-integration.md`
   - `docs/testing/README.md`
 
-// 4. View: Present to user
-Button("Distill") { 
-    viewModel.analyzeDistill() 
-}
-.disabled(viewModel.state.isAnalyzing || viewModel.state.memo?.transcript == nil)
-```
+
 
 ### 2. **Trust the Patterns**: Use established templates
 
@@ -422,7 +520,7 @@ Button("Distill") {
 - **Clean Recording Interface**: Simple, elegant recording button with clear visual feedback and state management
 - **Native Memo Lists**: Standard SwiftUI `List` with `NavigationLink` for clean, familiar user experience
 - **System Theming**: Automatic light/dark mode adaptation using system colors
-- **Recording Limits**: Smart 60-second recording with visual countdown; override via `SONORA_MAX_RECORDING_DURATION` environment variable
+- **Recording Limits**: No fixed per‑session cap; shows a smooth 10‑second countdown near cap and auto‑stops when remaining monthly quota is exhausted
 
 ### 5. **Iterate Quickly**: Easy to modify individual layers
 
@@ -470,7 +568,7 @@ The **OperationCoordinator** manages concurrent operations with conflict detecti
 ```swift
 // Register operation with conflict checking
 let operationId = await operationCoordinator.registerOperation(
-    .analysis(memoId: memo.id, analysisType: .tldr)
+    .analysis(memoId: memo.id, analysisType: .distill)
 )
 
 // Check system status
@@ -699,15 +797,15 @@ private func handleDomainError(_ error: DomainError) {
 
 ### Use Case Testing
 ```swift
-final class AnalyzeTLDRUseCaseTests: XCTestCase {
+final class AnalyzeDistillUseCaseTests: XCTestCase {
     private var mockAnalysisService: MockAnalysisService!
     private var mockRepository: MockAnalysisRepository!
-    private var useCase: AnalyzeTLDRUseCase!
+    private var useCase: AnalyzeDistillUseCase!
     
     override func setUp() {
         mockAnalysisService = MockAnalysisService()
         mockRepository = MockAnalysisRepository()
-        useCase = AnalyzeTLDRUseCase(
+        useCase = AnalyzeDistillUseCase(
             analysisService: mockAnalysisService,
             analysisRepository: mockRepository
         )
@@ -716,7 +814,7 @@ final class AnalyzeTLDRUseCaseTests: XCTestCase {
     func testSuccessfulAnalysis() async throws {
         // Given
         let transcript = "Test transcript"
-        let expectedResult = TLDRResult(summary: "Test summary")
+        let expectedResult = DistillData(summary: "Test summary", action_items: nil, reflection_questions: [])
         mockAnalysisService.mockResult = expectedResult
         
         // When
@@ -879,7 +977,7 @@ let canStart = await operationCoordinator.canStartAnalysis(for: memoId)
 
 // 2. Register and execute
 let operationId = await operationCoordinator.registerOperation(
-    .analysis(memoId: memoId, analysisType: .tldr)
+    .analysis(memoId: memoId, analysisType: .distill)
 )
 
 // 3. Perform analysis with proper completion

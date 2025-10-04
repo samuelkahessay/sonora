@@ -31,8 +31,8 @@ Key systems (verified in repo):
 
 UI Implementation:
 - **Native SwiftUI**: Standard Apple components with system styling
-- **System Theming**: Automatic light/dark via `ThemeManager` and system colors
-- **Recording Guardrails**: 3-minute (180s) limit with 10s warning countdown; override via `SONORA_MAX_RECORDING_DURATION` in `AppConfiguration`
+- **System Theming**: Automatic light/dark via `ThemeManager` and semantic system colors
+- **Recording Quotas & Countdown**: No fixed per-session cap. Free tier has a monthly cap for `.cloudAPI` transcription; Pro is unlimited. When a finite cap applies (derived from remaining monthly quota), the UI shows a smooth countdown for the last 10 seconds and auto-stops at the cap.
 
 ## Feature-Based Organization
 
@@ -196,7 +196,7 @@ Behavior:
   shown prompts and a rotation token to avoid in‑session repeats. `AppEvent.promptShown`
   uses `source = "inspire"` in this mode; default dynamic selection uses `source = "dynamic"`.
 - Localization keys: `daypart.*`, `weekpart.*`, and `prompt.<category>.<slug>` resolved by `DefaultLocalizationProvider` from `prompts.ndjson` (NDJSON is the single source of truth; no generator script required)
-- Feature flag: `FeatureFlags.usePrompts`
+  
 
 Events & logging:
 - AppEvents: `promptShown`, `promptUsed`, `promptFavoritedToggled` (privacy‑safe: no prompt text)
@@ -210,7 +210,7 @@ Testing:
 - Use case tests: rotation and token interpolation with fixed `DateProvider`
 - Enum tests: DayPart/WeekPart boundary and locale week‑start
 - Repository tests: in‑memory SwiftData for favorites/usage
-- UI snapshots: covered by existing RecordingView snapshots; update baselines when recording if prompt UI is enabled
+- UI tests: minimal coverage today; snapshot baselines are not maintained
 
 Files:
 - Domain: `Sonora/Domain/Models/RecordingPrompt.swift`, `InterpolatedPrompt.swift`, `Domain/Protocols/*`, `Domain/UseCases/Prompts/*`, `Domain/Services/PromptInterpolation.swift`
@@ -218,22 +218,23 @@ Files:
 - Core: `Core/Providers/DateProvider.swift`, `Core/Providers/LocalizationProvider.swift`, `Core/DI/DIContainer.swift` (prompt wiring)
 - Presentation: `Features/Recording/ViewModels/PromptViewModel.swift`, `Features/Recording/UI/Components/{DynamicPromptCard, FallbackPromptCard, InspireMeSheet}.swift`, `Features/Recording/UI/RecordingView.swift`
 
-## Current Status (January 2025)
+## Current Status (October 2025)
 
-**🏆 Architecture Excellence Achieved (95% Clean Architecture Compliance)**
+**🏆 Architecture Excellence Achieved (97% Clean Architecture Compliance)**
 
-- **Clean Architecture adherence**: 95% compliance with protocol-first DI and strict layer separation
-- **Service Layer Modernization**: Monolithic `BackgroundAudioService` (634 lines) transformed into orchestrated architecture:
+- **Clean Architecture adherence**: 97% compliance with protocol-first DI and strict layer separation
+- **Service Layer Modernization**: Monolithic `BackgroundAudioService` transformed into orchestrated architecture:
   - 6 focused services implementing Single Responsibility Principle
   - Reactive state synchronization through Combine publishers
   - Constructor dependency injection with protocol abstractions
   - Zero breaking changes to existing APIs
-- **Use Cases**: 19+ use case files covering Recording, Transcription, Analysis, Memo, and Live Activity workflows
-- **Presentation**: MVVM with ViewState patterns, consuming Combine publishers; NotificationCenter usage eliminated
-- **UI Implementation**: Native SwiftUI with system theming; experimental components removed for standard Apple design
+- **Use Cases**: 36+ use case files across Recording, Transcription, Analysis, Memo, EventKit, Live Activity, System, and Prompts
+- **Presentation**: MVVM with ViewState patterns, consuming Combine publishers
+- **UI Implementation**: Native SwiftUI with system theming and semantic colors
 - **Recording System**: Enhanced with focused services for session management, permissions, timing, and background tasks
-- **Live Activities**: Full Dynamic Island integration with Start/Update/End use cases and AppIntent support
+- **Live Activities**: Dynamic Island integration via ActivityKit-backed `LiveActivityService` with start/update/end use cases
 - **Swift 6 Compliance**: Full concurrency compliance with proper @MainActor usage and async/await patterns
+- **Data Layer Inventory**: 10 repository implementations; 20+ focused services across Audio, Transcription, Analysis, EventKit, Export, Moderation, System, Titles, and Prompts
 
 ## Gaps & Targeted Improvements
 
@@ -261,12 +262,11 @@ Files:
 - Log meaningfully: use structured logs; map errors via `ErrorMapping` to `SonoraError`.
 - Name entities simply: the domain entity is `Memo`; reserve suffixes for DTOs/persistence (e.g., `MemoDTO`, `MemoRecord`).
 
-## Live Activities & AppIntent
+## Live Activities
 
-- Service: `LiveActivityService` (Data) with `LiveActivityServiceProtocol` (Domain).
-- Use Cases: `StartLiveActivityUseCase`, `UpdateLiveActivityUseCase`, `EndLiveActivityUseCase` (Domain).
-- Event-driven updates: Handled via `LiveActivityEventHandler` responding to recording lifecycle events.
-- Control: AppIntent to stop recording integrates with Live Activity UI.
+- Service: `LiveActivityService` (Data) with `LiveActivityServiceProtocol` (Domain)
+- Use Cases: `StartLiveActivityUseCase`, `UpdateLiveActivityUseCase`, `EndLiveActivityUseCase` (Domain)
+- Event-driven updates: Handled via `LiveActivityEventHandler` responding to recording lifecycle events
 
 ## Testing Notes
 
@@ -284,6 +284,12 @@ Files:
 
 ## Phase 3 Enhancements
 
-- Adaptive Detection: `DetectEventsAndRemindersUseCase` now derives a lightweight `DetectionContext` and applies an `AdaptiveThresholdPolicy` (default: `DefaultAdaptiveThresholdPolicy`) to set per‑memo confidence thresholds. Legacy static thresholds are retained as a floor. Target: ~30% fewer false positives with ≤5% recall loss.
-- Progressive Analysis Routing: When `AppConfiguration.enableProgressiveAnalysisRouting` is true, `ProgressiveAnalysisService` performs a tiny → small → base progression with early termination on simple content. It logs per‑tier latency, model, and token usage. Access via `DIContainer.progressiveAnalysisService()`.
-- SwiftData Optimizations: Added indices for frequent access (`MemoModel.creationDate`, `TranscriptionModel.id/status`), batched transcription state loading to remove N+1, and a short‑lived memo list cache in `MemoRepositoryImpl` to reduce list TTI.
+- Adaptive Detection: `DetectEventsAndRemindersUseCase` derives a lightweight `DetectionContext` and applies an `AdaptiveThresholdPolicy` (default: `DefaultAdaptiveThresholdPolicy`) to set per‑memo confidence thresholds. Legacy static thresholds serve as a floor. Goal: improve precision with minimal recall impact.
+- Progressive Analysis Routing: `AppConfiguration.enableProgressiveAnalysisRouting` feature flag is present and defaults to true; routing tiers are planned. A dedicated service is not yet implemented in Data/Services.
+- SwiftData Notes: SwiftData models (`MemoModel`, `TranscriptionModel`, `AnalysisResultModel`, `PromptUsageRecord`) are in place with targeted FetchDescriptor queries. Additional indexing and batching strategies are under evaluation.
+
+## Quotas & Usage Tracking
+
+- Policy: Free tier has a 60‑minute/month cap for `.cloudAPI` transcription (see `DefaultRecordingQuotaPolicy`); Pro users are unlimited.
+- Enforcement: `CanStartRecordingUseCase` derives a per-session cap equal to remaining monthly quota; `RecordingTimerService` provides a 10‑second countdown before auto‑stop when a cap exists; `ConsumeRecordingUsageUseCase` records usage at stop.
+- UI: `RecordingViewModel` surfaces `monthlyUsageMinutes` and paywall state; countdown and auto‑stop are driven by repository/service signals.

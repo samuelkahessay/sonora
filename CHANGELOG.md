@@ -1423,6 +1423,384 @@ Phase 10 represents a strategic maturation of Sonora, marking a significant pivo
 
 ---
 
+## 🔁 PHASE 11: POST‑LAUNCH ENHANCEMENTS & MONETIZATION (September 20 – October 2, 2025)
+
+### Simplification & Settings Cleanup
+
+**[ea8e0f0]** - **Remove Local AI Paths**
+- Removed local transcription and local analysis functionality
+- Simplified codepaths to cloud-only experience
+
+**[e77cf39]** - **Settings: Processing Cleanup**
+- Removed Processing section from Settings
+- Reduced surface area and complexity
+
+**[16331f8]** - **Settings: Usage Improvements**
+- Improved Current Usage section
+- Clearer usage visibility for users
+
+**[9d2fed9]** - **Settings: Data Management**
+- Consolidated Data Management into a single section
+- Streamlined organization for privacy/export actions
+
+**[fb3bc34]** - **Remove Test Tab**
+- Removed test/debug tab from app
+- Polished production navigation
+
+**[e05cdaf]** - **Remove Debug Views**
+- Removed additional debug views
+- Reduced non-production artifacts
+
+**[2dfa46f]** - **Dark Mode Polish**
+- Fixed recording view background in dark mode
+- Improved visual consistency
+
+**[015f960]** - **Memo Detail Fixes**
+- Fixed memo detail view issues
+- Stability and layout corrections
+
+**[524efaf]** - **Settings Dismiss Button**
+- Added X button to dismiss Settings view
+- Quicker exit from configuration
+
+### Navigation & Typography
+
+**[231c519]** - **Navigation Titles (Initial)**
+- Partial working navigation titles in Settings and Memos
+- Foundation for typography update
+
+**[17da275]** - **Navigation Headers Update**
+- Updated navigation headers in Settings and Memo
+- Consistent header hierarchy
+
+**[c37b6cc]** - **Serif Title Progress**
+- Continued progress on serif navigation titles
+- Visual identity alignment
+
+**[63548c1]** - **Serif Titles Complete**
+- Working serif titles on all headers
+- Brand typography fully applied
+
+### Guided Prompts & UX
+
+**[f2a02f7]** - **Smoother Guided Prompts**
+- Smoothed transition into guided prompts
+- Improved perceived responsiveness
+
+**[11e8e66]** - **Prompt Transition Polish**
+- Further improved prompt transition timing
+- Reduced visual jank
+
+**[e618e3f]** - **Sonic Bloom Button**
+- Improved Sonic Bloom button visuals
+- Better affordance and feedback
+
+**[5731344]** - **Settings Placement**
+- Moved Settings into Memos view
+- More discoverable configuration entry point
+
+**[e7f4dc6]** - **Prompt Visibility Toggle**
+- Added toggle to show/hide guided prompts in Settings
+- User control over inspiration surfacing
+
+**[15187ca]** - **Prompt Toggle Positioning**
+- Improved positioning of guided prompts toggle
+- Cleaner layout alignment
+
+### Onboarding & Freemium Model
+
+**[fc62e9d]** - **Onboarding Name**
+- Added onboarding name configuration in Settings
+- Updated Lindy prompts
+
+**[088de95]** - **Delightful Onboarding**
+- Improved onboarding and documentation
+- Friendlier first-run experience
+
+**[209f0d0]** - **Freemium Docs**
+- Updated CLAUDE.md and freemium documentation
+- Clearer product model description
+
+**[bd7f196]** - **Freemium Limits**
+- Added 60 minutes per month freemium model
+- Supports generous trial usage
+
+**[f2dcb5b]** - **Recording Pause**
+- Added pause functionality to recording
+- Better control during capture
+
+**[902eb82]** - **Lindy Prompts**
+- Added Lindy prompt set
+- Expanded inspiration catalog
+
+### Calendar, Reminders & Event Detection
+
+**[ec1b4da]** - **Calendar/Reminders Integration**
+- Added Calendar and Reminders integration
+- Foundation for event creation from memos
+
+**[1d0c8e3]** - **Copy Update**
+- Updated no-speech message to friendlier copy
+- Clearer guidance when audio is quiet
+
+**[92460f3]** - **Limit Policy**
+- Removed daily limit; kept monthly limit
+- Simpler usage model
+
+**[87327ce]** - **Import Voice Memos**
+- Added import for system Voice Memos
+- Easier migration of recordings
+
+**[3f3ad68]** - **Import Chunking**
+- Forced chunking for large imports
+- More robust processing
+
+**[57036c6]** - **Audio Scrubber**
+- Added scrubber to audio playback
+- Improved navigation in recordings
+
+**[4b5e26f]** - **Scrubber Polish**
+- Improved scrubber behavior and visuals
+- Smoother interaction
+
+**[8a3aca4]** - **Delete Memo UX**
+- Improved delete on Memo Details
+- Safer/clearer confirmation flow
+
+**[4b02dc5]** - **No Speech Handling**
+- Improved no-speech detection handling
+- Better user feedback
+
+**[5d22e83]** - **Prompts NDJSON**
+- Moved prompts to prompts.ndjson
+- Prepares localized/streamed prompts
+
+**[f9ee3cd]** - **EventKit Refactor**
+- Refactored calendar/reminder integration
+- Clearer data flow and APIs
+
+**[8528bf6]** - **Distill Button Placement**
+- Improved Distill button location
+- Better proximity to analysis context
+
+**[ff251cd]** - **Distill Loader Messages**
+- Updated loader messages during distill
+- Clearer progress states
+
+**[b234c05]** - **Auto Titles Improvement**
+- Improved auto title generation
+- Better summarization quality
+
+**[886e67f]** - **Details + Cards**
+- Improved Memo Details analysis section
+- Better Calendar/Reminder event cards
+
+**[d8b5cac]** - **Reminder Time Detection**
+- Detects explicit times for reminders mentioned
+- More precise scheduling
+
+**[aa077c7]** - **Wire Add Reminder/Event**
+- Wired add reminder/calendar actions to functionality
+- End-to-end creation flow
+
+**[382a814]** - **Event Persistence**
+- Persist added events
+- Reliability improvements
+
+**[63b5d67]** - **Batch Add Events**
+- Improved batch add behavior
+- Handles multiple detections gracefully
+
+**[f33df9b]** - **Toggle Event/Reminder**
+- Toggle between creating reminder vs event
+- Flexible follow-up creation
+
+**[08ae763]** - **Unified Event Handling**
+- Unified event handling pipeline
+- Reduced duplication and edge cases
+
+**[3ff7ffb]** - **ActionItem Coordinator**
+- Added ActionItem Coordinator
+- Clear orchestration for follow-ups
+
+**[d9801d6]** - **Detection Robustness I**
+- Continued hardening of event/reminder detection
+- Added tests for edge cases
+
+**[7ef72c9]** - **Detection Robustness II**
+- Further robustness improvements with tests
+- Better accuracy
+
+**[a5fa9cd]** - **Duplicate Detection**
+- Improved duplicate event detection
+- Prevents repeated entries
+
+**[79a8b74]** - **Recurring Events Doc**
+- Added recurring event + current state UI doc
+- Captured UX considerations in Markdown
+
+**[17e621a]** - **Undo/Redo Removal**
+- Removed undo/redo and fixed edit events
+- Simplified editing flows
+
+**[ecbf640]** - **Edit Fix**
+- Fixed event/reminder editing
+- Reliable modification flows
+
+**[970e505]** - **Edit UI + Titles**
+- Updated edit UI and title generation
+- Consistent edit experience
+
+**[8a4593f]** - **Feedback on Add/Dismiss**
+- Visual feedback when events/reminders are added or dismissed
+- Clear confirmation cues
+
+### Monetization
+
+**[54b45cf]** - **RevenueCat Monetization**
+- Integrated RevenueCat purchases/subscriptions
+- Foundation for paywall and entitlements
+
+### Titles, Prompts & Memos
+
+**[2b9cd65]** - **Auto Titles**
+- Added automatic title generation
+- First pass of summarization
+
+**[a2cfad2]** - **Graceful Auto Titles**
+- Smoother/safer auto titling behaviors
+- Better fallbacks
+
+**[735252c]** - **Typing Effect**
+- Added streaming/typing effect to auto titles
+- Improved perceived responsiveness
+
+**[40f4f8c]** - **Search & Filter**
+- Added filter and search for memos
+- Faster memo discovery
+
+**[d8e5df4]** - **Manual Title Polish**
+- Improved manual rename with auto-capitalization
+- Experimented with Live Activity soundwave
+
+**[509014a]** - **Share Menu**
+- Improved share menu
+- Clearer export options
+
+**[f23f4ac]** - **Auto Titles Improvement**
+- Improved auto title generation
+- Higher-quality suggestions
+
+### Transcription, Performance & Reliability
+
+**[961d24f]** - **Parallel Chunk Processing**
+- Implemented parallel processing for transcription chunks
+- Improved throughput under load
+
+**[4949739]** - **Parallel Export**
+- Implemented parallel chunk export
+- Faster archive/export
+
+**[ff80d5a]** - **Copy Polish**
+- Removed language code from user-facing message
+- Cleaner copy
+
+**[ce232fc]** - **Main-Actor Bottleneck**
+- Eliminated main-actor bottleneck in transcription stack
+- Streamed multipart uploads from disk
+
+**[2ee0a53]** - **Background Transcription**
+- Improved background transcription
+- Cleaned filler post auto-titling
+
+**[205e9cb]** - **Stop Backfill**
+- Stopped auto title generation backfill
+- Reduced unnecessary processing
+
+**[733e93b]** - **Lazy Loading**
+- Implemented lazy loading for lists
+- Better memory/perf profile
+
+**[f08b012]** - **Whisper Languages**
+- Limited Whisper language selection to high-resource languages
+- Reduced configuration friction
+
+### Architecture & Type Safety
+
+**[7284cfe]** - **Type Safety (Memos Details)**
+- Implemented Phase 1.1 type safety in Memos Details
+- Safer models and access patterns
+
+**[bba1e5a]** - **Domain/UI Separation**
+- Cleanly separated domain from UI in Memos Details
+- Better layering and testability
+
+**[f3121d5]** - **Prompt Localization & Pipeline**
+- Switched to NDJSON-backed prompt localization
+- Hardened detection pipeline and stabilized EventBus
+
+**[8183f40]** - **SwiftLint**
+- Applied SwiftLint formatting and rules
+- Baseline quality improvements
+
+**[2afb1d7]** - **SwiftLint Improvements**
+- Incremental linting improvements
+- Cleaner diffs
+
+**[f812d10]** - **SwiftLint Pass**
+- Continued SwiftLint fixes
+- Consistency improvements
+
+**[e7c69f1]** - **SwiftLint Pass**
+- Continued SwiftLint fixes
+- Consistency improvements
+
+**[7616005]** - **SwiftLint Pass**
+- Continued SwiftLint fixes
+- Consistency improvements
+
+**[576a28f]** - **SwiftLint Pass**
+- Continued SwiftLint fixes
+- Consistency improvements
+
+**[da65898]** - **SwiftLint Pass**
+- Continued SwiftLint fixes
+- Consistency improvements
+
+**[ff40040]** - **SwiftLint Pass**
+- Continued SwiftLint fixes
+- Consistency improvements
+
+**[a158411]** - **Lint + Periphery**
+- Continued SwiftLint and Periphery unused code removal
+- Reduced dead code
+
+**[d2bf3a9]** - **Design System Consistency**
+- Improved design system consistency
+- More coherent components
+
+**[84f9103]** - **Component Simplification**
+- Simplified components
+- Reduced complexity
+
+**[3e8b8c5]** - **Composition & Performance**
+- Improved composition and performance
+- Architectural polish
+
+**[f5fca76]** - **Build Fixes**
+- Fixed remaining build errors and SwiftLint autocorrect
+- Clean build state
+
+**[1343373]** - **Comment Cleanup**
+- Removed unnecessary comments
+- Clearer source
+
+**[be7b222]** - **Dependency Cleanup**
+- Removed unnecessary packages
+- Leaner dependency graph
+
+---
+
 ## 📊 PROJECT TRANSFORMATION METRICS
 
 ### Architecture Evolution
