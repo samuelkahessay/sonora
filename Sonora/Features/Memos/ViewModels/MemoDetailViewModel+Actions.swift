@@ -146,6 +146,11 @@ extension MemoDetailViewModel {
                         isAnalyzing = false
                         print("📝 MemoDetailViewModel: Reminders detection completed")
                     }
+
+                case .cognitiveClarityCBT, .philosophicalEchoes, .valuesRecognition:
+                    // Pro-tier modes are embedded in Distill analysis, shouldn't be called directly
+                    Logger.shared.warning("Pro-tier mode called directly, falling back to Distill", category: .analysis)
+                    await performRegularDistill(transcript: transcript, memoId: memo.id)
                 }
             } catch {
                 await MainActor.run {

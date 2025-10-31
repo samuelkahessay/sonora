@@ -380,6 +380,13 @@ public struct OperationSummary: Sendable {
                 return "Detecting calendar events"
             case .reminders:
                 return "Detecting reminders"
+            // Pro-tier analysis operations
+            case .cognitiveClarityCBT:
+                return "Analyzing cognitive patterns"
+            case .philosophicalEchoes:
+                return "Connecting philosophical wisdom"
+            case .valuesRecognition:
+                return "Identifying core values"
             }
         }
     }

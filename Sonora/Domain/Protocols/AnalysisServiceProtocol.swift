@@ -41,4 +41,16 @@ protocol AnalysisServiceProtocol: ObservableObject, Sendable {
 
     // Free tier lite distill
     func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData>
+
+    // MARK: - Streaming Wrapper Methods
+
+    // Streaming variants for Distill components
+    func analyzeDistillSummaryStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<DistillSummaryData>
+    func analyzeDistillActionsStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<DistillActionsData>
+    func analyzeDistillReflectionStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<DistillReflectionData>
+
+    // Streaming variants for Pro-tier analysis
+    func analyzeCognitiveClarityCBTStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<CognitiveClarityData>
+    func analyzePhilosophicalEchoesStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<PhilosophicalEchoesData>
+    func analyzeValuesRecognitionStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<ValuesRecognitionData>
 }

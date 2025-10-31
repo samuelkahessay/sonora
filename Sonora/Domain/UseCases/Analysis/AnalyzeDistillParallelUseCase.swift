@@ -236,7 +236,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                         mode: mode,
                         transcript: transcript,
                         memoId: memoId,
-                        streamingProgress: { update in
+                        streamingProgress: { [self] update in
                             // Log streaming updates for debugging
                             logger.debug("\(mode.displayName) streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
                         }
@@ -287,7 +287,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                     logger.debug("Executing cognitive-clarity analysis (Beck/Ellis CBT) with streaming", category: .analysis, context: context)
                     let envelope = try await analysisService.analyzeCognitiveClarityCBTStreaming(
                         transcript: transcript,
-                        progress: { update in
+                        progress: { [self] update in
                             // Streaming updates for CBT patterns
                             logger.debug("CBT streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
                         }
@@ -306,7 +306,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                     logger.debug("Executing philosophical-echoes analysis (wisdom connections) with streaming", category: .analysis, context: context)
                     let envelope = try await analysisService.analyzePhilosophicalEchoesStreaming(
                         transcript: transcript,
-                        progress: { update in
+                        progress: { [self] update in
                             // Streaming updates for philosophical echoes
                             logger.debug("Wisdom streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
                         }
@@ -325,7 +325,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                     logger.debug("Executing values-recognition analysis with streaming", category: .analysis, context: context)
                     let envelope = try await analysisService.analyzeValuesRecognitionStreaming(
                         transcript: transcript,
-                        progress: { update in
+                        progress: { [self] update in
                             // Streaming updates for values
                             logger.debug("Values streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
                         }

@@ -100,13 +100,10 @@ public struct AnalysisStreamingUpdate: Sendable, Equatable {
     public let partialText: String
     /// Whether this is the final complete response
     public let isFinal: Bool
-    /// Optional: parsed data if available and complete
-    public let parsedData: Any?
 
-    public init(partialText: String, isFinal: Bool, parsedData: Any? = nil) {
+    public init(partialText: String, isFinal: Bool) {
         self.partialText = partialText
         self.isFinal = isFinal
-        self.parsedData = parsedData
     }
 
     public static func == (lhs: AnalysisStreamingUpdate, rhs: AnalysisStreamingUpdate) -> Bool {

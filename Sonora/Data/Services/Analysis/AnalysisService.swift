@@ -131,7 +131,7 @@ class AnalysisService: ObservableObject, AnalysisServiceProtocol, @unchecked Sen
                     )
 
                     finalEnvelope = envelope
-                    progress(AnalysisStreamingUpdate(partialText: aggregated, isFinal: true, parsedData: data))
+                    progress(AnalysisStreamingUpdate(partialText: aggregated, isFinal: true))
                     return
                 }
 
