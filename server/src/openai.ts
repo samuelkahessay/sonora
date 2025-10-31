@@ -296,6 +296,102 @@ export async function createChatJSON({
   return result;
 }
 
+// Chat Completions API for Pro-tier modes (less strict schema validation)
+export async function createChatCompletionsJSON({
+  system,
+  user,
+  model
+}: {
+  system: string;
+  user: string;
+  model?: string;
+}): Promise<CreateChatResult> {
+  const { result } = await requestWithRetry(async () => {
+    const startTime = Date.now();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const requestBody = {
+        model: model || MODEL,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 1.0
+      };
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal,
+        body: JSON.stringify(requestBody)
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        const isDev = process.env.NODE_ENV === 'development';
+        const errorMessage = `GPT Chat Completions API error: ${response.status} - ${response.statusText}`;
+        console.error('🚨 Chat Completions API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          ...(isDev ? { responseBody: text } : { bodyLength: text ? text.length : 0 }),
+          requestParams: {
+            model: requestBody.model,
+            temperature: requestBody.temperature,
+            responseFormat: requestBody.response_format
+          }
+        });
+        throw new Error(errorMessage);
+      }
+
+      const data: any = await response.json();
+      const latency = Date.now() - startTime;
+
+      // Log performance metrics
+      console.log('⏱️  Chat Completions Performance:', {
+        responseTime: `${latency}ms`,
+        model: requestBody.model,
+        inputTokens: data?.usage?.prompt_tokens || 0,
+        outputTokens: data?.usage?.completion_tokens || 0,
+        totalTokens: data?.usage?.total_tokens || 0
+      });
+
+      // Extract content from Chat Completions response
+      const content = data?.choices?.[0]?.message?.content;
+
+      if (!content) {
+        const debugInfo = {
+          hasChoices: Array.isArray(data?.choices),
+          choicesLength: data?.choices?.length,
+          hasUsage: !!data?.usage
+        };
+        console.error('🚨 Chat Completions Response Parsing Failed:', debugInfo);
+        throw new Error(`No content found in Chat Completions API response. Debug info: ${JSON.stringify(debugInfo)}`);
+      }
+
+      // Extract token usage
+      const usage = {
+        input: data?.usage?.prompt_tokens ?? 0,
+        output: data?.usage?.completion_tokens ?? 0
+      };
+
+      return { jsonText: String(content).trim(), usage };
+    } catch (e) {
+      clearTimeout(timeout);
+      throw e;
+    }
+  });
+
+  return result;
+}
+
 export async function createModeration(text: string): Promise<ModerationOutput> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);

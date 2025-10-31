@@ -145,7 +145,8 @@ final class DefaultViewModelFactory: ViewModelFactory {
                 eventBus: eventBus,
                 operationCoordinator: operationCoordinator,
                 detectUseCase: container.detectEventsAndRemindersUseCase(),
-                buildHistoricalContextUseCase: container.buildHistoricalContextUseCase()
+                buildHistoricalContextUseCase: container.buildHistoricalContextUseCase(),
+                storeKitService: container.storeKitService()
             ),
             analyzeLiteDistillUseCase: container.analyzeLiteDistillUseCase(),
             renameMemoUseCase: RenameMemoUseCase(memoRepository: memoRepository),

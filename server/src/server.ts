@@ -6,7 +6,7 @@ import fs from 'fs';
 import { FormData, File } from 'undici';
 import { RequestSchema, DistillDataSchema, LiteDistillDataSchema, EventsDataSchema, RemindersDataSchema, ModelSettings, AnalysisJsonSchemas } from './schema.js';
 import { buildPrompt } from './prompts.js';
-import { createChatJSON, createModeration } from './openai.js';
+import { createChatJSON, createChatCompletionsJSON, createModeration } from './openai.js';
 import { sanitizeTranscript } from './sanitize.js';
 
 const app = express();
@@ -751,14 +751,22 @@ app.post('/analyze', async (req, res) => {
       }
     }
 
-    // NON-STREAMING PATH: Use Responses API (existing logic)
-    const { jsonText, usage } = await createChatJSON({
-      system,
-      user,
-      verbosity: settings.verbosity,
-      reasoningEffort: settings.reasoningEffort,
-      schema
-    });
+    // NON-STREAMING PATH: Route Pro modes to Chat Completions API, basic modes to Responses API
+    const isProMode = ['cognitive-clarity', 'philosophical-echoes', 'values-recognition'].includes(mode);
+
+    const { jsonText, usage } = isProMode
+      ? await createChatCompletionsJSON({
+          system,
+          user,
+          model: process.env.SONORA_MODEL || 'gpt-5-nano'
+        })
+      : await createChatJSON({
+          system,
+          user,
+          verbosity: settings.verbosity,
+          reasoningEffort: settings.reasoningEffort,
+          schema
+        });
     
     // Parse and repair JSON if needed
     let parsedData;
@@ -906,6 +914,7 @@ app.post('/analyze', async (req, res) => {
     console.error('Server error:', error.message);
     res.status(500).json({
       error: 'Internal',
+      message: error.message || 'Unknown error',
       latency_ms: latency
     });
   }

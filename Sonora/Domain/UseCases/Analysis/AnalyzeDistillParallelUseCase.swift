@@ -97,6 +97,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     private let operationCoordinator: any OperationCoordinatorProtocol
     private let detectUseCase: any DetectEventsAndRemindersUseCaseProtocol
     private let buildHistoricalContextUseCase: any BuildHistoricalContextUseCaseProtocol
+    private let storeKitService: any StoreKitServiceProtocol
 
     // MARK: - Constants
     private let componentModes: [AnalysisMode] = [.distillSummary, .distillActions, .distillReflection]
@@ -109,7 +110,8 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         eventBus: any EventBusProtocol,
         operationCoordinator: any OperationCoordinatorProtocol,
         detectUseCase: any DetectEventsAndRemindersUseCaseProtocol,
-        buildHistoricalContextUseCase: any BuildHistoricalContextUseCaseProtocol
+        buildHistoricalContextUseCase: any BuildHistoricalContextUseCaseProtocol,
+        storeKitService: any StoreKitServiceProtocol
     ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository
@@ -118,6 +120,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         self.operationCoordinator = operationCoordinator
         self.detectUseCase = detectUseCase
         self.buildHistoricalContextUseCase = buildHistoricalContextUseCase
+        self.storeKitService = storeKitService
     }
 
     // MARK: - Use Case Execution
@@ -204,8 +207,9 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                     category: .analysis, context: context)
 
         // Send initial progress
-        // Total: summary + actions + reflection + detections + (optional: patterns) + 3 Pro modes
-        let totalComponents = componentModes.count + 1 + (enablePatterns ? 1 : 0) + 3
+        // Total: summary + actions + reflection + detections + (optional: patterns) + Pro modes (if subscribed)
+        let proModesCount = storeKitService.isPro ? 3 : 0
+        let totalComponents = componentModes.count + 1 + (enablePatterns ? 1 : 0) + proModesCount
         let initialPartial = partialData
         await MainActor.run {
             progressHandler(DistillProgressUpdate(
@@ -216,7 +220,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             ))
         }
 
-        logger.analysis("Starting parallel execution of \(componentModes.count) components + patterns=\(enablePatterns) + 3 Pro modes", context: context)
+        logger.analysis("Starting parallel execution of \(componentModes.count) components + patterns=\(enablePatterns) + Pro modes=\(proModesCount) (isPro=\(storeKitService.isPro))", context: context)
 
         // Execute all components in parallel using TaskGroup
         try await withThrowingTaskGroup(of: (AnalysisMode?, DistillComponentData, Int, TokenUsage).self) { group in
@@ -282,63 +286,68 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             }
 
             // Add Pro-tier analysis tasks (Beck/Ellis CBT, wisdom, values) with streaming support
-            group.addTask { [self] in
-                do {
-                    logger.debug("Executing cognitive-clarity analysis (Beck/Ellis CBT) with streaming", category: .analysis, context: context)
-                    let envelope = try await analysisService.analyzeCognitiveClarityCBTStreaming(
-                        transcript: transcript,
-                        progress: { [self] update in
-                            // Streaming updates for CBT patterns
-                            logger.debug("CBT streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
-                        }
-                    )
-                    let patterns = envelope.data.cognitivePatterns
-                    logger.debug("Cognitive patterns detected: \(patterns.count)", category: .analysis, context: context)
-                    return (.cognitiveClarityCBT, .cognitiveClarity(patterns.isEmpty ? nil : patterns), envelope.latency_ms, envelope.tokens)
-                } catch {
-                    logger.warning("Cognitive clarity error; continuing without CBT analysis", category: .analysis, context: context, error: error)
-                    return (.cognitiveClarityCBT, .cognitiveClarity(nil), 0, TokenUsage(input: 0, output: 0))
+            // Only execute for Pro subscribers
+            if storeKitService.isPro {
+                group.addTask { [self] in
+                    do {
+                        logger.debug("Executing cognitive-clarity analysis (Beck/Ellis CBT) with streaming", category: .analysis, context: context)
+                        let envelope = try await analysisService.analyzeCognitiveClarityCBTStreaming(
+                            transcript: transcript,
+                            progress: { [self] update in
+                                // Streaming updates for CBT patterns
+                                logger.debug("CBT streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
+                            }
+                        )
+                        let patterns = envelope.data.cognitivePatterns
+                        logger.debug("Cognitive patterns detected: \(patterns.count)", category: .analysis, context: context)
+                        return (.cognitiveClarityCBT, .cognitiveClarity(patterns.isEmpty ? nil : patterns), envelope.latency_ms, envelope.tokens)
+                    } catch {
+                        logger.warning("Cognitive clarity error; continuing without CBT analysis", category: .analysis, context: context, error: error)
+                        return (.cognitiveClarityCBT, .cognitiveClarity(nil), 0, TokenUsage(input: 0, output: 0))
+                    }
                 }
-            }
 
-            group.addTask { [self] in
-                do {
-                    logger.debug("Executing philosophical-echoes analysis (wisdom connections) with streaming", category: .analysis, context: context)
-                    let envelope = try await analysisService.analyzePhilosophicalEchoesStreaming(
-                        transcript: transcript,
-                        progress: { [self] update in
-                            // Streaming updates for philosophical echoes
-                            logger.debug("Wisdom streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
-                        }
-                    )
-                    let echoes = envelope.data.philosophicalEchoes
-                    logger.debug("Philosophical echoes detected: \(echoes.count)", category: .analysis, context: context)
-                    return (.philosophicalEchoes, .philosophicalEchoes(echoes.isEmpty ? nil : echoes), envelope.latency_ms, envelope.tokens)
-                } catch {
-                    logger.warning("Philosophical echoes error; continuing without wisdom analysis", category: .analysis, context: context, error: error)
-                    return (.philosophicalEchoes, .philosophicalEchoes(nil), 0, TokenUsage(input: 0, output: 0))
+                group.addTask { [self] in
+                    do {
+                        logger.debug("Executing philosophical-echoes analysis (wisdom connections) with streaming", category: .analysis, context: context)
+                        let envelope = try await analysisService.analyzePhilosophicalEchoesStreaming(
+                            transcript: transcript,
+                            progress: { [self] update in
+                                // Streaming updates for philosophical echoes
+                                logger.debug("Wisdom streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
+                            }
+                        )
+                        let echoes = envelope.data.philosophicalEchoes
+                        logger.debug("Philosophical echoes detected: \(echoes.count)", category: .analysis, context: context)
+                        return (.philosophicalEchoes, .philosophicalEchoes(echoes.isEmpty ? nil : echoes), envelope.latency_ms, envelope.tokens)
+                    } catch {
+                        logger.warning("Philosophical echoes error; continuing without wisdom analysis", category: .analysis, context: context, error: error)
+                        return (.philosophicalEchoes, .philosophicalEchoes(nil), 0, TokenUsage(input: 0, output: 0))
+                    }
                 }
-            }
 
-            group.addTask { [self] in
-                do {
-                    logger.debug("Executing values-recognition analysis with streaming", category: .analysis, context: context)
-                    let envelope = try await analysisService.analyzeValuesRecognitionStreaming(
-                        transcript: transcript,
-                        progress: { [self] update in
-                            // Streaming updates for values
-                            logger.debug("Values streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
-                        }
-                    )
-                    let coreValues = envelope.data.coreValues
-                    let tensions = envelope.data.tensions
-                    let valuesInsight = ValuesInsight(coreValues: coreValues, tensions: tensions)
-                    logger.debug("Values detected: \(coreValues.count), tensions: \(tensions?.count ?? 0)", category: .analysis, context: context)
-                    return (.valuesRecognition, .valuesRecognition(valuesInsight), envelope.latency_ms, envelope.tokens)
-                } catch {
-                    logger.warning("Values recognition error; continuing without values analysis", category: .analysis, context: context, error: error)
-                    return (.valuesRecognition, .valuesRecognition(nil), 0, TokenUsage(input: 0, output: 0))
+                group.addTask { [self] in
+                    do {
+                        logger.debug("Executing values-recognition analysis with streaming", category: .analysis, context: context)
+                        let envelope = try await analysisService.analyzeValuesRecognitionStreaming(
+                            transcript: transcript,
+                            progress: { [self] update in
+                                // Streaming updates for values
+                                logger.debug("Values streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
+                            }
+                        )
+                        let coreValues = envelope.data.coreValues
+                        let tensions = envelope.data.tensions
+                        let valuesInsight = ValuesInsight(coreValues: coreValues, tensions: tensions)
+                        logger.debug("Values detected: \(coreValues.count), tensions: \(tensions?.count ?? 0)", category: .analysis, context: context)
+                        return (.valuesRecognition, .valuesRecognition(valuesInsight), envelope.latency_ms, envelope.tokens)
+                    } catch {
+                        logger.warning("Values recognition error; continuing without values analysis", category: .analysis, context: context, error: error)
+                        return (.valuesRecognition, .valuesRecognition(nil), 0, TokenUsage(input: 0, output: 0))
+                    }
                 }
+            } else {
+                logger.info("Skipping Pro-tier analysis (user is not subscribed to Pro)", category: .analysis, context: context)
             }
 
             // Collect results as they complete

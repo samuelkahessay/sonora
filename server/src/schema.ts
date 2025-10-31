@@ -490,7 +490,6 @@ export const CognitiveClarityJsonSchema = {
         items: {
           type: "object",
           properties: {
-            id: { type: "string", description: "Optional UUID for this pattern" },
             type: {
               type: "string",
               enum: ["all-or-nothing", "catastrophizing", "mind-reading", "overgeneralization", "should-statements", "emotional-reasoning"],
@@ -501,12 +500,11 @@ export const CognitiveClarityJsonSchema = {
               description: "Specific observation from the transcript with evidence"
             },
             reframe: {
-              type: ["string", "null"],
+              type: "string",
               description: "Optional: A gentler way to think about this"
             }
           },
-          required: ["type", "observation", "reframe"],
-          additionalProperties: false
+          required: ["type", "observation"]
         }
       }
     },
@@ -526,7 +524,6 @@ export const PhilosophicalEchoesJsonSchema = {
         items: {
           type: "object",
           properties: {
-            id: { type: "string", description: "Optional UUID for this echo" },
             tradition: {
               type: "string",
               enum: ["stoicism", "buddhism", "existentialism", "socratic"],
@@ -537,16 +534,15 @@ export const PhilosophicalEchoesJsonSchema = {
               description: "2-3 sentences explaining how their insight echoes this tradition"
             },
             quote: {
-              type: ["string", "null"],
+              type: "string",
               description: "Optional: Relevant quote from the tradition"
             },
             source: {
-              type: ["string", "null"],
+              type: "string",
               description: "Optional: Attribution (e.g., 'Marcus Aurelius, Meditations')"
             }
           },
-          required: ["tradition", "connection", "quote", "source"],
-          additionalProperties: false
+          required: ["tradition", "connection"]
         }
       }
     },
@@ -566,7 +562,6 @@ export const ValuesRecognitionJsonSchema = {
         items: {
           type: "object",
           properties: {
-            id: { type: "string", description: "Optional UUID for this value" },
             name: {
               type: "string",
               description: "The value name (e.g., 'Authenticity', 'Family', 'Achievement')"
@@ -577,24 +572,20 @@ export const ValuesRecognitionJsonSchema = {
             },
             confidence: {
               type: "number",
-              minimum: 0,
-              maximum: 1,
               description: "Confidence score: 0.9-1.0 = explicit, 0.7-0.89 = strong implicit, <0.7 = omit"
             }
           },
-          required: ["name", "evidence", "confidence"],
-          additionalProperties: false
+          required: ["name", "evidence", "confidence"]
         },
         minItems: 2,
         maxItems: 4
       },
       tensions: {
-        type: ["array", "null"],
-        description: "Optional: Value tensions (competing priorities). Omit if no clear tensions.",
+        type: "array",
+        description: "Optional: Value tensions (competing priorities). Return empty array if no clear tensions.",
         items: {
           type: "object",
           properties: {
-            id: { type: "string", description: "Optional UUID for this tension" },
             value1: { type: "string", description: "First value in tension" },
             value2: { type: "string", description: "Second value in tension" },
             observation: {
@@ -602,8 +593,7 @@ export const ValuesRecognitionJsonSchema = {
               description: "How this tension manifests in their life"
             }
           },
-          required: ["value1", "value2", "observation"],
-          additionalProperties: false
+          required: ["value1", "value2", "observation"]
         }
       }
     },
