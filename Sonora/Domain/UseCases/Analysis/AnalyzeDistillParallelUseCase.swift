@@ -221,7 +221,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         // Execute all components in parallel using TaskGroup
         try await withThrowingTaskGroup(of: (AnalysisMode?, DistillComponentData, Int, TokenUsage).self) { group in
 
-            // Add tasks for each component
+            // Add tasks for each component with streaming support
             for mode in componentModes {
                 group.addTask { [self] in
                     // Check cache first
@@ -230,9 +230,17 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                         return (mode, cached.data, cached.latency_ms, cached.tokens)
                     }
 
-                    // Execute API call for component
-                    logger.debug("Executing API call for component \(mode.rawValue)", category: .analysis, context: context)
-                    let result = try await executeComponentAnalysis(mode: mode, transcript: transcript, memoId: memoId)
+                    // Execute API call for component with streaming
+                    logger.debug("Executing API call for component \(mode.rawValue) with streaming", category: .analysis, context: context)
+                    let result = try await executeComponentAnalysis(
+                        mode: mode,
+                        transcript: transcript,
+                        memoId: memoId,
+                        streamingProgress: { update in
+                            // Log streaming updates for debugging
+                            logger.debug("\(mode.displayName) streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
+                        }
+                    )
 
                     // Save component to cache
                     await saveComponentCache(data: result.data, latency: result.latency_ms, tokens: result.tokens, mode: mode, memoId: memoId)
@@ -273,11 +281,17 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                 }
             }
 
-            // Add Pro-tier analysis tasks (Beck/Ellis CBT, wisdom, values)
+            // Add Pro-tier analysis tasks (Beck/Ellis CBT, wisdom, values) with streaming support
             group.addTask { [self] in
                 do {
-                    logger.debug("Executing cognitive-clarity analysis (Beck/Ellis CBT)", category: .analysis, context: context)
-                    let envelope = try await analysisService.analyzeCognitiveClarityCBT(transcript: transcript)
+                    logger.debug("Executing cognitive-clarity analysis (Beck/Ellis CBT) with streaming", category: .analysis, context: context)
+                    let envelope = try await analysisService.analyzeCognitiveClarityCBTStreaming(
+                        transcript: transcript,
+                        progress: { update in
+                            // Streaming updates for CBT patterns
+                            logger.debug("CBT streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
+                        }
+                    )
                     let patterns = envelope.data.cognitivePatterns
                     logger.debug("Cognitive patterns detected: \(patterns.count)", category: .analysis, context: context)
                     return (.cognitiveClarityCBT, .cognitiveClarity(patterns.isEmpty ? nil : patterns), envelope.latency_ms, envelope.tokens)
@@ -289,8 +303,14 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
 
             group.addTask { [self] in
                 do {
-                    logger.debug("Executing philosophical-echoes analysis (wisdom connections)", category: .analysis, context: context)
-                    let envelope = try await analysisService.analyzePhilosophicalEchoes(transcript: transcript)
+                    logger.debug("Executing philosophical-echoes analysis (wisdom connections) with streaming", category: .analysis, context: context)
+                    let envelope = try await analysisService.analyzePhilosophicalEchoesStreaming(
+                        transcript: transcript,
+                        progress: { update in
+                            // Streaming updates for philosophical echoes
+                            logger.debug("Wisdom streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
+                        }
+                    )
                     let echoes = envelope.data.philosophicalEchoes
                     logger.debug("Philosophical echoes detected: \(echoes.count)", category: .analysis, context: context)
                     return (.philosophicalEchoes, .philosophicalEchoes(echoes.isEmpty ? nil : echoes), envelope.latency_ms, envelope.tokens)
@@ -302,8 +322,14 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
 
             group.addTask { [self] in
                 do {
-                    logger.debug("Executing values-recognition analysis", category: .analysis, context: context)
-                    let envelope = try await analysisService.analyzeValuesRecognition(transcript: transcript)
+                    logger.debug("Executing values-recognition analysis with streaming", category: .analysis, context: context)
+                    let envelope = try await analysisService.analyzeValuesRecognitionStreaming(
+                        transcript: transcript,
+                        progress: { update in
+                            // Streaming updates for values
+                            logger.debug("Values streaming: \(update.partialText.prefix(50))...", category: .analysis, context: context)
+                        }
+                    )
                     let coreValues = envelope.data.coreValues
                     let tensions = envelope.data.tensions
                     let valuesInsight = ValuesInsight(coreValues: coreValues, tensions: tensions)
@@ -391,16 +417,30 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         }
     }
 
-    private func executeComponentAnalysis(mode: AnalysisMode, transcript: String, memoId: UUID) async throws -> (data: DistillComponentData, latency_ms: Int, tokens: TokenUsage) {
+    private func executeComponentAnalysis(
+        mode: AnalysisMode,
+        transcript: String,
+        memoId: UUID,
+        streamingProgress: AnalysisStreamingHandler? = nil
+    ) async throws -> (data: DistillComponentData, latency_ms: Int, tokens: TokenUsage) {
         switch mode {
         case .distillSummary:
-            let envelope = try await analysisService.analyzeDistillSummary(transcript: transcript)
+            let envelope = try await analysisService.analyzeDistillSummaryStreaming(
+                transcript: transcript,
+                progress: streamingProgress
+            )
             return (.summary(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillActions:
-            let envelope = try await analysisService.analyzeDistillActions(transcript: transcript)
+            let envelope = try await analysisService.analyzeDistillActionsStreaming(
+                transcript: transcript,
+                progress: streamingProgress
+            )
             return (.actions(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillReflection:
-            let envelope = try await analysisService.analyzeDistillReflection(transcript: transcript)
+            let envelope = try await analysisService.analyzeDistillReflectionStreaming(
+                transcript: transcript,
+                progress: streamingProgress
+            )
             return (.reflection(envelope.data), envelope.latency_ms, envelope.tokens)
         default:
             throw AnalysisError.invalidResponse

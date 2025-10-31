@@ -10,6 +10,15 @@ protocol AnalysisServiceProtocol: ObservableObject, Sendable {
         historicalContext: [HistoricalMemoContext]?
     ) async throws -> AnalyzeEnvelope<T>
 
+    // Streaming variant - provides real-time updates as analysis generates
+    func analyzeWithStreaming<T: Codable & Sendable>(
+        mode: AnalysisMode,
+        transcript: String,
+        responseType: T.Type,
+        historicalContext: [HistoricalMemoContext]?,
+        progress: AnalysisStreamingHandler?
+    ) async throws -> AnalyzeEnvelope<T>
+
     // Convenience method for distill with historical context
     func analyzeDistill(
         transcript: String,

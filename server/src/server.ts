@@ -498,7 +498,7 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
 // Main analyze endpoint
 app.post('/analyze', async (req, res) => {
   const startTime = Date.now();
-  
+
   try {
     // Validate request
     const { mode, transcript, historicalContext } = RequestSchema.parse(req.body);
@@ -515,6 +515,243 @@ app.post('/analyze', async (req, res) => {
     const useStrictSchema = !(mode === 'distill' && hasHistoricalContext);
     const schema = useStrictSchema ? AnalysisJsonSchemas[mode as keyof typeof AnalysisJsonSchemas] : undefined;
 
+    // Detect streaming request (via Accept header or query param)
+    const wantsStream = (req.headers['accept'] || '').toLowerCase().includes('text/event-stream') || req.query.stream === '1' || req.body.stream === true;
+
+    // STREAMING PATH: Use Chat Completions API with SSE
+    if (wantsStream) {
+      if (!OPENAI_API_KEY) {
+        return res.status(500).json({ error: 'Server missing OPENAI_API_KEY' });
+      }
+
+      res.status(200);
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      (res as any).flushHeaders?.();
+
+      const sendEvent = (event: string, data: Record<string, unknown>) => {
+        res.write(`event: ${event}\n`);
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      };
+
+      try {
+        // Desired policy:
+        // 1) Try gpt-5 with Chat Completions streaming
+        // 2) If that fails, fall back to non-streaming gpt-5 (Responses API)
+        // 3) If that fails, try gpt-4o-mini with Chat Completions streaming
+
+        const streamWithModel = async (model: string): Promise<any> => {
+          const requestBody: Record<string, any> = {
+            model,
+            messages: [
+              { role: 'system', content: system },
+              { role: 'user', content: user }
+            ],
+            temperature: 0.5,
+            response_format: { type: 'json_object' },
+            stream: true
+          };
+          const r = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+          });
+          return r;
+        };
+
+        const sendFinalFromNonStreamingGpt5 = async () => {
+          // Use the same schema/validation as non-streaming path
+          const { jsonText, usage } = await createChatJSON({
+            system,
+            user,
+            verbosity: settings.verbosity,
+            reasoningEffort: settings.reasoningEffort,
+            schema,
+            model: 'gpt-5'
+          });
+
+          // Parse and repair JSON if needed
+          let parsedData: any;
+          try {
+            parsedData = JSON.parse(jsonText);
+          } catch {
+            const stripped = jsonText.trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+            parsedData = JSON.parse(stripped);
+          }
+
+          // Validate response shape (mirror non-streaming logic)
+          let validatedData: any;
+          switch (mode) {
+            case 'distill':
+              validatedData = DistillDataSchema.parse(parsedData);
+              break;
+            case 'lite-distill':
+              validatedData = LiteDistillDataSchema.parse(parsedData);
+              break;
+            case 'distill-summary':
+              validatedData = { summary: parsedData.summary };
+              break;
+            case 'distill-actions':
+              validatedData = { action_items: parsedData.action_items || [] };
+              break;
+            case 'distill-themes':
+              validatedData = { key_themes: parsedData.key_themes || [] };
+              break;
+            case 'distill-reflection':
+              validatedData = { reflection_questions: parsedData.reflection_questions || [] };
+              break;
+            case 'events':
+              validatedData = EventsDataSchema.parse(parsedData);
+              break;
+            case 'reminders':
+              validatedData = RemindersDataSchema.parse(parsedData);
+              break;
+            case 'cognitive-clarity':
+              validatedData = { cognitivePatterns: parsedData.cognitivePatterns || [] };
+              break;
+            case 'philosophical-echoes':
+              validatedData = { philosophicalEchoes: parsedData.philosophicalEchoes || [] };
+              break;
+            case 'values-recognition':
+              validatedData = { coreValues: parsedData.coreValues || [], tensions: parsedData.tensions };
+              break;
+            default:
+              throw new Error(`Unknown mode: ${mode}`);
+          }
+
+          const latency = Date.now() - startTime;
+          sendEvent('final', {
+            mode,
+            data: validatedData,
+            model: 'gpt-5',
+            tokens: { input: usage.input, output: usage.output, ...(usage.reasoning !== undefined && { reasoning: usage.reasoning }) },
+            latency_ms: latency,
+            streaming: false
+          });
+          res.end();
+        };
+
+        // Step 1: try GPT-5 streaming
+        let selectedModel = 'gpt-5';
+        let response = await streamWithModel(selectedModel);
+        if (!response.ok) {
+          const body = await response.text().catch(() => '');
+          console.warn(`OpenAI GPT-5 streaming rejected: ${response.status} ${response.statusText} :: ${body.slice(0, 400)}`);
+
+          // Step 2: fallback to non-streaming GPT-5
+          try {
+            await sendFinalFromNonStreamingGpt5();
+            return;
+          } catch (e) {
+            console.warn('Non-streaming GPT-5 fallback failed, attempting 4o-mini streaming. Reason:', (e as any)?.message);
+
+            // Step 3: try 4o-mini streaming
+            selectedModel = 'gpt-4o-mini';
+            response = await streamWithModel(selectedModel);
+            if (!response.ok) {
+              const text = await response.text().catch(() => '');
+              console.error('OpenAI streaming (4o-mini) error:', response.status, response.statusText, text.slice(0, 400));
+              sendEvent('error', { error: 'UpstreamFailed', status: response.status });
+              res.end();
+              return;
+            }
+          }
+        }
+
+        // If we get here with an OK response, process streaming
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let aggregated = '';
+        let finished = false;
+        let inputTokens = 0;
+        let outputTokens = 0;
+
+        const processEvent = (rawEvent: string) => {
+          const trimmed = rawEvent.trim();
+          if (!trimmed || finished) return;
+
+          const lines = trimmed.split('\n');
+          const dataPayload = lines
+            .filter(l => l.startsWith('data:'))
+            .map(l => l.slice(5).trim())
+            .join('');
+
+          if (!dataPayload) return;
+
+          if (dataPayload === '[DONE]') {
+            finished = true;
+            try {
+              const parsed = JSON.parse(aggregated);
+              const latency = Date.now() - startTime;
+              sendEvent('final', {
+                mode,
+                data: parsed,
+                model: selectedModel,
+                tokens: { input: inputTokens, output: outputTokens },
+                latency_ms: latency,
+                streaming: true
+              });
+            } catch (parseError) {
+              console.error('Final JSON parse error:', parseError);
+              sendEvent('error', { error: 'InvalidJSON' });
+            }
+            res.end();
+            return;
+          }
+
+          try {
+            const json = JSON.parse(dataPayload);
+            const delta = json?.choices?.[0]?.delta?.content ?? '';
+            if (json?.usage) {
+              inputTokens = json.usage.prompt_tokens || inputTokens;
+              outputTokens = json.usage.completion_tokens || outputTokens;
+            }
+            if (typeof delta === 'string' && delta.length > 0) {
+              aggregated += delta;
+              sendEvent('interim', { partial_text: aggregated.slice(0, 10000) });
+            }
+          } catch (error) {
+            console.error('Failed to parse streaming chunk:', error);
+          }
+        };
+
+        for await (const chunk of response.body as any) {
+          buffer += decoder.decode(chunk, { stream: true });
+          let separatorIndex = buffer.indexOf('\n\n');
+          while (separatorIndex !== -1) {
+            const rawEvent = buffer.slice(0, separatorIndex);
+            buffer = buffer.slice(separatorIndex + 2);
+            processEvent(rawEvent);
+            if (finished) {
+              return;
+            }
+            separatorIndex = buffer.indexOf('\n\n');
+          }
+        }
+
+        if (buffer.trim().length > 0) {
+          processEvent(buffer);
+        }
+
+        if (!res.writableEnded && !finished) {
+          res.end();
+        }
+        return;
+      } catch (error) {
+        console.error('Streaming /analyze error:', error);
+        if (!res.writableEnded) {
+          sendEvent('error', { error: 'Internal' });
+          res.end();
+        }
+        return;
+      }
+    }
+
+    // NON-STREAMING PATH: Use Responses API (existing logic)
     const { jsonText, usage } = await createChatJSON({
       system,
       user,
@@ -711,6 +948,92 @@ app.get('/keycheck', async (_req, res) => {
       message: `GPT-5-nano test failed: ${e?.message || 'Unknown error'}`,
       model: process.env.SONORA_MODEL || 'gpt-5-mini'
     });
+  }
+});
+
+// Streaming capability probe (defaults to GPT-5, override via ?model=)
+app.get('/keycheck-stream', async (req, res) => {
+  try {
+    if (!OPENAI_API_KEY) return res.status(500).json({ ok: false, message: 'OPENAI_API_KEY missing' });
+
+    const start = Date.now();
+    const model = typeof req.query.model === 'string' && req.query.model.length > 0 ? req.query.model : 'gpt-5';
+    const requestBody: Record<string, any> = {
+      model,
+      messages: [
+        { role: 'system', content: 'You are a probe that verifies streaming works. Respond with a tiny valid JSON object strictly: {"ok":true}.' },
+        { role: 'user', content: 'Respond with {"ok":true} only.' }
+      ],
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      stream: true
+    };
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const elapsed = Date.now() - start;
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      // Do not leak full upstream body
+      return res.json({
+        ok: false,
+        model,
+        reason: 'UpstreamNotOK',
+        status: response.status,
+        time_ms: elapsed,
+        bodyPreviewLen: text ? text.length : 0
+      });
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let events = 0;
+    let firstEventMs: number | null = null;
+    let aggregated = '';
+
+    const started = Date.now();
+    const deadline = started + 4000; // 4s window
+
+    for await (const chunk of response.body as any) {
+      buffer += decoder.decode(chunk, { stream: true });
+      let idx = buffer.indexOf('\n\n');
+      while (idx !== -1) {
+        const rawEvent = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+        const lines = rawEvent.split('\n');
+        const dataPayload = lines.filter(l => l.startsWith('data:')).map(l => l.slice(5).trim()).join('');
+        if (dataPayload) {
+          if (firstEventMs === null) firstEventMs = Date.now() - start;
+          if (dataPayload !== '[DONE]') {
+            events += 1;
+            aggregated += (() => { try { const j = JSON.parse(dataPayload); return j?.choices?.[0]?.delta?.content ?? ''; } catch { return ''; } })();
+          }
+        }
+        idx = buffer.indexOf('\n\n');
+      }
+      if (events > 0 || Date.now() > deadline) break;
+    }
+
+    return res.json({
+      ok: events > 0,
+      model,
+      events,
+      time_ms: Date.now() - start,
+      first_event_ms: firstEventMs,
+      sample_preview: aggregated.substring(0, 50)
+    });
+  } catch (e: any) {
+    console.error('🚨 keycheck-stream failed:', e?.message);
+    return res.status(502).json({ ok: false, model: req.query.model || 'gpt-5', message: e?.message || 'Unknown error' });
   }
 });
 

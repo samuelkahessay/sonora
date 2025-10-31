@@ -3,6 +3,172 @@ import Foundation
 class AnalysisService: ObservableObject, AnalysisServiceProtocol, @unchecked Sendable {
     private let config = AppConfiguration.shared
 
+    func analyzeWithStreaming<T: Codable & Sendable>(
+        mode: AnalysisMode,
+        transcript: String,
+        responseType: T.Type,
+        historicalContext: [HistoricalMemoContext]? = nil,
+        progress: AnalysisStreamingHandler?
+    ) async throws -> AnalyzeEnvelope<T> {
+        let analyzeURL = config.apiBaseURL.appendingPathComponent("analyze")
+        print("🔧 AnalysisService (Streaming): Using API URL: \(analyzeURL.absoluteString)")
+
+        // Sanitize transcript
+        let safeTranscript = AnalysisGuardrails.sanitizeTranscriptForLLM(transcript)
+
+        var requestBody: [String: Any] = [
+            "mode": mode.rawValue,
+            "transcript": safeTranscript,
+            "stream": true  // Enable streaming
+        ]
+
+        // Include historical context if provided
+        if let historicalContext = historicalContext, !historicalContext.isEmpty {
+            if let encoded = try? JSONEncoder().encode(historicalContext),
+               let jsonArray = try? JSONSerialization.jsonObject(with: encoded) as? [[String: Any]] {
+                requestBody["historicalContext"] = jsonArray
+                print("🔧 AnalysisService (Streaming): Including \(historicalContext.count) historical memos")
+            }
+        }
+
+        var request = URLRequest(url: analyzeURL)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")  // Request SSE
+        request.timeoutInterval = config.timeoutInterval(for: mode)
+
+        print("🔧 AnalysisService (Streaming): Timeout: \(request.timeoutInterval)s for \(mode.displayName)")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            throw AnalysisError.networkError("Failed to encode request: \(error.localizedDescription)")
+        }
+
+        // Use streaming if progress callback provided
+        if let progress = progress {
+            return try await performStreamingRequest(
+                request: request,
+                responseType: responseType,
+                mode: mode,
+                progress: progress
+            )
+        } else {
+            // Fall back to non-streaming if no progress handler
+            return try await analyze(
+                mode: mode,
+                transcript: transcript,
+                responseType: responseType,
+                historicalContext: historicalContext
+            )
+        }
+    }
+
+    private func performStreamingRequest<T: Codable & Sendable>(
+        request: URLRequest,
+        responseType: T.Type,
+        mode: AnalysisMode,
+        progress: @escaping AnalysisStreamingHandler
+    ) async throws -> AnalyzeEnvelope<T> {
+        return try await Task.detached(priority: .utility) { [config] in
+            try Task.checkCancellation()
+
+            let (stream, response) = try await URLSession.shared.bytes(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw AnalysisError.networkError("Invalid response")
+            }
+            guard httpResponse.statusCode == 200 else {
+                print("❌ AnalysisService (Streaming): Server error \(httpResponse.statusCode)")
+                throw AnalysisError.serverError(httpResponse.statusCode)
+            }
+
+            var buffer = ""
+            var aggregated = ""
+            var finalEnvelope: AnalyzeEnvelope<T>?
+
+            func handleEvent(_ rawEvent: String) throws {
+                let trimmed = rawEvent.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return }
+
+                let lines = trimmed.split(separator: "\n", omittingEmptySubsequences: false)
+                let dataPayload = lines
+                    .filter { $0.hasPrefix("data:") }
+                    .map { $0.dropFirst(5).trimmingCharacters(in: .whitespaces) }
+                    .joined()
+
+                guard !dataPayload.isEmpty else { return }
+
+                // Check for event type
+                let eventType = lines
+                    .first(where: { $0.hasPrefix("event:") })?
+                    .dropFirst(6)
+                    .trimmingCharacters(in: .whitespaces) ?? "message"
+
+                if eventType == "final" {
+                    // Parse final complete response
+                    guard let jsonData = dataPayload.data(using: .utf8),
+                          let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+                          let dataObj = json["data"],
+                          let dataJson = try? JSONSerialization.data(withJSONObject: dataObj) else {
+                        throw AnalysisError.decodingError("Failed to parse final response")
+                    }
+
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    let data = try decoder.decode(T.self, from: dataJson)
+
+                    let tokens = json["tokens"] as? [String: Int]
+                    let envelope = AnalyzeEnvelope<T>(
+                        mode: mode,
+                        data: data,
+                        model: json["model"] as? String ?? config.apiBaseURL.absoluteString,
+                        tokens: TokenUsage(
+                            input: tokens?["input"] ?? 0,
+                            output: tokens?["output"] ?? 0
+                        ),
+                        latency_ms: json["latency_ms"] as? Int ?? 0,
+                        moderation: nil
+                    )
+
+                    finalEnvelope = envelope
+                    progress(AnalysisStreamingUpdate(partialText: aggregated, isFinal: true, parsedData: data))
+                    return
+                }
+
+                // Handle interim streaming updates
+                if eventType == "interim", let jsonData = dataPayload.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+                   let partialText = json["partial_text"] as? String {
+                    aggregated = partialText
+                    progress(AnalysisStreamingUpdate(partialText: partialText, isFinal: false))
+                }
+            }
+
+            for try await byte in stream {
+                let scalar = String(decoding: [byte], as: UTF8.self)
+                buffer.append(contentsOf: scalar)
+
+                while let range = buffer.range(of: "\n\n") {
+                    let rawEvent = String(buffer[..<range.lowerBound])
+                    buffer.removeSubrange(..<range.upperBound)
+                    try handleEvent(rawEvent)
+                }
+            }
+
+            // Process any remaining buffer
+            if !buffer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                try handleEvent(buffer)
+            }
+
+            guard let envelope = finalEnvelope else {
+                throw AnalysisError.networkError("No final response received from streaming")
+            }
+
+            print("✅ AnalysisService (Streaming): Analysis completed")
+            return envelope
+        }.value
+    }
+
     func analyze<T: Codable & Sendable>(
         mode: AnalysisMode,
         transcript: String,
@@ -130,5 +296,91 @@ class AnalysisService: ObservableObject, AnalysisServiceProtocol, @unchecked Sen
 
     func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData> {
         try await analyze(mode: .liteDistill, transcript: transcript, responseType: LiteDistillData.self, historicalContext: nil)
+    }
+
+    // MARK: - Streaming Wrapper Methods
+
+    /// Streaming variant for Distill Summary
+    func analyzeDistillSummaryStreaming(
+        transcript: String,
+        progress: AnalysisStreamingHandler?
+    ) async throws -> AnalyzeEnvelope<DistillSummaryData> {
+        try await analyzeWithStreaming(
+            mode: .distillSummary,
+            transcript: transcript,
+            responseType: DistillSummaryData.self,
+            historicalContext: nil,
+            progress: progress
+        )
+    }
+
+    /// Streaming variant for Distill Actions
+    func analyzeDistillActionsStreaming(
+        transcript: String,
+        progress: AnalysisStreamingHandler?
+    ) async throws -> AnalyzeEnvelope<DistillActionsData> {
+        try await analyzeWithStreaming(
+            mode: .distillActions,
+            transcript: transcript,
+            responseType: DistillActionsData.self,
+            historicalContext: nil,
+            progress: progress
+        )
+    }
+
+    /// Streaming variant for Distill Reflection
+    func analyzeDistillReflectionStreaming(
+        transcript: String,
+        progress: AnalysisStreamingHandler?
+    ) async throws -> AnalyzeEnvelope<DistillReflectionData> {
+        try await analyzeWithStreaming(
+            mode: .distillReflection,
+            transcript: transcript,
+            responseType: DistillReflectionData.self,
+            historicalContext: nil,
+            progress: progress
+        )
+    }
+
+    /// Streaming variant for Cognitive Clarity (CBT)
+    func analyzeCognitiveClarityCBTStreaming(
+        transcript: String,
+        progress: AnalysisStreamingHandler?
+    ) async throws -> AnalyzeEnvelope<CognitiveClarityData> {
+        try await analyzeWithStreaming(
+            mode: .cognitiveClarityCBT,
+            transcript: transcript,
+            responseType: CognitiveClarityData.self,
+            historicalContext: nil,
+            progress: progress
+        )
+    }
+
+    /// Streaming variant for Philosophical Echoes
+    func analyzePhilosophicalEchoesStreaming(
+        transcript: String,
+        progress: AnalysisStreamingHandler?
+    ) async throws -> AnalyzeEnvelope<PhilosophicalEchoesData> {
+        try await analyzeWithStreaming(
+            mode: .philosophicalEchoes,
+            transcript: transcript,
+            responseType: PhilosophicalEchoesData.self,
+            historicalContext: nil,
+            progress: progress
+        )
+    }
+
+    /// Streaming variant for Values Recognition
+    func analyzeValuesRecognitionStreaming(
+        transcript: String,
+        progress: AnalysisStreamingHandler?
+    ) async throws -> AnalyzeEnvelope<ValuesRecognitionData> {
+        try await analyzeWithStreaming(
+            mode: .valuesRecognition,
+            transcript: transcript,
+            responseType: ValuesRecognitionData.self,
+            historicalContext: nil,
+            progress: progress
+        )
     }
 }

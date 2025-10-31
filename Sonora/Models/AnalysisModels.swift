@@ -89,6 +89,31 @@ public struct TokenUsage: Codable, Sendable {
     public let output: Int
 }
 
+// MARK: - Streaming Support
+
+/// Handler for analysis streaming updates
+public typealias AnalysisStreamingHandler = @Sendable (AnalysisStreamingUpdate) -> Void
+
+/// Represents a streaming update from the analysis service
+public struct AnalysisStreamingUpdate: Sendable, Equatable {
+    /// Partial text received so far (accumulated)
+    public let partialText: String
+    /// Whether this is the final complete response
+    public let isFinal: Bool
+    /// Optional: parsed data if available and complete
+    public let parsedData: Any?
+
+    public init(partialText: String, isFinal: Bool, parsedData: Any? = nil) {
+        self.partialText = partialText
+        self.isFinal = isFinal
+        self.parsedData = parsedData
+    }
+
+    public static func == (lhs: AnalysisStreamingUpdate, rhs: AnalysisStreamingUpdate) -> Bool {
+        lhs.partialText == rhs.partialText && lhs.isFinal == rhs.isFinal
+    }
+}
+
 public struct DistillData: Codable, Sendable {
     // Core fields (all tiers)
     public let summary: String

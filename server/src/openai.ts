@@ -86,12 +86,14 @@ export async function createChatJSON({
   verbosity = 'low',
   reasoningEffort = 'medium',
   schema,
+  model,
 }: {
   system: string;
   user: string;
   verbosity?: Verbosity;
   reasoningEffort?: ReasoningEffort;
   schema?: { name: string; schema: any };
+  model?: string; // optional override
 }): Promise<CreateChatResult> {
   const { result } = await requestWithRetry(async () => {
     const startTime = Date.now();
@@ -99,7 +101,7 @@ export async function createChatJSON({
     const timeout = setTimeout(() => controller.abort(), 30000);
     try {
       const requestBody = {
-        model: MODEL,
+        model: model || MODEL,
         // Messages as structured content blocks for Responses API
         input: [
           { role: 'system', content: [{ type: 'input_text', text: system }] },
