@@ -3,13 +3,12 @@ import Foundation
 import SwiftData
 
 @MainActor
-final class AutoTitleJobRepositoryImpl: ObservableObject, AutoTitleJobRepository {
-    @Published private var jobsCache: [AutoTitleJob] = []
-
+final class AutoTitleJobRepositoryImpl: AutoTitleJobRepository {
+    private let jobsSubject = CurrentValueSubject<[AutoTitleJob], Never>([])
     private let context: ModelContext
 
     var jobsPublisher: AnyPublisher<[AutoTitleJob], Never> {
-        $jobsCache.eraseToAnyPublisher()
+        jobsSubject.eraseToAnyPublisher()
     }
 
     init(context: ModelContext) {
@@ -18,15 +17,15 @@ final class AutoTitleJobRepositoryImpl: ObservableObject, AutoTitleJobRepository
     }
 
     func fetchAllJobs() -> [AutoTitleJob] {
-        jobsCache
+        jobsSubject.value
     }
 
     func fetchQueuedJobs() -> [AutoTitleJob] {
-        jobsCache.filter { $0.status == .queued || $0.status == .processing }
+        jobsSubject.value.filter { $0.status == .queued || $0.status == .processing }
     }
 
     func job(for memoId: UUID) -> AutoTitleJob? {
-        jobsCache.first { $0.memoId == memoId }
+        jobsSubject.value.first { $0.memoId == memoId }
     }
 
     func save(_ job: AutoTitleJob) {
@@ -87,10 +86,10 @@ final class AutoTitleJobRepositoryImpl: ObservableObject, AutoTitleJobRepository
         let descriptor = FetchDescriptor<AutoTitleJobModel>(sortBy: [SortDescriptor(\.createdAt, order: .forward)])
         do {
             let models = try context.fetch(descriptor)
-            jobsCache = models.map { mapModel($0) }
+            jobsSubject.send(models.map { mapModel($0) })
         } catch {
             print("❌ AutoTitleJobRepository: Failed to fetch jobs: \(error)")
-            jobsCache = []
+            jobsSubject.send([])
         }
     }
 

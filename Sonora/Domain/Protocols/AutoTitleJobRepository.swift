@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 @MainActor
-protocol AutoTitleJobRepository: ObservableObject {
+protocol AutoTitleJobRepository {
     var jobsPublisher: AnyPublisher<[AutoTitleJob], Never> { get }
 
     func fetchAllJobs() -> [AutoTitleJob]
