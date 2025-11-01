@@ -18,9 +18,8 @@ struct TranscriptionStateChange {
 }
 
 @MainActor
-protocol TranscriptionRepository: ObservableObject {
-    var objectWillChange: ObservableObjectPublisher { get }
-    var transcriptionStates: [String: TranscriptionState] { get set }
+protocol TranscriptionRepository {
+    var transcriptionStates: [String: TranscriptionState] { get }
 
     /// Publisher for transcription state changes - Swift 6 compliant event-driven updates
     var stateChangesPublisher: AnyPublisher<TranscriptionStateChange, Never> { get }

@@ -3,8 +3,12 @@ import Foundation
 import SwiftData
 
 @MainActor
-final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionRepository {
-    @Published var transcriptionStates: [String: TranscriptionState] = [:]
+final class TranscriptionRepositoryImpl: TranscriptionRepository {
+    private let transcriptionStatesSubject = CurrentValueSubject<[String: TranscriptionState], Never>([:])
+
+    var transcriptionStates: [String: TranscriptionState] {
+        transcriptionStatesSubject.value
+    }
 
     // MARK: - Event-Driven State Changes (Swift 6 Compliant)
 
@@ -74,8 +78,10 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
 
     func saveTranscriptionState(_ state: TranscriptionState, for memoId: UUID) {
         let key = memoIdKey(for: memoId)
-        let previousState = transcriptionStates[key]
-        transcriptionStates[key] = state
+        var states = transcriptionStatesSubject.value
+        let previousState = states[key]
+        states[key] = state
+        transcriptionStatesSubject.send(states)
 
         // Publish state change event - Swift 6 compliant MainActor isolation
         let stateChange = TranscriptionStateChange(
@@ -121,11 +127,13 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
 
     func getTranscriptionState(for memoId: UUID) -> TranscriptionState {
         let key = memoIdKey(for: memoId)
-        if let cached = transcriptionStates[key] { return cached }
+        var states = transcriptionStatesSubject.value
+        if let cached = states[key] { return cached }
 
         guard let model = fetchTranscriptionModel(for: memoId) else {
             let state = TranscriptionState.notStarted
-            transcriptionStates[key] = state
+            states[key] = state
+            transcriptionStatesSubject.send(states)
 
             // Publish initial state discovery event
             let stateChange = TranscriptionStateChange(
@@ -139,7 +147,8 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
         }
 
         let state = mapModelToState(model)
-        transcriptionStates[key] = state
+        states[key] = state
+        transcriptionStatesSubject.send(states)
 
         // Publish state discovery event when loading from persistent storage
         let stateChange = TranscriptionStateChange(
@@ -154,8 +163,10 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
 
     func deleteTranscriptionData(for memoId: UUID) {
         let key = memoIdKey(for: memoId)
-        let previousState = transcriptionStates[key]
-        transcriptionStates.removeValue(forKey: key)
+        var states = transcriptionStatesSubject.value
+        let previousState = states[key]
+        states.removeValue(forKey: key)
+        transcriptionStatesSubject.send(states)
 
         if let model = fetchTranscriptionModel(for: memoId) {
             context.delete(model)
@@ -227,7 +238,7 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
     }
 
     func clearTranscriptionCache() {
-        transcriptionStates.removeAll()
+        transcriptionStatesSubject.send([:])
         logger.debug("Cleared transcription cache", category: .repository, context: LogContext())
     }
 
@@ -235,9 +246,10 @@ final class TranscriptionRepositoryImpl: ObservableObject, TranscriptionReposito
         guard !memoIds.isEmpty else { return [:] }
         var result: [UUID: TranscriptionState] = [:]
         // Use cache first
+        let states = transcriptionStatesSubject.value
         for id in memoIds {
             let key = memoIdKey(for: id)
-            if let cached = transcriptionStates[key] { result[id] = cached }
+            if let cached = states[key] { result[id] = cached }
         }
         let missing = memoIds.filter { result[$0] == nil }
         guard !missing.isEmpty else { return result }
