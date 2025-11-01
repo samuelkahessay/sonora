@@ -1,11 +1,10 @@
 import Foundation
-import Combine
 @testable import Sonora
 
 /// Mock implementation of AnalysisServiceProtocol for testing
 /// Uses programmatic streaming simulation for testing SSE behavior
 @MainActor
-final class StreamingMockAnalysisService: ObservableObject, AnalysisServiceProtocol {
+final class StreamingMockAnalysisService: AnalysisServiceProtocol {
 
     // MARK: - Configuration
 

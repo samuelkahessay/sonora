@@ -1,6 +1,6 @@
 import Foundation
 
-class AnalysisService: ObservableObject, AnalysisServiceProtocol, @unchecked Sendable {
+final class AnalysisService: AnalysisServiceProtocol, Sendable {
     private let config = AppConfiguration.shared
 
     func analyzeWithStreaming<T: Codable & Sendable>(

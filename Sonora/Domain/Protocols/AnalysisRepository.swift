@@ -1,8 +1,7 @@
-import Combine
 import Foundation
 
 @MainActor
-protocol AnalysisRepository: ObservableObject {
+protocol AnalysisRepository {
     func saveAnalysisResult<T: Codable>(_ result: AnalyzeEnvelope<T>, for memoId: UUID, mode: AnalysisMode)
     func getAnalysisResult<T: Codable>(for memoId: UUID, mode: AnalysisMode, responseType: T.Type) -> AnalyzeEnvelope<T>?
     func hasAnalysisResult(for memoId: UUID, mode: AnalysisMode) -> Bool

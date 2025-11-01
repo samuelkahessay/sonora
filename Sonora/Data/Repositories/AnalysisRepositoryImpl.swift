@@ -1,9 +1,8 @@
-import Combine
 import Foundation
 import SwiftData
 
 @MainActor
-final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
+final class AnalysisRepositoryImpl: AnalysisRepository {
     private var analysisCache: [String: Any] = [:]
     private var analysisHistory: [UUID: [(mode: AnalysisMode, timestamp: Date)]] = [:]
     private let logger: any LoggerProtocol
@@ -135,6 +134,13 @@ final class AnalysisRepositoryImpl: ObservableObject, AnalysisRepository {
             let items = try modelContext.fetch(descriptor)
             for item in items { modelContext.delete(item) }
             try modelContext.save()
+
+            // Clear cache entries for all modes of this memo
+            for mode in AnalysisMode.allCases {
+                let key = cacheKey(for: memoId, mode: mode)
+                analysisCache.removeValue(forKey: key)
+            }
+
             analysisHistory.removeValue(forKey: memoId)
             print("🗑️ AnalysisRepository: Deleted all analysis results for memo \(memoId)")
         } catch {

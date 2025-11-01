@@ -1,7 +1,6 @@
-import Combine
 import Foundation
 
-protocol AnalysisServiceProtocol: ObservableObject, Sendable {
+protocol AnalysisServiceProtocol: Sendable {
     // Base analyze method - implementations should provide default nil for historicalContext
     func analyze<T: Codable & Sendable>(
         mode: AnalysisMode,
