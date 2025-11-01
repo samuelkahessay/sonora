@@ -11,7 +11,7 @@ final class AudioPlayerProxy: NSObject, AVAudioPlayerDelegate {
 }
 
 @MainActor
-final class AudioRepositoryImpl: ObservableObject, AudioRepository {
+final class AudioRepositoryImpl: AudioRepository {
     @Published var playingMemo: Memo?
     @Published var isPlaying = false
 
@@ -126,19 +126,33 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
         print("🎵 AudioRepositoryImpl: BackgroundAudioService configured")
     }
 
-    // MARK: - Internal Polling for UI Streams
+    // MARK: - Reactive Subscriptions
     private func setupPolling() {
-        // 0.1s polling to expose stable UI publishers; service also updates internally
-        Timer.publish(every: 0.1, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self = self else { return }
-                // Recording time
-                self.recordingTimeSubject.send(self.backgroundAudioService.recordingTime)
-                // Permission status
-                self.permissionStatusSubject.send(MicrophonePermissionStatus.current())
-                // Countdown
-                self.countdownSubject.send((self.backgroundAudioService.isInCountdown, self.backgroundAudioService.remainingTime))
+        // Subscribe to recording time changes (reactive, no polling)
+        backgroundAudioService.$recordingTime
+            .sink { [weak self] time in
+                self?.recordingTimeSubject.send(time)
+            }
+            .store(in: &cancellables)
+
+        // Subscribe to countdown state changes (reactive, no polling)
+        Publishers.CombineLatest(
+            backgroundAudioService.$isInCountdown,
+            backgroundAudioService.$remainingTime
+        )
+        .sink { [weak self] isInCountdown, remainingTime in
+            self?.countdownSubject.send((isInCountdown, remainingTime))
+        }
+        .store(in: &cancellables)
+
+        // Subscribe to permission changes (reactive, no polling)
+        backgroundAudioService.$hasPermission
+            .map { hasPermission -> MicrophonePermissionStatus in
+                // When permission state changes, get the current detailed status
+                MicrophonePermissionStatus.current()
+            }
+            .sink { [weak self] status in
+                self?.permissionStatusSubject.send(status)
             }
             .store(in: &cancellables)
 
@@ -378,9 +392,6 @@ final class AudioRepositoryImpl: ObservableObject, AudioRepository {
 
         // Save the recording to the documents directory if needed
         // This would typically trigger memo creation in the repository layer
-
-        // Notify observers if needed
-        objectWillChange.send()
     }
 
     /// Handle recording failure

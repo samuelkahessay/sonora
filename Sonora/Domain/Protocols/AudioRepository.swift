@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 @MainActor
-protocol AudioRepository: ObservableObject {
+protocol AudioRepository {
     // MARK: - Playback Properties
     var playingMemo: Memo? { get set }
     var isPlaying: Bool { get set }
