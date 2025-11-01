@@ -139,7 +139,7 @@ struct RecordingViewModelTests {
 
         // Trigger recording finished callback
         mocks.audioRepository.simulateRecordingFinished(url: testURL)
-        try await Task.sleep(nanoseconds: TestConstants.shortDelay)
+        try await Task.sleep(nanoseconds: TestConstants.debounceDelay)
 
         #expect(mocks.handleNewRecording.executeCallCount == 1)
     }
