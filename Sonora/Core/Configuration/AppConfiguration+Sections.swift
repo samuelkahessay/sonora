@@ -271,19 +271,19 @@ struct AnalysisConfig: Sendable {
     static func defaults(build: BuildConfiguration) -> Self {
         if build.isDebug {
             return Self(
-                distillAnalysisTimeout: 60.0,
-                contentAnalysisTimeout: 35.0,
-                themesAnalysisTimeout: 30.0,
-                todosAnalysisTimeout: 28.0,
+                distillAnalysisTimeout: 180.0,
+                contentAnalysisTimeout: 180.0,
+                themesAnalysisTimeout: 180.0,
+                todosAnalysisTimeout: 180.0,
                 minimumTranscriptLength: 10,
                 maximumTranscriptLength: 50_000
             )
         } else {
             return Self(
-                distillAnalysisTimeout: 60.0,
-                contentAnalysisTimeout: 20.0,
-                themesAnalysisTimeout: 18.0,
-                todosAnalysisTimeout: 16.0,
+                distillAnalysisTimeout: 180.0,
+                contentAnalysisTimeout: 180.0,
+                themesAnalysisTimeout: 180.0,
+                todosAnalysisTimeout: 180.0,
                 minimumTranscriptLength: 10,
                 maximumTranscriptLength: 50_000
             )
