@@ -2,9 +2,8 @@ import Combine
 import Foundation
 
 @MainActor
-protocol MemoRepository: ObservableObject {
-    var objectWillChange: ObservableObjectPublisher { get }
-    var memos: [Memo] { get set }
+protocol MemoRepository {
+    var memos: [Memo] { get }
 
     // MARK: - Reactive Publishers (Swift 6 Compliant)
 
@@ -18,6 +17,10 @@ protocol MemoRepository: ObservableObject {
     func stopPlaying()
     /// Seek playback position for the specified memo (no-op if not the active memo)
     func seek(to time: TimeInterval, for memo: Memo)
+
+    /// Publishes playback state changes (playing memo and play/pause state)
+    var playbackStatePublisher: AnyPublisher<MemoPlaybackState, Never> { get }
+
     /// Publishes periodic playback progress updates for the active memo
     var playbackProgressPublisher: AnyPublisher<PlaybackProgress, Never> { get }
 
@@ -42,5 +45,11 @@ struct PlaybackProgress: Equatable, Sendable {
     let memoId: UUID
     let currentTime: TimeInterval
     let duration: TimeInterval
+    let isPlaying: Bool
+}
+
+/// Memo playback state update (playing memo and play/pause state)
+struct MemoPlaybackState: Equatable, Sendable {
+    let playingMemo: Memo?
     let isPlaying: Bool
 }

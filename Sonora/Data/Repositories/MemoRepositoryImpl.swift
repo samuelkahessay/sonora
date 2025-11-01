@@ -5,7 +5,16 @@ import SwiftData
 
 @MainActor
 final class MemoRepositoryImpl: ObservableObject, MemoRepository {
-    @Published var memos: [Memo] = []
+    // MARK: - State Management with Subjects
+
+    private let memosSubject = CurrentValueSubject<[Memo], Never>([])
+    private let playbackStateSubject = CurrentValueSubject<MemoPlaybackState, Never>(
+        MemoPlaybackState(playingMemo: nil, isPlaying: false)
+    )
+
+    var memos: [Memo] {
+        get { memosSubject.value }
+    }
 
     // Lightweight in-memory cache for common list queries
     private var memosCache: [Memo]?
@@ -16,12 +25,22 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
 
     /// Publisher for memo list changes - enables unified state management
     var memosPublisher: AnyPublisher<[Memo], Never> {
-        $memos.eraseToAnyPublisher()
+        memosSubject.eraseToAnyPublisher()
     }
 
-    // Playback state
-    @Published private(set) var playingMemo: Memo?
-    @Published private(set) var isPlaying: Bool = false
+    /// Publisher for playback state changes
+    var playbackStatePublisher: AnyPublisher<MemoPlaybackState, Never> {
+        playbackStateSubject.eraseToAnyPublisher()
+    }
+
+    // Playback state (derived from subject)
+    var playingMemo: Memo? {
+        playbackStateSubject.value.playingMemo
+    }
+
+    var isPlaying: Bool {
+        playbackStateSubject.value.isPlaying
+    }
 
     // Transcription is handled via dedicated repository and use cases
     private let transcriptionRepository: any TranscriptionRepository
@@ -34,6 +53,17 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
 
     private let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private let memosDirectoryPath: URL
+
+    // MARK: - Private Helpers
+
+    private func updatePlaybackState(playingMemo: Memo?, isPlaying: Bool) {
+        let newState = MemoPlaybackState(playingMemo: playingMemo, isPlaying: isPlaying)
+        playbackStateSubject.send(newState)
+    }
+
+    private func updateMemos(_ newMemos: [Memo]) {
+        memosSubject.send(newMemos)
+    }
 
     // MARK: - Initialization
     init(
@@ -90,7 +120,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         // Resume paused memo
         if playingMemo?.id == memo.id && !isPlaying && player != nil {
             player?.play()
-            isPlaying = true
+            updatePlaybackState(playingMemo: playingMemo, isPlaying: true)
             print("▶️ MemoRepository: Resumed \(memo.filename)")
             return
         }
@@ -114,8 +144,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             player = audio
             audio.prepareToPlay()
             audio.play()
-            playingMemo = memo
-            isPlaying = true
+            updatePlaybackState(playingMemo: memo, isPlaying: true)
             print("▶️ MemoRepository: Playing \(memo.filename)")
             startPlaybackTimer()
             Task { @MainActor in
@@ -131,7 +160,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
 
     func pausePlaying() {
         player?.pause()
-        isPlaying = false
+        updatePlaybackState(playingMemo: playingMemo, isPlaying: false)
         print("⏸️ MemoRepository: Paused playback")
         Task { @MainActor in
             self.publishProgress()
@@ -141,8 +170,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     func stopPlaying() {
         player?.stop()
         player = nil
-        isPlaying = false
-        playingMemo = nil
+        updatePlaybackState(playingMemo: nil, isPlaying: false)
         print("⏹️ MemoRepository: Stopped playback")
         stopPlaybackTimer()
     }
@@ -159,8 +187,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 let audio = try AVAudioPlayer(contentsOf: memo.fileURL)
                 player = audio
                 audio.prepareToPlay()
-                playingMemo = memo
-                isPlaying = false
+                updatePlaybackState(playingMemo: memo, isPlaying: false)
             } catch {
                 print("❌ MemoRepository: Failed to prepare player for seek: \(error)")
                 return
@@ -253,14 +280,15 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     }
 
     private func refreshAutoTitleStatesFromJobs() {
-        let updated = memos.map { memo -> Memo in
+        let currentMemos = memosSubject.value
+        let updated = currentMemos.map { memo -> Memo in
             let state = autoTitleState(for: memo.id)
             return memo.autoTitleState == state ? memo : memo.withAutoTitleState(state)
         }
 
-        guard updated != memos else { return }
+        guard updated != currentMemos else { return }
 
-        memos = updated
+        updateMemos(updated)
         memosCache = updated
         memosCacheTime = Date()
     }
@@ -268,7 +296,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     func loadMemos() {
         // Serve cached list immediately if fresh (perceived latency win)
         if let cache = memosCache, let ts = memosCacheTime, Date().timeIntervalSince(ts) < 3 {
-            self.memos = cache
+            updateMemos(cache)
         }
         do {
             let descriptor = FetchDescriptor<MemoModel>(sortBy: [SortDescriptor(\.creationDate, order: .reverse)])
@@ -304,7 +332,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                     autoTitleState: autoTitleState(for: model.id)
                 )
             }
-            self.memos = mapped
+            updateMemos(mapped)
             self.memosCache = mapped
             self.memosCacheTime = Date()
             print("✅ MemoRepository: Loaded \(mapped.count) memos from SwiftData (batched states)")
@@ -320,7 +348,7 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             }
         } catch {
             print("❌ MemoRepository: Failed to fetch memos from SwiftData: \(error)")
-            self.memos = []
+            updateMemos([])
             self.memosCache = nil
         }
     }
@@ -448,13 +476,15 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             )
 
             // Update in-memory list
-            if let idx = memos.firstIndex(where: { $0.id == memo.id }) {
-                memos[idx] = savedMemo
+            var currentMemos = memosSubject.value
+            if let idx = currentMemos.firstIndex(where: { $0.id == memo.id }) {
+                currentMemos[idx] = savedMemo
             } else {
-                memos.append(savedMemo)
-                memos.sort { $0.recordingEndDate > $1.recordingEndDate }
+                currentMemos.append(savedMemo)
+                currentMemos.sort { $0.recordingEndDate > $1.recordingEndDate }
                 print("📝 MemoRepository: Added memo \(savedMemo.filename) to in-memory list with ID \(savedMemo.id)")
             }
+            updateMemos(currentMemos)
 
             print("✅ MemoRepository: Successfully saved memo \(memo.filename) [SwiftData]")
             // Invalidate list cache
@@ -492,7 +522,9 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             }
 
             // Update in-memory list
-            memos.removeAll { $0.id == memo.id }
+            var currentMemos = memosSubject.value
+            currentMemos.removeAll { $0.id == memo.id }
+            updateMemos(currentMemos)
 
             print("✅ MemoRepository: Successfully deleted memo \(memo.filename)")
             // Invalidate list cache
@@ -572,10 +604,11 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
             do { try context.save() } catch { print("❌ MemoRepository: Failed to rename memo in SwiftData: \(error)") }
         }
         // Update in-memory memo as well
-        if let index = memos.firstIndex(where: { $0.id == memo.id }) {
-            let updatedMemo = memos[index].withCustomTitle(sanitizedTitle)
-            memos[index] = updatedMemo
-            objectWillChange.send()
+        var currentMemos = memosSubject.value
+        if let index = currentMemos.firstIndex(where: { $0.id == memo.id }) {
+            let updatedMemo = currentMemos[index].withCustomTitle(sanitizedTitle)
+            currentMemos[index] = updatedMemo
+            updateMemos(currentMemos)
             let displayText = sanitizedTitle ?? "default"
             let shareableText = sanitizedTitle.flatMap { FileNameSanitizer.sanitize($0) } ?? "default filename"
             print("✅ MemoRepository: Successfully renamed memo to '\(displayText)' with shareable filename '\(shareableText)'")

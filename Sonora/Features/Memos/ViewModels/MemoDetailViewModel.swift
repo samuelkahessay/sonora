@@ -528,11 +528,59 @@ private extension TranscriptionState {
 // MARK: - Setup & Repository Wiring
 extension MemoDetailViewModel {
     fileprivate func setupBindings() {
-        // React to repository changes instead of polling
-        memoRepository.objectWillChange
+        // Subscribe to playback state changes
+        memoRepository.playbackStatePublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] playbackState in
+                guard let self = self, let memo = self.currentMemo else { return }
+                let newIsPlaying = playbackState.playingMemo?.id == memo.id && playbackState.isPlaying
+                if self.isPlaying != newIsPlaying {
+                    self.isPlaying = newIsPlaying
+                }
+            }
+            .store(in: &cancellables)
+
+        // Subscribe to memo list changes to detect metadata updates (e.g., auto-title completion)
+        memoRepository.memosPublisher
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
-                self?.updateFromRepository()
+                guard let self = self, let memo = self.currentMemo else { return }
+
+                // Update transcription state
+                let newTranscriptionState = self.getTranscriptionStateUseCase.execute(memo: memo)
+                if !self.transcriptionState.isEqual(to: newTranscriptionState) {
+                    self.transcriptionState = newTranscriptionState
+                }
+
+                // Update duration baseline from memo if not set yet
+                if self.state.audio.duration == 0 {
+                    self.state.audio.duration = memo.duration
+                }
+
+                // Sync latest memo metadata (including auto-generated customTitle)
+                if let latest = self.memoRepository.getMemo(by: memo.id) {
+                    // If the title changed (e.g., auto-title completed), update local state
+                    let latestDisplay = latest.displayName
+                    if latestDisplay != self.currentMemoTitle {
+                        self.currentMemoTitle = latestDisplay
+                    }
+                    // Keep an up-to-date reference to the memo
+                    if latest != memo {
+                        self.currentMemo = latest
+                    }
+                }
+
+                // Update language detection + moderation from metadata if available
+                if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
+                    if let lang = meta.detectedLanguage, let score = meta.qualityScore {
+                        self.updateLanguageDetection(language: lang, qualityScore: score)
+                    }
+                    if let flagged = meta.moderationFlagged { self.transcriptionModerationFlagged = flagged }
+                    if let cats = meta.moderationCategories { self.transcriptionModerationCategories = cats }
+                    if let service = meta.transcriptionService {
+                        self.state.transcription.service = service
+                    }
+                }
             }
             .store(in: &cancellables)
 
@@ -594,50 +642,6 @@ extension MemoDetailViewModel {
         activeOperations = allSummaries.map { $0.operation.id }
     }
 
-    fileprivate func updateFromRepository() {
-        guard let memo = currentMemo else { return }
-
-        // Update transcription state
-        let newTranscriptionState = getTranscriptionStateUseCase.execute(memo: memo)
-        if !transcriptionState.isEqual(to: newTranscriptionState) {
-            transcriptionState = newTranscriptionState
-        }
-
-        // Update playing state
-        let newIsPlaying = memoRepository.playingMemo?.id == memo.id && memoRepository.isPlaying
-        if isPlaying != newIsPlaying {
-            isPlaying = newIsPlaying
-        }
-        // Update duration baseline from memo if not set yet
-        if state.audio.duration == 0 {
-            state.audio.duration = memo.duration
-        }
-
-        // Sync latest memo metadata (including auto-generated customTitle)
-        if let latest = memoRepository.getMemo(by: memo.id) {
-            // If the title changed (e.g., auto-title completed), update local state
-            let latestDisplay = latest.displayName
-            if latestDisplay != currentMemoTitle {
-                currentMemoTitle = latestDisplay
-            }
-            // Keep an up-to-date reference to the memo
-            if latest != memo {
-                currentMemo = latest
-            }
-        }
-
-        // Update language detection + moderation from metadata if available
-        if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
-            if let lang = meta.detectedLanguage, let score = meta.qualityScore {
-                updateLanguageDetection(language: lang, qualityScore: score)
-            }
-            if let flagged = meta.moderationFlagged { transcriptionModerationFlagged = flagged }
-            if let cats = meta.moderationCategories { transcriptionModerationCategories = cats }
-            if let service = meta.transcriptionService {
-                state.transcription.service = service
-            }
-        }
-    }
 }
 
 // MARK: - User Actions & Operations

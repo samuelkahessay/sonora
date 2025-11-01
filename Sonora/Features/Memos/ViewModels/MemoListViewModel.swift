@@ -234,14 +234,11 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         unifiedStateSubscription = Publishers.CombineLatest3(
             memoRepository.memosPublisher,
             transcriptionRepository.stateChangesPublisher.map { _ in () }.prepend(()) /* Trigger on any transcription change */,
-            memoRepository.memosPublisher.map { [weak self] _ in
-                // Get current playback state
-                (self?.memoRepository.playingMemo, self?.memoRepository.isPlaying ?? false)
-            }
+            memoRepository.playbackStatePublisher
         )
         .receive(on: RunLoop.main)
         .sink { [weak self] memos, _, playbackState in
-            self?.updateUnifiedState(memos: memos, playingMemo: playbackState.0, isPlaying: playbackState.1)
+            self?.updateUnifiedState(memos: memos, playingMemo: playbackState.playingMemo, isPlaying: playbackState.isPlaying)
         }
 
         unifiedStateSubscription?.store(in: &cancellables)
@@ -250,6 +247,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 guard let self else { return }
+                // Directly access current values from repository (backed by CurrentValueSubject)
                 self.updateUnifiedState(
                     memos: self.memoRepository.memos,
                     playingMemo: self.memoRepository.playingMemo,
@@ -258,11 +256,15 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             }
         titleStateSubscription?.store(in: &cancellables)
 
-        // Legacy repository observation for backward compatibility
-        memoRepository.objectWillChange
+        // Subscribe to playback state changes
+        memoRepository.playbackStatePublisher
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.updateFromRepository()
+            .sink { [weak self] playbackState in
+                guard let self = self else { return }
+                self.playbackState = PlaybackState(
+                    playingMemo: playbackState.playingMemo,
+                    isPlaying: playbackState.isPlaying
+                )
             }
             .store(in: &cancellables)
 
@@ -291,7 +293,12 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         }
 
         // Initial update
-        updateFromRepository()
+        allMemos = memoRepository.memos
+        recomputeDisplayedMemos()
+        playbackState = PlaybackState(
+            playingMemo: memoRepository.playingMemo,
+            isPlaying: memoRepository.isPlaying
+        )
         updateTranscriptionStates()
 
         // Initialize unified state
@@ -322,15 +329,6 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         Publishers.CombineLatest($filterStartDate, $filterEndDate)
             .sink { [weak self] _, _ in self?.recomputeDisplayedMemos() }
             .store(in: &cancellables)
-    }
-
-    private func updateFromRepository() {
-        allMemos = memoRepository.memos
-        recomputeDisplayedMemos()
-        playbackState = PlaybackState(
-            playingMemo: memoRepository.playingMemo,
-            isPlaying: memoRepository.isPlaying
-        )
     }
 
     private func updateTranscriptionStates() {
