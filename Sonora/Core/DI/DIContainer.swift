@@ -182,6 +182,11 @@ final class DIContainer: ObservableObject, Resolver {
             RecordingTimerService()
         }
 
+        // Register AudioQualityManager (required by BackgroundAudioService)
+        register(AudioQualityManager.self) { _ in
+            AudioQualityManager()
+        }
+
         // Register BackgroundAudioService with orchestrated services
         register(BackgroundAudioService.self) { resolver in
             let sessionService = (resolver as? Self)?.requireResolve(AudioSessionService.self, "AudioSessionService")
@@ -287,7 +292,7 @@ final class DIContainer: ObservableObject, Resolver {
 
         // Phase 2: Instantiate optimization services (strong references for app lifetime)
         if self._audioQualityManager == nil {
-            self._audioQualityManager = AudioQualityManager()
+            self._audioQualityManager = resolve(AudioQualityManager.self)
         }
 
         if self._transcriptionServiceFactory == nil {
