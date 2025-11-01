@@ -9,6 +9,16 @@ import Foundation
 @testable import Sonora
 import SwiftData
 import Testing
+
+// MARK: - Mock Services
+final class MockSpotlightIndexer: SpotlightIndexing {
+    var indexed: [UUID] = []
+    var deleted: [UUID] = []
+    func index(memoID: UUID) async { indexed.append(memoID) }
+    func delete(memoID: UUID) async { deleted.append(memoID) }
+    func reindexAll() async {}
+}
+
 struct SonoraTests {
 
     @MainActor
@@ -72,12 +82,34 @@ struct SonoraTests {
     @Test
     @MainActor
     func testUpdatedMemoUseCases() async throws {
-        // Create test repository
-        let repository = try makeTestMemoRepository()
+        // Create test repository and dependencies
+        let schema = Schema([
+            MemoModel.self,
+            TranscriptionModel.self,
+            AnalysisResultModel.self,
+            AutoTitleJobModel.self
+        ])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+        let transcriptionRepo = TranscriptionRepositoryImpl(context: context)
+        let analysisRepo = AnalysisRepositoryImpl(context: context)
+        let jobRepo = AutoTitleJobRepositoryImpl(context: context)
+        let repository = MemoRepositoryImpl(
+            context: context,
+            transcriptionRepository: transcriptionRepo,
+            autoTitleJobRepository: jobRepo
+        )
+        let spotlightIndexer = MockSpotlightIndexer()
 
         // Create use cases
         let loadMemosUseCase = LoadMemosUseCase(memoRepository: repository)
-        let deleteMemosUseCase = DeleteMemoUseCase(memoRepository: repository)
+        let deleteMemosUseCase = DeleteMemoUseCase(
+            memoRepository: repository,
+            analysisRepository: analysisRepo,
+            transcriptionRepository: transcriptionRepo,
+            spotlightIndexer: spotlightIndexer
+        )
         let handleRecordingUseCase = HandleNewRecordingUseCase(memoRepository: repository, eventBus: EventBus.shared)
         let playMemoUseCase = PlayMemoUseCase(memoRepository: repository)
 

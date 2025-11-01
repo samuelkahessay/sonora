@@ -14,6 +14,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
     private let memoRepository: any MemoRepository
     private let analysisRepository: any AnalysisRepository
     private let transcriptionRepository: any TranscriptionRepository
+    private let spotlightIndexer: any SpotlightIndexing
     private let logger: any LoggerProtocol
 
     // MARK: - Initialization
@@ -21,24 +22,14 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
         memoRepository: any MemoRepository,
         analysisRepository: any AnalysisRepository,
         transcriptionRepository: any TranscriptionRepository,
+        spotlightIndexer: any SpotlightIndexing,
         logger: any LoggerProtocol = Logger.shared
     ) {
         self.memoRepository = memoRepository
         self.analysisRepository = analysisRepository
         self.transcriptionRepository = transcriptionRepository
+        self.spotlightIndexer = spotlightIndexer
         self.logger = logger
-    }
-
-    // MARK: - Convenience Initializer (for backward compatibility)
-    @MainActor
-    convenience init(memoRepository: any MemoRepository) {
-        let container = DIContainer.shared
-        self.init(
-            memoRepository: memoRepository,
-            analysisRepository: container.analysisRepository(),
-            transcriptionRepository: container.transcriptionRepository(),
-            logger: container.logger()
-        )
     }
 
     // MARK: - Use Case Execution
@@ -84,7 +75,7 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
 
             // Update Spotlight index (best-effort)
             Task {
-                await DIContainer.shared.spotlightIndexer().delete(memoID: memo.id)
+                await spotlightIndexer.delete(memoID: memo.id)
             }
 
         } catch let repositoryError as RepositoryError {

@@ -43,6 +43,7 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     private let backgroundTaskService: BackgroundTaskService
     private let permissionService: AudioPermissionService
     private let timerService: RecordingTimerService
+    private let audioQualityManager: AudioQualityManager
 
     // MARK: - Private Properties
     private var cancellables = Set<AnyCancellable>()
@@ -54,8 +55,7 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
     /// Current optimized recording settings (resolved lazily via AudioQualityManager)
     private var currentRecordingSettings: AudioRecordingSettings {
         // Prefer adaptive, voice-optimized settings via the manager when available
-        let mgr = DIContainer.shared.audioQualityManager()
-        return mgr.getOptimalSettings(for: .voice)
+        return audioQualityManager.getOptimalSettings(for: .voice)
     }
 
     // MARK: - Callbacks
@@ -85,13 +85,15 @@ final class BackgroundAudioService: NSObject, ObservableObject, @unchecked Senda
          recordingService: AudioRecordingService = AudioRecordingService(),
          backgroundTaskService: BackgroundTaskService = BackgroundTaskService(),
          permissionService: AudioPermissionService = AudioPermissionService(),
-         timerService: RecordingTimerService = RecordingTimerService()) {
+         timerService: RecordingTimerService = RecordingTimerService(),
+         audioQualityManager: AudioQualityManager) {
 
         self.sessionService = sessionService
         self.recordingService = recordingService
         self.backgroundTaskService = backgroundTaskService
         self.permissionService = permissionService
         self.timerService = timerService
+        self.audioQualityManager = audioQualityManager
 
         super.init()
 

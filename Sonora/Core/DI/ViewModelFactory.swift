@@ -71,6 +71,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
             transcriptionAPI: transcriptionAPI,
             eventBus: container.eventBus(),
             operationCoordinator: container.operationCoordinator(),
+            audioMetadataService: container.audioMetadataService(),
             moderationService: container.moderationService(),
             fillerWordFilter: fillerWordFilter
         )
@@ -91,6 +92,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
                 memoRepository: memoRepository,
                 analysisRepository: container.analysisRepository(),
                 transcriptionRepository: transcriptionRepository,
+                spotlightIndexer: container.spotlightIndexer(),
                 logger: container.logger()
             ),
             playMemoUseCase: PlayMemoUseCase(memoRepository: memoRepository),
@@ -121,6 +123,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
             transcriptionAPI: transcriptionAPI,
             eventBus: eventBus,
             operationCoordinator: operationCoordinator,
+            audioMetadataService: container.audioMetadataService(),
             moderationService: moderationService,
             fillerWordFilter: fillerWordFilter
         )
@@ -156,6 +159,7 @@ final class DefaultViewModelFactory: ViewModelFactory {
                 memoRepository: memoRepository,
                 analysisRepository: analysisRepository,
                 transcriptionRepository: transcriptionRepository,
+                spotlightIndexer: container.spotlightIndexer(),
                 logger: logger
             ),
             memoRepository: memoRepository,

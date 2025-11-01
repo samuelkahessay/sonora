@@ -57,6 +57,7 @@ final class DIContainer: ObservableObject, Resolver {
     // MARK: - Phase 2: Core Optimization Services
     private var _audioQualityManager: AudioQualityManager?
     private var _memoryPressureDetector: MemoryPressureDetector?
+    private var _audioMetadataService: (any AudioMetadataServiceProtocol)?
 
     // MARK: - EventKit Services (Protocol References)
     private var _eventKitRepository: (any EventKitRepository)?
@@ -193,12 +194,15 @@ final class DIContainer: ObservableObject, Resolver {
                 ?? { fatalError("DIContainer: resolver not DIContainer") }()
             let timerService = (resolver as? Self)?.requireResolve(RecordingTimerService.self, "RecordingTimerService")
                 ?? { fatalError("DIContainer: resolver not DIContainer") }()
+            let audioQualityManager = (resolver as? Self)?.requireResolve(AudioQualityManager.self, "AudioQualityManager")
+                ?? { fatalError("DIContainer: resolver not DIContainer") }()
             return BackgroundAudioService(
                 sessionService: sessionService,
                 recordingService: recordingService,
                 backgroundTaskService: backgroundTaskService,
                 permissionService: permissionService,
-                timerService: timerService
+                timerService: timerService,
+                audioQualityManager: audioQualityManager
             )
         }
 
@@ -348,6 +352,7 @@ final class DIContainer: ObservableObject, Resolver {
             transcriptionAPI: svc,
             eventBus: eventBus(),
             operationCoordinator: operationCoordinator(),
+            audioMetadataService: audioMetadataService(),
             moderationService: moderationService(),
             fillerWordFilter: fillerWordFilter()
         )
@@ -387,6 +392,17 @@ final class DIContainer: ObservableObject, Resolver {
         ensureConfigured()
         guard let det = _memoryPressureDetector else { fatalError("DIContainer not configured: memoryPressureDetector") }
         return det
+    }
+
+    /// Audio metadata service for extracting audio file information
+    @MainActor
+    func audioMetadataService() -> any AudioMetadataServiceProtocol {
+        ensureConfigured()
+        if _audioMetadataService == nil {
+            _audioMetadataService = AudioMetadataService()
+        }
+        guard let svc = _audioMetadataService else { fatalError("Failed to init audioMetadataService") }
+        return svc
     }
 
     /// Get transcript exporter service
@@ -749,6 +765,7 @@ final class DIContainer: ObservableObject, Resolver {
             transcriptionAPI: transcriptionService,
             eventBus: bus,
             operationCoordinator: _operationCoordinator,
+            audioMetadataService: AudioMetadataService(),
             moderationService: mod,
             fillerWordFilter: fillerWordFilter()
         )

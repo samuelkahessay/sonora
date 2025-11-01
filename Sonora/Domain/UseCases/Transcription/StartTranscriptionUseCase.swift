@@ -1,4 +1,3 @@
-import AVFoundation
 import Foundation
 
 @MainActor
@@ -12,6 +11,7 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
     private let logger: any LoggerProtocol
     private let moderationService: any ModerationServiceProtocol
     private let fillerWordFilter: any FillerWordFiltering
+    private let audioMetadataService: any AudioMetadataServiceProtocol
     // New dependencies for chunked flow
     private let vadService: any VADSplittingService
     private let chunkManager: AudioChunkManager
@@ -26,6 +26,7 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
         transcriptionAPI: any TranscriptionAPI,
         eventBus: any EventBusProtocol,
         operationCoordinator: any OperationCoordinatorProtocol,
+        audioMetadataService: any AudioMetadataServiceProtocol,
         logger: any LoggerProtocol = Logger.shared,
         vadService: any VADSplittingService = DefaultVADSplittingService(),
         chunkManager: AudioChunkManager = AudioChunkManager(),
@@ -39,6 +40,7 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
         self.transcriptionAPI = transcriptionAPI
         self.eventBus = eventBus
         self.operationCoordinator = operationCoordinator
+        self.audioMetadataService = audioMetadataService
         self.logger = logger
         self.vadService = vadService
         self.chunkManager = chunkManager
@@ -292,7 +294,7 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
     // MARK: - AI Labeling & Moderation
     private func annotateAIMetadataAndModerate(memoId: UUID, text: String) async {
         var meta: TranscriptionMetadata = await MainActor.run {
-            DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memoId) ?? TranscriptionMetadata()
+            transcriptionRepository.getTranscriptionMetadata(for: memoId) ?? TranscriptionMetadata()
         }
         meta.aiGenerated = true
         do {
@@ -303,7 +305,7 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
             // Best-effort; keep AI label.
         }
         await MainActor.run {
-            DIContainer.shared.transcriptionRepository().saveTranscriptionMetadata(meta, for: memoId)
+            transcriptionRepository.saveTranscriptionMetadata(meta, for: memoId)
         }
     }
 }
@@ -427,9 +429,7 @@ extension StartTranscriptionUseCase {
             return vadService
         }()
         let segments = try await vadToUse.detectVoiceSegments(audioURL: audioURL)
-        let asset = AVURLAsset(url: audioURL)
-        let durationTime = try await asset.load(.duration)
-        let totalDurationSec = CMTimeGetSeconds(durationTime)
+        let totalDurationSec = try await audioMetadataService.getAudioDuration(url: audioURL)
         return AudioAnalysis(segments: segments, forceChunk: forceChunk, totalDurationSec: totalDurationSec)
     }
 
@@ -631,9 +631,7 @@ extension StartTranscriptionUseCase {
 
     private func skipIfTooShort(audioURL: URL, memo: Memo, operationId: UUID, context: LogContext) async throws -> Bool {
         do {
-            let asset = AVURLAsset(url: audioURL)
-            let durationTime = try await asset.load(.duration)
-            let totalDurationSec = CMTimeGetSeconds(durationTime)
+            let totalDurationSec = try await audioMetadataService.getAudioDuration(url: audioURL)
             if totalDurationSec < 0.8 {
                 await MainActor.run {
                     transcriptionRepository.saveTranscriptionState(.failed("Clip too short"), for: memo.id)
