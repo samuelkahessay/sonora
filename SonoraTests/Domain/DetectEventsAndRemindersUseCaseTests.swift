@@ -319,14 +319,29 @@ private final class StubAnalysisService: ObservableObject, AnalysisServiceProtoc
         }
     }
 
-    func analyzeDistill(transcript: String, historicalContext: [HistoricalMemoContext]?) async throws -> AnalyzeEnvelope<DistillData> { fatalError("Not stubbed") }
+    func analyzeWithStreaming<T>(mode: AnalysisMode, transcript: String, responseType: T.Type, historicalContext: [HistoricalMemoContext]?, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<T> {
+        fatalError("Not stubbed")
+    }
 
+    func analyzeDistill(transcript: String, historicalContext: [HistoricalMemoContext]?) async throws -> AnalyzeEnvelope<DistillData> { fatalError("Not stubbed") }
     func analyzeDistill(transcript: String) async throws -> AnalyzeEnvelope<DistillData> { fatalError("Not stubbed") }
     func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData> { fatalError("Not stubbed") }
     func analyzeDistillSummary(transcript: String) async throws -> AnalyzeEnvelope<DistillSummaryData> { fatalError("Not stubbed") }
     func analyzeDistillActions(transcript: String) async throws -> AnalyzeEnvelope<DistillActionsData> { fatalError("Not stubbed") }
     func analyzeDistillThemes(transcript: String) async throws -> AnalyzeEnvelope<DistillThemesData> { fatalError("Not stubbed") }
     func analyzeDistillReflection(transcript: String) async throws -> AnalyzeEnvelope<DistillReflectionData> { fatalError("Not stubbed") }
+
+    func analyzeCognitiveClarityCBT(transcript: String) async throws -> AnalyzeEnvelope<CognitiveClarityData> { fatalError("Not stubbed") }
+    func analyzePhilosophicalEchoes(transcript: String) async throws -> AnalyzeEnvelope<PhilosophicalEchoesData> { fatalError("Not stubbed") }
+    func analyzeValuesRecognition(transcript: String) async throws -> AnalyzeEnvelope<ValuesRecognitionData> { fatalError("Not stubbed") }
+
+    func analyzeDistillSummaryStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<DistillSummaryData> { fatalError("Not stubbed") }
+    func analyzeDistillActionsStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<DistillActionsData> { fatalError("Not stubbed") }
+    func analyzeDistillReflectionStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<DistillReflectionData> { fatalError("Not stubbed") }
+
+    func analyzeCognitiveClarityCBTStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<CognitiveClarityData> { fatalError("Not stubbed") }
+    func analyzePhilosophicalEchoesStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<PhilosophicalEchoesData> { fatalError("Not stubbed") }
+    func analyzeValuesRecognitionStreaming(transcript: String, progress: AnalysisStreamingHandler?) async throws -> AnalyzeEnvelope<ValuesRecognitionData> { fatalError("Not stubbed") }
 }
 
 @MainActor

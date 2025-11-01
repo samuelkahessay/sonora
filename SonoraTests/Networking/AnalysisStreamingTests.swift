@@ -175,11 +175,11 @@ final class AnalysisStreamingTests: XCTestCase {
     func test_analyzeValuesRecognitionStreaming_receivesValidValues() async throws {
         // Given
         let transcript = "Family is the most important thing to me. I also value honesty and integrity in all my relationships."
-        var finalData: Any?
+        var finalReceived = false
 
         let progressHandler: AnalysisStreamingHandler = { update in
             if update.isFinal {
-                finalData = update.parsedData
+                finalReceived = true
             }
         }
 
@@ -190,6 +190,7 @@ final class AnalysisStreamingTests: XCTestCase {
         )
 
         // Then
+        XCTAssertTrue(finalReceived, "Should receive final update")
         XCTAssertEqual(envelope.mode, .valuesRecognition, "Mode should match")
         XCTAssertFalse(envelope.data.coreValues.isEmpty, "Should detect core values")
     }
