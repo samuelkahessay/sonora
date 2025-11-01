@@ -1,16 +1,16 @@
 import XCTest
 @testable import Sonora
 
-/// Integration tests for AI analysis streaming functionality
-/// Tests SSE parsing, progress updates, and final envelope construction
+/// Unit tests for AI analysis streaming functionality
+/// Tests SSE parsing, progress updates, and final envelope construction using mocks
 @MainActor
 final class AnalysisStreamingTests: XCTestCase {
 
-    var analysisService: AnalysisService!
+    var analysisService: StreamingMockAnalysisService!
 
     override func setUp() async throws {
         try await super.setUp()
-        analysisService = AnalysisService()
+        analysisService = StreamingMockAnalysisService()
     }
 
     override func tearDown() async throws {
@@ -66,6 +66,11 @@ final class AnalysisStreamingTests: XCTestCase {
         )
 
         // Then - Verify partial text grows progressively
+        guard partialLengths.count > 1 else {
+            XCTFail("Expected at least 2 interim updates, got \(partialLengths.count)")
+            return
+        }
+
         for i in 1..<partialLengths.count {
             XCTAssertGreaterThanOrEqual(
                 partialLengths[i],
