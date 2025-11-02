@@ -265,6 +265,7 @@ struct AnalysisConfig: Sendable {
     let contentAnalysisTimeout: TimeInterval
     let themesAnalysisTimeout: TimeInterval
     let todosAnalysisTimeout: TimeInterval
+    let proModeAnalysisTimeout: TimeInterval
     let minimumTranscriptLength: Int
     let maximumTranscriptLength: Int
 
@@ -275,6 +276,7 @@ struct AnalysisConfig: Sendable {
                 contentAnalysisTimeout: 180.0,
                 themesAnalysisTimeout: 180.0,
                 todosAnalysisTimeout: 180.0,
+                proModeAnalysisTimeout: 420.0,
                 minimumTranscriptLength: 10,
                 maximumTranscriptLength: 50_000
             )
@@ -284,6 +286,7 @@ struct AnalysisConfig: Sendable {
                 contentAnalysisTimeout: 180.0,
                 themesAnalysisTimeout: 180.0,
                 todosAnalysisTimeout: 180.0,
+                proModeAnalysisTimeout: 420.0,
                 minimumTranscriptLength: 10,
                 maximumTranscriptLength: 50_000
             )
@@ -296,6 +299,7 @@ struct AnalysisConfig: Sendable {
         if let s = env["SONORA_CONTENT_TIMEOUT"], let v = TimeInterval(s) { c = c.copy(contentAnalysisTimeout: v); print("🔧 AppConfiguration: Content timeout overridden to \(v)s") }
         if let s = env["SONORA_THEMES_TIMEOUT"], let v = TimeInterval(s) { c = c.copy(themesAnalysisTimeout: v); print("🔧 AppConfiguration: Themes timeout overridden to \(v)s") }
         if let s = env["SONORA_TODOS_TIMEOUT"], let v = TimeInterval(s) { c = c.copy(todosAnalysisTimeout: v); print("🔧 AppConfiguration: Todos timeout overridden to \(v)s") }
+        if let s = env["SONORA_PRO_MODE_TIMEOUT"], let v = TimeInterval(s) { c = c.copy(proModeAnalysisTimeout: v); print("🔧 AppConfiguration: Pro mode timeout overridden to \(v)s") }
         if let s = env["SONORA_MIN_TRANSCRIPT_LENGTH"], let v = Int(s) { c = c.copy(minimumTranscriptLength: max(1, v)); print("🔧 AppConfiguration: Min transcript length overridden to \(max(1, v))") }
         if let s = env["SONORA_MAX_TRANSCRIPT_LENGTH"], let v = Int(s) { c = c.copy(maximumTranscriptLength: max(self.minimumTranscriptLength, v)); print("🔧 AppConfiguration: Max transcript length overridden to \(max(self.minimumTranscriptLength, v))") }
         return c
@@ -306,6 +310,7 @@ struct AnalysisConfig: Sendable {
         contentAnalysisTimeout: TimeInterval? = nil,
         themesAnalysisTimeout: TimeInterval? = nil,
         todosAnalysisTimeout: TimeInterval? = nil,
+        proModeAnalysisTimeout: TimeInterval? = nil,
         minimumTranscriptLength: Int? = nil,
         maximumTranscriptLength: Int? = nil
     ) -> Self {
@@ -314,6 +319,7 @@ struct AnalysisConfig: Sendable {
             contentAnalysisTimeout: contentAnalysisTimeout ?? self.contentAnalysisTimeout,
             themesAnalysisTimeout: themesAnalysisTimeout ?? self.themesAnalysisTimeout,
             todosAnalysisTimeout: todosAnalysisTimeout ?? self.todosAnalysisTimeout,
+            proModeAnalysisTimeout: proModeAnalysisTimeout ?? self.proModeAnalysisTimeout,
             minimumTranscriptLength: minimumTranscriptLength ?? self.minimumTranscriptLength,
             maximumTranscriptLength: maximumTranscriptLength ?? self.maximumTranscriptLength
         )
