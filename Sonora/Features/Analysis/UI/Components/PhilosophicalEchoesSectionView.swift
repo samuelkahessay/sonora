@@ -78,7 +78,7 @@ private struct PhilosophicalEchoCard: View {
             if let quote = echo.quote {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 0) {
-                        Text(""\(quote)"")
+                        Text("\"\(quote)\"")
                             .font(.caption)
                             .italic()
                             .foregroundColor(.semantic(.textSecondary))

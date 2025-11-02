@@ -318,7 +318,7 @@ struct DistillResultView: View {
                 for echo in echoes {
                     lines.append("• \(echo.tradition.displayName): \(echo.connection)")
                     if let quote = echo.quote {
-                        lines.append("  "\(quote)"")
+                        lines.append("  \"\(quote)\"")
                         if let source = echo.source {
                             lines.append("  — \(source)")
                         }
