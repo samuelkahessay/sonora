@@ -65,6 +65,27 @@ struct DistillResultView: View {
 
             // Pro-tier analysis sections
             if isPro {
+                // Debug: Log pro mode data availability
+                let _ = Logger.shared.debug(
+                    "Pro mode data check",
+                    category: .viewModel,
+                    context: LogContext(additionalInfo: [
+                        "isPro": isPro,
+                        "cognitivePatterns": effectiveCognitivePatterns?.count ?? 0,
+                        "philosophicalEchoes": effectivePhilosophicalEchoes?.count ?? 0,
+                        "valuesInsights": effectiveValuesInsights != nil ? "present" : "nil"
+                    ])
+                )
+
+                // Debug indicator (temporary - remove after debugging)
+                #if DEBUG
+                ProModeDebugIndicator(
+                    cognitiveCount: effectiveCognitivePatterns?.count ?? 0,
+                    echoesCount: effectivePhilosophicalEchoes?.count ?? 0,
+                    hasValues: effectiveValuesInsights != nil
+                )
+                #endif
+
                 // Cognitive Clarity (CBT) Section
                 if let cognitivePatterns = effectiveCognitivePatterns, !cognitivePatterns.isEmpty {
                     CognitiveClaritySectionView(patterns: cognitivePatterns)
@@ -79,6 +100,13 @@ struct DistillResultView: View {
                 if let valuesInsights = effectiveValuesInsights {
                     ValuesInsightSectionView(insight: valuesInsights)
                 }
+            } else {
+                // Debug: Log why pro modes aren't showing
+                let _ = Logger.shared.debug(
+                    "Pro modes not showing - isPro is false",
+                    category: .viewModel,
+                    context: LogContext(additionalInfo: ["isPro": isPro])
+                )
             }
 
             // Copy results action (also triggers smart transcript expand via notification)
@@ -377,6 +405,75 @@ private final class ViewModelHolder: ObservableObject {
 }
 
 private extension DistillResultView { }
+
+// MARK: - Debug Indicator
+#if DEBUG
+private struct ProModeDebugIndicator: View {
+    let cognitiveCount: Int
+    let echoesCount: Int
+    let hasValues: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "ant.circle")
+                    .foregroundColor(.orange)
+                Text("Pro Mode Debug")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.orange)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                debugRow(icon: "brain.head.profile", label: "Cognitive Patterns", count: cognitiveCount)
+                debugRow(icon: "book.pages", label: "Philosophical Echoes", count: echoesCount)
+                debugRow(icon: "heart.text.square", label: "Values Insights", present: hasValues)
+            }
+        }
+        .padding(12)
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private func debugRow(icon: String, label: String, count: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text("\(count) items")
+                .font(.caption2)
+                .fontWeight(.medium)
+                .foregroundColor(count > 0 ? .green : .red)
+        }
+    }
+
+    @ViewBuilder
+    private func debugRow(icon: String, label: String, present: Bool) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(present ? "Present" : "Nil")
+                .font(.caption2)
+                .fontWeight(.medium)
+                .foregroundColor(present ? .green : .red)
+        }
+    }
+}
+#endif
 
 // MARK: - Observed wrapper to react to VM changes
 private struct ActionItemsHostObservedSection: View {
