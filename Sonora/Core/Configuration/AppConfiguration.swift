@@ -129,6 +129,11 @@ public final class AppConfiguration: ObservableObject {
     /// Can be overridden with SONORA_TODOS_TIMEOUT environment variable
     public private(set) var todosAnalysisTimeout: TimeInterval = 16.0
 
+    /// Timeout for pro-tier analysis operations (Cognitive Clarity, Philosophical Echoes, Values Recognition)
+    /// Can be overridden with SONORA_PRO_MODE_TIMEOUT environment variable
+    /// Pro modes require extended timeout for deep reasoning with GPT-5
+    public private(set) var proModeAnalysisTimeout: TimeInterval = 420.0
+
     /// Minimum transcript length required for analysis (characters)
     /// Can be overridden with SONORA_MIN_TRANSCRIPT_LENGTH environment variable
     public private(set) var minimumTranscriptLength: Int = 10
@@ -314,6 +319,7 @@ public final class AppConfiguration: ObservableObject {
         contentAnalysisTimeout = ana.contentAnalysisTimeout
         themesAnalysisTimeout = ana.themesAnalysisTimeout
         todosAnalysisTimeout = ana.todosAnalysisTimeout
+        proModeAnalysisTimeout = ana.proModeAnalysisTimeout
         minimumTranscriptLength = ana.minimumTranscriptLength
         maximumTranscriptLength = ana.maximumTranscriptLength
 
@@ -370,6 +376,7 @@ public final class AppConfiguration: ObservableObject {
             contentAnalysisTimeout: contentAnalysisTimeout,
             themesAnalysisTimeout: themesAnalysisTimeout,
             todosAnalysisTimeout: todosAnalysisTimeout,
+            proModeAnalysisTimeout: proModeAnalysisTimeout,
             minimumTranscriptLength: minimumTranscriptLength,
             maximumTranscriptLength: maximumTranscriptLength
         ).withOverrides(env: env)
@@ -414,6 +421,7 @@ public final class AppConfiguration: ObservableObject {
         contentAnalysisTimeout = ana.contentAnalysisTimeout
         themesAnalysisTimeout = ana.themesAnalysisTimeout
         todosAnalysisTimeout = ana.todosAnalysisTimeout
+        proModeAnalysisTimeout = ana.proModeAnalysisTimeout
         minimumTranscriptLength = ana.minimumTranscriptLength
         maximumTranscriptLength = ana.maximumTranscriptLength
 
@@ -453,9 +461,9 @@ public final class AppConfiguration: ObservableObject {
         switch mode {
         case .distill:
             return distillAnalysisTimeout
-        // Distill component modes use shorter timeouts since they're focused
+        // Distill component modes use half the distill timeout (no artificial clamping)
         case .distillSummary, .distillActions, .distillThemes, .distillReflection:
-            return min(distillAnalysisTimeout / 2, 15.0) // Half the distill timeout or 15s, whichever is lower
+            return distillAnalysisTimeout / 2 // Half the distill timeout for focused component analysis
         case .liteDistill:
             return min(distillAnalysisTimeout / 2, 10.0) // Lite Distill is even faster
         case .events:
@@ -464,7 +472,7 @@ public final class AppConfiguration: ObservableObject {
             return contentAnalysisTimeout // Use same timeout as content analysis
         // Pro-tier modes use extended timeout for deeper reasoning (high reasoning effort on GPT-5)
         case .cognitiveClarityCBT, .philosophicalEchoes, .valuesRecognition:
-            return distillAnalysisTimeout // Same as full distill (60s default) for GPT-5 extended thinking
+            return proModeAnalysisTimeout // Extended timeout (420s default) for GPT-5 deep reasoning
         }
     }
 
