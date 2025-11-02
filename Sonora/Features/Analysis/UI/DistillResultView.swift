@@ -78,13 +78,12 @@ struct DistillResultView: View {
                 )
 
                 // Debug indicator (temporary - remove after debugging)
-                #if DEBUG
+                // Visible in all builds including TestFlight for debugging
                 ProModeDebugIndicator(
                     cognitiveCount: effectiveCognitivePatterns?.count ?? 0,
                     echoesCount: effectivePhilosophicalEchoes?.count ?? 0,
                     hasValues: effectiveValuesInsights != nil
                 )
-                #endif
 
                 // Cognitive Clarity (CBT) Section
                 if let cognitivePatterns = effectiveCognitivePatterns, !cognitivePatterns.isEmpty {
@@ -407,7 +406,7 @@ private final class ViewModelHolder: ObservableObject {
 private extension DistillResultView { }
 
 // MARK: - Debug Indicator
-#if DEBUG
+// Visible in all builds including TestFlight for debugging
 private struct ProModeDebugIndicator: View {
     let cognitiveCount: Int
     let echoesCount: Int
@@ -473,7 +472,6 @@ private struct ProModeDebugIndicator: View {
         }
     }
 }
-#endif
 
 // MARK: - Observed wrapper to react to VM changes
 private struct ActionItemsHostObservedSection: View {
