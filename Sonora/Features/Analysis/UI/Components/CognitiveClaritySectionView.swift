@@ -1,0 +1,120 @@
+import SwiftUI
+
+/// Displays cognitive patterns detected using CBT framework
+/// Shows cognitive distortions with observations and optional reframes
+/// Pro-tier feature
+internal struct CognitiveClaritySectionView: View {
+    let patterns: [CognitivePattern]
+
+    @ScaledMetric private var sectionSpacing: CGFloat = 12
+    @ScaledMetric private var headerSpacing: CGFloat = 6
+    @ScaledMetric private var patternSpacing: CGFloat = 16
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: sectionSpacing) {
+            HStack(spacing: headerSpacing) {
+                Image(systemName: "brain.head.profile")
+                    .font(SonoraDesignSystem.Typography.sectionHeading)
+                    .foregroundColor(.semantic(.accent))
+                Text("Cognitive Clarity")
+                    .font(SonoraDesignSystem.Typography.sectionHeading)
+                    .foregroundColor(.semantic(.textPrimary))
+
+                Image(systemName: "crown.fill")
+                    .font(.caption2)
+                    .foregroundColor(.semantic(.brandPrimary))
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Cognitive Clarity section, Pro feature, \(patterns.count) patterns detected")
+
+            VStack(alignment: .leading, spacing: patternSpacing) {
+                ForEach(patterns) { pattern in
+                    CognitivePatternCard(pattern: pattern)
+                }
+            }
+        }
+    }
+}
+
+/// Individual cognitive pattern card showing distortion type, observation, and optional reframe
+private struct CognitivePatternCard: View {
+    let pattern: CognitivePattern
+
+    @ScaledMetric private var cardPadding: CGFloat = 12
+    @ScaledMetric private var contentSpacing: CGFloat = 8
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: contentSpacing) {
+            // Distortion type with icon
+            HStack(spacing: 6) {
+                Image(systemName: pattern.type.iconName)
+                    .font(.caption)
+                    .foregroundColor(.semantic(.accent))
+
+                Text(pattern.type.displayName)
+                    .font(SonoraDesignSystem.Typography.cardBody)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.semantic(.textPrimary))
+            }
+
+            // Brief description of the distortion type
+            Text(pattern.type.description)
+                .font(.caption)
+                .foregroundColor(.semantic(.textSecondary))
+                .italic()
+
+            // Observation from the memo
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Observation")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.semantic(.textSecondary))
+
+                Text(pattern.observation)
+                    .font(SonoraDesignSystem.Typography.cardBody)
+                    .foregroundColor(.semantic(.textPrimary))
+                    .lineSpacing(2)
+                    .multilineTextAlignment(.leading)
+            }
+
+            // Optional reframe
+            if let reframe = pattern.reframe {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.caption2)
+                        Text("Reframe")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundColor(.semantic(.success))
+
+                    Text(reframe)
+                        .font(SonoraDesignSystem.Typography.cardBody)
+                        .foregroundColor(.semantic(.textPrimary))
+                        .lineSpacing(2)
+                        .multilineTextAlignment(.leading)
+                        .padding(8)
+                        .background(
+                            Color.semantic(.success).opacity(0.08)
+                        )
+                        .cornerRadius(6)
+                }
+            }
+        }
+        .padding(cardPadding)
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.semantic(.accent).opacity(0.06),
+                    Color.semantic(.accent).opacity(0.03)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(SonoraDesignSystem.Spacing.cardRadius)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Cognitive pattern: \(pattern.type.displayName). \(pattern.observation)")
+    }
+}
