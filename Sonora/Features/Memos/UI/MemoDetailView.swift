@@ -11,6 +11,7 @@ struct MemoDetailView: View {
     @FocusState private var isTitleEditingFocused: Bool
     @State private var scrollOffset: CGFloat = 0
     @State private var loggedSuccessTitle: String?
+    @State private var showProModesDebug = false
 
     enum AccessibleElement {
         case playButton
@@ -91,6 +92,18 @@ struct MemoDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 16) {
+                    #if DEBUG
+                    // Pro Modes Debug button (only in debug builds)
+                    Button(action: {
+                        showProModesDebug = true
+                    }) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.orange)
+                    }
+                    .accessibilityLabel("Pro Modes Debug")
+                    #endif
+
                     Button(action: {
                         HapticManager.shared.playSelection()
                         viewModel.showShareSheet = true
@@ -114,6 +127,9 @@ struct MemoDetailView: View {
             ShareMemoSheet(memo: memo, viewModel: viewModel) {
                 viewModel.showShareSheet = false
             }
+        }
+        .sheet(isPresented: $showProModesDebug) {
+            ProModesDebugOverlay(viewModel: viewModel)
         }
         // Legacy quick-add sheets removed; flows are integrated in Action Items UI.
         .onAppear {
