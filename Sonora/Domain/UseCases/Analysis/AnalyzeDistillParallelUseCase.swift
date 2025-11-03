@@ -302,7 +302,15 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                         logger.debug("Cognitive patterns detected: \(patterns.count)", category: .analysis, context: context)
                         return (.cognitiveClarityCBT, .cognitiveClarity(patterns.isEmpty ? nil : patterns), envelope.latency_ms, envelope.tokens)
                     } catch {
-                        logger.warning("Cognitive clarity error; continuing without CBT analysis", category: .analysis, context: context, error: error)
+                        logger.error(
+                            "❌ COGNITIVE CLARITY API FAILED - Pro mode will not show CBT patterns",
+                            category: .analysis,
+                            context: LogContext(additionalInfo: [
+                                "error": "\(error)",
+                                "errorType": "\(type(of: error))"
+                            ]),
+                            error: error
+                        )
                         return (.cognitiveClarityCBT, .cognitiveClarity(nil), 0, TokenUsage(input: 0, output: 0))
                     }
                 }
@@ -321,7 +329,15 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                         logger.debug("Philosophical echoes detected: \(echoes.count)", category: .analysis, context: context)
                         return (.philosophicalEchoes, .philosophicalEchoes(echoes.isEmpty ? nil : echoes), envelope.latency_ms, envelope.tokens)
                     } catch {
-                        logger.warning("Philosophical echoes error; continuing without wisdom analysis", category: .analysis, context: context, error: error)
+                        logger.error(
+                            "❌ PHILOSOPHICAL ECHOES API FAILED - Pro mode will not show wisdom connections",
+                            category: .analysis,
+                            context: LogContext(additionalInfo: [
+                                "error": "\(error)",
+                                "errorType": "\(type(of: error))"
+                            ]),
+                            error: error
+                        )
                         return (.philosophicalEchoes, .philosophicalEchoes(nil), 0, TokenUsage(input: 0, output: 0))
                     }
                 }
@@ -342,7 +358,15 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                         logger.debug("Values detected: \(coreValues.count), tensions: \(tensions?.count ?? 0)", category: .analysis, context: context)
                         return (.valuesRecognition, .valuesRecognition(valuesInsight), envelope.latency_ms, envelope.tokens)
                     } catch {
-                        logger.warning("Values recognition error; continuing without values analysis", category: .analysis, context: context, error: error)
+                        logger.error(
+                            "❌ VALUES RECOGNITION API FAILED - Pro mode will not show values insights",
+                            category: .analysis,
+                            context: LogContext(additionalInfo: [
+                                "error": "\(error)",
+                                "errorType": "\(type(of: error))"
+                            ]),
+                            error: error
+                        )
                         return (.valuesRecognition, .valuesRecognition(nil), 0, TokenUsage(input: 0, output: 0))
                     }
                 }

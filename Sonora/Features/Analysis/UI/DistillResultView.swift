@@ -412,6 +412,10 @@ private struct ProModeDebugIndicator: View {
     let echoesCount: Int
     let hasValues: Bool
 
+    private var hasAnyData: Bool {
+        cognitiveCount > 0 || echoesCount > 0 || hasValues
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
@@ -428,13 +432,41 @@ private struct ProModeDebugIndicator: View {
                 debugRow(icon: "book.pages", label: "Philosophical Echoes", count: echoesCount)
                 debugRow(icon: "heart.text.square", label: "Values Insights", present: hasValues)
             }
+
+            // Warning if no data
+            if !hasAnyData {
+                VStack(alignment: .leading, spacing: 4) {
+                    Divider()
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                        Text("No pro mode data received")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                            .fontWeight(.semibold)
+                    }
+                    Text("Possible causes:")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 2)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("• Backend API errors (check logs)")
+                        Text("• API endpoints not deployed")
+                        Text("• Network timeout/failure")
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                }
+                .padding(.top, 4)
+            }
         }
         .padding(12)
-        .background(Color.orange.opacity(0.1))
+        .background(Color.orange.opacity(hasAnyData ? 0.1 : 0.15))
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                .stroke(hasAnyData ? Color.orange.opacity(0.3) : Color.red.opacity(0.4), lineWidth: hasAnyData ? 1 : 2)
         )
     }
 
