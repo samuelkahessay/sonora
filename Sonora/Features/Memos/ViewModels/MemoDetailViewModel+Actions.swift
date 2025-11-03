@@ -112,11 +112,19 @@ extension MemoDetailViewModel {
                 switch mode {
                 case .distill:
                     // Route based on subscription tier
-                    if isProUser && isParallelDistillEnabled {
+                    // Refresh subscription status to ensure we have the latest entitlements
+                    // This prevents routing to Lite Distill when user is actually Pro
+                    await storeKitService.refreshEntitlements()
+                    let isPro = storeKitService.isPro
+                    print("📝 MemoDetailViewModel: Distill routing - isPro: \(isPro), parallelEnabled: \(isParallelDistillEnabled)")
+                    if isPro && isParallelDistillEnabled {
+                        print("📝 MemoDetailViewModel: Routing to Parallel Distill (Pro with pro modes)")
                         await performParallelDistill(transcript: transcript, memoId: memo.id)
-                    } else if isProUser {
+                    } else if isPro {
+                        print("📝 MemoDetailViewModel: Routing to Regular Distill (Pro without parallel)")
                         await performRegularDistill(transcript: transcript, memoId: memo.id)
                     } else {
+                        print("📝 MemoDetailViewModel: Routing to Lite Distill (Free tier)")
                         // Free tier → Lite Distill
                         await performLiteDistill(transcript: transcript, memoId: memo.id)
                     }
