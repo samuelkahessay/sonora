@@ -495,6 +495,36 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
   }
 });
 
+// Validate and wrap analysis response data based on mode
+function validateAnalysisData(mode: string, parsedData: any): any {
+  switch (mode) {
+    case 'distill':
+      return DistillDataSchema.parse(parsedData);
+    case 'lite-distill':
+      return LiteDistillDataSchema.parse(parsedData);
+    case 'distill-summary':
+      return { summary: parsedData.summary };
+    case 'distill-actions':
+      return { action_items: parsedData.action_items || [] };
+    case 'distill-themes':
+      return { key_themes: parsedData.key_themes || [] };
+    case 'distill-reflection':
+      return { reflection_questions: parsedData.reflection_questions || [] };
+    case 'events':
+      return EventsDataSchema.parse(parsedData);
+    case 'reminders':
+      return RemindersDataSchema.parse(parsedData);
+    case 'cognitive-clarity':
+      return { cognitivePatterns: parsedData.cognitivePatterns || [] };
+    case 'philosophical-echoes':
+      return { philosophicalEchoes: parsedData.philosophicalEchoes || [] };
+    case 'values-recognition':
+      return { coreValues: parsedData.coreValues || [], tensions: parsedData.tensions };
+    default:
+      throw new Error(`Unknown mode: ${mode}`);
+  }
+}
+
 // Main analyze endpoint
 app.post('/analyze', async (req, res) => {
   const startTime = Date.now();
@@ -583,45 +613,8 @@ app.post('/analyze', async (req, res) => {
             parsedData = JSON.parse(stripped);
           }
 
-          // Validate response shape (mirror non-streaming logic)
-          let validatedData: any;
-          switch (mode) {
-            case 'distill':
-              validatedData = DistillDataSchema.parse(parsedData);
-              break;
-            case 'lite-distill':
-              validatedData = LiteDistillDataSchema.parse(parsedData);
-              break;
-            case 'distill-summary':
-              validatedData = { summary: parsedData.summary };
-              break;
-            case 'distill-actions':
-              validatedData = { action_items: parsedData.action_items || [] };
-              break;
-            case 'distill-themes':
-              validatedData = { key_themes: parsedData.key_themes || [] };
-              break;
-            case 'distill-reflection':
-              validatedData = { reflection_questions: parsedData.reflection_questions || [] };
-              break;
-            case 'events':
-              validatedData = EventsDataSchema.parse(parsedData);
-              break;
-            case 'reminders':
-              validatedData = RemindersDataSchema.parse(parsedData);
-              break;
-            case 'cognitive-clarity':
-              validatedData = { cognitivePatterns: parsedData.cognitivePatterns || [] };
-              break;
-            case 'philosophical-echoes':
-              validatedData = { philosophicalEchoes: parsedData.philosophicalEchoes || [] };
-              break;
-            case 'values-recognition':
-              validatedData = { coreValues: parsedData.coreValues || [], tensions: parsedData.tensions };
-              break;
-            default:
-              throw new Error(`Unknown mode: ${mode}`);
-          }
+          // Validate response shape using shared validation function
+          const validatedData = validateAnalysisData(mode, parsedData);
 
           const latency = Date.now() - startTime;
           sendEvent('final', {
@@ -686,17 +679,18 @@ app.post('/analyze', async (req, res) => {
             finished = true;
             try {
               const parsed = JSON.parse(aggregated);
+              const validatedData = validateAnalysisData(mode, parsed);
               const latency = Date.now() - startTime;
               sendEvent('final', {
                 mode,
-                data: parsed,
+                data: validatedData,
                 model: selectedModel,
                 tokens: { input: inputTokens, output: outputTokens },
                 latency_ms: latency,
                 streaming: true
               });
             } catch (parseError) {
-              console.error('Final JSON parse error:', parseError);
+              console.error('Final JSON parse/validation error:', parseError);
               sendEvent('error', { error: 'InvalidJSON' });
             }
             res.end();
@@ -785,46 +779,10 @@ app.post('/analyze', async (req, res) => {
       }
     }
     
-    // Validate response shape
+    // Validate response shape using shared validation function
     let validatedData;
     try {
-      switch (mode) {
-        case 'distill':
-          validatedData = DistillDataSchema.parse(parsedData);
-          break;
-        case 'lite-distill':
-          validatedData = LiteDistillDataSchema.parse(parsedData);
-          break;
-        case 'distill-summary':
-          validatedData = { summary: parsedData.summary };
-          break;
-        case 'distill-actions':
-          validatedData = { action_items: parsedData.action_items || [] };
-          break;
-        case 'distill-themes':
-          validatedData = { key_themes: parsedData.key_themes || [] };
-          break;
-        case 'distill-reflection':
-          validatedData = { reflection_questions: parsedData.reflection_questions || [] };
-          break;
-        case 'events':
-          validatedData = EventsDataSchema.parse(parsedData);
-          break;
-        case 'reminders':
-          validatedData = RemindersDataSchema.parse(parsedData);
-          break;
-        case 'cognitive-clarity':
-          validatedData = { cognitivePatterns: parsedData.cognitivePatterns || [] };
-          break;
-        case 'philosophical-echoes':
-          validatedData = { philosophicalEchoes: parsedData.philosophicalEchoes || [] };
-          break;
-        case 'values-recognition':
-          validatedData = { coreValues: parsedData.coreValues || [], tensions: parsedData.tensions };
-          break;
-        default:
-          throw new Error(`Unknown mode: ${mode}`);
-      }
+      validatedData = validateAnalysisData(mode, parsedData);
     } catch (schemaError) {
       return res.status(502).json({
         error: 'SchemaMismatch',
