@@ -426,6 +426,13 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                             "refreshTrigger": "\(uiState.refreshTrigger)"
                         ]))
         }
+
+        // CRITICAL FIX: Update allMemos whenever repository publishes new memos
+        // This ensures new recordings appear in the memo list immediately
+        if allMemos != memos {
+            allMemos = memos
+            recomputeDisplayedMemos()
+        }
     }
 
     // MARK: - Event-Driven Updates (No More Polling)
