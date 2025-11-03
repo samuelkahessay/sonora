@@ -13,7 +13,7 @@ struct MemoListTopBarView: View {
                         Text("Cancel")
                             .fontWeight(.regular)
                     } else {
-                        Image(systemName: "square.and.pencil")
+                        Image(systemName: "checklist")
                     }
                 }
                 .animation(.easeInOut(duration: 0.2), value: isEditMode)
