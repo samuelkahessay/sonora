@@ -317,8 +317,9 @@ public final class EventBus: ObservableObject {
 // MARK: - EventBus Protocol
 
 /// Protocol for dependency injection and testing
+/// @MainActor isolation makes it implicitly Sendable
 @MainActor
-public protocol EventBusProtocol {
+public protocol EventBusProtocol: Sendable {
     func publish(_ event: AppEvent)
     func subscribe(to eventType: AppEvent.Type, subscriber: AnyObject?, handler: @escaping (AppEvent) -> Void) -> UUID
     func unsubscribe(_ subscriptionId: UUID)

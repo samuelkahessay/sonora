@@ -238,7 +238,9 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
         )
         .receive(on: RunLoop.main)
         .sink { [weak self] memos, _, playbackState in
-            self?.updateUnifiedState(memos: memos, playingMemo: playbackState.playingMemo, isPlaying: playbackState.isPlaying)
+            Task { @MainActor in
+                await self?.updateUnifiedState(memos: memos, playingMemo: playbackState.playingMemo, isPlaying: playbackState.isPlaying)
+            }
         }
 
         unifiedStateSubscription?.store(in: &cancellables)
@@ -248,11 +250,13 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             .sink { [weak self] _ in
                 guard let self else { return }
                 // Directly access current values from repository (backed by CurrentValueSubject)
-                self.updateUnifiedState(
-                    memos: self.memoRepository.memos,
-                    playingMemo: self.memoRepository.playingMemo,
-                    isPlaying: self.memoRepository.isPlaying
-                )
+                Task { @MainActor in
+                    await self.updateUnifiedState(
+                        memos: self.memoRepository.memos,
+                        playingMemo: self.memoRepository.playingMemo,
+                        isPlaying: self.memoRepository.isPlaying
+                    )
+                }
             }
         titleStateSubscription?.store(in: &cancellables)
 
@@ -285,7 +289,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             case let .transcriptionCompleted(memoId, _):
                 Task { @MainActor in
                     // Force refresh the specific memo's transcription state
-                    self.refreshTranscriptionState(for: memoId)
+                    await self.refreshTranscriptionState(for: memoId)
                 }
             default:
                 break
@@ -299,14 +303,18 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             playingMemo: memoRepository.playingMemo,
             isPlaying: memoRepository.isPlaying
         )
-        updateTranscriptionStates()
+        Task { @MainActor in
+            await updateTranscriptionStates()
+        }
 
         // Initialize unified state
-        updateUnifiedState(
-            memos: memoRepository.memos,
-            playingMemo: memoRepository.playingMemo,
-            isPlaying: memoRepository.isPlaying
-        )
+        Task { @MainActor in
+            await updateUnifiedState(
+                memos: memoRepository.memos,
+                playingMemo: memoRepository.playingMemo,
+                isPlaying: memoRepository.isPlaying
+            )
+        }
 
         // MARK: - Search binding
         $searchText
@@ -331,9 +339,9 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
             .store(in: &cancellables)
     }
 
-    private func updateTranscriptionStates() {
+    private func updateTranscriptionStates() async {
         let oldStates = transcriptionDisplayState.states
-        let newStates = transcriptionRepository.transcriptionStates
+        let newStates = await transcriptionRepository.transcriptionStates
 
         // Detect meaningful changes (keys added/removed or value changes)
         let changedKeys: [String] = {
@@ -378,9 +386,11 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     }
 
     /// Update unified state combining memos with transcription states (Swift 6 compliant)
-    private func updateUnifiedState(memos: [Memo], playingMemo: Memo?, isPlaying: Bool) {
-        let newMemosWithState = memos.map { memo in
-            let transcriptionState = getTranscriptionState(for: memo)
+    private func updateUnifiedState(memos: [Memo], playingMemo: Memo?, isPlaying: Bool) async {
+        var newMemosWithState: [MemoWithState] = []
+
+        for memo in memos {
+            let transcriptionState = await getTranscriptionState(for: memo)
             let isThisMemoPlaying = playingMemo?.id == memo.id && isPlaying
             let coordinatorState = titleCoordinator.state(for: memo.id)
             let persistedState = memo.autoTitleState
@@ -393,12 +403,12 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
                 titleState = coordinatorState
             }
 
-            return MemoWithState(
+            newMemosWithState.append(MemoWithState(
                 memo: memo,
                 transcriptionState: transcriptionState,
                 titleState: titleState,
                 isPlaying: isThisMemoPlaying
-            )
+            ))
         }
 
         // Only update if there are actual changes to reduce UI churn
@@ -424,10 +434,10 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     /// This significantly reduces CPU usage and battery drain during transcription operations
 
     /// Force refresh a specific memo's transcription state (now event-driven)
-    private func refreshTranscriptionState(for memoId: UUID) {
+    private func refreshTranscriptionState(for memoId: UUID) async {
         guard let memo = memos.first(where: { $0.id == memoId }) else { return }
 
-        let newState = getTranscriptionStateUseCase.execute(memo: memo)
+        let newState = await getTranscriptionStateUseCase.execute(memo: memo)
         let key = memoId.uuidString
 
         if transcriptionStates[key] != newState {
@@ -591,8 +601,8 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     }
 
     /// Get transcription state for a memo
-    func getTranscriptionState(for memo: Memo) -> TranscriptionState {
-        getTranscriptionStateUseCase.execute(memo: memo)
+    func getTranscriptionState(for memo: Memo) async -> TranscriptionState {
+        await getTranscriptionStateUseCase.execute(memo: memo)
     }
 
     // MARK: - Rename Methods
@@ -764,8 +774,8 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     }
 
     /// Get transcription action button text for a memo
-    func transcriptionActionText(for memo: Memo) -> String? {
-        let state = getTranscriptionState(for: memo)
+    func transcriptionActionText(for memo: Memo) async -> String? {
+        let state = await getTranscriptionState(for: memo)
         if state.isFailed {
             return "Retry"
         } else if state.isNotStarted {
@@ -777,8 +787,8 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     }
 
     /// Get transcription action button color for a memo
-    func transcriptionActionColor(for memo: Memo) -> Color {
-        let state = getTranscriptionState(for: memo)
+    func transcriptionActionColor(for memo: Memo) async -> Color {
+        let state = await getTranscriptionState(for: memo)
         if state.isFailed {
             return .semantic(.warning)
         } else if state.isNotStarted {
@@ -789,14 +799,14 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
     }
 
     /// Check if transcription action is available for a memo
-    func canPerformTranscriptionAction(for memo: Memo) -> Bool {
-        let state = getTranscriptionState(for: memo)
+    func canPerformTranscriptionAction(for memo: Memo) async -> Bool {
+        let state = await getTranscriptionState(for: memo)
         return state.isFailed || state.isNotStarted
     }
 
     /// Perform transcription action for a memo
-    func performTranscriptionAction(for memo: Memo) {
-        let state = getTranscriptionState(for: memo)
+    func performTranscriptionAction(for memo: Memo) async {
+        let state = await getTranscriptionState(for: memo)
         if state.isFailed {
             retryTranscription(for: memo)
         } else if state.isNotStarted {
@@ -944,7 +954,7 @@ final class MemoListViewModel: ObservableObject, ErrorHandling {
 extension MemoListViewModel {
 
     /// Create memo row state for a specific memo (legacy method)
-    func memoRowState(for memo: Memo) -> MemoRowState {
+    func memoRowState(for memo: Memo) async -> MemoRowState {
         // Try to use unified state first for efficiency
         if let memoWithState = memosWithState.first(where: { $0.memo.id == memo.id }) {
             return MemoRowState(from: memoWithState)
@@ -953,7 +963,7 @@ extension MemoListViewModel {
         // Fallback to individual lookups
         return MemoRowState(
             memo: memo,
-            transcriptionState: getTranscriptionState(for: memo),
+            transcriptionState: await getTranscriptionState(for: memo),
             titleState: {
                 let coordinatorState = titleCoordinator.state(for: memo.id)
                 if case .idle = coordinatorState {

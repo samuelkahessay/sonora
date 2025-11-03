@@ -6,7 +6,8 @@ protocol AnalyzeDistillUseCaseProtocol: Sendable {
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<DistillData>
 }
 
-final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sendable {
+/// Use case runs off main thread; repository operations automatically hop to main actor.
+final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, Sendable {
 
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
@@ -31,7 +32,6 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sen
     }
 
     // MARK: - Use Case Execution
-    @MainActor
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<DistillData> {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
@@ -48,9 +48,7 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sen
 
         // CACHE FIRST (de-risk): Skip coordinator for cache hits
         let cacheTimer = PerformanceTimer(operation: "Distill Cache Check", category: .performance)
-        if let cachedResult = await MainActor.run(body: {
-            analysisRepository.getAnalysisResult(for: memoId, mode: .distill, responseType: DistillData.self)
-        }) {
+        if let cachedResult = await analysisRepository.getAnalysisResult(for: memoId, mode: .distill, responseType: DistillData.self) {
             _ = cacheTimer.finish(additionalInfo: "Cache HIT - returning immediately (no coordinator op)")
             logger.analysis("Found cached Distill analysis (cache hit)",
                           level: .info,
@@ -102,9 +100,7 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, @unchecked Sen
 
             // SAVE TO CACHE: Store result for future use
             let saveTimer = PerformanceTimer(operation: "Distill Cache Save", category: .performance)
-            await MainActor.run {
-                analysisRepository.saveAnalysisResult(result, for: memoId, mode: .distill)
-            }
+            await analysisRepository.saveAnalysisResult(result, for: memoId, mode: .distill)
             _ = saveTimer.finish(additionalInfo: "Analysis cached successfully")
 
             logger.analysis("Distill analysis cached successfully",

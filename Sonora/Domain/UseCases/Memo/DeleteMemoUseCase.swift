@@ -173,30 +173,29 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
 
         logger.useCase("Starting cascading analysis deletion", context: context)
 
-        await MainActor.run {
-            let analysisResults = analysisRepository.getAllAnalysisResults(for: memo.id)
-            let analysisCount = analysisResults.count
+        // Repository methods are now async - they handle actor hopping internally
+        let analysisResults = await analysisRepository.getAllAnalysisResults(for: memo.id)
+        let analysisCount = analysisResults.count
 
-            if analysisCount > 0 {
-                logger.useCase("Found \(analysisCount) analysis results to delete",
-                             context: LogContext(correlationId: correlationId, additionalInfo: [
-                                 "memoId": memo.id.uuidString,
-                                 "analysisCount": analysisCount,
-                                 "modes": analysisResults.keys.map { $0.rawValue }
-                             ]))
+        if analysisCount > 0 {
+            logger.useCase("Found \(analysisCount) analysis results to delete",
+                         context: LogContext(correlationId: correlationId, additionalInfo: [
+                             "memoId": memo.id.uuidString,
+                             "analysisCount": analysisCount,
+                             "modes": analysisResults.availableModes.map { $0.rawValue }
+                         ]))
 
-                analysisRepository.deleteAnalysisResults(for: memo.id)
+            await analysisRepository.deleteAnalysisResults(for: memo.id)
 
-                logger.useCase("Cascading analysis deletion completed",
-                             level: .info,
-                             context: LogContext(correlationId: correlationId, additionalInfo: [
-                                 "memoId": memo.id.uuidString,
-                                 "deletedAnalysisCount": analysisCount
-                             ]))
-            } else {
-                logger.debug("No analysis results found for memo", category: .useCase,
-                           context: LogContext(correlationId: correlationId, additionalInfo: ["memoId": memo.id.uuidString]))
-            }
+            logger.useCase("Cascading analysis deletion completed",
+                         level: .info,
+                         context: LogContext(correlationId: correlationId, additionalInfo: [
+                             "memoId": memo.id.uuidString,
+                             "deletedAnalysisCount": analysisCount
+                         ]))
+        } else {
+            logger.debug("No analysis results found for memo", category: .useCase,
+                       context: LogContext(correlationId: correlationId, additionalInfo: ["memoId": memo.id.uuidString]))
         }
     }
 }
@@ -211,9 +210,7 @@ extension DeleteMemoUseCase {
 
         logger.useCase("Starting cascading transcription deletion", context: context)
 
-        await MainActor.run {
-            transcriptionRepository.deleteTranscriptionData(for: memo.id)
-            logger.useCase("Cascading transcription deletion completed", level: .info, context: context)
-        }
+        await transcriptionRepository.deleteTranscriptionData(for: memo.id)
+        logger.useCase("Cascading transcription deletion completed", level: .info, context: context)
     }
 }

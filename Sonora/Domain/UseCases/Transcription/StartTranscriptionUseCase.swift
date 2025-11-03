@@ -1,7 +1,9 @@
 import Foundation
 
-@MainActor
-internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol {
+// TODO: Remove @unchecked Sendable once service protocols are made Sendable
+// Dependencies that need Sendable conformance: ModerationServiceProtocol, FillerWordFiltering,
+// LanguageQualityEvaluator, ClientLanguageDetectionService
+internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtocol, @unchecked Sendable {
 
     // MARK: - Dependencies
     private let transcriptionRepository: any TranscriptionRepository
@@ -52,7 +54,6 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
     }
 
     // MARK: - Use Case Execution
-    @MainActor
     internal func execute(memo: Memo) async throws {
         let context = LogContext(additionalInfo: [
             "memoId": memo.id.uuidString,
@@ -62,7 +63,7 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
         logger.info("Starting transcription for memo: \(memo.filename)", category: .transcription, context: context)
 
         // Preconditions and historical skip check
-        try guardIdempotencyAndSilenceHistory(memo: memo, context: context)
+        try await guardIdempotencyAndSilenceHistory(memo: memo, context: context)
 
         // Check for operation conflicts (e.g., can't transcribe while recording same memo)
         try await guardNoConflictingOperation(memo: memo, context: context)
@@ -102,10 +103,8 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
             logger.error("Transcription failed", category: .transcription, context: context, error: error)
 
             // Save failed state to repository
-            await MainActor.run {
-                let failedState = TranscriptionState.failed(error.localizedDescription)
-                transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
-            }
+            let failedState = TranscriptionState.failed(error.localizedDescription)
+            await transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
 
             // Fail the transcription operation
             await operationCoordinator.failOperation(operationId, errorDescription: error.localizedDescription)
@@ -128,9 +127,11 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
         await operationCoordinator.updateProgress(operationId: operationId, progress: progress)
     }
 
-    private func prepareTranscript(from text: String) -> (processed: String, original: String) {
+    private func prepareTranscript(from text: String) async -> (processed: String, original: String) {
         let original = text
-        let sanitized = fillerWordFilter.removeFillerWords(from: text)
+        let sanitized = await MainActor.run {
+            fillerWordFilter.removeFillerWords(from: text)
+        }
         // Ensure we never persist an empty transcript when the user actually spoke.
         if sanitized.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
            !original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -276,10 +277,8 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
     }
 
     private func saveAndComplete(operationId: UUID, memoId: UUID, text: String, context: LogContext) async {
-        await MainActor.run {
-            // Save final text (also sets state to completed)
-            transcriptionRepository.saveTranscriptionText(text, for: memoId)
-        }
+        // Save final text (also sets state to completed)
+        await transcriptionRepository.saveTranscriptionText(text, for: memoId)
 
         await annotateAIMetadataAndModerate(memoId: memoId, text: text)
 
@@ -293,9 +292,7 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
 
     // MARK: - AI Labeling & Moderation
     private func annotateAIMetadataAndModerate(memoId: UUID, text: String) async {
-        var meta: TranscriptionMetadata = await MainActor.run {
-            transcriptionRepository.getTranscriptionMetadata(for: memoId) ?? TranscriptionMetadata()
-        }
+        var meta: TranscriptionMetadata = await transcriptionRepository.getTranscriptionMetadata(for: memoId) ?? TranscriptionMetadata()
         meta.aiGenerated = true
         do {
             let mod = try await moderationService.moderate(text: text)
@@ -304,9 +301,7 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
         } catch {
             // Best-effort; keep AI label.
         }
-        await MainActor.run {
-            transcriptionRepository.saveTranscriptionMetadata(meta, for: memoId)
-        }
+        await transcriptionRepository.saveTranscriptionMetadata(meta, for: memoId)
     }
 }
 
@@ -318,8 +313,7 @@ internal struct LanguageFallbackConfig {
     }
 }
 
-@MainActor
-internal protocol StartTranscriptionUseCaseProtocol {
+internal protocol StartTranscriptionUseCaseProtocol: Sendable {
     func execute(memo: Memo) async throws
 }
 
@@ -369,7 +363,7 @@ public enum TranscriptionError: LocalizedError {
 extension StartTranscriptionUseCase {
     private func enrichedServiceInfo(for memoId: UUID, base: [String: Any]) async -> [String: Any] {
         var info = base
-        let meta = await MainActor.run { transcriptionRepository.getTranscriptionMetadata(for: memoId) }
+        let meta = await transcriptionRepository.getTranscriptionMetadata(for: memoId)
         let serviceKey = meta?.transcriptionService?.rawValue ?? "unknown"
         let serviceLabel: String = serviceKey == "cloud_api" ? "Cloud API" : "unknown"
         info["serviceKey"] = serviceKey
@@ -377,7 +371,7 @@ extension StartTranscriptionUseCase {
         return info
     }
 
-    private struct FinalizationPayload {
+    private struct FinalizationPayload: @unchecked Sendable {
         let operationId: UUID
         let memo: Memo
         let textToSave: String
@@ -391,18 +385,16 @@ extension StartTranscriptionUseCase {
     }
 
     private func finalize(using payload: FinalizationPayload) async {
-        await MainActor.run {
-            transcriptionRepository.saveTranscriptionText(payload.textToSave, for: payload.memo.id)
-            transcriptionRepository.saveTranscriptionMetadata(
-                TranscriptionMetadata(
-                    text: payload.processedText,
-                    originalText: payload.originalText,
-                    detectedLanguage: payload.langToSave,
-                    qualityScore: payload.qualityToSave
-                ),
-                for: payload.memo.id
-            )
-        }
+        await transcriptionRepository.saveTranscriptionText(payload.textToSave, for: payload.memo.id)
+        await transcriptionRepository.saveTranscriptionMetadata(
+            TranscriptionMetadata(
+                text: payload.processedText,
+                originalText: payload.originalText,
+                detectedLanguage: payload.langToSave,
+                qualityScore: payload.qualityToSave
+            ),
+            for: payload.memo.id
+        )
         await annotateAIMetadataAndModerate(memoId: payload.memo.id, text: payload.textToSave)
         switch payload.logLevel {
         case .info:
@@ -435,10 +427,8 @@ extension StartTranscriptionUseCase {
 
     private func handleNoSpeech(memo: Memo, operationId: UUID, context: LogContext) async {
         await updateProgress(operationId: operationId, fraction: 0.9, step: "Sonora didn't quite catch that")
-        await MainActor.run {
-            let failedState = TranscriptionState.failed("Sonora didn't quite catch that")
-            transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
-        }
+        let failedState = TranscriptionState.failed("Sonora didn't quite catch that")
+        await transcriptionRepository.saveTranscriptionState(failedState, for: memo.id)
         await operationCoordinator.completeOperation(operationId)
         logger.info("Transcription skipped (no speech)", category: .transcription, context: context)
     }
@@ -449,7 +439,7 @@ extension StartTranscriptionUseCase {
             let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang)
             let eval = qualityEvaluator.evaluateQuality(resp, text: resp.text)
             let textToSave = resp.text
-            let (processedText, originalText) = prepareTranscript(from: resp.text)
+            let (processedText, originalText) = await prepareTranscript(from: resp.text)
             await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
             let langToSave = resp.detectedLanguage ?? lang
             let qualityToSave = eval.overallScore
@@ -474,7 +464,7 @@ extension StartTranscriptionUseCase {
         let aggregator = TranscriptionAggregator()
         let agg = aggregator.aggregate(primary)
         let textToSave = agg.text
-        let (processedText, originalText) = prepareTranscript(from: agg.text)
+        let (processedText, originalText) = await prepareTranscript(from: agg.text)
         let langToSave = lang
         let qualityToSave = agg.confidence
         let textLen = processedText.count
@@ -516,7 +506,7 @@ extension StartTranscriptionUseCase {
             }
             await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
             let textToSave = finalResp.text
-            let (processedText, originalText) = prepareTranscript(from: finalResp.text)
+            let (processedText, originalText) = await prepareTranscript(from: finalResp.text)
             let langToSave = DefaultClientLanguageDetectionService.iso639_1(fromBCP47: finalResp.detectedLanguage) ?? finalResp.detectedLanguage ?? "und"
             let qualityToSave = finalEval.overallScore
             let textLen = processedText.count
@@ -537,7 +527,7 @@ extension StartTranscriptionUseCase {
         let finalLanguage = result.lang
         await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
         let textToSave = finalText
-        let (processedText, originalText) = prepareTranscript(from: finalText)
+        let (processedText, originalText) = await prepareTranscript(from: finalText)
         let langToSave = finalLanguage
         let qualityToSave = result.qualityScore
         let textLen = processedText.count
@@ -592,8 +582,8 @@ extension StartTranscriptionUseCase {
         return (finalText, finalLanguage, finalEval.overallScore)
     }
     // Extracted guards and setup
-    private func guardIdempotencyAndSilenceHistory(memo: Memo, context: LogContext) throws {
-        let preState = transcriptionRepository.getTranscriptionState(for: memo.id)
+    private func guardIdempotencyAndSilenceHistory(memo: Memo, context: LogContext) async throws {
+        let preState = await transcriptionRepository.getTranscriptionState(for: memo.id)
         if preState.isInProgress { throw TranscriptionError.alreadyInProgress }
         if case .completed = preState { throw TranscriptionError.alreadyCompleted }
         if case .failed(let msg) = preState,
@@ -633,9 +623,7 @@ extension StartTranscriptionUseCase {
         do {
             let totalDurationSec = try await audioMetadataService.getAudioDuration(url: audioURL)
             if totalDurationSec < 0.8 {
-                await MainActor.run {
-                    transcriptionRepository.saveTranscriptionState(.failed("Clip too short"), for: memo.id)
-                }
+                await transcriptionRepository.saveTranscriptionState(.failed("Clip too short"), for: memo.id)
                 await operationCoordinator.completeOperation(operationId)
                 logger.info("Transcription skipped (clip too short)", category: .transcription, context: context)
                 return true
@@ -647,9 +635,7 @@ extension StartTranscriptionUseCase {
     }
 
     private func markInProgress(memo: Memo) async {
-        await MainActor.run {
-            transcriptionRepository.saveTranscriptionState(.inProgress, for: memo.id)
-        }
+        await transcriptionRepository.saveTranscriptionState(.inProgress, for: memo.id)
     }
     /// Decide whether to force chunked transcription based on audio characteristics typical of imported files
     private func shouldForceChunking(audioURL: URL) async -> Bool {

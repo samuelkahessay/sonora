@@ -645,13 +645,11 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         for memoId: UUID,
         mode: AnalysisMode
     ) async -> T? {
-        await MainActor.run {
-            analysisRepository.getAnalysisResult(
-                for: memoId,
-                mode: mode,
-                responseType: T.self
-            )?.data
-        }
+        await analysisRepository.getAnalysisResult(
+            for: memoId,
+            mode: mode,
+            responseType: T.self
+        )?.data
     }
 
     private func cacheAnalysisResult<T: Codable & Sendable>(
@@ -659,17 +657,15 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         for memoId: UUID,
         mode: AnalysisMode
     ) async {
-        await MainActor.run {
-            let envelope = AnalyzeEnvelope(
-                mode: mode,
-                data: data,
-                model: "gpt-5-nano",
-                tokens: TokenUsage(input: 0, output: 0), // Simplified for now
-                latency_ms: 0, // Simplified for now
-                moderation: nil
-            )
+        let envelope = AnalyzeEnvelope(
+            mode: mode,
+            data: data,
+            model: "gpt-5-nano",
+            tokens: TokenUsage(input: 0, output: 0), // Simplified for now
+            latency_ms: 0, // Simplified for now
+            moderation: nil
+        )
 
-            analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
-        }
+        await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
     }
 }

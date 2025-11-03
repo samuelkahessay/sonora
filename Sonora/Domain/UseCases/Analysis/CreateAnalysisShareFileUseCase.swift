@@ -25,7 +25,6 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
         self.logger = logger
     }
 
-    @MainActor
     func execute(memo: Memo, includeTypes: Set<DomainAnalysisType>?) async throws -> URL {
         let corr = UUID().uuidString
         let context = LogContext(correlationId: corr, additionalInfo: [
@@ -49,10 +48,8 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
                 return set
             }
 
-            // Determine latest timestamps from repository history (MainActor-isolated)
-            let history = await MainActor.run(resultType: [(mode: AnalysisMode, timestamp: Date)].self) {
-                analysisRepository.getAnalysisHistory(for: memo.id)
-            }
+            // Determine latest timestamps from repository history
+            let history = await analysisRepository.getAnalysisHistory(for: memo.id)
             var timestampByMode: [AnalysisMode: Date] = [:]
             for (mode, ts) in history { timestampByMode[mode] = ts }
 
@@ -60,9 +57,9 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
             struct Section { let mode: AnalysisMode; let timestamp: Date; let text: String }
             var sections: [Section] = []
 
-            func addIfAvailable<M: Codable>(_ mode: AnalysisMode, _ type: M.Type, builder: (AnalyzeEnvelope<M>) -> String?) async {
+            func addIfAvailable<M: Codable & Sendable>(_ mode: AnalysisMode, _ type: M.Type, builder: (AnalyzeEnvelope<M>) -> String?) async {
                 if let filter = modeFilter, !filter.contains(mode) { return }
-                let env: AnalyzeEnvelope<M>? = await MainActor.run { analysisRepository.getAnalysisResult(for: memo.id, mode: mode, responseType: M.self) }
+                let env: AnalyzeEnvelope<M>? = await analysisRepository.getAnalysisResult(for: memo.id, mode: mode, responseType: M.self)
                 guard let env = env else { return }
                 let ts = timestampByMode[mode] ?? Date()
                 if let txt = builder(env), !txt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -73,9 +70,7 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
             // Distill section: prefer full DistillData; otherwise consolidate component modes
             let includeDistill = (includeTypes == nil) || (includeTypes?.contains(.distill) == true)
             if includeDistill {
-                let fullDistill: AnalyzeEnvelope<DistillData>? = await MainActor.run {
-                    analysisRepository.getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self)
-                }
+                let fullDistill: AnalyzeEnvelope<DistillData>? = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self)
                 if let env = fullDistill {
                     let ts = timestampByMode[.distill] ?? Date()
                     var s = "📝 DISTILL (Updated: \(Self.fmtDate(ts)))\n\n"
@@ -88,15 +83,9 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
                     sections.append(Section(mode: .distill, timestamp: ts, text: s))
                 } else {
                     // Consolidate component modes: summary, themes, actions, reflection
-                    let sumEnv: AnalyzeEnvelope<DistillSummaryData>? = await MainActor.run(resultType: AnalyzeEnvelope<DistillSummaryData>?.self) {
-                        analysisRepository.getAnalysisResult(for: memo.id, mode: .distillSummary, responseType: DistillSummaryData.self)
-                    }
-                    let actEnv: AnalyzeEnvelope<DistillActionsData>? = await MainActor.run(resultType: AnalyzeEnvelope<DistillActionsData>?.self) {
-                        analysisRepository.getAnalysisResult(for: memo.id, mode: .distillActions, responseType: DistillActionsData.self)
-                    }
-                    let refEnv: AnalyzeEnvelope<DistillReflectionData>? = await MainActor.run(resultType: AnalyzeEnvelope<DistillReflectionData>?.self) {
-                        analysisRepository.getAnalysisResult(for: memo.id, mode: .distillReflection, responseType: DistillReflectionData.self)
-                    }
+                    let sumEnv: AnalyzeEnvelope<DistillSummaryData>? = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillSummary, responseType: DistillSummaryData.self)
+                    let actEnv: AnalyzeEnvelope<DistillActionsData>? = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillActions, responseType: DistillActionsData.self)
+                    let refEnv: AnalyzeEnvelope<DistillReflectionData>? = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillReflection, responseType: DistillReflectionData.self)
 
                     if sumEnv != nil || actEnv != nil || refEnv != nil {
                         // Determine latest timestamp among components

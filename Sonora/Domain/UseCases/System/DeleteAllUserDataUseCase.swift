@@ -87,7 +87,7 @@ final class DeleteAllUserDataUseCase: DeleteAllUserDataUseCaseProtocol {
 
         // Refresh repositories after deletion
         memoRepository.loadMemos()
-        transcriptionRepository.clearTranscriptionCache()
-        analysisRepository.clearCache()
+        await transcriptionRepository.clearTranscriptionCache()
+        await analysisRepository.clearCache()
     }
 }

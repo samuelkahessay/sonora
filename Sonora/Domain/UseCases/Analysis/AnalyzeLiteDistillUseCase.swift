@@ -8,7 +8,8 @@ protocol AnalyzeLiteDistillUseCaseProtocol: Sendable {
 
 /// Free-tier Lite Distill analysis use case
 /// Single API call optimized for cost efficiency while delivering meaningful insights
-final class AnalyzeLiteDistillUseCase: AnalyzeLiteDistillUseCaseProtocol, @unchecked Sendable {
+/// Use case runs off main thread; repository operations automatically hop to main actor.
+final class AnalyzeLiteDistillUseCase: AnalyzeLiteDistillUseCaseProtocol, Sendable {
 
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
@@ -33,7 +34,6 @@ final class AnalyzeLiteDistillUseCase: AnalyzeLiteDistillUseCaseProtocol, @unche
     }
 
     // MARK: - Use Case Execution
-    @MainActor
     func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<LiteDistillData> {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
@@ -49,9 +49,7 @@ final class AnalyzeLiteDistillUseCase: AnalyzeLiteDistillUseCaseProtocol, @unche
         }
 
         // CACHE FIRST: Skip coordinator for cache hit
-        if let cachedResult = await MainActor.run(body: {
-            analysisRepository.getAnalysisResult(for: memoId, mode: .liteDistill, responseType: LiteDistillData.self)
-        }) {
+        if let cachedResult = await analysisRepository.getAnalysisResult(for: memoId, mode: .liteDistill, responseType: LiteDistillData.self) {
             logger.analysis("LiteDistill.CacheHit", level: .info, context: context)
             return cachedResult
         }
@@ -67,9 +65,7 @@ final class AnalyzeLiteDistillUseCase: AnalyzeLiteDistillUseCaseProtocol, @unche
             let result = try await analysisService.analyzeLiteDistill(transcript: transcript)
 
             // Save result to cache
-            await MainActor.run {
-                analysisRepository.saveAnalysisResult(result, for: memoId, mode: .liteDistill)
-            }
+            await analysisRepository.saveAnalysisResult(result, for: memoId, mode: .liteDistill)
 
             // Publish completion event
             await MainActor.run {

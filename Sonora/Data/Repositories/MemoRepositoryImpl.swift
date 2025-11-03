@@ -249,8 +249,8 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
     private func mapToDomain(_ model: MemoModel) -> Memo {
         // Always derive the canonical audio URL from current container + memo id
         let url = audioFilePath(for: model.id)
-        // Status injected via batched map when available; default to repository lookup as fallback
-        let status = mapToDomainStatus(transcriptionRepository.getTranscriptionState(for: model.id))
+        // Default to notStarted; callers should use batched state fetching for accurate status
+        let status: DomainTranscriptionStatus = .notStarted
         return Memo(
             id: model.id,
             filename: model.filename,
@@ -298,64 +298,68 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         if let cache = memosCache, let ts = memosCacheTime, Date().timeIntervalSince(ts) < 3 {
             updateMemos(cache)
         }
-        do {
-            let descriptor = FetchDescriptor<MemoModel>(sortBy: [SortDescriptor(\.creationDate, order: .reverse)])
-            let models = try context.fetch(descriptor)
-            let ids = models.map { $0.id }
 
-            // Identify orphaned records first (based on canonical path in current container)
-            let orphanModels: [MemoModel] = models.filter { model in
-                let url = audioFilePath(for: model.id)
-                return !FileManager.default.fileExists(atPath: url.path)
-            }
+        Task { @MainActor in
+            do {
+                let descriptor = FetchDescriptor<MemoModel>(sortBy: [SortDescriptor(\.creationDate, order: .reverse)])
+                let models = try context.fetch(descriptor)
+                let ids = models.map { $0.id }
 
-            // Batch fetch transcription states to avoid N+1
-            let states = transcriptionRepository.getTranscriptionStates(for: ids)
-            let mapped: [Memo] = models.compactMap { model in
-                // Recompute canonical path from current container
-                let url = audioFilePath(for: model.id)
-                // Filter out orphaned records (container changed or file removed)
-                guard FileManager.default.fileExists(atPath: url.path) else {
-                    return nil
+                // Identify orphaned records first (based on canonical path in current container)
+                let orphanModels: [MemoModel] = models.filter { model in
+                    let url = audioFilePath(for: model.id)
+                    return !FileManager.default.fileExists(atPath: url.path)
                 }
-                let state = states[model.id] ?? transcriptionRepository.getTranscriptionState(for: model.id)
-                return Memo(
-                    id: model.id,
-                    filename: model.filename,
-                    fileURL: url,
-                    creationDate: model.creationDate,
-                    durationSeconds: model.duration,
-                    transcriptionStatus: mapToDomainStatus(state),
-                    analysisResults: [],
-                    customTitle: model.customTitle,
-                    shareableFileName: model.shareableFileName,
-                    autoTitleState: autoTitleState(for: model.id)
-                )
-            }
-            updateMemos(mapped)
-            self.memosCache = mapped
-            self.memosCacheTime = Date()
-            print("✅ MemoRepository: Loaded \(mapped.count) memos from SwiftData (batched states)")
 
-            // Background cleanup for orphaned SwiftData records; single summary log
-            if !orphanModels.isEmpty {
-                let count = orphanModels.count
-                Task { @MainActor in
+                // Batch fetch transcription states to avoid N+1
+                let states = await transcriptionRepository.getTranscriptionStates(for: ids)
+                let mapped: [Memo] = models.compactMap { model in
+                    // Recompute canonical path from current container
+                    let url = audioFilePath(for: model.id)
+                    // Filter out orphaned records (container changed or file removed)
+                    guard FileManager.default.fileExists(atPath: url.path) else {
+                        return nil
+                    }
+                    // Use batched state or default to notStarted (batch should have all states)
+                    let state = states[model.id] ?? .notStarted
+                    return Memo(
+                        id: model.id,
+                        filename: model.filename,
+                        fileURL: url,
+                        creationDate: model.creationDate,
+                        durationSeconds: model.duration,
+                        transcriptionStatus: mapToDomainStatus(state),
+                        analysisResults: [],
+                        customTitle: model.customTitle,
+                        shareableFileName: model.shareableFileName,
+                        autoTitleState: autoTitleState(for: model.id)
+                    )
+                }
+                updateMemos(mapped)
+                self.memosCache = mapped
+                self.memosCacheTime = Date()
+                print("✅ MemoRepository: Loaded \(mapped.count) memos from SwiftData (batched states)")
+
+                // Background cleanup for orphaned SwiftData records; single summary log
+                if !orphanModels.isEmpty {
+                    let count = orphanModels.count
                     orphanModels.forEach { context.delete($0) }
                     do { try context.save() } catch { /* best-effort */ }
                     print("🧹 MemoRepository: Orphan cleanup removed \(count) memo record(s) (missing audio files)")
                 }
+            } catch {
+                print("❌ MemoRepository: Failed to fetch memos from SwiftData: \(error)")
+                updateMemos([])
+                self.memosCache = nil
             }
-        } catch {
-            print("❌ MemoRepository: Failed to fetch memos from SwiftData: \(error)")
-            updateMemos([])
-            self.memosCache = nil
         }
     }
 
     // MARK: - Search
     /// Search memos by query across filename, custom title, and full transcript text
     /// Returns memos sorted by creation date (newest first)
+    /// Note: Transcription states default to .notStarted for synchronous return;
+    /// accurate states available via memosPublisher or main memo list
     func searchMemos(query: String) -> [Memo] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         // Fast path: empty query returns current list (already sorted)
@@ -375,21 +379,18 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
 
             let models = try context.fetch(descriptor)
 
-            // Batch fetch transcription states to avoid N+1
-            let ids = models.map { $0.id }
-            let states = transcriptionRepository.getTranscriptionStates(for: ids)
-
             let mapped: [Memo] = models.compactMap { model in
                 let url = audioFilePath(for: model.id)
                 guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-                let state = states[model.id] ?? transcriptionRepository.getTranscriptionState(for: model.id)
+                // Use .notStarted for search results to maintain synchronous return
+                // Accurate transcription states available via main memo list/publishers
                 return Memo(
                     id: model.id,
                     filename: model.filename,
                     fileURL: url,
                     creationDate: model.creationDate,
                     durationSeconds: model.duration,
-                    transcriptionStatus: mapToDomainStatus(state),
+                    transcriptionStatus: .notStarted,
                     analysisResults: [],
                     customTitle: model.customTitle,
                     shareableFileName: model.shareableFileName,

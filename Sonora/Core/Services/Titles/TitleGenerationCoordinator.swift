@@ -51,11 +51,15 @@ final class TitleGenerationCoordinator: ObservableObject {
         memoCancellable = memoRepository.memosPublisher
             .receive(on: RunLoop.main)
             .sink { [weak self] memos in
-                self?.resumePendingJobsIfNeeded(memos: memos)
+                Task {
+                    await self?.resumePendingJobsIfNeeded(memos: memos)
+                }
             }
 
         handleJobsUpdate(jobRepository.fetchAllJobs())
-        resumePendingJobsIfNeeded(memos: memoRepository.memos)
+        Task {
+            await resumePendingJobsIfNeeded(memos: memoRepository.memos)
+        }
         processQueueIfNeeded()
     }
 
@@ -96,7 +100,9 @@ final class TitleGenerationCoordinator: ObservableObject {
     }
 
     func appDidBecomeActive() {
-        resumePendingJobsIfNeeded(memos: memoRepository.memos)
+        Task {
+            await resumePendingJobsIfNeeded(memos: memoRepository.memos)
+        }
         processQueueIfNeeded()
     }
 
@@ -142,11 +148,14 @@ final class TitleGenerationCoordinator: ObservableObject {
         }
     }
 
-    private func resumePendingJobsIfNeeded(memos: [Memo]) {
+    private func resumePendingJobsIfNeeded(memos: [Memo]) async {
         guard !memos.isEmpty else { return }
 
-        let candidates = memos.filter { memo in
-            shouldAutoTitle(memo) && jobRepository.job(for: memo.id) == nil
+        var candidates: [Memo] = []
+        for memo in memos {
+            if await shouldAutoTitle(memo) && jobRepository.job(for: memo.id) == nil {
+                candidates.append(memo)
+            }
         }
 
         guard !candidates.isEmpty else { return }
@@ -237,7 +246,7 @@ final class TitleGenerationCoordinator: ObservableObject {
             return
         }
 
-        guard let transcript = transcriptionRepository.getTranscriptionText(for: memoId), !transcript.isEmpty else {
+        guard let transcript = await transcriptionRepository.getTranscriptionText(for: memoId), !transcript.isEmpty else {
             throw TitleCoordinatorError.transcriptUnavailable
         }
 
@@ -257,7 +266,7 @@ final class TitleGenerationCoordinator: ObservableObject {
         }
 
         let slice = slice(transcript: transcript)
-        let languageHint = transcriptionRepository.getTranscriptionMetadata(for: memoId)?.detectedLanguage
+        let languageHint = await transcriptionRepository.getTranscriptionMetadata(for: memoId)?.detectedLanguage
 
         do {
             let streamingFlag = TitleStreamingFlag()
@@ -305,12 +314,12 @@ final class TitleGenerationCoordinator: ObservableObject {
         return firstPart + "\n\n" + lastPart
     }
 
-    private func shouldAutoTitle(_ memo: Memo) -> Bool {
+    private func shouldAutoTitle(_ memo: Memo) async -> Bool {
         if let customTitle = memo.customTitle, !customTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return false
         }
         guard memo.transcriptionStatus.isCompleted else { return false }
-        guard let transcript = transcriptionRepository.getTranscriptionText(for: memo.id), !transcript.isEmpty else { return false }
+        guard let transcript = await transcriptionRepository.getTranscriptionText(for: memo.id), !transcript.isEmpty else { return false }
         // Skip entirely for 0–1 word transcripts to avoid pointless jobs
         let wordCount = tokenizeWords(transcript).count
         guard wordCount >= 2 else { return false }

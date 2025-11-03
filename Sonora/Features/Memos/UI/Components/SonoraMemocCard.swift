@@ -41,10 +41,6 @@ struct SonoraMemocCard: View {
 
     // MARK: - Computed Properties
 
-    private var transcriptionState: TranscriptionState {
-        viewModel.getTranscriptionState(for: memo)
-    }
-
     private var hasInsights: Bool {
         // Check if memo has analysis results with insights
         memo.analysisResults.contains { result in

@@ -49,7 +49,9 @@ struct AnalysisSectionView: View {
                         HapticManager.shared.playSelection()
                         if hasCached {
                             if !hasShown {
-                                viewModel.restoreCachedDistill()
+                                Task {
+                                    await viewModel.restoreCachedDistill()
+                                }
                             }
                         } else {
                             viewModel.performAnalysis(mode: .distill, transcript: transcript)

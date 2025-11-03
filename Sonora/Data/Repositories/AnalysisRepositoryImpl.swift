@@ -1,6 +1,8 @@
 import Foundation
 import SwiftData
 
+/// Implementation maintains @MainActor isolation for SwiftData context operations.
+/// Protocol callers can call from any actor; Swift automatically hops to main actor.
 @MainActor
 final class AnalysisRepositoryImpl: AnalysisRepository {
     private var analysisCache: [String: Any] = [:]
@@ -18,7 +20,7 @@ final class AnalysisRepositoryImpl: AnalysisRepository {
         "\(memoId.uuidString)_\(mode.rawValue)"
     }
 
-    func saveAnalysisResult<T: Codable>(_ result: AnalyzeEnvelope<T>, for memoId: UUID, mode: AnalysisMode) {
+    func saveAnalysisResult<T: Codable & Sendable>(_ result: AnalyzeEnvelope<T>, for memoId: UUID, mode: AnalysisMode) async {
         let correlationId = UUID().uuidString
         let logCtx = LogContext(correlationId: correlationId, additionalInfo: [
             "memoId": memoId.uuidString,
@@ -61,7 +63,7 @@ final class AnalysisRepositoryImpl: AnalysisRepository {
         }
     }
 
-    func getAnalysisResult<T: Codable>(for memoId: UUID, mode: AnalysisMode, responseType: T.Type) -> AnalyzeEnvelope<T>? {
+    func getAnalysisResult<T: Codable & Sendable>(for memoId: UUID, mode: AnalysisMode, responseType: T.Type) async -> AnalyzeEnvelope<T>? {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: [
             "memoId": memoId.uuidString,
@@ -115,7 +117,7 @@ final class AnalysisRepositoryImpl: AnalysisRepository {
         }
     }
 
-    func hasAnalysisResult(for memoId: UUID, mode: AnalysisMode) -> Bool {
+    func hasAnalysisResult(for memoId: UUID, mode: AnalysisMode) async -> Bool {
         let key = cacheKey(for: memoId, mode: mode)
 
         if analysisCache[key] != nil {
@@ -128,7 +130,7 @@ final class AnalysisRepositoryImpl: AnalysisRepository {
         return ((try? modelContext.fetch(descriptor))?.isEmpty == false)
     }
 
-    func deleteAnalysisResults(for memoId: UUID) {
+    func deleteAnalysisResults(for memoId: UUID) async {
         do {
             let descriptor = FetchDescriptor<AnalysisResultModel>(predicate: #Predicate { $0.memo?.id == memoId })
             let items = try modelContext.fetch(descriptor)
@@ -148,7 +150,7 @@ final class AnalysisRepositoryImpl: AnalysisRepository {
         }
     }
 
-    func deleteAnalysisResult(for memoId: UUID, mode: AnalysisMode) {
+    func deleteAnalysisResult(for memoId: UUID, mode: AnalysisMode) async {
         let key = cacheKey(for: memoId, mode: mode)
         do {
             let descriptor = FetchDescriptor<AnalysisResultModel>(
@@ -167,35 +169,35 @@ final class AnalysisRepositoryImpl: AnalysisRepository {
         }
     }
 
-    func getAllAnalysisResults(for memoId: UUID) -> [AnalysisMode: Any] {
-        var results: [AnalysisMode: Any] = [:]
+    func getAllAnalysisResults(for memoId: UUID) async -> AnalysisResultsSummary {
+        var availableModes: Set<AnalysisMode> = []
 
         for mode in AnalysisMode.allCases {
             let key = cacheKey(for: memoId, mode: mode)
-            if let cached = analysisCache[key] {
-                results[mode] = cached
+            if analysisCache[key] != nil {
+                availableModes.insert(mode)
             } else {
                 let descriptor = FetchDescriptor<AnalysisResultModel>(
                     predicate: #Predicate { ($0.memo?.id == memoId) && ($0.mode == mode.rawValue) }
                 )
                 if (try? modelContext.fetch(descriptor))?.isEmpty == false {
-                    results[mode] = "Available in store"
+                    availableModes.insert(mode)
                 }
             }
         }
 
-        return results
+        return AnalysisResultsSummary(availableModes: availableModes)
     }
 
-    func clearCache() {
+    func clearCache() async {
         analysisCache.removeAll()
         analysisHistory.removeAll()
         print("🧹 AnalysisRepository: Cleared analysis cache")
     }
 
-    func getCacheSize() -> Int { analysisCache.count }
+    func getCacheSize() async -> Int { analysisCache.count }
 
-    func getAnalysisHistory(for memoId: UUID) -> [(mode: AnalysisMode, timestamp: Date)] {
+    func getAnalysisHistory(for memoId: UUID) async -> [(mode: AnalysisMode, timestamp: Date)] {
         if let existing = analysisHistory[memoId] { return existing }
         // Derive from store
         if let items = try? modelContext.fetch(FetchDescriptor<AnalysisResultModel>(predicate: #Predicate { $0.memo?.id == memoId })) {

@@ -3,17 +3,21 @@ import SwiftUI
 struct MemoSwipeActionsView: View {
     let memo: Memo
     @ObservedObject var viewModel: MemoListViewModel
+    @State private var transcriptionState: TranscriptionState = .notStarted
 
     var body: some View {
         Group {
             deleteButton
             contextualTranscriptionActions
         }
+        .task(id: memo.id) {
+            transcriptionState = await viewModel.getTranscriptionState(for: memo)
+        }
     }
 
     @ViewBuilder
     private var contextualTranscriptionActions: some View {
-        let state = viewModel.getTranscriptionState(for: memo)
+        let state = transcriptionState
         if state.isNotStarted {
             Button {
                 HapticManager.shared.playSelection()

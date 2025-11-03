@@ -2,26 +2,32 @@ import Combine
 import Foundation
 import SwiftData
 
+/// Implementation maintains @MainActor isolation for Combine subjects and SwiftData context.
+/// Protocol callers can call from any actor; Swift automatically hops to main actor.
 @MainActor
 final class TranscriptionRepositoryImpl: TranscriptionRepository {
     private let transcriptionStatesSubject = CurrentValueSubject<[String: TranscriptionState], Never>([:])
 
     var transcriptionStates: [String: TranscriptionState] {
-        transcriptionStatesSubject.value
+        get async {
+            transcriptionStatesSubject.value
+        }
     }
 
     // MARK: - Event-Driven State Changes (Swift 6 Compliant)
 
     /// Subject for publishing transcription state changes
-    private let stateChangesSubject = PassthroughSubject<TranscriptionStateChange, Never>()
+    /// NOTE: nonisolated(unsafe) because Combine publishers are accessed from multiple contexts
+    /// but the underlying state management is on main actor
+    nonisolated(unsafe) private let stateChangesSubject = PassthroughSubject<TranscriptionStateChange, Never>()
 
     /// Publisher for transcription state changes - eliminates need for polling
-    var stateChangesPublisher: AnyPublisher<TranscriptionStateChange, Never> {
+    nonisolated var stateChangesPublisher: AnyPublisher<TranscriptionStateChange, Never> {
         stateChangesSubject.eraseToAnyPublisher()
     }
 
     /// Get state changes for a specific memo
-    func stateChangesPublisher(for memoId: UUID) -> AnyPublisher<TranscriptionStateChange, Never> {
+    nonisolated func stateChangesPublisher(for memoId: UUID) -> AnyPublisher<TranscriptionStateChange, Never> {
         stateChangesPublisher
             .filter { $0.memoId == memoId }
             .eraseToAnyPublisher()
@@ -76,7 +82,7 @@ final class TranscriptionRepositoryImpl: TranscriptionRepository {
         }
     }
 
-    func saveTranscriptionState(_ state: TranscriptionState, for memoId: UUID) {
+    func saveTranscriptionState(_ state: TranscriptionState, for memoId: UUID) async {
         let key = memoIdKey(for: memoId)
         var states = transcriptionStatesSubject.value
         let previousState = states[key]
@@ -125,7 +131,7 @@ final class TranscriptionRepositoryImpl: TranscriptionRepository {
         logger.debug("Inserted transcription state in SwiftData", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "status": trans.status]))
     }
 
-    func getTranscriptionState(for memoId: UUID) -> TranscriptionState {
+    func getTranscriptionState(for memoId: UUID) async -> TranscriptionState {
         let key = memoIdKey(for: memoId)
         var states = transcriptionStatesSubject.value
         if let cached = states[key] { return cached }
@@ -161,7 +167,7 @@ final class TranscriptionRepositoryImpl: TranscriptionRepository {
         return state
     }
 
-    func deleteTranscriptionData(for memoId: UUID) {
+    func deleteTranscriptionData(for memoId: UUID) async {
         let key = memoIdKey(for: memoId)
         var states = transcriptionStatesSubject.value
         let previousState = states[key]
@@ -186,16 +192,16 @@ final class TranscriptionRepositoryImpl: TranscriptionRepository {
         logger.info("Deleted transcription data for memo (SwiftData)", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]))
     }
 
-    func getTranscriptionText(for memoId: UUID) -> String? {
-        let state = getTranscriptionState(for: memoId)
+    func getTranscriptionText(for memoId: UUID) async -> String? {
+        let state = await getTranscriptionState(for: memoId)
         return state.text
     }
 
-    func saveTranscriptionText(_ text: String, for memoId: UUID) {
-        saveTranscriptionState(.completed(text), for: memoId)
+    func saveTranscriptionText(_ text: String, for memoId: UUID) async {
+        await saveTranscriptionState(.completed(text), for: memoId)
     }
 
-    func getTranscriptionMetadata(for memoId: UUID) -> TranscriptionMetadata? {
+    func getTranscriptionMetadata(for memoId: UUID) async -> TranscriptionMetadata? {
         guard let model = fetchTranscriptionModel(for: memoId) else { return nil }
         if let data = model.metadataData, let meta = try? JSONDecoder().decode(TranscriptionMetadata.self, from: data) {
             return meta
@@ -212,8 +218,8 @@ final class TranscriptionRepositoryImpl: TranscriptionRepository {
         )
     }
 
-    func saveTranscriptionMetadata(_ metadata: TranscriptionMetadata, for memoId: UUID) {
-        let existing = getTranscriptionMetadata(for: memoId)
+    func saveTranscriptionMetadata(_ metadata: TranscriptionMetadata, for memoId: UUID) async {
+        let existing = await getTranscriptionMetadata(for: memoId)
         let merged = existing?.merging(metadata) ?? metadata
         let data = try? JSONEncoder().encode(merged)
         let now = Date()
@@ -237,12 +243,12 @@ final class TranscriptionRepositoryImpl: TranscriptionRepository {
         do { try context.save() } catch { logger.error("Failed to insert transcription metadata", category: .repository, context: LogContext(additionalInfo: ["memoId": memoId.uuidString]), error: error) }
     }
 
-    func clearTranscriptionCache() {
+    func clearTranscriptionCache() async {
         transcriptionStatesSubject.send([:])
         logger.debug("Cleared transcription cache", category: .repository, context: LogContext())
     }
 
-    func getTranscriptionStates(for memoIds: [UUID]) -> [UUID: TranscriptionState] {
+    func getTranscriptionStates(for memoIds: [UUID]) async -> [UUID: TranscriptionState] {
         guard !memoIds.isEmpty else { return [:] }
         var result: [UUID: TranscriptionState] = [:]
         // Use cache first

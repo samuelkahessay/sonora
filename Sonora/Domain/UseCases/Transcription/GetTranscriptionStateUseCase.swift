@@ -2,27 +2,26 @@ import Foundation
 
 /// Use case for getting transcription state of a memo
 /// Encapsulates the business logic for retrieving transcription status
-protocol GetTranscriptionStateUseCaseProtocol {
-    @MainActor
-    func execute(memo: Memo) -> TranscriptionState
+protocol GetTranscriptionStateUseCaseProtocol: Sendable {
+    func execute(memo: Memo) async -> TranscriptionState
 }
 
-final class GetTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol {
+final class GetTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol, Sendable {
 
     // MARK: - Dependencies
     private let transcriptionRepository: any TranscriptionRepository
-    private let logger: any LoggerProtocol = Logger.shared
+    private let logger: any LoggerProtocol
 
     // MARK: - Initialization
-    init(transcriptionRepository: any TranscriptionRepository) {
+    init(transcriptionRepository: any TranscriptionRepository, logger: any LoggerProtocol = Logger.shared) {
         self.transcriptionRepository = transcriptionRepository
+        self.logger = logger
     }
 
     // MARK: - Use Case Execution
-    @MainActor
-    func execute(memo: Memo) -> TranscriptionState {
+    func execute(memo: Memo) async -> TranscriptionState {
         // Get current transcription state from repository
-        let state = transcriptionRepository.getTranscriptionState(for: memo.id)
+        let state = await transcriptionRepository.getTranscriptionState(for: memo.id)
 
         // Log state retrieval at debug level (reduces console noise)
         logger.debug("Retrieved transcription state for \(memo.filename): \(state.statusText)",

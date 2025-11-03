@@ -130,7 +130,9 @@ struct MemoDetailView: View {
             isTranscriptExpanded = true
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-            viewModel.restoreAnalysisStateIfNeeded()
+            Task {
+                await viewModel.restoreAnalysisStateIfNeeded()
+            }
         }
         .onChange(of: viewModel.transcriptionState) { _, state in
             if case .failed(let err) = state {

@@ -87,7 +87,8 @@ enum DistillComponentData: Sendable {
     case valuesRecognition(ValuesInsight?)
 }
 
-final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol, @unchecked Sendable {
+/// Use case runs off main thread; parallel components execute concurrently in background.
+final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol, Sendable {
 
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
@@ -124,7 +125,6 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     }
 
     // MARK: - Use Case Execution
-    @MainActor
     func execute(transcript: String, memoId: UUID, progressHandler: @MainActor @escaping (DistillProgressUpdate) -> Void) async throws -> AnalyzeEnvelope<DistillData> {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
@@ -140,9 +140,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         }
 
         // CACHE FIRST: Skip coordinator entirely for cache hit
-        if let cachedResult = await MainActor.run(body: {
-            analysisRepository.getAnalysisResult(for: memoId, mode: .distill, responseType: DistillData.self)
-        }) {
+        if let cachedResult = await analysisRepository.getAnalysisResult(for: memoId, mode: .distill, responseType: DistillData.self) {
             logger.analysis("Found complete cached Distill analysis (no coordinator op)", level: .info, context: context)
             return cachedResult
         }
@@ -164,9 +162,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             )
 
             // Save complete result to cache
-            await MainActor.run {
-                analysisRepository.saveAnalysisResult(result, for: memoId, mode: .distill)
-            }
+            await analysisRepository.saveAnalysisResult(result, for: memoId, mode: .distill)
 
             // Publish completion event
             await MainActor.run {
@@ -405,25 +401,23 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     }
 
     private func checkComponentCache(mode: AnalysisMode, memoId: UUID) async -> (data: DistillComponentData, latency_ms: Int, tokens: TokenUsage)? {
-        await MainActor.run {
-            switch mode {
-            case .distillSummary:
-                if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillSummaryData.self) {
-                    return (.summary(result.data), result.latency_ms, result.tokens)
-                }
-            case .distillActions:
-                if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillActionsData.self) {
-                    return (.actions(result.data), result.latency_ms, result.tokens)
-                }
-            case .distillReflection:
-                if let result = analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillReflectionData.self) {
-                    return (.reflection(result.data), result.latency_ms, result.tokens)
-                }
-            default:
-                break
+        switch mode {
+        case .distillSummary:
+            if let result = await analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillSummaryData.self) {
+                return (.summary(result.data), result.latency_ms, result.tokens)
             }
-            return nil
+        case .distillActions:
+            if let result = await analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillActionsData.self) {
+                return (.actions(result.data), result.latency_ms, result.tokens)
+            }
+        case .distillReflection:
+            if let result = await analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillReflectionData.self) {
+                return (.reflection(result.data), result.latency_ms, result.tokens)
+            }
+        default:
+            break
         }
+        return nil
     }
 
     private func executeComponentAnalysis(
@@ -457,27 +451,25 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     }
 
     private func saveComponentCache(data: DistillComponentData, latency: Int, tokens: TokenUsage, mode: AnalysisMode, memoId: UUID) async {
-        await MainActor.run {
-            switch data {
-            case .summary(let summaryData):
-                let envelope = AnalyzeEnvelope(mode: mode, data: summaryData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
-                analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
-            case .actions(let actionsData):
-                let envelope = AnalyzeEnvelope(mode: mode, data: actionsData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
-                analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
-            case .reflection(let reflectionData):
-                let envelope = AnalyzeEnvelope(mode: mode, data: reflectionData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
-                analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
-            case .detections:
-                // No cache persistence for detection bundle in this use case.
-                break
-            case .patterns:
-                // No separate cache for patterns - they're part of the full distill result
-                break
-            case .cognitiveClarity, .philosophicalEchoes, .valuesRecognition:
-                // No separate cache for Pro components - they're part of the full distill result
-                break
-            }
+        switch data {
+        case .summary(let summaryData):
+            let envelope = AnalyzeEnvelope(mode: mode, data: summaryData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+            await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+        case .actions(let actionsData):
+            let envelope = AnalyzeEnvelope(mode: mode, data: actionsData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+            await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+        case .reflection(let reflectionData):
+            let envelope = AnalyzeEnvelope(mode: mode, data: reflectionData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+            await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+        case .detections:
+            // No cache persistence for detection bundle in this use case.
+            break
+        case .patterns:
+            // No separate cache for patterns - they're part of the full distill result
+            break
+        case .cognitiveClarity, .philosophicalEchoes, .valuesRecognition:
+            // No separate cache for Pro components - they're part of the full distill result
+            break
         }
     }
 

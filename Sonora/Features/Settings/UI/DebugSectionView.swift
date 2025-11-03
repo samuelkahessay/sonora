@@ -172,8 +172,8 @@ The meditation practice I started two weeks ago is starting to show results. I'm
 
             // Inject completed transcription state
             let transcriptionRepo = container.transcriptionRepository()
-            transcriptionRepo.saveTranscriptionState(.completed(sampleRichTranscript), for: newMemo.id)
-            transcriptionRepo.saveTranscriptionText(sampleRichTranscript, for: newMemo.id)
+            await transcriptionRepo.saveTranscriptionState(.completed(sampleRichTranscript), for: newMemo.id)
+            await transcriptionRepo.saveTranscriptionText(sampleRichTranscript, for: newMemo.id)
 
             // Notify success
             alertMessage = "✅ Test memo created successfully! Check the memo list."

@@ -152,7 +152,7 @@ public final class MemoEventHandler {
                 logger.warning("Skipping transcription: audio file missing", category: .transcription, context: context, error: nil)
                 return
             }
-            let state = transcriptionRepository.getTranscriptionState(for: domainMemo.id)
+            let state = await transcriptionRepository.getTranscriptionState(for: domainMemo.id)
             // Only start if nothing has begun yet
             guard state.isNotStarted else { return }
             do {
@@ -175,7 +175,7 @@ public final class MemoEventHandler {
                     if required > remaining {
                         // Fail immediately and do not start API work
                         let message = "Monthly quota reached"
-                        self.transcriptionRepository.saveTranscriptionState(.failed(message), for: domainMemo.id)
+                        await self.transcriptionRepository.saveTranscriptionState(.failed(message), for: domainMemo.id)
                         self.logger.info("Transcription blocked by monthly quota (required=\(Int(required))s, remaining=\(Int(remaining))s)",
                                          category: .transcription,
                                          context: context)
@@ -233,12 +233,10 @@ public final class MemoEventHandler {
         }
 
         // Fetch transcription metadata to report the service used
-        let serviceMeta: (serviceKey: String, serviceLabel: String) = {
-            let meta = transcriptionRepository.getTranscriptionMetadata(for: memoId)
-            let key = meta?.transcriptionService?.rawValue ?? "unknown"
-            let label = (meta?.transcriptionService == .cloudAPI) ? "Cloud API" : "unknown"
-            return (key, label)
-        }()
+        let meta = await transcriptionRepository.getTranscriptionMetadata(for: memoId)
+        let key = meta?.transcriptionService?.rawValue ?? "unknown"
+        let label = (meta?.transcriptionService == .cloudAPI) ? "Cloud API" : "unknown"
+        let serviceMeta = (serviceKey: key, serviceLabel: label)
 
         let info: [String: Any] = [
             "memoId": memoId.uuidString,

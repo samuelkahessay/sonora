@@ -56,15 +56,15 @@ final class BuildHistoricalContextUseCase: BuildHistoricalContextUseCaseProtocol
 
             // Try to get cached distill summary
             var summary: String?
-            if let cachedDistill = analysisRepository.getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
+            if let cachedDistill = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
                 summary = cachedDistill.data.summary
-            } else if let cachedSummary = analysisRepository.getAnalysisResult(for: memo.id, mode: .distillSummary, responseType: DistillSummaryData.self) {
+            } else if let cachedSummary = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillSummary, responseType: DistillSummaryData.self) {
                 summary = cachedSummary.data.summary
             }
 
             // Try to get cached themes
             var themes: [String]?
-            if let cachedDistillThemes = analysisRepository.getAnalysisResult(for: memo.id, mode: .distillThemes, responseType: DistillThemesData.self) {
+            if let cachedDistillThemes = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillThemes, responseType: DistillThemesData.self) {
                 themes = cachedDistillThemes.data.key_themes
             }
 

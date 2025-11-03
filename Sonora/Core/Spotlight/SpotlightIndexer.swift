@@ -137,7 +137,7 @@ final class SpotlightIndexer: SpotlightIndexing {
         }
         // Give up quietly after one retry to avoid log spam (subsequent events will re-attempt)
         // Respect privacy flag if provided via metadata; skip if isPrivate == true
-        if let meta = transcriptionRepository.getTranscriptionMetadata(for: memoID), let isPrivate = meta.isPrivate, isPrivate {
+        if let meta = await transcriptionRepository.getTranscriptionMetadata(for: memoID), let isPrivate = meta.isPrivate, isPrivate {
             logger.info("Spotlight: skipping private memo", category: .service, context: LogContext(additionalInfo: ["component": "Spotlight", "memoId": memoID.uuidString]))
             return
         }
@@ -154,7 +154,7 @@ final class SpotlightIndexer: SpotlightIndexing {
         attrs.contentCreationDate = memo.creationDate
         attrs.contentModificationDate = memo.creationDate
         // lastUsedDate best-effort from metadata if present
-        if let meta = transcriptionRepository.getTranscriptionMetadata(for: memo.id), let last = meta.lastOpenedAt {
+        if let meta = await transcriptionRepository.getTranscriptionMetadata(for: memo.id), let last = meta.lastOpenedAt {
             attrs.lastUsedDate = last
         }
         return CSSearchableItem(uniqueIdentifier: idStr, domainIdentifier: "memo", attributeSet: attrs)
@@ -168,7 +168,7 @@ final class SpotlightIndexer: SpotlightIndexing {
 
     private func contentDescription(for memo: Memo) async -> String {
         // Prefer summary if available; else first 160 chars of transcript; else fallback
-        if let t = transcriptionRepository.getTranscriptionText(for: memo.id), !t.isEmpty {
+        if let t = await transcriptionRepository.getTranscriptionText(for: memo.id), !t.isEmpty {
             let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.count > 160 {
                 let idx = trimmed.index(trimmed.startIndex, offsetBy: 160)

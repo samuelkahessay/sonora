@@ -29,6 +29,14 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     // MARK: - Subscription State
     @Published var isProUser: Bool = false
 
+    // MARK: - Analysis Cache State
+    /// Cached analysis availability count (loaded asynchronously)
+    @Published var analysisAvailableCount: Int = 0
+    /// Latest analysis update timestamp (loaded asynchronously)
+    @Published var latestAnalysisUpdatedAt: Date?
+    /// Whether a cached Distill result exists (loaded asynchronously)
+    @Published var hasCachedDistill: Bool = false
+
     // MARK: - Current Memo
     internal var currentMemo: Memo?
 
@@ -73,15 +81,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             return nil
         }
 
-        // First check metadata for pre-cleaned text (from old transcriptions)
-        if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id),
-           let cleanedInMetadata = meta.text, !cleanedInMetadata.isEmpty,
-           cleanedInMetadata != originalText {
-            // Metadata has different cleaned version - use it
-            cleanedTextCache[memo.id] = cleanedInMetadata
-            return cleanedInMetadata
-        }
-
         // Lazy clean on first access
         let filter = DIContainer.shared.fillerWordFilter()
         let cleaned = filter.removeFillerWords(from: originalText)
@@ -110,26 +109,35 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         currentMemo?.filename ?? "none"
     }
 
-    /// Count of available analysis categories. With the simplified model,
-    /// only Distill is considered.
-    var analysisAvailableCount: Int {
-        guard let memo = currentMemo else { return 0 }
-        let repo = DIContainer.shared.analysisRepository()
-        let hasDistill = repo.hasAnalysisResult(for: memo.id, mode: .distill)
-            || repo.hasAnalysisResult(for: memo.id, mode: .distillSummary)
-            || repo.hasAnalysisResult(for: memo.id, mode: .distillActions)
-            || repo.hasAnalysisResult(for: memo.id, mode: .distillReflection)
-        return hasDistill ? 1 : 0
-    }
-
     /// Whether repository has any completed analysis for current memo
     var hasAnalysisAvailable: Bool { analysisAvailableCount > 0 }
 
-    /// Latest analysis update timestamp from repository history
-    var latestAnalysisUpdatedAt: Date? {
-        guard let memo = currentMemo else { return nil }
-        let history = DIContainer.shared.analysisRepository().getAnalysisHistory(for: memo.id)
-        return history.map { $0.timestamp }.max()
+    /// Load analysis cache metadata asynchronously
+    private func loadAnalysisCacheMetadata() {
+        guard let memo = currentMemo else { return }
+        Task {
+            let repo = DIContainer.shared.analysisRepository()
+
+            // Check each mode separately (can't use || with await)
+            let hasDistillMode = await repo.hasAnalysisResult(for: memo.id, mode: .distill)
+            let hasDistillSummary = await repo.hasAnalysisResult(for: memo.id, mode: .distillSummary)
+            let hasDistillActions = await repo.hasAnalysisResult(for: memo.id, mode: .distillActions)
+            let hasDistillReflection = await repo.hasAnalysisResult(for: memo.id, mode: .distillReflection)
+
+            let hasDistill = hasDistillMode || hasDistillSummary || hasDistillActions || hasDistillReflection
+            let count = hasDistill ? 1 : 0
+
+            let history = await repo.getAnalysisHistory(for: memo.id)
+            let latestTimestamp = history.map { $0.timestamp }.max()
+
+            let hasCached = await repo.hasAnalysisResult(for: memo.id, mode: .distill)
+
+            await MainActor.run {
+                self.analysisAvailableCount = count
+                self.latestAnalysisUpdatedAt = latestTimestamp
+                self.hasCachedDistill = hasCached
+            }
+        }
     }
 
     /// Whether retry should be offered in UI
@@ -280,6 +288,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                         analysisPerformanceInfo = "Parallel: \(envelope.latency_ms)ms, Total: \(Int(duration * 1_000))ms"
 
                         print("📝 MemoDetailViewModel: Parallel Distill analysis completed in \(Int(duration * 1_000))ms")
+
+                        // Reload cache metadata after analysis completes
+                        loadAnalysisCacheMetadata()
                     }
 
                     PerformanceMetricsService.shared.recordDuration(
@@ -339,6 +350,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                     "API: \(envelope.latency_ms)ms, Total: \(Int(duration * 1_000))ms"
 
                 print("📝 MemoDetailViewModel: Regular Distill analysis completed (cached: \(wasCached))")
+
+                // Reload cache metadata after analysis completes
+                loadAnalysisCacheMetadata()
             }
 
             // Record total duration metric
@@ -378,6 +392,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                     "API: \(envelope.latency_ms)ms, Total: \(Int(duration * 1_000))ms"
 
                 print("📝 MemoDetailViewModel: Lite Distill analysis completed (cached: \(wasCached))")
+
+                // Reload cache metadata after analysis completes
+                loadAnalysisCacheMetadata()
             }
 
             // Record performance metrics for free tier
@@ -399,8 +416,8 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
 
     // MARK: - Private Methods
 
-    private func updateTranscriptionState(for memo: Memo) {
-        let newState = getTranscriptionStateUseCase.execute(memo: memo)
+    private func updateTranscriptionState(for memo: Memo) async {
+        let newState = await getTranscriptionStateUseCase.execute(memo: memo)
         print("🔄 MemoDetailViewModel: Updating state for \(memo.filename)")
         print("🔄 MemoDetailViewModel: Current UI state: \(transcriptionState.statusText)")
         print("🔄 MemoDetailViewModel: New state from Repository: \(newState.statusText)")
@@ -418,15 +435,22 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     func onViewAppear() {
         guard let memo = currentMemo else { return }
         print("📝 MemoDetailViewModel: View appeared for memo: \(memo.filename)")
-        updateTranscriptionState(for: memo)
+        Task {
+            await updateTranscriptionState(for: memo)
+        }
         setupPlayingState(for: memo)
 
         // Attempt to load language metadata to show banner if needed
-        if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id),
-           let lang = meta.detectedLanguage,
-           let score = meta.qualityScore {
-            updateLanguageDetection(language: lang, qualityScore: score)
+        Task {
+            if let meta = await DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id),
+               let lang = meta.detectedLanguage,
+               let score = meta.qualityScore {
+                updateLanguageDetection(language: lang, qualityScore: score)
+            }
         }
+
+        // Load analysis cache metadata
+        loadAnalysisCacheMetadata()
 
         // Auto-restore Distill results on appear without requiring another tap
         // Prefer Distill as the default mode when none is selected
@@ -436,28 +460,34 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
 
         // If we are (or defaulted to) Distill and no result is currently in memory, restore from cache if available
         if selectedAnalysisMode == .distill, analysisPayload == nil {
-            if let env: AnalyzeEnvelope<DistillData> = DIContainer.shared
-                .analysisRepository()
-                .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
-                analysisPayload = .distill(env.data, env)
-                isAnalyzing = false
-                analysisCacheStatus = "✅ Restored from cache"
-                analysisPerformanceInfo = "Restored on appear"
+            Task {
+                if let env: AnalyzeEnvelope<DistillData> = await DIContainer.shared
+                    .analysisRepository()
+                    .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
+                    await MainActor.run {
+                        self.analysisPayload = .distill(env.data, env)
+                        self.isAnalyzing = false
+                        self.analysisCacheStatus = "✅ Restored from cache"
+                        self.analysisPerformanceInfo = "Restored on appear"
+                    }
+                }
             }
         }
     }
 
         /// Restore analysis UI state when returning from background or view re-appear
-    func restoreAnalysisStateIfNeeded() {
+    func restoreAnalysisStateIfNeeded() async {
         guard let memo = currentMemo else { return }
         if selectedAnalysisMode == .distill, analysisPayload == nil {
-            if let env: AnalyzeEnvelope<DistillData> = DIContainer.shared
+            if let env: AnalyzeEnvelope<DistillData> = await DIContainer.shared
                 .analysisRepository()
                 .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
-                analysisPayload = .distill(env.data, env)
-                isAnalyzing = false
-                analysisCacheStatus = "✅ Restored from cache"
-                analysisPerformanceInfo = "Restored on return"
+                await MainActor.run {
+                    self.analysisPayload = .distill(env.data, env)
+                    self.isAnalyzing = false
+                    self.analysisCacheStatus = "✅ Restored from cache"
+                    self.analysisPerformanceInfo = "Restored on return"
+                }
             }
         }
     }
@@ -485,8 +515,10 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         await MainActor.run {
             self.transcriptionProgressPercent = nil
             self.transcriptionProgressStep = nil
-            // Refresh language metadata and banner on completion
-            if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
+        }
+        // Refresh language metadata and banner on completion
+        if let meta = await DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
+            await MainActor.run {
                 if let lang = meta.detectedLanguage, let score = meta.qualityScore {
                     self.updateLanguageDetection(language: lang, qualityScore: score)
                 }
@@ -547,9 +579,11 @@ extension MemoDetailViewModel {
                 guard let self = self, let memo = self.currentMemo else { return }
 
                 // Update transcription state
-                let newTranscriptionState = self.getTranscriptionStateUseCase.execute(memo: memo)
-                if !self.transcriptionState.isEqual(to: newTranscriptionState) {
-                    self.transcriptionState = newTranscriptionState
+                Task { @MainActor in
+                    let newTranscriptionState = await self.getTranscriptionStateUseCase.execute(memo: memo)
+                    if !self.transcriptionState.isEqual(to: newTranscriptionState) {
+                        self.transcriptionState = newTranscriptionState
+                    }
                 }
 
                 // Update duration baseline from memo if not set yet
@@ -571,14 +605,16 @@ extension MemoDetailViewModel {
                 }
 
                 // Update language detection + moderation from metadata if available
-                if let meta = DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
-                    if let lang = meta.detectedLanguage, let score = meta.qualityScore {
-                        self.updateLanguageDetection(language: lang, qualityScore: score)
-                    }
-                    if let flagged = meta.moderationFlagged { self.transcriptionModerationFlagged = flagged }
-                    if let cats = meta.moderationCategories { self.transcriptionModerationCategories = cats }
-                    if let service = meta.transcriptionService {
-                        self.state.transcription.service = service
+                Task { @MainActor in
+                    if let meta = await DIContainer.shared.transcriptionRepository().getTranscriptionMetadata(for: memo.id) {
+                        if let lang = meta.detectedLanguage, let score = meta.qualityScore {
+                            self.updateLanguageDetection(language: lang, qualityScore: score)
+                        }
+                        if let flagged = meta.moderationFlagged { self.transcriptionModerationFlagged = flagged }
+                        if let cats = meta.moderationCategories { self.transcriptionModerationCategories = cats }
+                        if let service = meta.transcriptionService {
+                            self.state.transcription.service = service
+                        }
                     }
                 }
             }
@@ -663,8 +699,13 @@ extension MemoDetailViewModel {
         state.audio.currentTime = 0
 
         // Initial state update
-        updateTranscriptionState(for: memo)
+        Task {
+            await updateTranscriptionState(for: memo)
+        }
         setupPlayingState(for: memo)
+
+        // Load analysis cache metadata
+        loadAnalysisCacheMetadata()
 
         // Subscribe to transcription state changes for this memo to avoid race conditions
         DIContainer.shared.transcriptionRepository()
@@ -685,23 +726,19 @@ extension MemoDetailViewModel {
         }
     }
 
-    /// Whether a cached Distill result exists in the repository for the current memo
-    var hasCachedDistill: Bool {
-        guard let memo = currentMemo else { return false }
-        return DIContainer.shared.analysisRepository().hasAnalysisResult(for: memo.id, mode: .distill)
-    }
-
     /// Restore cached Distill result into the UI if present
-    func restoreCachedDistill() {
+    func restoreCachedDistill() async {
         guard let memo = currentMemo else { return }
-        if let env: AnalyzeEnvelope<DistillData> = DIContainer.shared
+        if let env: AnalyzeEnvelope<DistillData> = await DIContainer.shared
             .analysisRepository()
             .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
-            selectedAnalysisMode = .distill
-            analysisPayload = .distill(env.data, env)
-            isAnalyzing = false
-            analysisCacheStatus = "✅ Restored from cache"
-            analysisPerformanceInfo = "Restored on demand"
+            await MainActor.run {
+                self.selectedAnalysisMode = .distill
+                self.analysisPayload = .distill(env.data, env)
+                self.isAnalyzing = false
+                self.analysisCacheStatus = "✅ Restored from cache"
+                self.analysisPerformanceInfo = "Restored on demand"
+            }
         }
     }
 }

@@ -34,11 +34,6 @@ struct MemoRowView: View {
     @State private var editedTitle: String = ""
     @FocusState private var isEditingFocused: Bool
 
-    // Recomputed each render; drives color/animation
-    private var transcriptionState: TranscriptionState {
-        viewModel.getTranscriptionState(for: memo)
-    }
-
     // MARK: - Design Constants
 
     /// **Color Configuration**

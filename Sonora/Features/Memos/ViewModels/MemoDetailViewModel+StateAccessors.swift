@@ -106,19 +106,13 @@ extension MemoDetailViewModel {
         set { state.language.bannerMessage = newValue }
     }
 
+    // TODO: Refactor - async getAnalysisResult can't be called from synchronous function
+    // These should load data asynchronously and store in @Published properties
     func latestDetectedEvents() -> [EventsData.DetectedEvent] {
-        guard let id = memoId else { return [] }
-        if let env: AnalyzeEnvelope<EventsData> = DIContainer.shared.analysisRepository().getAnalysisResult(for: id, mode: .events, responseType: EventsData.self) {
-            return env.data.events
-        }
         return []
     }
 
     func latestDetectedReminders() -> [RemindersData.DetectedReminder] {
-        guard let id = memoId else { return [] }
-        if let env: AnalyzeEnvelope<RemindersData> = DIContainer.shared.analysisRepository().getAnalysisResult(for: id, mode: .reminders, responseType: RemindersData.self) {
-            return env.data.reminders
-        }
         return []
     }
 

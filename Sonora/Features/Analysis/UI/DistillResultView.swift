@@ -126,34 +126,18 @@ struct DistillResultView: View {
     }
 
     // Use domain-deduplicated results directly
+    // Note: Repository fallback removed - async getAnalysisResult can't be called from computed property
+    // TODO: Refactor to load repository data asynchronously in onAppear
     var eventsForUI: [EventsData.DetectedEvent] {
         if let ev = data?.events, !ev.isEmpty { return ev }
         if let ev = partialData?.events, !ev.isEmpty { return ev }
-        if let id = memoId, let env: AnalyzeEnvelope<EventsData> = container.analysisRepository().getAnalysisResult(for: id, mode: .events, responseType: EventsData.self) {
-            if !env.data.events.isEmpty {
-                Logger.shared.info(
-                    "ActionItems.FallbackRepo",
-                    category: .viewModel,
-                    context: LogContext(additionalInfo: ["memoId": id.uuidString, "mode": "events", "count": env.data.events.count])
-                )
-            }
-            return env.data.events
-        }
         return []
     }
+    // Note: Repository fallback removed - async getAnalysisResult can't be called from computed property
+    // TODO: Refactor to load repository data asynchronously in onAppear
     var remindersForUI: [RemindersData.DetectedReminder] {
         if let rem = data?.reminders, !rem.isEmpty { return rem }
         if let rem = partialData?.reminders, !rem.isEmpty { return rem }
-        if let id = memoId, let env: AnalyzeEnvelope<RemindersData> = container.analysisRepository().getAnalysisResult(for: id, mode: .reminders, responseType: RemindersData.self) {
-            if !env.data.reminders.isEmpty {
-                Logger.shared.info(
-                    "ActionItems.FallbackRepo",
-                    category: .viewModel,
-                    context: LogContext(additionalInfo: ["memoId": id.uuidString, "mode": "reminders", "count": env.data.reminders.count])
-                )
-            }
-            return env.data.reminders
-        }
         return []
     }
 
