@@ -515,7 +515,7 @@ function validateAnalysisData(mode: string, parsedData: any): any {
     case 'reminders':
       return RemindersDataSchema.parse(parsedData);
     case 'cognitive-clarity':
-      return { cognitivePatterns: parsedData.cognitivePatterns || [] };
+      return { thinkingPatterns: parsedData.thinkingPatterns || [] };
     case 'philosophical-echoes':
       return { philosophicalEchoes: parsedData.philosophicalEchoes || [] };
     case 'values-recognition':
@@ -530,11 +530,26 @@ app.post('/analyze', async (req, res) => {
   const startTime = Date.now();
 
   try {
+    // Log request metadata for debugging (PRIVACY: never log transcript content)
+    const requestMetadata = {
+      mode: req.body.mode,
+      isPro: req.body.isPro,
+      transcriptLength: req.body.transcript?.length || 0,
+      hasHistoricalContext: !!req.body.historicalContext,
+      historicalContextCount: req.body.historicalContext?.length || 0
+    };
+    console.log('🔍 [DEBUG] Request metadata:', JSON.stringify(requestMetadata, null, 2));
+    console.log('🔍 [DEBUG] isPro field in body:', req.body.isPro, '(type:', typeof req.body.isPro, ')');
+
     // Validate request
     const { mode, transcript, historicalContext, isPro } = RequestSchema.parse(req.body);
 
+    // Log parsed values
+    console.log('✅ [DEBUG] Parsed isPro:', isPro, '(type:', typeof isPro, ')');
+    console.log('🎯 [DEBUG] Condition check: mode === "distill":', mode === 'distill', '&& isPro === true:', isPro === true);
+
     // SIMPLIFIED NON-STREAMING PATH: Handle pro modes aggregation for distill mode
-    if (mode === 'distill' && isPro) {
+    if (mode === 'distill' && isPro === true) {
       // Pro user requesting distill - fetch all pro modes data in parallel
       console.log('📝 Distill analysis with Pro modes enabled');
 
@@ -609,10 +624,10 @@ app.post('/analyze', async (req, res) => {
         try {
           const parsed = JSON.parse(jsonText);
           const validated = validateAnalysisData('cognitive-clarity', parsed);
-          (validatedBaseData as any).cognitivePatterns = validated.cognitivePatterns;
-          console.log(`✅ Cognitive patterns: ${validated.cognitivePatterns.length} patterns`);
+          (validatedBaseData as any).thinkingPatterns = validated.thinkingPatterns;
+          console.log(`✅ Thinking patterns: ${validated.thinkingPatterns.length} patterns`);
         } catch (err) {
-          console.warn('⚠️ Cognitive clarity parsing failed:', err);
+          console.warn('⚠️ Thinking patterns parsing failed:', err);
         }
       } else {
         console.warn('⚠️ Cognitive clarity request failed:', cognitiveResult.reason);
@@ -657,8 +672,8 @@ app.post('/analyze', async (req, res) => {
 
       // Build moderation text from combined data
       let textForModeration = `${(validatedBaseData as any).summary}\n${((validatedBaseData as any).action_items || []).map((a: any) => a.text).join(' \n')}\n${((validatedBaseData as any).reflection_questions || []).join(' \n')}`;
-      if ((validatedBaseData as any).cognitivePatterns) {
-        textForModeration += `\n${((validatedBaseData as any).cognitivePatterns || []).map((p: any) => `${p.observation} ${p.reframe || ''}`).join(' \n')}`;
+      if ((validatedBaseData as any).thinkingPatterns) {
+        textForModeration += `\n${((validatedBaseData as any).thinkingPatterns || []).map((p: any) => `${p.observation} ${p.reframe || ''}`).join(' \n')}`;
       }
       if ((validatedBaseData as any).philosophicalEchoes) {
         textForModeration += `\n${((validatedBaseData as any).philosophicalEchoes || []).map((e: any) => `${e.connection} ${e.quote || ''}`).join(' \n')}`;
@@ -679,6 +694,7 @@ app.post('/analyze', async (req, res) => {
     }
 
     // Standard path for non-pro distill or other modes
+    console.log('⚠️ [DEBUG] Taking NON-PRO path. Reason: mode =', mode, ', isPro =', isPro);
     const { system, user } = buildPrompt(mode, transcript, historicalContext);
     const settings = ModelSettings[mode as keyof typeof ModelSettings] || { verbosity: 'low', reasoningEffort: 'medium' };
     const hasHistoricalContext = historicalContext && historicalContext.length > 0;
@@ -760,7 +776,7 @@ app.post('/analyze', async (req, res) => {
           textForModeration = `${(vd.reminders || []).map((r: any) => r.title).join(' \n')}`;
           break;
         case 'cognitive-clarity':
-          textForModeration = `${(vd.cognitivePatterns || []).map((p: any) => `${p.observation} ${p.reframe || ''}`).join(' \n')}`;
+          textForModeration = `${(vd.thinkingPatterns || []).map((p: any) => `${p.observation} ${p.reframe || ''}`).join(' \n')}`;
           break;
         case 'philosophical-echoes':
           textForModeration = `${(vd.philosophicalEchoes || []).map((e: any) => `${e.connection} ${e.quote || ''}`).join(' \n')}`;
@@ -808,7 +824,7 @@ app.post('/analyze', async (req, res) => {
       });
     }
     
-    // Generic server error
+    // Generic server error (PRIVACY: only log error message, never request data)
     console.error('Server error:', error.message);
     res.status(500).json({
       error: 'Internal',

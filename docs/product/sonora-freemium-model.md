@@ -207,29 +207,53 @@ distillReflection: "reflection_questions"
 
 ## Competitive Positioning Strategy
 
+### Target User Profile: Verbal Processors
+
+**Primary User**:
+- **Cognitive style**: Thinks by talking out loud
+- **Frustration**: ChatGPT interrupts their flow
+- **Use case**: Post-gym walks, commutes, transitional moments
+- **Need**: Uninterrupted thinking space → instant clarity
+- **Willingness to pay**: $10/month for clarity tool (proven by Granola)
+
+**User Characteristics**:
+- Says "let me think out loud" or calls friends to "talk through" decisions
+- Finds typing journaling too slow/frustrating
+- Uses ChatGPT Voice but annoyed by interruptions
+- Has daily routine with transition time (gym, commute)
+- Age 25-45, tech-comfortable, active lifestyle
+
 ### Sonora's Unique Value Proposition
 
 | Feature | Sonora Free | Sonora Pro | Competitors |
 |---------|-------------|------------|-------------|
-| **Philosophical Focus** | ✅ Lite | ✅ Full | ❌ None have this |
-| **EventKit Integration** | ❌ | ✅ | ❌ Unique to Sonora |
-| **AI Analysis Depth** | Lite (2 modes) | Full (6 modes) | ❌ Most have 1-2 modes |
-| **Stoic/Wisdom Integration** | ✅ | ✅ | ❌ Unique positioning |
-| **Native iOS Design** | ✅ | ✅ | ⚠️ Varies |
+| **Non-Reactive** | ✅ | ✅ | ❌ ChatGPT interrupts |
+| **Distill Mode** | ✅ Lite | ✅ Full | ❌ Unique approach |
+| **Uninterrupted Flow** | ✅ | ✅ | ❌ Most are reactive |
+| **Pattern Recognition** | ✅ Basic | ✅ Advanced | ⚠️ Limited in others |
+| **Verbal Processing Focus** | ✅ | ✅ | ❌ No one owns this |
 
 ### Differentiation Strategy
 
-**Against Dictation Apps** (SuperWhisper, WisprFlow):
-- **Sonora**: Analysis + insight generation vs pure dictation
-- **Advantage**: Transforms thoughts into actionable insights
+**Against ChatGPT Voice** (PRIMARY COMPETITION):
+- **Sonora**: Non-reactive, preserves thinking flow
+- **ChatGPT**: Reactive, interrupts after pauses
+- **Advantage**: "ChatGPT is for conversation. Sonora is for thinking."
 
-**Against Voice Journal Apps** (AudioDiary):
-- **Sonora**: Philosophical depth + calendar integration
-- **Advantage**: Ancient wisdom meets modern productivity
+**Against Granola** (Meeting Notes):
+- **Sonora**: Personal thinking, solo reflection
+- **Granola**: Meeting notes, professional collaboration
+- **Advantage**: Different use cases, not competitors
 
-**Against Meeting Apps** (Otter.ai):
-- **Sonora**: Personal reflection vs meeting notes
-- **Advantage**: Designed for individual growth and self-discovery
+**Against Voice Memos**:
+- **Sonora**: Recording + distillation automatic
+- **Voice Memos**: Just records, no processing
+- **Advantage**: Eliminates manual workflow (Record → Whisper → ChatGPT)
+
+**Against Journaling Apps** (Day One):
+- **Sonora**: Verbal processing, no typing friction
+- **Day One**: Written journaling, typing required
+- **Advantage**: Works with how verbal processors naturally think
 
 ---
 

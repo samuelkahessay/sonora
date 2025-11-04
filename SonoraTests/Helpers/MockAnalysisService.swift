@@ -274,11 +274,11 @@ final class StreamingMockAnalysisService: AnalysisServiceProtocol {
                 ]
             ) as! T
 
-        case is CognitiveClarityData.Type:
-            return CognitiveClarityData(
-                cognitivePatterns: [
-                    CognitivePattern(
-                        type: .overgeneralization,
+        case is ThinkingPatternsData.Type:
+            return ThinkingPatternsData(
+                thinkingPatterns: [
+                    ThinkingPattern(
+                        type: .overbroadGeneralizing,
                         observation: "You mentioned 'I always mess things up'",
                         reframe: "What are some things you've done well recently?"
                     )

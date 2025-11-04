@@ -1,91 +1,178 @@
 # Sonora: Feature Roadmap
-*From Ancient Practices to Modern Features*
+*Clarity Through Uninterrupted Thinking*
 
-> This roadmap maps 2,000+ years of proven mental training practices to concrete product features. Each feature is grounded in philosophical tradition and validated by modern cognitive science.
-
----
-
-## Core Features (Canonical Grounding)
-
-### 1. Marcus Mode - Daily Resilience Journaling
-**Philosophical Basis**: Marcus Aurelius' *Meditations*
-**Practice**: Private reflection for building resilience and managing anxiety
-
-**Features**:
-- **Morning Preparation**: Record intentions, potential challenges, and virtue to practice
-- **Evening Review**: Reflect on what went well, what could improve, lessons learned
-- **Crisis Recording**: Quick voice capture during stressful moments for later reflection
-- **Principle Reinforcement**: Regular prompts to reconnect with core values
-
-**User Experience**:
-- One-tap recording with minimal friction during emotional moments
-- Smart prompts that adapt to user's emotional state and patterns
-- Integration with calendar for reviewing challenging upcoming events
-- Progress tracking showing growth in resilience over time
+> This roadmap prioritizes features that serve verbal processors—people who think by talking out loud. Distill is the hero. Everything else is secondary.
 
 ---
 
-### 2. Socratic Clarifier - AI-Guided Self-Inquiry
-**Philosophical Basis**: Plato's Socratic Method
-**Practice**: Structured questioning to expose assumptions and reach clarity
+## Tier 1: THE HERO FEATURE
 
-**Features**:
-- **Progressive Questioning**: AI asks increasingly specific questions to help users examine their thinking
-- **Assumption Detector**: Identifies unexamined beliefs in user speech
-- **Evidence Explorer**: Guides users to examine what supports and contradicts their beliefs
-- **Perspective Shifter**: Helps users see situations from multiple angles
+### 1. Distill Mode - Uninterrupted Thinking → Instant Clarity
+**Purpose**: Show verbal processors what they actually meant after speaking uninterrupted
 
-**User Experience**:
-- Conversational flow that feels natural, not interrogational
-- Smart pausing to let users think before next question
-- Visual mapping of insights discovered through questioning
-- Option to save breakthrough insights for future reference
+**Why This is THE Feature**:
+- This is why people use Sonora
+- Replaces manual workflow: Record → Whisper → ChatGPT
+- Non-reactive (unlike ChatGPT that interrupts)
+- Core value prop: "Think out loud → Get clarity"
 
----
+**Features** (Current):
+- **Summary**: "Here's what you actually said" in 1-2 paragraphs
+- **Key Themes**: Recurring patterns in this recording (Pro)
+- **Action Items**: Concrete next steps you mentioned (Pro)
+- **Reflection Questions**: Prompts to deepen thinking about patterns observed
 
-### 3. Distortion Detector - Cognitive Error Recognition
-**Philosophical Basis**: Aaron Beck's Cognitive Distortions + Albert Ellis's REBT
-**Practice**: Identifying and correcting common thinking errors
+**User Experience** (Current):
+- Zero friction: Tap → Talk 5-30 minutes uninterrupted → Distill appears
+- Works during post-gym walks, commutes, any transitional moment
+- Automatic transcription + distillation
+- No chatbot interrupting your flow
 
-**Features**:
-- **Real-time Detection**: AI identifies catastrophizing, all-or-nothing thinking, mind-reading, etc.
-- **Gentle Flagging**: Highlights potential distortions without judgment
-- **Reframing Prompts**: Guides users to develop more balanced perspectives
-- **Pattern Recognition**: Shows users their most common cognitive distortions over time
+**Future Enhancements** (v2+):
+- **Pattern tracking over time**: "You've mentioned 'work stress' in 5 recordings this month"
+- **Faster Distill**: Reduce latency from transcription → analysis
+- **Richer themes**: More sophisticated pattern recognition
+- **Shareable insights**: Export Distill results
 
-**User Experience**:
-- Non-judgmental alerts ("I notice you said 'always'—is that literally true?")
-- Choice-driven reframing (multiple alternatives, user selects what feels authentic)
-- Celebration of cognitive flexibility improvements
-- Educational micro-content about each distortion type
+**Success Metric**: % of recordings that get Distill analysis, user satisfaction with clarity gained
 
 ---
 
-### 4. Evening Review - Structured Daily Reflection
-**Philosophical Basis**: Seneca's *Letters from a Stoic*
-**Practice**: Systematic end-of-day review for growth and course correction
+## Tier 2: Core Supporting Features (Already Built)
 
-**Features**:
-- **Three-Part Structure**: What went well, what could improve, what to focus on tomorrow
-- **Virtue Tracking**: Daily check-in on practicing core values
-- **Habit Progress**: Simple tracking of key behaviors without obsessiveness
-- **Gratitude Integration**: Natural inclusion of appreciation in daily review
+### 2. Recording Prompts - Help Knowing What to Think About
+**Purpose**: Many verbal processors struggle with "what should I talk about?"
 
-**User Experience**:
-- Adaptive timing based on user's natural patterns
-- Smart prompts that reference the day's calendar events
-- Week/month view showing patterns and progress
-- Gentle reminders that respect user autonomy
+**Features** (Current):
+- 48 curated prompts with smart interpolation ([Name], [DayPart], [WeekPart])
+- 7-day no-repeat algorithm
+- "What's on your mind?" default prompt
+- Inspire Me sheet for browsing prompts
+
+**Why It Matters**: Removes barrier to starting—just pick a prompt and talk
+
+**Future**: User-created custom prompts, mood-aware prompt suggestions
 
 ---
 
-### 5. Stream Transcription - Unstructured Thought to Insight
-**Philosophical Basis**: Michel de Montaigne's Essays + William James's Stream of Consciousness
-**Practice**: Free-form exploration that discovers insights through articulation
+### 3. Frictionless Recording - Zero Barriers to Thinking
+**Purpose**: Quick access to start thinking out loud
 
-**Features**:
-- **Unstructured Recording**: No prompts, just space to think aloud
-- **Emerging Themes**: AI identifies patterns and themes across sessions
+**Features** (Current):
+- Live Activities in Dynamic Island
+- Lock screen controls
+- Background recording (walks, commutes)
+- One-tap start
+- Auto titles for organization
+
+**Why It Matters**: Verbal processors need instant access when thoughts are jumbled
+
+**Future**: Siri shortcut ("Hey Siri, think out loud"), Apple Watch controls
+
+---
+
+## Tier 3: Optional Depth Features (Lower Priority)
+
+### 4. Historical View - See Thinking Evolution Over Time
+**Purpose**: Understand how your thinking has changed
+
+**Features** (Future):
+- Timeline of all recordings
+- Theme evolution over months
+- Pattern recognition across sessions
+- "You used to talk about X, now you talk about Y"
+
+**Why Lower Priority**: Nice-to-have, not core to immediate clarity need
+
+---
+
+### 5. Socratic Reflection (Potential Future)
+**Purpose**: Deepen thinking through reflection questions
+
+**Features** (Concept):
+- Post-recording: AI asks 2-3 follow-up questions
+- Record brief responses
+- Creates deeper Distill analysis
+
+**Why Lower Priority**: Adds complexity, many users just want clarity from one session
+
+**Note**: This is NOT conversational AI (not reactive) - it's post-recording reflection prompts
+
+---
+
+## Features We're NOT Building
+
+### ❌ Therapy Features
+- No clinical CBT exercises
+- No mood tracking for mental health
+- No therapeutic interventions
+- **Why**: Liability risk, not our positioning
+
+### ❌ Meeting Notes Features
+- No meeting transcription for groups
+- No collaboration features
+- No meeting templates
+- **Why**: Granola owns this space, we focus on personal thinking
+
+### ❌ Conversational AI
+- No back-and-forth chatbot
+- No real-time responses during recording
+- No AI interrupting your flow
+- **Why**: We're non-reactive by design - that's our differentiation from ChatGPT
+
+### ❌ Complex Wellness Tracking
+- No habit tracking
+- No goal setting
+- No virtue scores
+- **Why**: Adds complexity, distracts from core value (clarity from thinking)
+
+---
+
+## Roadmap Philosophy
+
+### Focus Principles
+1. **Distill First**: Every feature should make Distill better or support getting to Distill faster
+2. **Non-Reactive Always**: Never interrupt the user's thinking flow
+3. **Verbal Processing Core**: If it doesn't serve people who think by talking, cut it
+4. **Simplicity Over Features**: 10 people who love Distill > 100 people with feature bloat
+
+### Success Metrics
+- **Primary**: Weekly active Distill usage
+- **Secondary**: Time from recording → Distill result (latency)
+- **Tertiary**: User retention at 1 week, 1 month
+- **North Star**: "Verbal processors can't imagine thinking without it"
+
+### Anti-Metrics (What We Don't Optimize For)
+- ❌ Total features shipped
+- ❌ Time spent in app (we want quick clarity, not engagement loops)
+- ❌ Daily active users (weekly is fine for thinking tool)
+
+---
+
+## Current Prioritization (Q1 2025)
+
+### Now (Ship Immediately)
+1. Perfect Distill reliability and latency
+2. Improve transcription accuracy
+3. Fix any recording friction
+
+### Next (1-2 months)
+4. Pattern tracking over time (Pro feature)
+5. Faster Distill analysis
+6. Richer theme detection
+
+### Later (3-6 months)
+7. Historical timeline view
+8. Shareable insights export
+9. Siri shortcuts
+
+### Not Now (Maybe Never)
+- Therapy features
+- Meeting notes
+- Conversational AI
+- Wellness tracking
+
+**Principle**: We're building a thinking tool for verbal processors. Everything else is distraction.
 - **Contradiction Mapping**: Shows when user holds conflicting beliefs
 - **Insight Surfacing**: Highlights moments of clarity within rambling
 

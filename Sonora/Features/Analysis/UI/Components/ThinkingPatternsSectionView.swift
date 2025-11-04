@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Displays cognitive patterns detected using CBT framework
-/// Shows cognitive distortions with observations and optional reframes
+/// Displays thinking patterns observed through language analysis
+/// Shows recurring speech habits with observations and alternative perspectives
 /// Pro-tier feature
-internal struct CognitiveClaritySectionView: View {
-    let patterns: [CognitivePattern]
+internal struct ThinkingPatternsSectionView: View {
+    let patterns: [ThinkingPattern]
 
     @ScaledMetric private var sectionSpacing: CGFloat = 12
     @ScaledMetric private var headerSpacing: CGFloat = 6
@@ -16,7 +16,7 @@ internal struct CognitiveClaritySectionView: View {
                 Image(systemName: "brain.head.profile")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.accent))
-                Text("Cognitive Clarity")
+                Text("Thinking Patterns")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.textPrimary))
 
@@ -25,27 +25,27 @@ internal struct CognitiveClaritySectionView: View {
                     .foregroundColor(.semantic(.brandPrimary))
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Cognitive Clarity section, Pro feature, \(patterns.count) patterns detected")
+            .accessibilityLabel("Thinking Patterns section, Pro feature, \(patterns.count) patterns detected")
 
             VStack(alignment: .leading, spacing: patternSpacing) {
                 ForEach(patterns) { pattern in
-                    CognitivePatternCard(pattern: pattern)
+                    ThinkingPatternCard(pattern: pattern)
                 }
             }
         }
     }
 }
 
-/// Individual cognitive pattern card showing distortion type, observation, and optional reframe
-private struct CognitivePatternCard: View {
-    let pattern: CognitivePattern
+/// Individual thinking pattern card showing pattern type, observation, and alternative perspective
+private struct ThinkingPatternCard: View {
+    let pattern: ThinkingPattern
 
     @ScaledMetric private var cardPadding: CGFloat = 12
     @ScaledMetric private var contentSpacing: CGFloat = 8
 
     var body: some View {
         VStack(alignment: .leading, spacing: contentSpacing) {
-            // Distortion type with icon
+            // Pattern type with icon
             HStack(spacing: 6) {
                 Image(systemName: pattern.type.iconName)
                     .font(.caption)
@@ -57,7 +57,7 @@ private struct CognitivePatternCard: View {
                     .foregroundColor(.semantic(.textPrimary))
             }
 
-            // Brief description of the distortion type
+            // Brief description of the pattern type
             Text(pattern.type.description)
                 .font(.caption)
                 .foregroundColor(.semantic(.textSecondary))
@@ -115,6 +115,6 @@ private struct CognitivePatternCard: View {
         )
         .cornerRadius(SonoraDesignSystem.Spacing.cardRadius)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Cognitive pattern: \(pattern.type.displayName). \(pattern.observation)")
+        .accessibilityLabel("Thinking pattern: \(pattern.type.displayName). \(pattern.observation)")
     }
 }

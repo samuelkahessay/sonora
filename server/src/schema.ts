@@ -76,7 +76,7 @@ export const RequestSchema = z.object({
   ]),
   transcript: z.string().min(10).max(10000),
   historicalContext: z.array(HistoricalMemoContextSchema).max(10).optional(),
-  isPro: z.boolean().optional() // Pro subscription flag - server includes pro modes when true
+  isPro: z.boolean().default(false) // Pro subscription flag - server includes pro modes when true (defaults to false if not provided)
 });
 
 export const DistillDataSchema = z.object({
@@ -99,15 +99,15 @@ export const DistillDataSchema = z.object({
     confidence: z.number().min(0).max(1).default(0.8)
   })).optional(),
   // Pro-tier fields (populated when isPro=true in request)
-  cognitivePatterns: z.array(z.object({
+  thinkingPatterns: z.array(z.object({
     id: z.string().optional(),
     type: z.enum([
-      'all-or-nothing',
-      'catastrophizing',
-      'mind-reading',
-      'overgeneralization',
-      'should-statements',
-      'emotional-reasoning'
+      'black-and-white-thinking',
+      'worst-case-thinking',
+      'assumption-making',
+      'overbroad-generalizing',
+      'pressure-language',
+      'feelings-as-facts-thinking'
     ]),
     observation: z.string(),
     reframe: z.string().optional()
@@ -217,17 +217,17 @@ export const LiteDistillDataSchema = z.object({
 
 // Pro Tier Analysis Schemas
 
-// Cognitive Clarity - Beck/Ellis CBT framework for identifying thinking distortions
-export const CognitiveClarityDataSchema = z.object({
-  cognitivePatterns: z.array(z.object({
+// Thinking Patterns - Observational language pattern recognition
+export const ThinkingPatternsDataSchema = z.object({
+  thinkingPatterns: z.array(z.object({
     id: z.string().optional(),
     type: z.enum([
-      'all-or-nothing',
-      'catastrophizing',
-      'mind-reading',
-      'overgeneralization',
-      'should-statements',
-      'emotional-reasoning'
+      'black-and-white-thinking',
+      'worst-case-thinking',
+      'assumption-making',
+      'overbroad-generalizing',
+      'pressure-language',
+      'feelings-as-facts-thinking'
     ]),
     observation: z.string(),
     reframe: z.string().optional()
@@ -515,21 +515,21 @@ export const DistillReflectionJsonSchema = {
 
 // Pro Tier JSON Schemas for GPT-5 Responses API
 
-export const CognitiveClarityJsonSchema = {
-  name: "cognitive_clarity_response",
+export const ThinkingPatternsJsonSchema = {
+  name: "thinking_patterns_response",
   schema: {
     type: "object",
     properties: {
-      cognitivePatterns: {
+      thinkingPatterns: {
         type: "array",
-        description: "Beck/Ellis CBT cognitive distortions detected. Return empty array if none found.",
+        description: "Linguistic speech patterns observed. Return empty array if none found.",
         items: {
           type: "object",
           properties: {
             type: {
               type: "string",
-              enum: ["all-or-nothing", "catastrophizing", "mind-reading", "overgeneralization", "should-statements", "emotional-reasoning"],
-              description: "Type of cognitive distortion"
+              enum: ["black-and-white-thinking", "worst-case-thinking", "assumption-making", "overbroad-generalizing", "pressure-language", "feelings-as-facts-thinking"],
+              description: "Type of speech pattern observed"
             },
             observation: {
               type: "string",
@@ -537,14 +537,14 @@ export const CognitiveClarityJsonSchema = {
             },
             reframe: {
               type: "string",
-              description: "Optional: A gentler way to think about this"
+              description: "Optional: An alternative way to express this"
             }
           },
           required: ["type", "observation"]
         }
       }
     },
-    required: ["cognitivePatterns"],
+    required: ["thinkingPatterns"],
     additionalProperties: false
   }
 };
@@ -646,7 +646,7 @@ export const AnalysisJsonSchemas = {
   'distill-actions': DistillActionsJsonSchema,
   'distill-themes': DistillThemesJsonSchema,
   'distill-reflection': DistillReflectionJsonSchema,
-  'cognitive-clarity': CognitiveClarityJsonSchema,
+  'cognitive-clarity': ThinkingPatternsJsonSchema,
   'philosophical-echoes': PhilosophicalEchoesJsonSchema,
   'values-recognition': ValuesRecognitionJsonSchema,
   events: EventsJsonSchema,
@@ -679,7 +679,7 @@ export const ResponseSchema = z.object({
     DistillActionsDataSchema,
     DistillThemesDataSchema,
     DistillReflectionDataSchema,
-    CognitiveClarityDataSchema,
+    ThinkingPatternsDataSchema,
     PhilosophicalEchoesDataSchema,
     ValuesRecognitionDataSchema
   ]),
@@ -705,10 +705,10 @@ export type DistillSummaryData = z.infer<typeof DistillSummaryDataSchema>;
 export type DistillActionsData = z.infer<typeof DistillActionsDataSchema>;
 export type DistillThemesData = z.infer<typeof DistillThemesDataSchema>;
 export type DistillReflectionData = z.infer<typeof DistillReflectionDataSchema>;
-export type CognitiveClarityData = z.infer<typeof CognitiveClarityDataSchema>;
+export type ThinkingPatternsData = z.infer<typeof ThinkingPatternsDataSchema>;
 export type PhilosophicalEchoesData = z.infer<typeof PhilosophicalEchoesDataSchema>;
 export type ValuesRecognitionData = z.infer<typeof ValuesRecognitionDataSchema>;
 export type EventsData = z.infer<typeof EventsDataSchema>;
 export type RemindersData = z.infer<typeof RemindersDataSchema>;
-export type DataOut = DistillData | LiteDistillData | DistillSummaryData | DistillActionsData | DistillThemesData | DistillReflectionData | CognitiveClarityData | PhilosophicalEchoesData | ValuesRecognitionData | EventsData | RemindersData;
+export type DataOut = DistillData | LiteDistillData | DistillSummaryData | DistillActionsData | DistillThemesData | DistillReflectionData | ThinkingPatternsData | PhilosophicalEchoesData | ValuesRecognitionData | EventsData | RemindersData;
 export type ResponseData = z.infer<typeof ResponseSchema>;

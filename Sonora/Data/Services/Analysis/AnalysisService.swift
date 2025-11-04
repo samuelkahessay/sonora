@@ -22,9 +22,11 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
         ]
 
         // Include isPro flag for pro modes aggregation on server
+        requestBody["isPro"] = isPro
         if isPro {
-            requestBody["isPro"] = true
             print("🔧 AnalysisService: Pro subscription active - server will include pro modes")
+        } else {
+            print("⚠️ AnalysisService: Free tier - Pro modes will NOT be included")
         }
 
         // Include historical context if provided (for pattern detection)
@@ -47,6 +49,12 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
 
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+
+            // Log the actual JSON being sent for debugging
+            if let jsonString = String(data: request.httpBody!, encoding: .utf8) {
+                print("🔍 [DEBUG] Request JSON being sent:")
+                print(jsonString)
+            }
         } catch {
             throw AnalysisError.networkError("Failed to encode request: \(error.localizedDescription)")
         }

@@ -381,8 +381,8 @@ public struct OperationSummary: Sendable {
             case .reminders:
                 return "Detecting reminders"
             // Pro-tier analysis operations
-            case .cognitiveClarityCBT:
-                return "Analyzing cognitive patterns"
+            case .thinkingPatterns:
+                return "Analyzing thinking patterns"
             case .philosophicalEchoes:
                 return "Connecting philosophical wisdom"
             case .valuesRecognition:

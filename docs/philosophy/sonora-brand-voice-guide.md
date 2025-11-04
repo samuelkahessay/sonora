@@ -1,7 +1,51 @@
 # Sonora: Brand Voice Guide
-*Timeless Wisdom for Modern Minds*
+*Clear Language for Verbal Thinkers*
 
-> How Sonora communicates reflects its philosophical foundation: timeless not trendy, clear not clever, inviting not prescriptive. Every word serves the user's authentic growth.
+> How Sonora communicates reflects its core purpose: We're a thinking tool for verbal processors, not a therapy app or AI companion. Every word serves clarity through uninterrupted thinking.
+
+---
+
+## Core Positioning Language
+
+### Verbal Processor Focus
+**Who we're for**: People who think by talking out loud
+
+**Language patterns**:
+- ✅ "For people who think by talking"
+- ✅ "Verbal processors"
+- ✅ "Think out loud"
+- ✅ "Talk through your thoughts"
+- ❌ "Voice journaling" (too generic)
+- ❌ "Mental wellness" (therapy-adjacent)
+- ❌ "Mindfulness practice" (meditation space)
+
+### Non-Reactive Differentiation
+**Key differentiator**: We don't interrupt like ChatGPT
+
+**Language patterns**:
+- ✅ "Unlike ChatGPT that interrupts, Sonora lets you finish"
+- ✅ "Speak uninterrupted for 5-30 minutes"
+- ✅ "Non-reactive intelligence"
+- ✅ "No chatbot cutting you off"
+- ❌ "AI conversation" (implies back-and-forth)
+- ❌ "Voice assistant" (implies interruption)
+
+### Use Case Framing
+**When people use us**: Transitional moments
+
+**Language patterns**:
+- ✅ "Post-gym walks"
+- ✅ "Commutes"
+- ✅ "When thoughts are jumbled"
+- ✅ "Before big decisions"
+- ❌ "Meeting notes" (Granola's space)
+- ❌ "Therapy sessions" (liability risk)
+
+### What We're NOT
+**Critical disclaimers** (always include when relevant):
+- "Sonora is a thinking tool, not therapy or treatment for any condition"
+- "If you're experiencing mental health concerns, please consult a professional"
+- "We help with clarity, not clinical treatment"
 
 ---
 
@@ -178,30 +222,30 @@
 
 ## Context-Specific Voice Applications
 
-### During Crisis or Distress
-**Tone**: Calm, grounding, immediate focus on stability
-**Language**: Simple, concrete, action-oriented
-**Example**: "Right now, what's one thing that might help you feel safer?"
+### When Thoughts Are Jumbled
+**Tone**: Patient, accepting of messy thinking
+**Language**: Encouraging uninterrupted flow
+**Example**: "Just keep talking—the clarity will emerge."
 
-### During Insight or Breakthrough
-**Tone**: Celebrating but not overwhelming, encouraging deeper exploration
-**Language**: Curious, amplifying, connecting
-**Example**: "That sounds like an important realization. What makes it feel significant to you?"
+### After Recording (Distill Results)
+**Tone**: Reflective, surfacing patterns
+**Language**: "Here's what you actually said..."
+**Example**: "Your key themes were X, Y, Z. Notice how you kept coming back to..."
 
-### During Confusion or Uncertainty
-**Tone**: Patient, normalizing, gently exploratory
-**Language**: Accepting of not-knowing, process-focused
-**Example**: "It's okay not to have clarity yet. What feels true right now, even if it's small?"
+### When User Discovers a Pattern
+**Tone**: Curious, inviting deeper exploration
+**Language**: Non-judgmental pattern observation
+**Example**: "This is the third time you've mentioned X. What does that pattern tell you?"
 
-### During Resistance or Avoidance
-**Tone**: Respectful of boundaries, gently curious, non-pushy
-**Language**: Honor user's pace, validate difficulty
-**Example**: "That seems like a difficult topic. We don't need to go there unless you want to."
+### When Starting a Recording
+**Tone**: Low-pressure, no performance anxiety
+**Language**: Simple prompts, permission to ramble
+**Example**: "What's on your mind right now?"
 
-### During Growth and Progress
-**Tone**: Acknowledging progress without inflating, encouraging continuation
-**Language**: Specific recognition, forward-looking
-**Example**: "You've been thinking about this differently than before. What's helped that shift happen?"
+### Differentiation from ChatGPT
+**Tone**: Clear about what makes us different
+**Language**: Non-reactive, uninterrupted emphasis
+**Example**: "Unlike ChatGPT that interrupts, you can talk for as long as you need. We'll reflect back when you're done."
 
 ---
 

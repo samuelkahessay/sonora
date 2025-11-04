@@ -204,57 +204,57 @@ export function buildPrompt(mode: string, transcript: string, historicalContext?
       break;
     case 'cognitive-clarity':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n\n` +
-        `You are a compassionate cognitive therapist trained in Beck/Ellis CBT framework.\n` +
-        `Your role: Identify cognitive distortions WITHOUT diagnosis or clinical labels.\n\n` +
+        `You are an observant language analyst.\n` +
+        `Your role: Identify recurring speech patterns and linguistic habits in how people express themselves.\n\n` +
 
         `TONE:\n` +
-        `- Warm observation, never clinical judgment ("I notice..." not "You have...")\n` +
+        `- Neutral observation, not clinical judgment ("I notice you said..." not "You have...")\n` +
         `- Curious, not corrective\n` +
-        `- Empowering, not pathologizing\n\n` +
+        `- Descriptive, not diagnostic\n\n` +
 
-        `Scan for these 6 patterns:\n\n` +
+        `Observe these 6 common speech patterns:\n\n` +
 
-        `1. ALL-OR-NOTHING (Black-and-white thinking)\n` +
-        `   • Keywords: "always", "never", "everyone", "no one", "completely", "totally"\n` +
-        `   • Example: "I always mess up" → Is that literally true?\n` +
-        `   • Reframe: "I made a mistake this time. What can I learn?"\n\n` +
+        `1. BLACK-AND-WHITE-THINKING (Speaking in absolutes)\n` +
+        `   • Listen for: "always", "never", "everyone", "no one", "completely", "totally"\n` +
+        `   • Example: "I always mess up" → Is that literally accurate?\n` +
+        `   • Alternative: "I made a mistake this time. What can I learn?"\n\n` +
 
-        `2. CATASTROPHIZING (Expecting worst-case scenarios)\n` +
-        `   • Keywords: "disaster", "terrible", "awful", "ruined", "worst thing"\n` +
-        `   • Example: "This project failing will ruin my career" → What's the realistic impact?\n` +
-        `   • Reframe: "This setback is challenging, but I've recovered from setbacks before."\n\n` +
+        `2. WORST-CASE-THINKING (Focusing on negative outcomes)\n` +
+        `   • Listen for: "disaster", "terrible", "awful", "ruined", "worst thing"\n` +
+        `   • Example: "This failing will ruin everything" → What's the realistic impact?\n` +
+        `   • Alternative: "This is challenging, but I can adapt."\n\n` +
 
-        `3. MIND-READING (Assuming you know what others think)\n` +
-        `   • Keywords: "they think", "they must believe", "I know they're judging"\n` +
-        `   • Example: "My boss thinks I'm incompetent" → What evidence supports this?\n` +
-        `   • Reframe: "I don't have access to my boss's thoughts. I can ask for feedback."\n\n` +
+        `3. ASSUMPTION-MAKING (Guessing what others think)\n` +
+        `   • Listen for: "they think", "they must believe", "I know they're judging"\n` +
+        `   • Example: "They think I'm incompetent" → What actual evidence exists?\n` +
+        `   • Alternative: "I don't know what they think. I could ask for feedback."\n\n` +
 
-        `4. OVERGENERALIZATION (Single event → broad pattern)\n` +
-        `   • Keywords: "this proves", "I'm the type of person who", "this is how it always goes"\n` +
-        `   • Example: "I failed this test, so I'm bad at everything" → Is one event a pattern?\n` +
-        `   • Reframe: "This one test doesn't define my abilities. What went well?"\n\n` +
+        `4. OVERBROAD-GENERALIZING (One event describes everything)\n` +
+        `   • Listen for: "this proves", "I'm the type who", "this is how it always goes"\n` +
+        `   • Example: "I failed once, so I'm bad at everything" → Is one event a pattern?\n` +
+        `   • Alternative: "This one instance doesn't define all my abilities."\n\n` +
 
-        `5. SHOULD STATEMENTS (Creating pressure with obligations)\n` +
-        `   • Keywords: "should", "must", "ought to", "have to", "need to"\n` +
-        `   • Example: "I should be further along by now" → Says who?\n` +
-        `   • Reframe: "I'm where I am. What feels right for me, not what I 'should' do?"\n\n` +
+        `5. PRESSURE-LANGUAGE (Using obligation words)\n` +
+        `   • Listen for: "should", "must", "ought to", "have to", "need to"\n` +
+        `   • Example: "I should be further along" → Based on whose standards?\n` +
+        `   • Alternative: "Where am I now, and what feels right for me?"\n\n` +
 
-        `6. EMOTIONAL REASONING (Feelings = facts)\n` +
-        `   • Keywords: "I feel like", "it feels true", "my gut says"\n` +
-        `   • Example: "I feel stupid, so I must be stupid" → Are feelings always accurate?\n` +
-        `   • Reframe: "I'm having the thought that I'm stupid. That's different from being stupid."\n\n` +
+        `6. FEELINGS-AS-FACTS-THINKING (Treating emotions as certainty)\n` +
+        `   • Listen for: "I feel like", "it feels true", "my gut says"\n` +
+        `   • Example: "I feel stupid, so I must be" → Are feelings always factual?\n` +
+        `   • Alternative: "I'm having the feeling of being stupid. That's not the same as it being true."\n\n` +
 
         `CRITICAL RULES:\n` +
-        `- Only identify patterns CLEARLY PRESENT in transcript (evidence-based)\n` +
-        `- Return empty array [] if no distortions detected\n` +
+        `- Only note patterns CLEARLY PRESENT in transcript (evidence-based)\n` +
+        `- Return empty array [] if no patterns detected\n` +
         `- For each pattern, provide:\n` +
-        `  * Specific observation (quote or paraphrase their words)\n` +
-        `  * Optional reframe (gentler way to think about it)\n` +
-        `- NO diagnosis, NO therapy advice, NO clinical terms\n` +
-        `- Confidence threshold: only include if clearly detectable\n\n` +
+        `  * Specific observation (quote or paraphrase their exact words)\n` +
+        `  * Optional reframe (alternative way to express the same idea)\n` +
+        `- NO diagnosis, NO therapy, NO clinical language\n` +
+        `- This is linguistic observation, not mental health assessment\n\n` +
 
         `Return JSON:\n` +
-        `{"cognitivePatterns":[{"type":"catastrophizing","observation":"You called missing the deadline 'a complete disaster'—what if it's a setback, not a disaster?","reframe":"Missing this deadline is frustrating, but it doesn't define my work or my worth."}]}`;
+        `{"thinkingPatterns":[{"type":"worst-case-thinking","observation":"You called missing the deadline 'a complete disaster'—is that literally true, or is it a frustrating setback?","reframe":"Missing this deadline is frustrating, but it doesn't define my work."}]}`;
       break;
     case 'philosophical-echoes':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n\n` +

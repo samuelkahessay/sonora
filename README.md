@@ -1,6 +1,8 @@
-# Sonora - Modern iOS Voice Memo App with AI Analysis
+# Sonora - Think Out Loud, Get Instant Clarity
 
-**Sonora** is a sophisticated iOS voice memo application with AI-powered analysis and exemplary Clean Architecture implementation. Built with native SwiftUI and following industry-leading architectural patterns for maximum reliability, testability, and maintainability.
+**Sonora** is for verbal processors—people who think by talking. Speak your jumbled thoughts during walks, commutes, or transitional moments, and get distilled clarity without interruption. Unlike ChatGPT that interrupts your flow, Sonora lets you finish your complete thoughts, then shows you what you actually meant.
+
+Built with native SwiftUI following Clean Architecture principles for maximum reliability and maintainability.
 
 ## 🧰 Requirements
 
@@ -62,6 +64,33 @@ xcodebuild -resolvePackageDependencies -project Sonora.xcodeproj
 
 Note: Treat subdirectories as the single source of truth; do not duplicate models across layers.
 
+## 🎯 Why Sonora?
+
+### For Verbal Processors
+Some people think by writing. Others think by talking. If you're someone who says "let me think out loud for a second," or who calls friends to "talk through" decisions—you're a verbal processor. Sonora is built for you.
+
+### The Problem Sonora Solves
+You used to have to:
+1. Record in Apple Voice Memos
+2. Transfer to computer
+3. Run through Whisper for transcription
+4. Paste into ChatGPT
+5. Manually extract themes
+
+**Sonora does all of this automatically.** One tap → Talk → Instant clarity.
+
+### Non-Reactive Intelligence
+**Unlike ChatGPT or Claude that interrupt your thinking after every pause**, Sonora lets you speak completely uninterrupted for 5, 10, even 30 minutes. Then it reflects back the clarity you couldn't see while speaking.
+
+This isn't just a feature—it's a fundamentally different mental model. When you're processing thoughts, interruptions break flow. Sonora preserves it.
+
+### When To Use Sonora
+- **Post-gym walks**: Process thoughts while walking home with endorphins flowing
+- **Commutes**: Turn transit time into thinking time (driving, train, walking)
+- **After important conversations**: Digest what just happened
+- **Before big decisions**: Talk through options out loud
+- **Anytime thoughts are jumbled**: Speak → Clarity
+
 ## ✨ Modern Design & Features
 
 ### 🎨 **Native SwiftUI Design**
@@ -81,88 +110,75 @@ Note: Treat subdirectories as the single source of truth; do not duplicate model
 - Accessibility: Use `text/Inverted` over tinted brand backgrounds; prefer `bg/*` + `text/*` for content to maintain AA contrast.
 
 ### 🚀 **Core Capabilities**
-Sonora combines cutting-edge technology with intuitive design:
-- **Advanced Voice Recording**: Background recording with Live Activities integration
-- **Real-time Transcription**: Powered by modern `TranscriptionAPI` implementation  
-- **AI-Powered Analysis**: Intelligent summaries, themes, todos, and content insights
-- **Thread-safe Operations**: Sophisticated concurrency management with progress tracking
-- **Event-Driven Architecture**: Decoupled, reactive system for scalable feature development
-- **Focused Service Architecture**: 20+ specialized services across 9 categories with orchestration pattern
 
-### 🎯 **Key Features**
-- **🎤 Smart Recording**: Smooth 10-second countdown near cap; auto‑stop when remaining monthly quota runs out (no fixed per‑session limit for Pro)
-- **💡 Dynamic Prompts**: Context-aware recording prompts personalized by name, time of day, and week part
-- **📱 Live Activities**: Real-time recording status in Dynamic Island
-- **🧠 AI Analysis Suite**: Distill summaries, theme extraction, todo identification, content analysis
-- **⚡ Advanced Operations**: Queue management, progress tracking, conflict resolution
-- **🔄 Event System**: Reactive architecture for seamless feature integration
-- **🏗️ Clean Architecture**: 97% compliance with protocol-based dependency injection
-- **📊 Operation Metrics**: Real-time system performance and resource monitoring
-- **📅 EventKit Integration**: Smart calendar event and reminder creation from voice transcripts
-- **⏱️ Recording Quotas**: Free tier has a 60‑minute monthly cloud transcription cap with usage tracking; Pro is unlimited
-- **📤 Export System**: Multiple export formats for transcripts, analysis, and data
-- **🛡️ Content Moderation**: AI-powered content safety and filtering
-- **📝 Advanced Prompts**: 48 curated prompts with intelligent interpolation and selection
-- **🧷 Auto Titles**: Automatic memo titles with live typing effect and graceful fallbacks
-- **🔎 Memo Search & Filters**: Search by text; filter by transcript presence and date range
-- **💳 Subscriptions & Paywall**: RevenueCat-backed purchases, restore, and Pro entitlement gating
-- **🔍 Core Spotlight Search**: System-wide memo indexing for Spotlight
-- **🚀 Parallel Transcription & Export**: Concurrent chunk processing and faster archive/export
+#### The Hero: Distill Mode
+**Distill** is the heart of Sonora. Talk for 5-30 minutes uninterrupted, then get:
+- **Summary**: What you actually said, distilled to essence
+- **Key Themes**: The patterns you couldn't see while speaking
+- **Action Items**: Concrete next steps extracted from your thoughts
+- **Reflection Questions**: Prompts to deepen your thinking
+- **Thinking Patterns**: Recurring themes across your recordings over time
 
-### 🔧 **Advanced Features Deep Dive**
+This replaces the painful manual workflow: Record → Transcribe → ChatGPT → Extract themes.
 
-#### **📅 EventKit Integration**
-- **Smart Detection**: AI-powered extraction of calendar events and reminders from voice transcripts
-- **Calendar Creation**: Direct integration with Apple Calendar and Reminders apps
-- **Event Confirmation**: Beautiful confirmation UI with calendar selection and date/time editing
-- **Batch Operations**: Create multiple events and reminders in a single action
-- **Conflict Detection**: Smart scheduling that checks for existing calendar conflicts
+#### Built for Reliability
+- **Background Recording**: Walk, commute, multitask—recording continues seamlessly with Live Activities
+- **Automatic Transcription**: Powered by OpenAI Whisper API with intelligent chunking
+- **Quick Access**: Live Activities, lock screen controls—zero friction to start thinking
+- **Thread-safe Operations**: Sophisticated concurrency management ensures smooth performance
+- **Clean Architecture**: 97% protocol-based architecture for reliability and testability
 
-#### **⏱️ Recording Quota Management**
-- **Monthly Limits**: Free tier has a 60‑minute/month cloud transcription cap; Pro is unlimited
-- **Session Caps**: No fixed per‑session cap; if a cap applies, it equals the remaining monthly quota for the session
-- **Usage Monitoring**: Real‑time monthly usage surfaced in UI and used for gating
-- **Reset Logic**: Automatic monthly quota reset
+### 🎯 **Key Features for Verbal Processing**
 
-#### **📤 Export System**
-- **Transcript Export**: Multiple formats for sharing transcriptions
-- **Analysis Export**: Export AI-generated summaries and insights
-- **Data Export**: Comprehensive data export for backup and portability
-- **Share Integration**: Native iOS share sheet integration
+#### Core Features
+- **🧠 Distill Mode**: The hero—summaries, themes, action items, reflection questions from uninterrupted speech
+- **💡 Dynamic Prompts**: 48 curated prompts to help you know what to think about (personalized by name, time, day)
+- **🎤 Frictionless Recording**: One tap to start, Live Activities in Dynamic Island, lock screen controls
+- **📱 Background Recording**: Continues seamlessly while you walk, commute, or multitask
+- **🧷 Auto Titles**: Automatically title your recordings so you can find them later
+- **🔎 Search & History**: Find past thoughts instantly—search by text, filter by date
 
-#### **📝 Advanced Prompts System**
-- **Curated Library**: 48 professionally crafted recording prompts
-- **Smart Interpolation**: Dynamic tokens - [Name], [DayPart], [WeekPart]
-- **Intelligent Selection**: 7-day no-repeat algorithm with weighted selection
-- **Contextual Relevance**: Time-aware and personalized prompt suggestions
-  - **Usage Tracking**: Analytics for prompt effectiveness and engagement
+#### Power User Features
+- **⏱️ Recording Quotas**: Free tier has 60-min/month transcription; Pro is unlimited
+- **📤 Export & Share**: Export transcripts and analysis to share or backup
+- **🔍 Spotlight Integration**: Find memos from iOS system search
+- **📅 Optional: Calendar Integration**: Extract events/reminders (de-emphasized—not core to thinking)
+- **🛡️ Content Safety**: AI-powered moderation for peace of mind
+- **💳 Simple Pricing**: $10/month for Pro—covers unlimited transcription and analysis
 
-#### **🧷 Auto Titles**
-- **Coordinator-Driven**: `TitleGenerationCoordinator` orchestrates auto-title jobs per memo
-- **Live Typing Effect**: Streams title updates for responsive UX
-- **Fallbacks**: Safe fallbacks on failure with retry logic
+### 🔧 **How It Works (Technical)**
 
-#### **🔎 Memo Search & Filters**
-- **Search**: Instant text search across memo titles/transcripts
-- **Filters**: Has transcript, date range, and sort options
-- **Unified State**: ViewModel-managed results with Combine
+#### **🎤 Recording Flow**
+1. **One-Tap Start**: Quick access via app, Live Activity, or lock screen
+2. **Background Capture**: Records while you walk, drive, or multitask
+3. **Automatic Transcription**: Uploads audio, transcribes via OpenAI Whisper API
+4. **Distill Analysis**: Extracts summary, themes, action items, reflection questions
+5. **Ready in Moments**: Get clarity without manual work
 
-#### **💳 Subscriptions & Paywall**
-- **RevenueCat Integration**: Purchases, restore, entitlement updates
-- **Pro Gating**: Monthly transcription cap lifted for Pro users
-- **Settings**: Paywall and restore controls in Settings
-  
-See also: `docs/Subscriptions.md`
+#### **📝 Dynamic Prompts**
+- **48 Curated Prompts**: "What's on your mind?", "What went well today?", context-aware suggestions
+- **Smart Interpolation**: Personalized with your name, time of day, week part
+- **7-Day No-Repeat**: Never see the same prompt twice in a week
+- **Help You Start**: Many verbal processors struggle with "what should I talk about?"—prompts solve this
 
-#### **🔍 Core Spotlight Search**
-- **Indexing**: `SpotlightIndexer` indexes memos for system search
-- **Event-Driven**: Updates on create/rename/delete via EventBus handler
-- **User Control**: Respects diagnostics/settings toggles
+#### **⏱️ Recording Quotas**
+- **Free Tier**: 60 minutes/month of cloud transcription
+- **Pro Tier**: Unlimited transcription and analysis
+- **No Per-Session Cap**: Talk as long as you need (up to monthly quota)
+- **Fair Usage**: Designed to encourage daily use, not discourage long sessions
 
-#### **🚀 Transcription Performance**
-- **Parallel Chunking**: Task groups transcribe chunks concurrently
-- **Background Uploads**: Background URLSession for resilient uploads
-- **Throughput**: Faster end-to-end transcription and export
+#### **🔍 Finding Past Thoughts**
+- **Search**: Instant text search across all recordings and transcripts
+- **Spotlight**: System-wide search integration—find memos from iOS search
+- **Auto Titles**: Every recording gets an automatic descriptive title
+- **Filters**: Sort by date, filter by transcription status
+
+#### **📤 Export & Sharing**
+- **Transcript Export**: Share the raw text of what you said
+- **Analysis Export**: Share the distilled insights
+- **Native Share Sheet**: Standard iOS sharing to any app
+
+For technical implementation details, see `docs/architecture/ARCHITECTURE.md`.
 
 ## 🚀 **Release Timeline & Milestones**
 

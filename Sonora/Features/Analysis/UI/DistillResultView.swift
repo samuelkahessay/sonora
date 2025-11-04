@@ -44,9 +44,9 @@ struct DistillResultView: View {
 
             // Pro-tier analysis sections
             if isPro {
-                // Cognitive Clarity (CBT) Section
-                if let cognitivePatterns = effectiveCognitivePatterns, !cognitivePatterns.isEmpty {
-                    CognitiveClaritySectionView(patterns: cognitivePatterns)
+                // Thinking Patterns Section
+                if let thinkingPatterns = effectiveThinkingPatterns, !thinkingPatterns.isEmpty {
+                    ThinkingPatternsSectionView(patterns: thinkingPatterns)
                 }
 
                 // Philosophical Echoes Section
@@ -83,13 +83,13 @@ struct DistillResultView: View {
                 category: .viewModel,
                 context: LogContext(additionalInfo: [
                     "isPro": isPro,
-                    "hasCognitivePatterns": effectiveCognitivePatterns != nil,
-                    "cognitivePatternCount": effectiveCognitivePatterns?.count ?? 0,
+                    "hasThinkingPatterns": effectiveThinkingPatterns != nil,
+                    "thinkingPatternCount": effectiveThinkingPatterns?.count ?? 0,
                     "hasPhilosophicalEchoes": effectivePhilosophicalEchoes != nil,
                     "philosophicalEchoesCount": effectivePhilosophicalEchoes?.count ?? 0,
                     "hasValuesInsights": effectiveValuesInsights != nil,
                     "proSectionsWillRender": isPro && (
-                        (effectiveCognitivePatterns?.isEmpty == false) ||
+                        (effectiveThinkingPatterns?.isEmpty == false) ||
                         (effectivePhilosophicalEchoes?.isEmpty == false) ||
                         (effectiveValuesInsights != nil)
                     )
@@ -102,7 +102,7 @@ struct DistillResultView: View {
                     category: .viewModel,
                     context: LogContext(additionalInfo: ["storeKitService": "check RevenueCat entitlements"])
                 )
-            } else if effectiveCognitivePatterns == nil && effectivePhilosophicalEchoes == nil && effectiveValuesInsights == nil {
+            } else if effectiveThinkingPatterns == nil && effectivePhilosophicalEchoes == nil && effectiveValuesInsights == nil {
                 Logger.shared.warning(
                     "⚠️ Pro sections hidden: isPro=true but no Pro data available",
                     category: .viewModel,
@@ -153,8 +153,8 @@ struct DistillResultView: View {
         data?.reflection_questions
     }
 
-    private var effectiveCognitivePatterns: [CognitivePattern]? {
-        data?.cognitivePatterns
+    private var effectiveThinkingPatterns: [ThinkingPattern]? {
+        data?.thinkingPatterns
     }
 
     private var effectivePhilosophicalEchoes: [PhilosophicalEcho]? {
@@ -293,10 +293,10 @@ struct DistillResultView: View {
         }
         // Pro-tier analysis sections
         if isPro {
-            // Cognitive Clarity
-            if let cognitivePatterns = effectiveCognitivePatterns, !cognitivePatterns.isEmpty {
-                var lines: [String] = ["Cognitive Clarity (CBT):"]
-                for pattern in cognitivePatterns {
+            // Thinking Patterns
+            if let thinkingPatterns = effectiveThinkingPatterns, !thinkingPatterns.isEmpty {
+                var lines: [String] = ["Thinking Patterns:"]
+                for pattern in thinkingPatterns {
                     lines.append("• \(pattern.type.displayName): \(pattern.observation)")
                     if let reframe = pattern.reframe {
                         lines.append("  Reframe: \(reframe)")

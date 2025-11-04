@@ -12,8 +12,8 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
     case distillThemes = "distill-themes"
     case distillReflection = "distill-reflection"
 
-    // Pro-tier analysis modes (CBT, wisdom, values)
-    case cognitiveClarityCBT = "cognitive-clarity"
+    // Pro-tier analysis modes (thinking patterns, wisdom, values)
+    case thinkingPatterns = "thinking-patterns"
     case philosophicalEchoes = "philosophical-echoes"
     case valuesRecognition = "values-recognition"
 
@@ -42,7 +42,7 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
         case .distillActions: return "Actions"
         case .distillThemes: return "Themes"
         case .distillReflection: return "Reflection"
-        case .cognitiveClarityCBT: return "Cognitive Clarity"
+        case .thinkingPatterns: return "Thinking Patterns"
         case .philosophicalEchoes: return "Philosophical Echoes"
         case .valuesRecognition: return "Values Recognition"
         }
@@ -58,7 +58,7 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
         case .distillActions: return "checkmark.circle.fill"
         case .distillThemes: return "tag.circle"
         case .distillReflection: return "questionmark.circle"
-        case .cognitiveClarityCBT: return "brain.head.profile"
+        case .thinkingPatterns: return "brain.head.profile"
         case .philosophicalEchoes: return "book.closed"
         case .valuesRecognition: return "heart.circle"
         }
@@ -99,7 +99,7 @@ public struct DistillData: Codable, Sendable {
     public let reminders: [RemindersData.DetectedReminder]?
 
     // Pro-tier fields (parallel API calls for enhanced analysis)
-    public let cognitivePatterns: [CognitivePattern]?
+    public let thinkingPatterns: [ThinkingPattern]?
     public let philosophicalEchoes: [PhilosophicalEcho]?
     public let valuesInsights: ValuesInsight?
 
@@ -156,7 +156,7 @@ public struct DistillData: Codable, Sendable {
         patterns: [Pattern]? = nil,
         events: [EventsData.DetectedEvent]? = nil,
         reminders: [RemindersData.DetectedReminder]? = nil,
-        cognitivePatterns: [CognitivePattern]? = nil,
+        thinkingPatterns: [ThinkingPattern]? = nil,
         philosophicalEchoes: [PhilosophicalEcho]? = nil,
         valuesInsights: ValuesInsight? = nil
     ) {
@@ -166,7 +166,7 @@ public struct DistillData: Codable, Sendable {
         self.patterns = patterns
         self.events = events
         self.reminders = reminders
-        self.cognitivePatterns = cognitivePatterns
+        self.thinkingPatterns = thinkingPatterns
         self.philosophicalEchoes = philosophicalEchoes
         self.valuesInsights = valuesInsights
     }
@@ -185,14 +185,14 @@ public struct DistillData: Codable, Sendable {
         self.patterns = try container.decodeIfPresent([Pattern].self, forKey: .patterns)
         self.events = try container.decodeIfPresent([EventsData.DetectedEvent].self, forKey: .events)
         self.reminders = try container.decodeIfPresent([RemindersData.DetectedReminder].self, forKey: .reminders)
-        self.cognitivePatterns = try container.decodeIfPresent([CognitivePattern].self, forKey: .cognitivePatterns)
+        self.thinkingPatterns = try container.decodeIfPresent([ThinkingPattern].self, forKey: .thinkingPatterns)
         self.philosophicalEchoes = try container.decodeIfPresent([PhilosophicalEcho].self, forKey: .philosophicalEchoes)
         self.valuesInsights = try container.decodeIfPresent(ValuesInsight.self, forKey: .valuesInsights)
     }
 
     private enum CodingKeys: String, CodingKey {
         case summary, action_items, reflection_questions, patterns, events, reminders
-        case cognitivePatterns, philosophicalEchoes, valuesInsights
+        case thinkingPatterns, philosophicalEchoes, valuesInsights
     }
 }
 
@@ -259,9 +259,9 @@ public struct DistillReflectionData: Codable, Sendable {
 
 // MARK: - Pro-Tier Analysis Response Data Models
 
-/// Response wrapper for cognitive-clarity analysis (Beck/Ellis CBT patterns)
-public struct CognitiveClarityData: Codable, Sendable {
-    public let cognitivePatterns: [CognitivePattern]
+/// Response wrapper for thinking-patterns analysis (observational pattern recognition)
+public struct ThinkingPatternsData: Codable, Sendable {
+    public let thinkingPatterns: [ThinkingPattern]
 }
 
 /// Response wrapper for philosophical-echoes analysis (wisdom connections)
@@ -573,66 +573,66 @@ public struct LiteDistillData: Codable, Sendable, Equatable {
 
 // MARK: - Pro Tier Analysis Models
 
-/// Cognitive pattern detection based on Beck/Ellis CBT framework
-/// Helps users identify thinking distortions with optional reframes
-/// Pro-tier feature: parallel API call for cognitive clarity
-public struct CognitivePattern: Codable, Sendable, Identifiable, Equatable {
+/// Thinking pattern recognition through observational language analysis
+/// Helps users identify recurring speech habits and thought expressions
+/// Pro-tier feature: parallel API call for thinking patterns
+public struct ThinkingPattern: Codable, Sendable, Identifiable, Equatable {
     public let id: String
-    public let type: CognitiveDistortion
+    public let type: ThinkingHabit
     public let observation: String
     public let reframe: String?
 
-    public enum CognitiveDistortion: String, Codable, Sendable, Equatable {
-        case allOrNothing = "all-or-nothing"
-        case catastrophizing = "catastrophizing"
-        case mindReading = "mind-reading"
-        case overgeneralization = "overgeneralization"
-        case shouldStatements = "should-statements"
-        case emotionalReasoning = "emotional-reasoning"
+    public enum ThinkingHabit: String, Codable, Sendable, Equatable {
+        case blackAndWhiteThinking = "black-and-white-thinking"
+        case worstCaseThinking = "worst-case-thinking"
+        case assumptionMaking = "assumption-making"
+        case overbroadGeneralizing = "overbroad-generalizing"
+        case pressureLanguage = "pressure-language"
+        case feelingsAsFactsThinking = "feelings-as-facts-thinking"
 
         var displayName: String {
             switch self {
-            case .allOrNothing: return "All-or-Nothing"
-            case .catastrophizing: return "Catastrophizing"
-            case .mindReading: return "Mind Reading"
-            case .overgeneralization: return "Overgeneralization"
-            case .shouldStatements: return "Should Statements"
-            case .emotionalReasoning: return "Emotional Reasoning"
+            case .blackAndWhiteThinking: return "Black-and-White Thinking"
+            case .worstCaseThinking: return "Worst-Case Thinking"
+            case .assumptionMaking: return "Assumption-Making"
+            case .overbroadGeneralizing: return "Overbroad Generalizing"
+            case .pressureLanguage: return "Pressure Language"
+            case .feelingsAsFactsThinking: return "Feelings as Facts"
             }
         }
 
         var iconName: String {
             switch self {
-            case .allOrNothing: return "line.diagonal"
-            case .catastrophizing: return "exclamationmark.triangle"
-            case .mindReading: return "bubble.left.and.bubble.right"
-            case .overgeneralization: return "arrow.triangle.branch"
-            case .shouldStatements: return "hand.raised"
-            case .emotionalReasoning: return "heart.circle"
+            case .blackAndWhiteThinking: return "line.diagonal"
+            case .worstCaseThinking: return "exclamationmark.triangle"
+            case .assumptionMaking: return "bubble.left.and.bubble.right"
+            case .overbroadGeneralizing: return "arrow.triangle.branch"
+            case .pressureLanguage: return "hand.raised"
+            case .feelingsAsFactsThinking: return "heart.circle"
             }
         }
 
         var description: String {
             switch self {
-            case .allOrNothing:
-                return "Seeing things in black-and-white categories"
-            case .catastrophizing:
-                return "Expecting the worst-case scenario"
-            case .mindReading:
-                return "Assuming you know what others think"
-            case .overgeneralization:
-                return "Drawing broad conclusions from single events"
-            case .shouldStatements:
-                return "Using 'should', 'must', 'ought' creates pressure"
-            case .emotionalReasoning:
-                return "Believing feelings reflect reality"
+            case .blackAndWhiteThinking:
+                return "Speaking in absolutes like 'always' or 'never'"
+            case .worstCaseThinking:
+                return "Focusing on negative outcomes"
+            case .assumptionMaking:
+                return "Guessing what others might be thinking"
+            case .overbroadGeneralizing:
+                return "Using one event to describe a pattern"
+            case .pressureLanguage:
+                return "Using words like 'should', 'must', or 'have to'"
+            case .feelingsAsFactsThinking:
+                return "Treating emotions as if they're definitely true"
             }
         }
     }
 
     public init(
         id: String = UUID().uuidString,
-        type: CognitiveDistortion,
+        type: ThinkingHabit,
         observation: String,
         reframe: String? = nil
     ) {
@@ -716,12 +716,12 @@ public struct PhilosophicalEcho: Codable, Sendable, Identifiable, Equatable {
     }
 }
 
-// Add normalization to CognitivePattern
-extension CognitivePattern {
+// Add normalization to ThinkingPattern
+extension ThinkingPattern {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(String.self, forKey: .id)
-        self.type = try container.decode(CognitiveDistortion.self, forKey: .type)
+        self.type = try container.decode(ThinkingHabit.self, forKey: .type)
         self.observation = try container.decode(String.self, forKey: .observation).normalizingSmartPunctuation()
         self.reframe = try container.decodeIfPresent(String.self, forKey: .reframe)?.normalizingSmartPunctuation()
     }

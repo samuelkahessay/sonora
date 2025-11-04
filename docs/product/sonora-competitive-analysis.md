@@ -1,7 +1,7 @@
 # Sonora: Competitive Analysis
-*Positioning Against the Field*
+*Positioning for Verbal Processors*
 
-> Sonora occupies a unique position in the mental wellness space by combining ancient wisdom practices with modern AI. This analysis maps the competitive landscape and defines our differentiated value proposition.
+> Sonora is a thinking tool for people who think by talking out loud. This analysis maps the competitive landscape and defines our differentiated value proposition: **non-reactive intelligence for uninterrupted thinking**.
 
 ---
 
@@ -9,58 +9,69 @@
 
 ### Current Categories
 
-**1. Digital Therapy Apps**
-- BetterHelp, Talkspace, Cerebral
-- Focus: Clinical treatment of mental health conditions
-- Business Model: Subscription + therapist matching
+**1. Conversational AI (ChatGPT Voice, Claude)**
+- OpenAI ChatGPT Voice, Anthropic Claude, Google Gemini
+- Focus: Interactive conversation and Q&A
+- Business Model: Free with limits, $20/month for advanced
 
-**2. Journaling Apps**
+**2. Meeting Notes Apps**
+- Granola, Otter.ai, Fireflies, Fathom
+- Focus: Professional meeting transcription and notes
+- Business Model: Freemium, $10-20/month premium
+
+**3. Voice Memo Apps**
+- Apple Voice Memos, Google Recorder, Just Press Record
+- Focus: Simple audio recording
+- Business Model: Free (built-in) or one-time purchase
+
+**4. Journaling Apps**
 - Day One, Journey, Reflectly, Five Minute Journal
-- Focus: Recording and organizing thoughts
+- Focus: Written daily reflection
 - Business Model: Premium features, templates, sync
 
-**3. AI Companions**
-- Replika, Pi, Character.AI, Woebot
-- Focus: Conversational relationship with AI
-- Business Model: Subscription for advanced features
-
-**4. Meditation/Mindfulness Apps**
-- Calm, Headspace, Insight Timer, Ten Percent Happier
-- Focus: Guided meditation and mindfulness practice
-- Business Model: Premium content subscriptions
-
-**5. CBT/Mental Training Apps**
-- MindShift, Sanvello, Youper, Mood Meter
-- Focus: Clinical techniques for anxiety/depression
-- Business Model: Freemium with premium CBT tools
+**5. Dictation Tools**
+- SuperWhisper, Wispr Flow, Otter.ai
+- Focus: Voice-to-text input replacement
+- Business Model: Freemium, $8-10/month premium
 
 ---
 
 ## Detailed Competitive Analysis
 
-### 1. vs. Digital Therapy Apps (BetterHelp, Talkspace)
+### 1. vs. ChatGPT Voice / Claude (PRIMARY COMPETITION)
 
 **What They Do Well**:
-- Professional clinical oversight
-- Human connection and relationship
-- Insurance coverage in some cases
-- Established trust for serious mental health issues
+- Conversational AI with instant responses
+- Powerful for Q&A, problem-solving, brainstorming
+- Free tiers available
+- Multi-modal (voice, text, images)
+- Huge brand awareness
 
-**Their Limitations**:
-- High cost ($200-400/month)
-- Therapist availability and matching issues
-- Focus on pathology rather than growth
-- Passive consumption model (user waits for therapist)
+**Their Critical Limitation for Verbal Processors**:
+- **❌ THEY INTERRUPT YOUR THINKING** - After 2-3 seconds of pause, they start responding
+- **❌ Breaks flow** - When processing thoughts, interruptions kill the thinking process
+- **❌ Conversational model** - Designed for back-and-forth, not uninterrupted reflection
+- **❌ No memory of thinking sessions** - Each conversation is isolated
 
 **Sonora's Differentiation**:
-- ✅ **Available 24/7** - No waiting for appointments
-- ✅ **Growth-focused** - Enhances normal functioning vs. treats illness
-- ✅ **Self-empowering** - Builds internal skills vs. external dependency
-- ✅ **Affordable** - Fraction of therapy cost
-- ✅ **Philosophical depth** - 2,000+ years of wisdom vs. modern therapeutic trends
-- ✅ **Active practice** - User develops skills vs. passive receiving
+- ✅ **Non-Reactive Intelligence** - Lets you speak uninterrupted for 5-30 minutes
+- ✅ **Preserves Flow** - No chatbot cutting you off mid-thought
+- ✅ **Built for Thinking** - Not conversation, but uninterrupted processing → clarity
+- ✅ **Distill Mode** - Shows you what you actually meant after you finish
+- ✅ **Pattern Recognition Over Time** - Tracks themes across sessions
+- ✅ **Context Aware** - Remembers your past thinking sessions
 
-**Positioning**: "Therapy apps treat problems. Sonora builds wisdom."
+**Use Case Differentiation**:
+- ChatGPT: "Help me solve this problem" (back-and-forth)
+- Sonora: "Let me think this through out loud" (uninterrupted → distilled clarity)
+
+**Positioning**: **"ChatGPT is for conversation. Sonora is for thinking."**
+
+**When to Use Each**:
+- Use ChatGPT when: You want answers, need problem-solving help, want to debate ideas
+- Use Sonora when: You need to process jumbled thoughts, think through decisions, gain clarity from talking uninterrupted
+
+**Target User**: Verbal processors who've used ChatGPT Voice and gotten frustrated by interruptions.
 
 ### 2. vs. Journaling Apps (Day One, Journey)
 
@@ -84,9 +95,80 @@
 - ✅ **Voice-first** - Natural expression vs. typing friction
 - ✅ **Active training** - Develops mental skills vs. records events
 
-**Positioning**: "Journaling apps store your thoughts. Sonora transforms them into wisdom."
+**Positioning**: "Journaling apps require typing discipline. Sonora works with how verbal processors naturally think."
 
-### 3. vs. AI Companions (Replika, Pi)
+### 3. vs. Granola (Meeting Notes Space)
+
+**What They Do Well**:
+- Perfect for professional meetings with other people
+- Augments typed notes with meeting audio
+- Non-reactive (doesn't interrupt meetings)
+- Clean meeting summaries and action items
+- $10/month pricing, strong VC backing ($67M raised)
+
+**Their Focus**:
+- Meetings with OTHER people (professional collaboration)
+- Typed notes + audio augmentation
+- Meeting templates (1-on-1, stand-up, sales call)
+- Professional productivity
+
+**Why Sonora Doesn't Compete**:
+- **❌ Different use case**: Granola is for meetings, Sonora is for personal thinking
+- **❌ Different context**: Granola is professional, Sonora is introspective
+- **❌ Different users**: Granola targets knowledge workers in meetings, Sonora targets verbal processors thinking alone
+
+**Sonora's Different Space**:
+- ✅ **Personal thinking**, not meeting notes
+- ✅ **Solo reflection**, not collaboration
+- ✅ **Post-gym walks/commutes**, not conference rooms
+- ✅ **Clarity from chaos**, not meeting documentation
+- ✅ **Think out loud alone**, not capture meetings with others
+
+**Positioning**: **"Granola gives you clarity from meetings. Sonora gives you clarity from your own mind."**
+
+**Market Validation**: Granola's success ($67M raised, $250M valuation) validates that people will pay $10/month for AI-powered clarity from audio. Sonora applies this to personal thinking instead of meetings.
+
+### 4. vs. Voice Memo Apps (Apple Voice Memos)
+
+**What They Do Well**:
+- Simple, reliable recording
+- Free and built-in
+- iCloud sync
+- Zero learning curve
+
+**Their Limitations**:
+- Passive capture only—no processing
+- No transcription
+- No insight generation
+- Just storage
+
+**Sonora's Differentiation**:
+- ✅ Recording + transcription + distillation in one
+- ✅ Automatic clarity from uninterrupted thinking
+- ✅ Pattern recognition over time
+- ✅ Replaces manual workflow: Record → Whisper → ChatGPT
+
+**Positioning**: "Voice Memos captures. Sonora clarifies."
+
+---
+
+## Summary: Sonora's Unique Position
+
+**We are NOT**:
+- ❌ Therapy or mental health treatment
+- ❌ Meeting notes tool (Granola's space)
+- ❌ Conversational AI (ChatGPT's space)
+- ❌ Simple voice recorder
+
+**We ARE**:
+- ✅ **Thinking tool for verbal processors**
+- ✅ **Non-reactive intelligence** (no interruptions)
+- ✅ **Distill mode as hero**: Uninterrupted thinking → instant clarity
+- ✅ **Built for transitional moments**: Post-gym, commutes, walks
+
+**Core Differentiator**: In a world of AI that interrupts (ChatGPT) or just records (Voice Memos), Sonora preserves your flow then shows you what you actually meant.
+
+**Target User**: "I think by talking out loud. ChatGPT interrupts me. I need uninterrupted space to process, then clarity."
 
 **What They Do Well**:
 - Engaging conversational AI

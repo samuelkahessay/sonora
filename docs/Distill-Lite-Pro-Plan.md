@@ -1,10 +1,10 @@
 Distill Lite / Pro – Product & Implementation Plan
 
 Scope
-- Align Distill to a wellness-first experience.
+- Position Distill as THE hero feature—clarity from uninterrupted thinking.
 - Free (Lite): Auto Title, Summary, Reflection Questions.
-- Pro: Everything in Lite + Action Items.
-- Remove Key Themes from Distill to avoid overlap with Themes mode.
+- Pro: Everything in Lite + Action Items + Key Themes.
+- Focus: Show verbal processors what they actually meant after talking uninterrupted.
 
 Pricing & Quotas
 - Free: 60 minutes/month recording (DefaultRecordingQuotaPolicy).
@@ -14,16 +14,18 @@ Pricing & Quotas
 User Experience (by tier)
 - Lite
   - Auto Title: 3–5 words, Title Case, no punctuation/emojis, ≤32 chars. Language-aware. Fallback to date+time.
-  - Summary: 1–2 paragraphs; kind, validating tone; avoid prescriptive language.
-  - Reflection Questions: 2–3 gentle prompts prioritizing self-awareness and small next steps.
+  - Summary: 1–2 paragraphs; reflective tone; shows "here's what you actually said"
+  - Reflection Questions: 2–3 prompts to deepen thinking about patterns observed
 - Pro
-  - Action Items: 3–5 verb-first nudges. No owners/dates. Wellness tone (“Take a 5-minute walk”, “Write two reflective sentences”).
+  - Action Items: 3–5 concrete next steps extracted from the thinking session
+  - Key Themes: Recurring patterns across this recording
   - Access to Themes, Todos, and Content modes from the Analysis area (unchanged gating).
 
 Design Principles
-- Wellness-aligned language (self-compassion, curiosity, small steps).
-- Keep Distill concise; deeper analysis belongs in Themes/Todos/Content.
-- Remove Key Themes from Distill; show Themes as its own mode when Pro.
+- Clarity-first: Help verbal processors see what they couldn't see while speaking
+- Non-judgmental pattern observation (not therapy, just "you said X three times")
+- Keep Distill concise; deeper analysis belongs in Themes/Todos/Content
+- Emphasize Distill as THE core feature—this is why people use Sonora
 
 Technical Plan
 1) Distill UI
@@ -43,18 +45,22 @@ Technical Plan
 
 Prompt Guidelines (server)
 - Summary (Lite/Pro):
-  - Goal: Calm, non-judgmental summary of what matters; ≤160 words.
-  - Avoid: diagnostics, therapy claims, directives.
-  - Do: validate feelings, spotlight patterns, suggest gentle attention areas.
+  - Goal: Show "here's what you actually said" in distilled form; ≤160 words.
+  - Avoid: therapy claims, emotional diagnoses, prescriptive advice.
+  - Do: Neutral pattern observation ("You mentioned X three times"), surface key points.
 - Reflection Questions (Lite/Pro):
-  - 2–3 questions. One “awareness” (what am I noticing?), one “tiny next step”, optional “connection/values”.
-  - No “should”; prefer “could”, “might”, “what would it feel like to…”.
+  - 2–3 questions to deepen thinking about what they said.
+  - Focus: "What pattern do you notice here?", "What would clarify this further?"
+  - Avoid: therapeutic framing; this is thinking prompts, not emotional processing.
 - Action Items (Pro):
-  - 3–5 small nudges; 1–2 sentences max; verb-first.
-  - Avoid owners/dates/priorities; avoid workplace assignment framing.
+  - 3–5 concrete next steps extracted from their thinking; verb-first.
+  - Based on what THEY said they want to do, not what AI suggests.
+  - Avoid: therapy homework, emotional regulation tasks.
 - Auto Title (All):
   - 3–5 words, Title Case, no punctuation/emojis, ≤32 chars, language-aware.
-  - Reject generic outputs (e.g., “Meeting”) unless paired with a specific noun.
+  - Reject generic outputs (e.g., "Meeting") unless paired with a specific noun.
+
+**CRITICAL DISCLAIMER**: All prompts must avoid clinical/therapeutic language. We're a thinking tool, not therapy.
 
 Rollout
 - Phase 1: Hide Key Themes in Distill; gate Action Items to Pro (done). Ship copy updates.

@@ -49,7 +49,7 @@ Sonora is a voice memo recording app with background recording, playback, and se
 
 ### Basic Information
 - **App Name**: Sonora
-- **Subtitle**: AI Voice Memo & Transcription
+- **Subtitle**: Think Out Loud, Get Clarity
 - **Category**: Productivity
 - **Sub-category**: Business
 - **Age Rating**: 4+ (No Objectionable Material)
@@ -58,86 +58,109 @@ Sonora is a voice memo recording app with background recording, playback, and se
 ### App Store Copy
 
 #### **Short Description (30 chars)**
-"AI Voice Memos & Transcription"
+"Think Out Loud, Get Clarity"
 
 #### **Promotional Text (170 chars max)**
-🎤 Record voice memos with background recording
-🧠 AI transcription & analysis  
-📱 Live Activity with Dynamic Island
-🔒 Privacy-first, local storage
+For verbal processors who think by talking.
+🎤 Non-reactive—speak uninterrupted
+🧠 Instant distilled clarity
+📱 Post-gym walks, commutes, anytime
 
 #### **Full Description**
 
-**Transform your voice into actionable insights with Sonora - the intelligent voice memo app built for privacy.**
+**For people who think by talking. Sonora gives you uninterrupted space to speak your thoughts, then reflects back instant clarity.**
 
-🎤 **Smart Recording**
-• Background recording with Live Activities
-• 3-minute focused recording sessions  
-• Dynamic Island integration on iPhone 14 Pro+
-• Continue recording when app is backgrounded
+Unlike ChatGPT that interrupts after every pause, Sonora lets you finish your complete thoughts—5, 10, even 30 minutes—then distills what you actually meant.
 
-🧠 **AI-Powered Analysis**
-• Instant transcription with 100+ language support
-• Smart summaries and key insights
-• Theme extraction and todo identification
-• Content moderation for safety
+🧠 **The Problem Sonora Solves**
+If you're a verbal processor, you used to have to:
+1. Record in Voice Memos
+2. Transfer to computer
+3. Transcribe with Whisper
+4. Paste into ChatGPT
+5. Manually extract themes
 
-📱 **Native iOS Experience**  
-• Beautiful SwiftUI design with Dark Mode
-• Seamless system integration
-• Full accessibility support
-• Optimized for all iPhone models
+Sonora does all of this automatically. One tap → Talk → Instant clarity.
 
-🔒 **Privacy by Design**
-• Local-first storage - your data stays on your device
-• Optional cloud transcription (you control when)
-• No user tracking or analytics
-• Open source architecture
+🎤 **Non-Reactive Intelligence**
+The key difference: Sonora doesn't interrupt your thinking. Speak completely uninterrupted while walking, commuting, or processing thoughts. When you're done, get:
+
+• Summary: What you actually said, distilled to essence
+• Key Themes: Patterns you couldn't see while speaking
+• Action Items: Concrete next steps from your thoughts
+• Reflection Questions: Prompts to deepen your thinking
+
+📱 **Built for Your Life**
+• Post-gym walks: Process thoughts while endorphins flow
+• Commutes: Turn transit time into thinking time
+• After important conversations: Digest what just happened
+• Before big decisions: Talk through options out loud
+• Anytime thoughts are jumbled: Speak → Clarity
+
+🚀 **Frictionless Recording**
+• One-Tap Start: Zero friction to begin thinking
+• Background Recording: Continues while you walk, multitask
+• Live Activities: See recording status in Dynamic Island
+• Lock Screen Controls: Start/stop without unlocking
+
+🔒 **Privacy-First**
+• Local storage by default—your thoughts stay on your device
+• Cloud transcription only when you choose
+• No tracking, no analytics
+• You control your data
 
 **Perfect for:**
-• Students recording lectures
-• Professionals capturing meeting notes  
-• Journalists conducting interviews
-• Anyone who thinks faster than they type
+• Verbal processors who think by talking out loud
+• People who've tried journaling but typing feels like work
+• Anyone frustrated by ChatGPT interrupting their thoughts
+• Daily gym-goers, commuters, walkers who want to process during transit
 
-**Why Sonora?**
-Unlike other voice apps, Sonora combines powerful AI capabilities with a privacy-first approach. Your recordings stay local until YOU choose to transcribe them. No subscriptions, no tracking, just pure functionality.
+**Why Sonora vs ChatGPT Voice?**
+ChatGPT is reactive—great for conversation, but interrupts your thinking. Sonora is non-reactive—built for uninterrupted processing, then reflection. Different tools for different needs.
+
+**Pricing:**
+Free: 60 minutes/month transcription
+Pro ($10/month): Unlimited transcription and analysis
 
 ---
 
-**Technical Excellence:**
-Built with Clean Architecture principles, featuring 95% protocol-based dependency injection and modern async/await concurrency. Sonora represents the gold standard for iOS app development.
+*Built with Clean Architecture for reliability you can trust.*
 
 ---
 
-*Download Sonora today and turn your voice into your most powerful productivity tool.*
+Download Sonora and turn your walks into thinking sessions.
 
 #### **Keywords (100 chars max)**
-voice memo,transcription,AI,recording,notes,productivity,speech to text,dictation,voice notes
+voice memo,think out loud,verbal processor,clarity,journaling,AI,transcription,walking,mindfulness
 
 #### **What's New (4000 chars max)**
-🎉 **Sonora 1.0 - Your Voice, Supercharged**
+🎉 **Sonora 1.0 - Think Out Loud, Get Clarity**
 
-**New Features:**
-• ✨ Background recording with Live Activities
-• 🧠 AI transcription in 100+ languages  
-• 📊 Smart analysis: summaries, themes, todos
-• 🎯 Dynamic Island integration (iPhone 14 Pro+)
-• 🔒 Privacy-first architecture
+**For Verbal Processors:**
+If you think by talking out loud, Sonora is built for you. Unlike ChatGPT that interrupts your thinking, Sonora lets you speak completely uninterrupted for 5-30 minutes, then reflects back instant clarity.
 
-**Technical Improvements:**
-• Built with Clean Architecture (95% compliance)
-• Modern async/await concurrency
-• Full accessibility support
-• Native SwiftUI design
+**What's New:**
+• 🧠 **Distill Mode**: Summaries, themes, action items, and reflection questions from uninterrupted speech
+• 🎤 **Non-Reactive Processing**: Speak without interruption—no chatbot cutting you off mid-thought
+• 📱 **Built for Walks**: Background recording perfect for post-gym walks, commutes, any transit time
+• 💡 **48 Curated Prompts**: Help for "what should I talk about?"
+• 🏃 **Live Activities**: See recording status in Dynamic Island, control from lock screen
 
-**Privacy & Security:**
-• Local-first storage by default
-• Optional cloud transcription (user-controlled)
-• Content moderation for safety
-• Zero tracking or analytics
+**The Problem We Solve:**
+You used to manually record → transcribe → ChatGPT → extract themes. Now it's automatic. One tap → Talk → Clarity.
 
-Record your thoughts, transcribe with AI, and transform voice into actionable insights - all while keeping your privacy intact.
+**Perfect For:**
+• Post-gym walks processing thoughts
+• Commutes turned into thinking time
+• Before big decisions—talk through options
+• Anytime thoughts feel jumbled
+
+**Privacy:**
+Your thoughts stay on your device. Cloud transcription only when you choose. No tracking. You control your data.
+
+Free: 60 min/month | Pro: Unlimited ($10/month)
+
+Turn your walks into thinking sessions.
 
 ---
 

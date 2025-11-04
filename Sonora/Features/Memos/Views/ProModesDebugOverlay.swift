@@ -51,10 +51,10 @@ struct ProModesDebugOverlay: View {
                                 .font(.headline)
                                 .padding(.top, 4)
 
-                            if let cognitive = data.cognitivePatterns {
-                                DebugRow(label: "  Cognitive Patterns", value: "✅ \(cognitive.count) patterns", status: .good)
+                            if let thinking = data.thinkingPatterns {
+                                DebugRow(label: "  Thinking Patterns", value: "✅ \(thinking.count) patterns", status: .good)
                             } else {
-                                DebugRow(label: "  Cognitive Patterns", value: "❌ nil", status: .bad)
+                                DebugRow(label: "  Thinking Patterns", value: "❌ nil", status: .bad)
                             }
 
                             if let philosophical = data.philosophicalEchoes {
@@ -99,7 +99,7 @@ struct ProModesDebugOverlay: View {
                     if let payload = viewModel.analysisPayload {
                         switch payload {
                         case .distill(let data, _):
-                            let hasCognitive = data.cognitivePatterns != nil && !data.cognitivePatterns!.isEmpty
+                            let hasThinking = data.thinkingPatterns != nil && !data.thinkingPatterns!.isEmpty
                             let hasPhilosophical = data.philosophicalEchoes != nil && !data.philosophicalEchoes!.isEmpty
                             let hasValues = data.valuesInsights != nil
 
@@ -109,9 +109,9 @@ struct ProModesDebugOverlay: View {
                                 .padding(.top, 4)
 
                             DebugRow(
-                                label: "  Cognitive Clarity",
-                                value: (viewIsPro && hasCognitive) ? "✅ YES" : "❌ NO",
-                                status: (viewIsPro && hasCognitive) ? .good : .bad
+                                label: "  Thinking Patterns",
+                                value: (viewIsPro && hasThinking) ? "✅ YES" : "❌ NO",
+                                status: (viewIsPro && hasThinking) ? .good : .bad
                             )
                             DebugRow(
                                 label: "  Philosophical Echoes",

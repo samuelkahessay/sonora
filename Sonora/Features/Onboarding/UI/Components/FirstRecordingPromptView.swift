@@ -139,7 +139,7 @@ struct FirstRecordingPromptView: View {
                 .foregroundColor(.semantic(.textPrimary))
                 .multilineTextAlignment(.center)
 
-            Text("There's no wrong way to start. Share a thought, describe your day, or voice an idea. Sonora will help you discover insights you might have missed.")
+            Text("If you think by talking out loud, you're in the right place. Talk freely—no chatbot will interrupt you. When you're done, Sonora will show you the clarity you couldn't see while speaking.")
                 .font(.system(.body, design: .serif))
                 .foregroundColor(.semantic(.textSecondary))
                 .multilineTextAlignment(.center)

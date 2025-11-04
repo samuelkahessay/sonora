@@ -52,7 +52,7 @@ struct HowItWorksView: View {
                 .multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Transform your voice into actionable insights.")
+            Text("For people who think by talking out loud.")
                 .font(.system(.subheadline, design: .serif))
                 .foregroundColor(.semantic(.textSecondary))
                 .multilineTextAlignment(.center)
@@ -256,22 +256,22 @@ enum HowItWorksStep: CaseIterable {
     var title: String {
         switch self {
         case .record:
-            return "1. Tap Record & Speak"
+            return "1. Speak Uninterrupted"
         case .transcribe:
             return "2. Automatic Transcription"
         case .analyze:
-            return "3. Get Distilled Insights"
+            return "3. Get Instant Clarity"
         }
     }
 
     var description: String {
         switch self {
         case .record:
-            return "Simply tap the record button and speak naturally about anything on your mind."
+            return "Talk freely for 5-30 minutes—walks, commutes, anytime. No chatbot interrupting your flow."
         case .transcribe:
-            return "Your voice is automatically converted to text with high accuracy."
+            return "Your thoughts are automatically transcribed while you speak or after you finish."
         case .analyze:
-            return "Distill gives you a concise summary, action items, and a reflection from your memo."
+            return "Distill shows you what you actually meant: summary, themes, action items, reflection questions."
         }
     }
 
