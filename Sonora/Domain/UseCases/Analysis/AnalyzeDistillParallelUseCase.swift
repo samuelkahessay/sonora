@@ -216,7 +216,13 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             ))
         }
 
-        logger.analysis("Starting parallel execution of \(componentModes.count) components + patterns=\(enablePatterns) + Pro modes=\(proModesCount) (isPro=\(storeKitService.isPro))", context: context)
+        logger.analysis("Starting parallel execution of \(componentModes.count) components + patterns=\(enablePatterns) + Pro modes=\(proModesCount)", context: context)
+        logger.analysis("Pro subscription status: isPro=\(storeKitService.isPro) (from StoreKitService)", context: context)
+        if storeKitService.isPro {
+            logger.analysis("✅ Pro modes ENABLED: Cognitive Clarity (CBT), Philosophical Echoes, Values Recognition", context: context)
+        } else {
+            logger.analysis("⚠️ Pro modes DISABLED: User does not have active Pro entitlement", context: context)
+        }
 
         // Execute all components in parallel using TaskGroup
         try await withThrowingTaskGroup(of: (AnalysisMode?, DistillComponentData, Int, TokenUsage).self) { group in
@@ -343,7 +349,8 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                     }
                 }
             } else {
-                logger.info("Skipping Pro-tier analysis (user is not subscribed to Pro)", category: .analysis, context: context)
+                logger.info("⏭️ Skipping Pro-tier analysis tasks (Cognitive Clarity, Philosophical Echoes, Values Recognition)", category: .analysis, context: context)
+                logger.info("   Reason: storeKitService.isPro=false - check RevenueCat entitlements", category: .analysis, context: context)
             }
 
             // Collect results as they complete

@@ -23,9 +23,61 @@ public final class RevenueCatService: NSObject, StoreKitServiceProtocol, @unchec
     private let userDefaults: UserDefaults
     private let cacheTTL: TimeInterval = 3_600 // 1 hour
     private let subject: CurrentValueSubject<Bool, Never>
+    private var initializationContinuation: CheckedContinuation<Void, Never>?
+    private var _isInitialized: Bool = false
 
     public var isProPublisher: AnyPublisher<Bool, Never> { subject.eraseToAnyPublisher() }
     public var isPro: Bool { subject.value }
+
+    /// Returns true once the initial entitlement refresh has completed.
+    /// Use this to ensure entitlements are loaded before making subscription-dependent decisions.
+    /// Waits up to 10 seconds (or 20 seconds in TestFlight) for initialization, then proceeds anyway.
+    public func waitForInitialization() async -> Bool {
+        // If already initialized, return immediately
+        if _isInitialized { return true }
+
+        // Determine timeout based on environment
+        let isTestFlight = Bundle.main.appStoreReceiptURL?.path.contains("sandboxReceipt") == true
+        let timeoutSeconds: UInt64 = isTestFlight ? 20 : 10
+
+        print("🛒 [RevenueCatService] Waiting for initialization (timeout: \(timeoutSeconds)s, isTestFlight: \(isTestFlight))...")
+
+        // Wait for initialization with timeout
+        do {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                // Task 1: Wait for initialization
+                group.addTask {
+                    await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                        if self._isInitialized {
+                            continuation.resume()
+                        } else {
+                            self.initializationContinuation = continuation
+                        }
+                    }
+                }
+
+                // Task 2: Timeout based on environment
+                group.addTask {
+                    try await Task.sleep(nanoseconds: timeoutSeconds * 1_000_000_000)
+                    throw TimeoutError()
+                }
+
+                // Wait for first task to complete
+                try await group.next()
+                group.cancelAll()
+            }
+            print("🛒 [RevenueCatService] ✓ Initialization wait completed successfully")
+            return true
+        } catch {
+            print("🛒 [RevenueCatService] ⚠️ Initialization timeout after \(timeoutSeconds)s, proceeding anyway")
+            if isTestFlight {
+                print("   💡 TestFlight tip: Check sandbox tester configuration and RevenueCat entitlements")
+            }
+            return false
+        }
+    }
+
+    private struct TimeoutError: Error {}
 
     public init(
         apiKey: String? = nil,
@@ -48,6 +100,18 @@ public final class RevenueCatService: NSObject, StoreKitServiceProtocol, @unchec
 
         super.init()
 
+        // Log initialization configuration
+        let maskedKey = String(resolvedKey.prefix(8)) + "..." + String(resolvedKey.suffix(4))
+        print("🛒 [RevenueCatService] Initializing with:")
+        print("   - API Key: \(maskedKey)")
+        print("   - Entitlement ID: '\(self.entitlementId)'")
+        print("   - StoreKit Version: 2")
+        print("   - Initial cached isPro: \(valid ? (cached ?? false) : false)")
+        if let ts = ts, valid {
+            let age = now - ts
+            print("   - Cache age: \(Int(age))s (valid for \(Int(cacheTTL - age))s more)")
+        }
+
         // Configure RevenueCat
         let builder = Configuration.Builder(withAPIKey: resolvedKey)
             .with(storeKitVersion: .storeKit2)
@@ -56,6 +120,7 @@ public final class RevenueCatService: NSObject, StoreKitServiceProtocol, @unchec
         Purchases.shared.delegate = self
 
         // Initial entitlement refresh
+        print("🛒 [RevenueCatService] Starting async entitlement refresh...")
         Task { await refreshEntitlements() }
     }
 
@@ -87,18 +152,51 @@ public final class RevenueCatService: NSObject, StoreKitServiceProtocol, @unchec
     }
 
     public func refreshEntitlements(force: Bool = false) async {
+        print("🛒 [RevenueCatService] refreshEntitlements(force: \(force)) called")
+
         if !force, let cached = getCachedIsProValid(), cached {
             await MainActor.run { self.subject.send(cached) }
-            print("🛒 [RevenueCatService] refreshEntitlements() using cached isPro=true")
+            print("🛒 [RevenueCatService] ✓ Using valid cached isPro=true (skipping API call)")
             return
         }
+
+        print("🛒 [RevenueCatService] Fetching customer info from RevenueCat API...")
         do {
             let info = try await Purchases.shared.customerInfo()
-            let active = isEntitled(info)
+
+            // Log all entitlements for debugging
+            print("🛒 [RevenueCatService] Received customer info:")
+            print("   - User ID: \(info.originalAppUserId)")
+            print("   - All entitlements: \(info.entitlements.all.keys.sorted())")
+            print("   - Active entitlements: \(info.entitlements.active.keys.sorted())")
+
+            // Check entitlement and log reasoning
+            let active = isEntitled(info, verbose: true)
             await MainActor.run { setIsPro(active) }
-            print("🛒 [RevenueCatService] refreshEntitlements() computed isPro=\(active)")
+
+            print("🛒 [RevenueCatService] ✓ refreshEntitlements() completed, isPro=\(active)")
+
+            // Mark initialization as complete
+            markInitializationComplete()
         } catch {
-            print("🛒 [RevenueCatService] refreshEntitlements() error: \(error.localizedDescription)")
+            print("🛒 [RevenueCatService] ❌ refreshEntitlements() error: \(error.localizedDescription)")
+            print("   - Error type: \(type(of: error))")
+            print("   - Full error: \(error)")
+
+            // Still mark as initialized even on error (to avoid hanging)
+            markInitializationComplete()
+        }
+    }
+
+    private func markInitializationComplete() {
+        guard !_isInitialized else { return }
+        _isInitialized = true
+        print("🛒 [RevenueCatService] ✓ Initialization completed")
+
+        // Resume any waiting continuation
+        if let continuation = initializationContinuation {
+            continuation.resume()
+            initializationContinuation = nil
         }
     }
 
@@ -112,16 +210,68 @@ public final class RevenueCatService: NSObject, StoreKitServiceProtocol, @unchec
 
     @MainActor
     private func setIsPro(_ value: Bool) {
+        let oldValue = subject.value
+        if oldValue != value {
+            print("🛒 [RevenueCatService] ⚡️ isPro changed: \(oldValue) → \(value)")
+        }
         subject.send(value)
         userDefaults.set(value, forKey: CacheKey.proFlag)
         userDefaults.set(Date().timeIntervalSince1970, forKey: CacheKey.proTs)
     }
 
-    private func isEntitled(_ info: CustomerInfo) -> Bool {
-        // Prefer checking explicit entitlement id
-        if let ent = info.entitlements[entitlementId], ent.isActive { return true }
-        // Fallback: any active entitlement
-        return info.entitlements.active.first != nil
+    private func isEntitled(_ info: CustomerInfo, verbose: Bool = false) -> Bool {
+        if verbose {
+            print("🛒 [RevenueCatService] Checking entitlement logic:")
+            print("   - Looking for entitlement: '\(entitlementId)' (case-insensitive)")
+        }
+
+        // Step 1: Try exact match first
+        if let ent = info.entitlements[entitlementId] {
+            if verbose {
+                print("   - Found exact match '\(entitlementId)' entitlement")
+                print("     • isActive: \(ent.isActive)")
+                print("     • productIdentifier: \(ent.productIdentifier)")
+                if let expiry = ent.expirationDate {
+                    print("     • expirationDate: \(expiry)")
+                }
+            }
+            if ent.isActive {
+                if verbose { print("   ✓ Result: Pro (exact entitlement match is active)") }
+                return true
+            }
+        } else if verbose {
+            print("   - Exact match '\(entitlementId)' NOT found")
+        }
+
+        // Step 2: Try case-insensitive match (e.g., "Pro" vs "pro")
+        let entitlementIdLower = entitlementId.lowercased()
+        for (key, ent) in info.entitlements.all {
+            if key.lowercased() == entitlementIdLower && ent.isActive {
+                if verbose {
+                    print("   - Found case-insensitive match '\(key)' (looking for '\(entitlementId)')")
+                    print("     • isActive: \(ent.isActive)")
+                    print("     • productIdentifier: \(ent.productIdentifier)")
+                }
+                if verbose { print("   ✓ Result: Pro (case-insensitive entitlement match is active)") }
+                return true
+            }
+        }
+
+        if verbose {
+            print("   - No case-insensitive match found for '\(entitlementId)'")
+        }
+
+        // Step 3: Fallback - check for any active entitlement
+        let hasAnyActive = info.entitlements.active.first != nil
+        if verbose {
+            print("   - Checking fallback: any active entitlement")
+            print("     • hasAnyActive: \(hasAnyActive)")
+            if hasAnyActive {
+                print("     • Active entitlements: \(info.entitlements.active.keys.sorted())")
+            }
+            print("   \(hasAnyActive ? "✓" : "✗") Result: \(hasAnyActive ? "Pro (fallback - any active entitlement)" : "Free (no active entitlements)")")
+        }
+        return hasAnyActive
     }
 
     private func findPackage(in offerings: Offerings, forProductId productId: String) -> Package? {
@@ -150,8 +300,8 @@ public final class RevenueCatService: NSObject, StoreKitServiceProtocol, @unchec
 
 extension RevenueCatService: PurchasesDelegate {
     public func purchases(_ purchases: Purchases, receivedUpdated customerInfo: CustomerInfo) {
-        let active = isEntitled(customerInfo)
+        print("🛒 [RevenueCatService] 🔄 Received updated customerInfo from delegate")
+        let active = isEntitled(customerInfo, verbose: true)
         Task { @MainActor in self.setIsPro(active) }
-        print("🛒 [RevenueCatService] receivedUpdated customerInfo, isPro=\(active)")
     }
 }

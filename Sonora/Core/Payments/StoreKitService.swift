@@ -10,6 +10,9 @@ public protocol StoreKitServiceProtocol: Sendable {
     var isProPublisher: AnyPublisher<Bool, Never> { get }
     var isPro: Bool { get }
     func refreshEntitlements(force: Bool) async
+    /// Waits for the initial entitlement refresh to complete.
+    /// Returns true if successful, false if timeout.
+    func waitForInitialization() async -> Bool
 }
 
 public extension StoreKitServiceProtocol {
@@ -173,5 +176,11 @@ public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable
         let value = await computeIsPro()
         await MainActor.run { setIsPro(value) }
         print("🛒 [StoreKitService] refreshEntitlements() computed isPro=\(value)")
+    }
+
+    public func waitForInitialization() async -> Bool {
+        // Native StoreKit service doesn't need async initialization
+        // Transactions are available immediately via Transaction.latest
+        return true
     }
 }

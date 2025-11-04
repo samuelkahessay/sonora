@@ -97,6 +97,46 @@ struct DistillResultView: View {
                     "isDetectionPending": isDetectionPending
                 ])
             )
+
+            // Log Pro subscription status and section availability
+            Logger.shared.info(
+                "DistillResultView: Pro status check",
+                category: .viewModel,
+                context: LogContext(additionalInfo: [
+                    "isPro": isPro,
+                    "hasCognitivePatterns": effectiveCognitivePatterns != nil,
+                    "cognitivePatternCount": effectiveCognitivePatterns?.count ?? 0,
+                    "hasPhilosophicalEchoes": effectivePhilosophicalEchoes != nil,
+                    "philosophicalEchoesCount": effectivePhilosophicalEchoes?.count ?? 0,
+                    "hasValuesInsights": effectiveValuesInsights != nil,
+                    "proSectionsWillRender": isPro && (
+                        (effectiveCognitivePatterns?.isEmpty == false) ||
+                        (effectivePhilosophicalEchoes?.isEmpty == false) ||
+                        (effectiveValuesInsights != nil)
+                    )
+                ])
+            )
+
+            if !isPro {
+                Logger.shared.info(
+                    "⚠️ Pro sections hidden: isPro=false",
+                    category: .viewModel,
+                    context: LogContext(additionalInfo: ["storeKitService": "check RevenueCat entitlements"])
+                )
+            } else if effectiveCognitivePatterns == nil && effectivePhilosophicalEchoes == nil && effectiveValuesInsights == nil {
+                Logger.shared.warning(
+                    "⚠️ Pro sections hidden: isPro=true but no Pro data available",
+                    category: .viewModel,
+                    context: LogContext(additionalInfo: ["reason": "Pro use case may not have executed"])
+                )
+            } else {
+                Logger.shared.info(
+                    "✅ Pro sections will render: isPro=true and Pro data available",
+                    category: .viewModel,
+                    context: LogContext()
+                )
+            }
+
             initializeViewModelIfNeeded()
         }
     }

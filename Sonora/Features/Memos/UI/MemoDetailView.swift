@@ -92,8 +92,7 @@ struct MemoDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 16) {
-                    #if DEBUG
-                    // Pro Modes Debug button (only in debug builds)
+                    // Pro Modes Debug button (visible in all builds for TestFlight debugging)
                     Button(action: {
                         showProModesDebug = true
                     }) {
@@ -102,7 +101,6 @@ struct MemoDetailView: View {
                             .foregroundColor(.orange)
                     }
                     .accessibilityLabel("Pro Modes Debug")
-                    #endif
 
                     Button(action: {
                         HapticManager.shared.playSelection()

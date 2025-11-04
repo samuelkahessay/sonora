@@ -83,6 +83,22 @@ The meditation practice I started two weeks ago is starting to show results. I'm
                 }
                 .buttonStyle(.bordered)
                 .tint(.semantic(.brandPrimary))
+
+                Divider()
+                    .padding(.vertical, Spacing.xs)
+
+                NavigationLink {
+                    ProStatusDebugView()
+                } label: {
+                    HStack {
+                        Label("Pro Subscription Status", systemImage: "crown.fill")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.semantic(.textTertiary))
+                            .font(.caption.weight(.semibold))
+                    }
+                }
+                .buttonStyle(.plain)
             }
         }
         .sheet(isPresented: $showEventsSheet) {
