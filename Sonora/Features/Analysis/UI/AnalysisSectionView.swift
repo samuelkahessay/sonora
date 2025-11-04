@@ -85,22 +85,8 @@ struct AnalysisSectionView: View {
             // Results with AI disclaimer (only when there are results)
             if let mode = viewModel.selectedAnalysisMode {
                 VStack(alignment: .leading, spacing: 12) {
-                    // Show progressive results for parallel distill or final results
-                    if mode == .distill && viewModel.isParallelDistillEnabled,
-                       let partialData = viewModel.partialDistillData,
-                       let progress = viewModel.distillProgress {
-                        DistillResultView(partialData: partialData, progress: progress, memoId: viewModel.memoId)
-                            // Avoid scale transitions that can cause visual overlap with siblings
-                            .transition(.opacity)
-                            .animation(SonoraDesignSystem.Animation.progressUpdate, value: progress.completedComponents)
-
-                        // Show disclaimer when any partial results are present
-                        if progress.completedComponents > 0 {
-                            AIDisclaimerView.analysis()
-                                .transition(.opacity)
-                                .animation(SonoraDesignSystem.Animation.progressUpdate, value: progress.completedComponents)
-                        }
-                    } else if let payload = viewModel.analysisPayload {
+                    // Show final results
+                    if let payload = viewModel.analysisPayload {
                         AnalysisResultsView(
                             payload: payload,
                             memoId: viewModel.memoId

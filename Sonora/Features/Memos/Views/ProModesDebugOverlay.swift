@@ -31,7 +31,6 @@ struct ProModesDebugOverlay: View {
                 Section("Analysis State") {
                     DebugRow(label: "Selected Mode", value: viewModel.selectedAnalysisMode?.displayName ?? "None")
                     DebugRow(label: "Is Analyzing", value: viewModel.isAnalyzing ? "Yes" : "No")
-                    DebugRow(label: "Parallel Enabled", value: viewModel.isParallelDistillEnabled ? "Yes" : "No", status: viewModel.isParallelDistillEnabled ? .good : .warning)
                     DebugRow(label: "Cache Status", value: viewModel.analysisCacheStatus ?? "N/A")
                     DebugRow(label: "Performance", value: viewModel.analysisPerformanceInfo ?? "N/A")
                 }
@@ -84,27 +83,6 @@ struct ProModesDebugOverlay: View {
                         }
                     } else {
                         Text("No analysis payload yet")
-                            .foregroundColor(.secondary)
-                            .italic()
-                    }
-                }
-
-                // Partial Data (During streaming)
-                Section("Partial Data (Streaming Progress)") {
-                    if let partial = viewModel.partialDistillData {
-                        DebugRow(label: "Summary", value: partial.summary != nil ? "✅ Present" : "⏳ Pending")
-                        DebugRow(label: "Reflection", value: partial.reflectionQuestions != nil ? "✅ Present" : "⏳ Pending")
-
-                        Divider()
-                        Text("Pro Modes (Partial):")
-                            .font(.headline)
-                            .padding(.top, 4)
-
-                        DebugRow(label: "  Cognitive Patterns", value: partial.cognitivePatterns != nil ? "✅ \(partial.cognitivePatterns!.count)" : "⏳ Pending")
-                        DebugRow(label: "  Philosophical Echoes", value: partial.philosophicalEchoes != nil ? "✅ \(partial.philosophicalEchoes!.count)" : "⏳ Pending")
-                        DebugRow(label: "  Values Insights", value: partial.valuesInsights != nil ? "✅ Present" : "⏳ Pending")
-                    } else {
-                        Text("No partial data (not streaming)")
                             .foregroundColor(.secondary)
                             .italic()
                     }

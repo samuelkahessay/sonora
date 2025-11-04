@@ -8,8 +8,6 @@ import UIKit
 struct DistillResultView: View {
     let data: DistillData?
     let envelope: AnalyzeEnvelope<DistillData>?
-    let partialData: PartialDistillData?
-    let progress: DistillProgressUpdate?
     let memoId: UUID?
     // Pro gating (Action Items: detection visible to all; adds gated later)
     private var isPro: Bool { DIContainer.shared.storeKitService().isPro }
@@ -17,35 +15,18 @@ struct DistillResultView: View {
     @SwiftUI.Environment(\.diContainer)
     var container: DIContainer
 
-    // Convenience initializers for backward compatibility
+    // Initializer
     init(data: DistillData, envelope: AnalyzeEnvelope<DistillData>, memoId: UUID? = nil) {
         self.data = data
         self.envelope = envelope
-        self.partialData = nil
-        self.progress = nil
-        self.memoId = memoId
-    }
-
-    init(partialData: PartialDistillData, progress: DistillProgressUpdate, memoId: UUID? = nil) {
-        self.data = partialData.toDistillData()
-        self.envelope = nil
-        self.partialData = partialData
-        self.progress = progress
         self.memoId = memoId
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            // Progress indicator for parallel processing
-            if let progress = progress, progress.completedComponents < progress.totalComponents {
-                DistillProgressSectionView(progress: progress)
-            }
-
             // Summary Section
             if let summary = effectiveSummary {
                 DistillSummarySectionView(summary: summary)
-            } else if isShowingProgress {
-                SummarySkeleton()
             }
 
             // Patterns & Connections Section
@@ -59,8 +40,6 @@ struct DistillResultView: View {
             // Reflection Questions Section
             if let reflectionQuestions = effectiveReflectionQuestions, !reflectionQuestions.isEmpty {
                 ReflectionQuestionsSectionView(questions: reflectionQuestions)
-            } else if isShowingProgress {
-                ReflectionQuestionsSkeleton()
             }
 
             // Pro-tier analysis sections
@@ -143,15 +122,6 @@ struct DistillResultView: View {
 
     // MARK: - Computed Properties
 
-    private var isShowingProgress: Bool {
-        progress != nil && partialData != nil
-    }
-
-    private var isProgressComplete: Bool {
-        guard let p = progress else { return false }
-        return p.completedComponents >= p.totalComponents
-    }
-
     @ViewBuilder
     private var copyAction: some View {
         HStack {
@@ -172,27 +142,27 @@ struct DistillResultView: View {
     }
 
     private var effectiveSummary: String? {
-        data?.summary ?? partialData?.summary
+        data?.summary
     }
 
     private var effectivePatterns: [DistillData.Pattern]? {
-        data?.patterns ?? partialData?.patterns
+        data?.patterns
     }
 
     private var effectiveReflectionQuestions: [String]? {
-        data?.reflection_questions ?? partialData?.reflectionQuestions
+        data?.reflection_questions
     }
 
     private var effectiveCognitivePatterns: [CognitivePattern]? {
-        data?.cognitivePatterns ?? partialData?.cognitivePatterns
+        data?.cognitivePatterns
     }
 
     private var effectivePhilosophicalEchoes: [PhilosophicalEcho]? {
-        data?.philosophicalEchoes ?? partialData?.philosophicalEchoes
+        data?.philosophicalEchoes
     }
 
     private var effectiveValuesInsights: ValuesInsight? {
-        data?.valuesInsights ?? partialData?.valuesInsights
+        data?.valuesInsights
     }
 
     // Use domain-deduplicated results directly
@@ -200,14 +170,12 @@ struct DistillResultView: View {
     // TODO: Refactor to load repository data asynchronously in onAppear
     var eventsForUI: [EventsData.DetectedEvent] {
         if let ev = data?.events, !ev.isEmpty { return ev }
-        if let ev = partialData?.events, !ev.isEmpty { return ev }
         return []
     }
     // Note: Repository fallback removed - async getAnalysisResult can't be called from computed property
     // TODO: Refactor to load repository data asynchronously in onAppear
     var remindersForUI: [RemindersData.DetectedReminder] {
         if let rem = data?.reminders, !rem.isEmpty { return rem }
-        if let rem = partialData?.reminders, !rem.isEmpty { return rem }
         return []
     }
 
@@ -380,17 +348,16 @@ struct DistillResultView: View {
                 lines.append(contentsOf: reminders.map(reminderLine))
             }
             parts.append(lines.joined(separator: "\n"))
-        } else if !(isShowingProgress && !isProgressComplete) {
-            // Only append a "none" message when not mid-stream
+        } else {
+            // Append "none" message when no detections found
             parts.append("Events & Reminders:\nNo events or reminders detected")
         }
         return parts.joined(separator: "\n\n")
     }
 
-    // Detection is pending if we are streaming and haven't received any detection payload yet
+    // Detection is never pending since we don't stream anymore
     private var isDetectionPending: Bool {
-        guard isShowingProgress else { return false }
-        return partialData?.events == nil && partialData?.reminders == nil && !isProgressComplete
+        return false
     }
 
 }

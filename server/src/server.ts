@@ -531,221 +531,161 @@ app.post('/analyze', async (req, res) => {
 
   try {
     // Validate request
-    const { mode, transcript, historicalContext } = RequestSchema.parse(req.body);
+    const { mode, transcript, historicalContext, isPro } = RequestSchema.parse(req.body);
 
-    // Build prompts
+    // SIMPLIFIED NON-STREAMING PATH: Handle pro modes aggregation for distill mode
+    if (mode === 'distill' && isPro) {
+      // Pro user requesting distill - fetch all pro modes data in parallel
+      console.log('📝 Distill analysis with Pro modes enabled');
+
+      const { system: baseSystem, user: baseUser } = buildPrompt(mode, transcript, historicalContext);
+      const baseSettings = ModelSettings[mode] || { verbosity: 'low', reasoningEffort: 'medium' };
+      const hasHistoricalContext = historicalContext && historicalContext.length > 0;
+      const useStrictSchema = !(mode === 'distill' && hasHistoricalContext);
+      const baseSchema = useStrictSchema ? AnalysisJsonSchemas[mode] : undefined;
+
+      // Make all API calls in parallel
+      const [baseResult, cognitiveResult, philosophicalResult, valuesResult] = await Promise.allSettled([
+        // Base distill analysis
+        createChatJSON({
+          system: baseSystem,
+          user: baseUser,
+          verbosity: baseSettings.verbosity,
+          reasoningEffort: baseSettings.reasoningEffort,
+          schema: baseSchema
+        }),
+        // Cognitive clarity (Beck/Ellis CBT)
+        (async () => {
+          const { system, user } = buildPrompt('cognitive-clarity', transcript);
+          return await createChatCompletionsJSON({
+            system,
+            user,
+            model: process.env.SONORA_MODEL || 'gpt-5-nano'
+          });
+        })(),
+        // Philosophical echoes (wisdom connections)
+        (async () => {
+          const { system, user } = buildPrompt('philosophical-echoes', transcript);
+          return await createChatCompletionsJSON({
+            system,
+            user,
+            model: process.env.SONORA_MODEL || 'gpt-5-nano'
+          });
+        })(),
+        // Values recognition
+        (async () => {
+          const { system, user } = buildPrompt('values-recognition', transcript);
+          return await createChatCompletionsJSON({
+            system,
+            user,
+            model: process.env.SONORA_MODEL || 'gpt-5-nano'
+          });
+        })()
+      ]);
+
+      // Parse base distill data
+      if (baseResult.status === 'rejected') {
+        throw baseResult.reason;
+      }
+      const { jsonText: baseJsonText, usage: baseUsage } = baseResult.value;
+      let baseData: any;
+      try {
+        baseData = JSON.parse(baseJsonText);
+      } catch {
+        const stripped = baseJsonText.trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+        baseData = JSON.parse(stripped);
+      }
+      const validatedBaseData = validateAnalysisData(mode, baseData);
+
+      // Aggregate tokens
+      let totalTokens = { input: baseUsage.input, output: baseUsage.output };
+      let maxLatency = Date.now() - startTime;
+
+      // Add cognitive patterns if successful
+      if (cognitiveResult.status === 'fulfilled') {
+        const { jsonText, usage } = cognitiveResult.value;
+        totalTokens.input += usage.input;
+        totalTokens.output += usage.output;
+        try {
+          const parsed = JSON.parse(jsonText);
+          const validated = validateAnalysisData('cognitive-clarity', parsed);
+          (validatedBaseData as any).cognitivePatterns = validated.cognitivePatterns;
+          console.log(`✅ Cognitive patterns: ${validated.cognitivePatterns.length} patterns`);
+        } catch (err) {
+          console.warn('⚠️ Cognitive clarity parsing failed:', err);
+        }
+      } else {
+        console.warn('⚠️ Cognitive clarity request failed:', cognitiveResult.reason);
+      }
+
+      // Add philosophical echoes if successful
+      if (philosophicalResult.status === 'fulfilled') {
+        const { jsonText, usage } = philosophicalResult.value;
+        totalTokens.input += usage.input;
+        totalTokens.output += usage.output;
+        try {
+          const parsed = JSON.parse(jsonText);
+          const validated = validateAnalysisData('philosophical-echoes', parsed);
+          (validatedBaseData as any).philosophicalEchoes = validated.philosophicalEchoes;
+          console.log(`✅ Philosophical echoes: ${validated.philosophicalEchoes.length} echoes`);
+        } catch (err) {
+          console.warn('⚠️ Philosophical echoes parsing failed:', err);
+        }
+      } else {
+        console.warn('⚠️ Philosophical echoes request failed:', philosophicalResult.reason);
+      }
+
+      // Add values insights if successful
+      if (valuesResult.status === 'fulfilled') {
+        const { jsonText, usage } = valuesResult.value;
+        totalTokens.input += usage.input;
+        totalTokens.output += usage.output;
+        try {
+          const parsed = JSON.parse(jsonText);
+          const validated = validateAnalysisData('values-recognition', parsed);
+          (validatedBaseData as any).valuesInsights = {
+            coreValues: validated.coreValues,
+            tensions: validated.tensions
+          };
+          console.log(`✅ Values insights: ${validated.coreValues.length} values`);
+        } catch (err) {
+          console.warn('⚠️ Values recognition parsing failed:', err);
+        }
+      } else {
+        console.warn('⚠️ Values recognition request failed:', valuesResult.reason);
+      }
+
+      // Build moderation text from combined data
+      let textForModeration = `${(validatedBaseData as any).summary}\n${((validatedBaseData as any).action_items || []).map((a: any) => a.text).join(' \n')}\n${((validatedBaseData as any).reflection_questions || []).join(' \n')}`;
+      if ((validatedBaseData as any).cognitivePatterns) {
+        textForModeration += `\n${((validatedBaseData as any).cognitivePatterns || []).map((p: any) => `${p.observation} ${p.reframe || ''}`).join(' \n')}`;
+      }
+      if ((validatedBaseData as any).philosophicalEchoes) {
+        textForModeration += `\n${((validatedBaseData as any).philosophicalEchoes || []).map((e: any) => `${e.connection} ${e.quote || ''}`).join(' \n')}`;
+      }
+      if ((validatedBaseData as any).valuesInsights) {
+        textForModeration += `\n${((validatedBaseData as any).valuesInsights.coreValues || []).map((v: any) => `${v.name} ${v.evidence}`).join(' \n')}`;
+      }
+      const moderation = await createModeration(String(textForModeration || '').slice(0, 8000));
+
+      return res.json({
+        mode,
+        data: validatedBaseData,
+        model: process.env.SONORA_MODEL || 'gpt-5-nano',
+        tokens: totalTokens,
+        latency_ms: maxLatency,
+        moderation
+      });
+    }
+
+    // Standard path for non-pro distill or other modes
     const { system, user } = buildPrompt(mode, transcript, historicalContext);
-
-    // Get GPT-5 settings for this mode
     const settings = ModelSettings[mode as keyof typeof ModelSettings] || { verbosity: 'low', reasoningEffort: 'medium' };
-
-    // Skip strict schema validation for distill mode when historical context is present
-    // This allows patterns field to be included without schema enforcement
     const hasHistoricalContext = historicalContext && historicalContext.length > 0;
     const useStrictSchema = !(mode === 'distill' && hasHistoricalContext);
     const schema = useStrictSchema ? AnalysisJsonSchemas[mode as keyof typeof AnalysisJsonSchemas] : undefined;
 
-    // Detect streaming request (via Accept header or query param)
-    const wantsStream = (req.headers['accept'] || '').toLowerCase().includes('text/event-stream') || req.query.stream === '1' || req.body.stream === true;
-
-    // STREAMING PATH: Use Chat Completions API with SSE
-    if (wantsStream) {
-      if (!OPENAI_API_KEY) {
-        return res.status(500).json({ error: 'Server missing OPENAI_API_KEY' });
-      }
-
-      res.status(200);
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      (res as any).flushHeaders?.();
-
-      const sendEvent = (event: string, data: Record<string, unknown>) => {
-        res.write(`event: ${event}\n`);
-        res.write(`data: ${JSON.stringify(data)}\n\n`);
-      };
-
-      try {
-        // Desired policy:
-        // 1) Try gpt-5 with Chat Completions streaming
-        // 2) If that fails, fall back to non-streaming gpt-5 (Responses API)
-        // 3) If that fails, try gpt-4o-mini with Chat Completions streaming
-
-        const streamWithModel = async (model: string): Promise<any> => {
-          const requestBody: Record<string, any> = {
-            model,
-            messages: [
-              { role: 'system', content: system },
-              { role: 'user', content: user }
-            ],
-            temperature: 0.5,
-            response_format: { type: 'json_object' },
-            stream: true
-          };
-          const r = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${OPENAI_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody)
-          });
-          return r;
-        };
-
-        const sendFinalFromNonStreamingGpt5 = async () => {
-          // Use the same schema/validation as non-streaming path
-          const { jsonText, usage } = await createChatJSON({
-            system,
-            user,
-            verbosity: settings.verbosity,
-            reasoningEffort: settings.reasoningEffort,
-            schema,
-            model: 'gpt-5'
-          });
-
-          // Parse and repair JSON if needed
-          let parsedData: any;
-          try {
-            parsedData = JSON.parse(jsonText);
-          } catch {
-            const stripped = jsonText.trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '');
-            parsedData = JSON.parse(stripped);
-          }
-
-          // Validate response shape using shared validation function
-          const validatedData = validateAnalysisData(mode, parsedData);
-
-          const latency = Date.now() - startTime;
-          sendEvent('final', {
-            mode,
-            data: validatedData,
-            model: 'gpt-5',
-            tokens: { input: usage.input, output: usage.output, ...(usage.reasoning !== undefined && { reasoning: usage.reasoning }) },
-            latency_ms: latency,
-            streaming: false
-          });
-          res.end();
-        };
-
-        // Step 1: try GPT-5 streaming
-        let selectedModel = 'gpt-5';
-        let response = await streamWithModel(selectedModel);
-        if (!response.ok) {
-          const body = await response.text().catch(() => '');
-          console.warn(`OpenAI GPT-5 streaming rejected: ${response.status} ${response.statusText} :: ${body.slice(0, 400)}`);
-
-          // Step 2: fallback to non-streaming GPT-5
-          try {
-            await sendFinalFromNonStreamingGpt5();
-            return;
-          } catch (e) {
-            console.warn('Non-streaming GPT-5 fallback failed, attempting 4o-mini streaming. Reason:', (e as any)?.message);
-
-            // Step 3: try 4o-mini streaming
-            selectedModel = 'gpt-4o-mini';
-            response = await streamWithModel(selectedModel);
-            if (!response.ok) {
-              const text = await response.text().catch(() => '');
-              console.error('OpenAI streaming (4o-mini) error:', response.status, response.statusText, text.slice(0, 400));
-              sendEvent('error', { error: 'UpstreamFailed', status: response.status });
-              res.end();
-              return;
-            }
-          }
-        }
-
-        // If we get here with an OK response, process streaming
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let aggregated = '';
-        let finished = false;
-        let inputTokens = 0;
-        let outputTokens = 0;
-
-        const processEvent = (rawEvent: string) => {
-          const trimmed = rawEvent.trim();
-          if (!trimmed || finished) return;
-
-          const lines = trimmed.split('\n');
-          const dataPayload = lines
-            .filter(l => l.startsWith('data:'))
-            .map(l => l.slice(5).trim())
-            .join('');
-
-          if (!dataPayload) return;
-
-          if (dataPayload === '[DONE]') {
-            finished = true;
-            try {
-              const parsed = JSON.parse(aggregated);
-              const validatedData = validateAnalysisData(mode, parsed);
-              const latency = Date.now() - startTime;
-              sendEvent('final', {
-                mode,
-                data: validatedData,
-                model: selectedModel,
-                tokens: { input: inputTokens, output: outputTokens },
-                latency_ms: latency,
-                streaming: true
-              });
-            } catch (parseError) {
-              console.error('Final JSON parse/validation error:', parseError);
-              sendEvent('error', { error: 'InvalidJSON' });
-            }
-            res.end();
-            return;
-          }
-
-          try {
-            const json = JSON.parse(dataPayload);
-            const delta = json?.choices?.[0]?.delta?.content ?? '';
-            if (json?.usage) {
-              inputTokens = json.usage.prompt_tokens || inputTokens;
-              outputTokens = json.usage.completion_tokens || outputTokens;
-            }
-            if (typeof delta === 'string' && delta.length > 0) {
-              aggregated += delta;
-              sendEvent('interim', { partial_text: aggregated.slice(0, 10000) });
-            }
-          } catch (error) {
-            console.error('Failed to parse streaming chunk:', error);
-          }
-        };
-
-        for await (const chunk of response.body as any) {
-          buffer += decoder.decode(chunk, { stream: true });
-          let separatorIndex = buffer.indexOf('\n\n');
-          while (separatorIndex !== -1) {
-            const rawEvent = buffer.slice(0, separatorIndex);
-            buffer = buffer.slice(separatorIndex + 2);
-            processEvent(rawEvent);
-            if (finished) {
-              return;
-            }
-            separatorIndex = buffer.indexOf('\n\n');
-          }
-        }
-
-        if (buffer.trim().length > 0) {
-          processEvent(buffer);
-        }
-
-        if (!res.writableEnded && !finished) {
-          res.end();
-        }
-        return;
-      } catch (error) {
-        console.error('Streaming /analyze error:', error);
-        if (!res.writableEnded) {
-          sendEvent('error', { error: 'Internal' });
-          res.end();
-        }
-        return;
-      }
-    }
-
-    // NON-STREAMING PATH: Route Pro modes to Chat Completions API, basic modes to Responses API
+    // Route Pro-specific modes to Chat Completions API, all others to Responses API
     const isProMode = ['cognitive-clarity', 'philosophical-echoes', 'values-recognition'].includes(mode);
 
     const { jsonText, usage } = isProMode

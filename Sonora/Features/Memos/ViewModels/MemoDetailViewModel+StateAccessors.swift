@@ -75,21 +75,6 @@ extension MemoDetailViewModel {
         set { state.analysis.performanceInfo = newValue }
     }
 
-    var isParallelDistillEnabled: Bool {
-        get { state.analysis.isParallelDistillEnabled }
-        set { state.analysis.isParallelDistillEnabled = newValue }
-    }
-
-    var distillProgress: DistillProgressUpdate? {
-        get { state.analysis.distillProgress }
-        set { state.analysis.distillProgress = newValue }
-    }
-
-    var partialDistillData: PartialDistillData? {
-        get { state.analysis.partialDistillData }
-        set { state.analysis.partialDistillData = newValue }
-    }
-
     // MARK: - Language Properties
     var detectedLanguage: String? {
         get { state.language.detectedLanguage }

@@ -75,7 +75,8 @@ export const RequestSchema = z.object({
     'values-recognition'
   ]),
   transcript: z.string().min(10).max(10000),
-  historicalContext: z.array(HistoricalMemoContextSchema).max(10).optional()
+  historicalContext: z.array(HistoricalMemoContextSchema).max(10).optional(),
+  isPro: z.boolean().optional() // Pro subscription flag - server includes pro modes when true
 });
 
 export const DistillDataSchema = z.object({
@@ -96,7 +97,42 @@ export const DistillDataSchema = z.object({
       snippet: z.string().optional()
     })).optional(),
     confidence: z.number().min(0).max(1).default(0.8)
-  })).optional()
+  })).optional(),
+  // Pro-tier fields (populated when isPro=true in request)
+  cognitivePatterns: z.array(z.object({
+    id: z.string().optional(),
+    type: z.enum([
+      'all-or-nothing',
+      'catastrophizing',
+      'mind-reading',
+      'overgeneralization',
+      'should-statements',
+      'emotional-reasoning'
+    ]),
+    observation: z.string(),
+    reframe: z.string().optional()
+  })).optional(),
+  philosophicalEchoes: z.array(z.object({
+    id: z.string().optional(),
+    tradition: z.enum(['stoicism', 'buddhism', 'existentialism', 'socratic']),
+    connection: z.string(),
+    quote: z.string().optional(),
+    source: z.string().optional()
+  })).optional(),
+  valuesInsights: z.object({
+    coreValues: z.array(z.object({
+      id: z.string().optional(),
+      name: z.string(),
+      evidence: z.string(),
+      confidence: z.number().min(0).max(1)
+    })),
+    tensions: z.array(z.object({
+      id: z.string().optional(),
+      value1: z.string(),
+      value2: z.string(),
+      observation: z.string()
+    })).optional()
+  }).optional()
 });
 
 // Events & Reminders Schemas

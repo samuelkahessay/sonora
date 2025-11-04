@@ -71,11 +71,6 @@ struct MemoDetailViewState: Equatable {
         var cacheStatus: String?
         var performanceInfo: String?
 
-        // Parallel Distill specific
-        var isParallelDistillEnabled: Bool = true
-        var distillProgress: DistillProgressUpdate?
-        var partialDistillData: PartialDistillData?
-
         // Custom Equatable: intentionally ignore `payload`
         static func == (lhs: Self, rhs: Self) -> Bool {
             lhs.selectedMode == rhs.selectedMode
@@ -83,9 +78,6 @@ struct MemoDetailViewState: Equatable {
             && lhs.error == rhs.error
             && lhs.cacheStatus == rhs.cacheStatus
             && lhs.performanceInfo == rhs.performanceInfo
-            && lhs.isParallelDistillEnabled == rhs.isParallelDistillEnabled
-            && lhs.distillProgress == rhs.distillProgress
-            && lhs.partialDistillData == rhs.partialDistillData
         }
     }
 

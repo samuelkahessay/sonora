@@ -15,7 +15,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     internal let retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol
     internal let getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol
     internal let analyzeDistillUseCase: AnalyzeDistillUseCaseProtocol
-    internal let analyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     internal let analyzeLiteDistillUseCase: AnalyzeLiteDistillUseCaseProtocol
     internal let renameMemoUseCase: RenameMemoUseCaseProtocol
     internal let createTranscriptShareFileUseCase: CreateTranscriptShareFileUseCaseProtocol
@@ -158,7 +157,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         retryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol,
         getTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol,
         analyzeDistillUseCase: AnalyzeDistillUseCaseProtocol,
-        analyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol,
         analyzeLiteDistillUseCase: AnalyzeLiteDistillUseCaseProtocol,
         renameMemoUseCase: RenameMemoUseCaseProtocol,
         createTranscriptShareFileUseCase: CreateTranscriptShareFileUseCaseProtocol,
@@ -173,7 +171,6 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         self.retryTranscriptionUseCase = retryTranscriptionUseCase
         self.getTranscriptionStateUseCase = getTranscriptionStateUseCase
         self.analyzeDistillUseCase = analyzeDistillUseCase
-        self.analyzeDistillParallelUseCase = analyzeDistillParallelUseCase
         self.analyzeLiteDistillUseCase = analyzeLiteDistillUseCase
         self.renameMemoUseCase = renameMemoUseCase
         self.createTranscriptShareFileUseCase = createTranscriptShareFileUseCase
@@ -255,87 +252,14 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         editedTitle = ""
     }
 
-    // MARK: - Parallel Distill Methods
+    // MARK: - Distill Methods
 
-    func performParallelDistill(transcript: String, memoId: UUID) async {
-        print("📝 MemoDetailViewModel: Starting parallel Distill analysis")
-
-        // Reset distill-specific state
-        await MainActor.run {
-            distillProgress = nil
-            partialDistillData = nil
-        }
-
-        let startTime = CFAbsoluteTimeGetCurrent()
-        let stream = AsyncThrowingStream<DistillProgressUpdate, Error> { continuation in
-            let worker = Task {
-                do {
-                    let envelope = try await analyzeDistillParallelUseCase.execute(
-                        transcript: transcript,
-                        memoId: memoId
-                    ) { progress in
-                        continuation.yield(progress)
-                    }
-
-                    let duration = CFAbsoluteTimeGetCurrent() - startTime
-
-                    await MainActor.run {
-                        analysisPayload = .distill(envelope.data, envelope)
-                        isAnalyzing = false
-
-                        let wasCached = duration < 1.0
-                        analysisCacheStatus = wasCached ? "✅ Loaded from cache" : "🚀 Parallel execution"
-                        analysisPerformanceInfo = "Parallel: \(envelope.latency_ms)ms, Total: \(Int(duration * 1_000))ms"
-
-                        print("📝 MemoDetailViewModel: Parallel Distill analysis completed in \(Int(duration * 1_000))ms")
-
-                        // Reload cache metadata after analysis completes
-                        loadAnalysisCacheMetadata()
-                    }
-
-                    PerformanceMetricsService.shared.recordDuration(
-                        name: "DistillTotalDuration",
-                        start: Date(timeIntervalSinceNow: -duration),
-                        extras: ["mode": "parallel"]
-                    )
-
-                    continuation.finish()
-                } catch {
-                    await MainActor.run {
-                        analysisError = error.localizedDescription
-                        self.error = ErrorMapping.mapError(error)
-                        isAnalyzing = false
-                        distillProgress = nil
-                        partialDistillData = nil
-                        print("❌ MemoDetailViewModel: Parallel Distill analysis failed: \(error.localizedDescription)")
-                    }
-                    continuation.finish(throwing: error)
-                }
-            }
-
-            continuation.onTermination = { _ in
-                worker.cancel()
-            }
-        }
-
-        do {
-            for try await progress in stream {
-                await MainActor.run {
-                    distillProgress = progress
-                    partialDistillData = progress.completedResults
-                }
-            }
-        } catch {
-            // Error state already handled in the stream task above.
-        }
-    }
-
-    func performRegularDistill(transcript: String, memoId: UUID) async {
-        print("📝 MemoDetailViewModel: Starting regular Distill analysis")
+    func performDistill(transcript: String, memoId: UUID) async {
+        print("📝 MemoDetailViewModel: Starting Distill analysis")
 
         do {
             let startTime = CFAbsoluteTimeGetCurrent()
-            let envelope = try await analyzeDistillUseCase.execute(transcript: transcript, memoId: memoId)
+            let envelope = try await analyzeDistillUseCase.execute(transcript: transcript, memoId: memoId, isPro: storeKitService.isPro)
             let duration = CFAbsoluteTimeGetCurrent() - startTime
 
             await MainActor.run {
@@ -349,7 +273,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                     "Response: \(Int(duration * 1_000))ms" :
                     "API: \(envelope.latency_ms)ms, Total: \(Int(duration * 1_000))ms"
 
-                print("📝 MemoDetailViewModel: Regular Distill analysis completed (cached: \(wasCached))")
+                print("📝 MemoDetailViewModel: Distill analysis completed (cached: \(wasCached), isPro: \(storeKitService.isPro))")
 
                 // Reload cache metadata after analysis completes
                 loadAnalysisCacheMetadata()
@@ -359,7 +283,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
             PerformanceMetricsService.shared.recordDuration(
                 name: "DistillTotalDuration",
                 start: Date(timeIntervalSinceNow: -duration),
-                extras: ["mode": "regular"]
+                extras: ["mode": "unified", "isPro": String(storeKitService.isPro)]
             )
 
         } catch {
@@ -367,7 +291,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                 analysisError = error.localizedDescription
                 self.error = ErrorMapping.mapError(error)
                 isAnalyzing = false
-                print("❌ MemoDetailViewModel: Regular Distill analysis failed: \(error.localizedDescription)")
+                print("❌ MemoDetailViewModel: Distill analysis failed: \(error.localizedDescription)")
             }
         }
     }

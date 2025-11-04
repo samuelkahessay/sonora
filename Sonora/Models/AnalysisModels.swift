@@ -89,28 +89,6 @@ public struct TokenUsage: Codable, Sendable {
     public let output: Int
 }
 
-// MARK: - Streaming Support
-
-/// Handler for analysis streaming updates
-public typealias AnalysisStreamingHandler = @Sendable (AnalysisStreamingUpdate) -> Void
-
-/// Represents a streaming update from the analysis service
-public struct AnalysisStreamingUpdate: Sendable, Equatable {
-    /// Partial text received so far (accumulated)
-    public let partialText: String
-    /// Whether this is the final complete response
-    public let isFinal: Bool
-
-    public init(partialText: String, isFinal: Bool) {
-        self.partialText = partialText
-        self.isFinal = isFinal
-    }
-
-    public static func == (lhs: AnalysisStreamingUpdate, rhs: AnalysisStreamingUpdate) -> Bool {
-        lhs.partialText == rhs.partialText && lhs.isFinal == rhs.isFinal
-    }
-}
-
 public struct DistillData: Codable, Sendable {
     // Core fields (all tiers)
     public let summary: String
@@ -191,6 +169,74 @@ public struct DistillData: Codable, Sendable {
         self.cognitivePatterns = cognitivePatterns
         self.philosophicalEchoes = philosophicalEchoes
         self.valuesInsights = valuesInsights
+    }
+
+    // Custom decoder that normalizes smart punctuation from AI-generated text
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        // Decode and normalize all string fields
+        self.summary = try container.decode(String.self, forKey: .summary).normalizingSmartPunctuation()
+        self.reflection_questions = try container.decode([String].self, forKey: .reflection_questions)
+            .map { $0.normalizingSmartPunctuation() }
+
+        // Decode optional array fields (no normalization needed - handled by nested types)
+        self.action_items = try container.decodeIfPresent([ActionItem].self, forKey: .action_items)
+        self.patterns = try container.decodeIfPresent([Pattern].self, forKey: .patterns)
+        self.events = try container.decodeIfPresent([EventsData.DetectedEvent].self, forKey: .events)
+        self.reminders = try container.decodeIfPresent([RemindersData.DetectedReminder].self, forKey: .reminders)
+        self.cognitivePatterns = try container.decodeIfPresent([CognitivePattern].self, forKey: .cognitivePatterns)
+        self.philosophicalEchoes = try container.decodeIfPresent([PhilosophicalEcho].self, forKey: .philosophicalEchoes)
+        self.valuesInsights = try container.decodeIfPresent(ValuesInsight.self, forKey: .valuesInsights)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case summary, action_items, reflection_questions, patterns, events, reminders
+        case cognitivePatterns, philosophicalEchoes, valuesInsights
+    }
+}
+
+// Add normalization to nested ActionItem
+extension DistillData.ActionItem {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.text = try container.decode(String.self, forKey: .text).normalizingSmartPunctuation()
+        self.priority = try container.decode(Priority.self, forKey: .priority)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case text, priority
+    }
+}
+
+// Add normalization to Pattern
+extension DistillData.Pattern {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(String.self, forKey: .id)
+        self.theme = try container.decode(String.self, forKey: .theme).normalizingSmartPunctuation()
+        self.description = try container.decode(String.self, forKey: .description).normalizingSmartPunctuation()
+        self.relatedMemos = try container.decodeIfPresent([RelatedMemo].self, forKey: .relatedMemos)
+        self.confidence = try container.decode(Float.self, forKey: .confidence)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, theme, description, relatedMemos, confidence
+    }
+}
+
+// Add normalization to Pattern.RelatedMemo
+extension DistillData.Pattern.RelatedMemo {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.memoId = try container.decodeIfPresent(String.self, forKey: .memoId)
+        self.title = try container.decode(String.self, forKey: .title).normalizingSmartPunctuation()
+        self.daysAgo = try container.decodeIfPresent(Int.self, forKey: .daysAgo)
+        self.snippet = try container.decodeIfPresent(String.self, forKey: .snippet)?.normalizingSmartPunctuation()
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case memoId, title, daysAgo, snippet
     }
 }
 
@@ -653,6 +699,35 @@ public struct PhilosophicalEcho: Codable, Sendable, Identifiable, Equatable {
         self.connection = connection
         self.quote = quote
         self.source = source
+    }
+
+    // Custom decoder that normalizes smart punctuation
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(String.self, forKey: .id)
+        self.tradition = try container.decode(PhilosophicalTradition.self, forKey: .tradition)
+        self.connection = try container.decode(String.self, forKey: .connection).normalizingSmartPunctuation()
+        self.quote = try container.decodeIfPresent(String.self, forKey: .quote)?.normalizingSmartPunctuation()
+        self.source = try container.decodeIfPresent(String.self, forKey: .source)?.normalizingSmartPunctuation()
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, tradition, connection, quote, source
+    }
+}
+
+// Add normalization to CognitivePattern
+extension CognitivePattern {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(String.self, forKey: .id)
+        self.type = try container.decode(CognitiveDistortion.self, forKey: .type)
+        self.observation = try container.decode(String.self, forKey: .observation).normalizingSmartPunctuation()
+        self.reframe = try container.decodeIfPresent(String.self, forKey: .reframe)?.normalizingSmartPunctuation()
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, type, observation, reframe
     }
 }
 

@@ -116,21 +116,17 @@ extension MemoDetailViewModel {
                     // This prevents routing to Lite Distill when user is actually Pro
                     await storeKitService.refreshEntitlements()
                     let isPro = storeKitService.isPro
-                    print("📝 MemoDetailViewModel: Distill routing - isPro: \(isPro), parallelEnabled: \(isParallelDistillEnabled)")
-                    if isPro && isParallelDistillEnabled {
-                        print("📝 MemoDetailViewModel: Routing to Parallel Distill (Pro with pro modes)")
-                        await performParallelDistill(transcript: transcript, memoId: memo.id)
-                    } else if isPro {
-                        print("📝 MemoDetailViewModel: Routing to Regular Distill (Pro without parallel)")
-                        await performRegularDistill(transcript: transcript, memoId: memo.id)
+                    print("📝 MemoDetailViewModel: Distill routing - isPro: \(isPro)")
+                    if isPro {
+                        print("📝 MemoDetailViewModel: Routing to Distill (Pro with Pro modes)")
+                        await performDistill(transcript: transcript, memoId: memo.id)
                     } else {
                         print("📝 MemoDetailViewModel: Routing to Lite Distill (Free tier)")
-                        // Free tier → Lite Distill
                         await performLiteDistill(transcript: transcript, memoId: memo.id)
                     }
 
                 case .distillSummary, .distillActions, .distillThemes, .distillReflection:
-                    await performRegularDistill(transcript: transcript, memoId: memo.id)
+                    await performDistill(transcript: transcript, memoId: memo.id)
 
                 case .liteDistill:
                     // Lite Distill should be handled by .distill case above based on subscription tier
@@ -158,7 +154,7 @@ extension MemoDetailViewModel {
                 case .cognitiveClarityCBT, .philosophicalEchoes, .valuesRecognition:
                     // Pro-tier modes are embedded in Distill analysis, shouldn't be called directly
                     Logger.shared.warning("Pro-tier mode called directly, falling back to Distill", category: .analysis)
-                    await performRegularDistill(transcript: transcript, memoId: memo.id)
+                    await performDistill(transcript: transcript, memoId: memo.id)
                 }
             } catch {
                 await MainActor.run {

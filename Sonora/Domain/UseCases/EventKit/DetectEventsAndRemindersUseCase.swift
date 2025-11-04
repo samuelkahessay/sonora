@@ -229,13 +229,15 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
             mode: .events,
             transcript: transcript,
             responseType: EventsData.self,
-            historicalContext: nil
+            historicalContext: nil,
+            isPro: false
         )
         async let remindersResult: AnalyzeEnvelope<RemindersData> = analysisService.analyze(
             mode: .reminders,
             transcript: transcript,
             responseType: RemindersData.self,
-            historicalContext: nil
+            historicalContext: nil,
+            isPro: false
         )
 
         // Process results and filter by confidence

@@ -3,7 +3,7 @@ import Foundation
 /// Use case for performing comprehensive Distill analysis on transcript with repository caching
 /// Provides mentor-like insights including summary, action items, themes, and reflection questions
 protocol AnalyzeDistillUseCaseProtocol: Sendable {
-    func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<DistillData>
+    func execute(transcript: String, memoId: UUID, isPro: Bool) async throws -> AnalyzeEnvelope<DistillData>
 }
 
 /// Use case runs off main thread; repository operations automatically hop to main actor.
@@ -32,9 +32,9 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, Sendable {
     }
 
     // MARK: - Use Case Execution
-    func execute(transcript: String, memoId: UUID) async throws -> AnalyzeEnvelope<DistillData> {
+    func execute(transcript: String, memoId: UUID, isPro: Bool) async throws -> AnalyzeEnvelope<DistillData> {
         let correlationId = UUID().uuidString
-        let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString])
+        let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString, "isPro": String(isPro)])
 
         logger.analysis("Starting Distill analysis (comprehensive mentor-like insights)", context: context)
 
@@ -79,7 +79,7 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, Sendable {
 
             // Call service to perform analysis
             let analysisTimer = PerformanceTimer(operation: "Distill Analysis API Call", category: .analysis)
-            let result = try await analysisService.analyzeDistill(transcript: transcript)
+            let result = try await analysisService.analyzeDistill(transcript: transcript, isPro: isPro)
 
             // Guardrails: validate structure before persisting
             guard AnalysisGuardrails.validate(distill: result.data) else {
