@@ -545,6 +545,13 @@ function sendSSEEvent(res: express.Response, event: string, data: Record<string,
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
+// SSE Keepalive: Send keepalive comments to prevent idle timeout
+function startKeepalive(res: express.Response, intervalMs = 5000): NodeJS.Timeout {
+  return setInterval(() => {
+    res.write(': keepalive\n\n');
+  }, intervalMs);
+}
+
 // Main analyze endpoint
 app.post('/analyze', async (req, res) => {
   const startTime = Date.now();
@@ -580,10 +587,16 @@ app.post('/analyze', async (req, res) => {
         console.log('📡 Starting SSE streaming for Pro distill');
 
         // Set SSE headers
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
+        res.status(200);
+        // Include charset to satisfy stricter clients (e.g., iOS URLSession)
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
         res.setHeader('Connection', 'keep-alive');
+        // Prevent intermediate proxies from buffering or transforming the stream
         res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+        (res as any).flushHeaders?.();
+
+        let sentFinal = false;
 
         const { system: baseSystem, user: baseUser } = buildPrompt(mode, transcript, historicalContext);
         const baseSettings = ModelSettings[mode] || { verbosity: 'low', reasoningEffort: 'medium' };
@@ -593,13 +606,21 @@ app.post('/analyze', async (req, res) => {
 
         // Step 1: Execute base distill analysis
         console.log('📡 [SSE] Executing base distill...');
-        const { jsonText: baseJsonText, usage: baseUsage } = await createChatJSON({
-          system: baseSystem,
-          user: baseUser,
-          verbosity: baseSettings.verbosity,
-          reasoningEffort: baseSettings.reasoningEffort,
-          schema: baseSchema
-        });
+        const baseKeepalive = startKeepalive(res);
+        let baseJsonText, baseUsage;
+        try {
+          const result = await createChatJSON({
+            system: baseSystem,
+            user: baseUser,
+            verbosity: baseSettings.verbosity,
+            reasoningEffort: baseSettings.reasoningEffort,
+            schema: baseSchema
+          });
+          baseJsonText = result.jsonText;
+          baseUsage = result.usage;
+        } finally {
+          clearInterval(baseKeepalive);
+        }
 
         // Parse base data
         let baseData: any;
@@ -626,35 +647,41 @@ app.post('/analyze', async (req, res) => {
 
         // Step 2: Execute Pro components in parallel
         console.log('📡 [SSE] Executing Pro components...');
-        const [cognitiveResult, philosophicalResult, valuesResult] = await Promise.allSettled([
-          // Thinking patterns
-          (async () => {
-            const { system, user } = buildPrompt('thinking-patterns', transcript);
-            return await createChatCompletionsJSON({
-              system,
-              user,
-              model: process.env.SONORA_MODEL || 'gpt-5-nano'
-            });
-          })(),
-          // Philosophical echoes
-          (async () => {
-            const { system, user } = buildPrompt('philosophical-echoes', transcript);
-            return await createChatCompletionsJSON({
-              system,
-              user,
-              model: process.env.SONORA_MODEL || 'gpt-5-nano'
-            });
-          })(),
-          // Values recognition
-          (async () => {
-            const { system, user } = buildPrompt('values-recognition', transcript);
-            return await createChatCompletionsJSON({
-              system,
-              user,
-              model: process.env.SONORA_MODEL || 'gpt-5-nano'
-            });
-          })()
-        ]);
+        const proKeepalive = startKeepalive(res);
+        let cognitiveResult, philosophicalResult, valuesResult;
+        try {
+          [cognitiveResult, philosophicalResult, valuesResult] = await Promise.allSettled([
+            // Thinking patterns
+            (async () => {
+              const { system, user } = buildPrompt('thinking-patterns', transcript);
+              return await createChatCompletionsJSON({
+                system,
+                user,
+                model: process.env.SONORA_MODEL || 'gpt-5-nano'
+              });
+            })(),
+            // Philosophical echoes
+            (async () => {
+              const { system, user } = buildPrompt('philosophical-echoes', transcript);
+              return await createChatCompletionsJSON({
+                system,
+                user,
+                model: process.env.SONORA_MODEL || 'gpt-5-nano'
+              });
+            })(),
+            // Values recognition
+            (async () => {
+              const { system, user } = buildPrompt('values-recognition', transcript);
+              return await createChatCompletionsJSON({
+                system,
+                user,
+                model: process.env.SONORA_MODEL || 'gpt-5-nano'
+              });
+            })()
+          ]);
+        } finally {
+          clearInterval(proKeepalive);
+        }
 
         // Aggregate tokens
         let totalTokens = { input: baseUsage.input, output: baseUsage.output };
@@ -764,6 +791,10 @@ app.post('/analyze', async (req, res) => {
           console.warn('⚠️ Values recognition request failed:', valuesResult.reason);
           (validatedBaseData as any).valuesInsights = null;
         }
+        } finally {
+          // Ensure we stop keepalives before sending final/ending stream
+          clearInterval(proKeepalive);
+        }
 
         // Build moderation text from combined data
         let textForModeration = `${(validatedBaseData as any).summary}\n${((validatedBaseData as any).action_items || []).map((a: any) => a.text).join(' \n')}\n${((validatedBaseData as any).reflection_questions || []).join(' \n')}`;
@@ -780,7 +811,7 @@ app.post('/analyze', async (req, res) => {
 
         const latency_ms = Date.now() - startTime;
 
-        // Send final event with complete data
+        // Send final event with complete data (keep snake_case to match iOS DistillData model)
         sendSSEEvent(res, 'final', {
           mode,
           data: validatedBaseData,
@@ -790,17 +821,20 @@ app.post('/analyze', async (req, res) => {
           moderation
         });
         console.log('📡 [SSE] Sent final event, closing stream');
-
+        sentFinal = true;
         res.end();
         return;
       } catch (sseError) {
         console.error('❌ [SSE] Streaming error:', sseError);
         // Fallback: send error event and close stream
         try {
-          sendSSEEvent(res, 'error', {
-            message: 'Streaming failed, falling back to non-streaming',
-            error: String(sseError)
-          });
+          // If we already sent final, do not emit an error event — just end quietly
+          if (!(typeof sentFinal === 'boolean' && sentFinal)) {
+            sendSSEEvent(res, 'error', {
+              message: 'Streaming failed, falling back to non-streaming',
+              error: String(sseError)
+            });
+          }
           res.end();
         } catch {
           // If even error sending fails, just end the response

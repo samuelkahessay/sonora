@@ -259,7 +259,7 @@ final class AnalysisService: AnalysisServiceProtocol, @unchecked Sendable {
         decoder.dateDecodingStrategy = .iso8601
 
         do {
-            for try await byte in bytes {
+            bytesLoop: for try await byte in bytes {
                 buffer.append(String(decoding: [byte], as: UTF8.self))
 
                 // Process complete events (terminated by \n\n)
@@ -322,11 +322,20 @@ final class AnalysisService: AnalysisServiceProtocol, @unchecked Sendable {
 
                             // Send final progress update
                             onProgress(AnalysisStreamingUpdate(isFinal: true))
+                            // We have what we need; stop reading further bytes to avoid
+                            // processing any late keepalives or error events.
+                            break bytesLoop
                         }
 
                     case "error":
-                        print("❌ AnalysisService (SSE): Server sent error event: \(data)")
-                        throw AnalysisError.serverError(500)
+                        // If final already received, ignore late error events.
+                        if finalEnvelope != nil {
+                            print("⚠️ AnalysisService (SSE): Ignoring late error event after final")
+                            continue
+                        } else {
+                            print("❌ AnalysisService (SSE): Server sent error event: \(data)")
+                            throw AnalysisError.serverError(500)
+                        }
 
                     default:
                         print("⚠️ AnalysisService (SSE): Unknown event type: \(type)")

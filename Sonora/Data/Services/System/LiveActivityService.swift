@@ -41,6 +41,11 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
     init() {
         setupStateObservation()
         print("📱 LiveActivityService: Initialized (ActivityKit-capable)")
+
+        // Clean up any orphaned activities from previous app sessions
+        Task { @MainActor in
+            await cleanupOrphanedActivities()
+        }
     }
 
     deinit {
@@ -80,9 +85,23 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
     // MARK: - Protocol Implementation
 
     func startRecordingActivity(memoTitle: String, startTime: Date) async throws {
+        // Defensive cleanup: end any tracked activity
         if isActivityActive {
             try await endCurrentActivity(dismissalPolicy: .immediate)
         }
+
+        // Additional safety: query and end ANY existing activities
+        // This handles edge cases where orphaned activities exist but aren't tracked
+        #if canImport(ActivityKit)
+        if #available(iOS 16.1, *) {
+            let existingActivities = Activity<SonoraLiveActivityAttributes>.activities
+            for activity in existingActivities {
+                print("📱 LiveActivityService: Ending existing activity \(activity.id) before starting new one")
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+        #endif
+
         activityStateSubject.send(.starting)
 
         #if canImport(ActivityKit)
@@ -266,6 +285,34 @@ final class LiveActivityService: LiveActivityServiceProtocol, ObservableObject, 
     }
 
     // MARK: - Helper Methods
+
+    /// Cleans up any orphaned Live Activities that may exist from previous app sessions.
+    /// This is critical for handling cases where the app crashed or was force-quit during recording.
+    private func cleanupOrphanedActivities() async {
+        #if canImport(ActivityKit)
+        if #available(iOS 16.1, *) {
+            let activities = Activity<SonoraLiveActivityAttributes>.activities
+            guard !activities.isEmpty else {
+                print("📱 LiveActivityService: No existing activities found on startup")
+                return
+            }
+
+            print("📱 LiveActivityService: Found \(activities.count) existing activity/activities on startup - cleaning up orphaned activities")
+
+            // End all existing activities immediately
+            // We assume no recording should survive app restart
+            for activity in activities {
+                await activity.end(nil, dismissalPolicy: .immediate)
+                print("📱 LiveActivityService: ✅ Ended orphaned activity \(activity.id)")
+            }
+
+            // Reset internal state to match
+            activityStateSubject.send(.inactive)
+            lastContentState = nil
+            print("📱 LiveActivityService: ✅ Cleanup complete")
+        }
+        #endif
+    }
 }
 
 // MARK: - Future ActivityKit Integration Notes
