@@ -57,19 +57,44 @@ private struct BloomEffectEvent: ViewModifier {
                 case .collapse: return 1 + (1 - progress) * 2.2
                 }
             }()
+
+            // Use logo gradient colors for the bloom effect
+            let bloomGradient = AngularGradient(
+                colors: [
+                    Color.sonoraCoral,     // Bright coral
+                    Color.sonoraWarmPink,  // Warm pink
+                    Color.sonoraMagenta,   // Rich magenta
+                    Color.sonoraPlum,      // Deep plum
+                    Color.sonoraCoral      // Back to coral for seamless loop
+                ],
+                center: .center
+            )
+
             AnyView(
-                Circle()
-                    .stroke(Color.insightGold.opacity(0.35), lineWidth: 10)
-                    .frame(width: size, height: size)
-                    .scaleEffect(scale)
-                    .opacity(1 - progress)
-                    .blendMode(.plusLighter)
-                    .animation(SonoraDesignSystem.Animation.bloomTransition, value: progress)
+                ZStack {
+                    // Outer glow for visibility in dark mode
+                    Circle()
+                        .stroke(bloomGradient, lineWidth: 14)
+                        .frame(width: size, height: size)
+                        .scaleEffect(scale)
+                        .opacity((1 - progress) * 0.4)
+                        .blur(radius: 8)
+                        .blendMode(.screen)
+
+                    // Sharp gradient ring
+                    Circle()
+                        .stroke(bloomGradient, lineWidth: 10)
+                        .frame(width: size, height: size)
+                        .scaleEffect(scale)
+                        .opacity((1 - progress) * 0.8)  // Increased opacity
+                        .blendMode(.plusLighter)
+                }
+                .animation(SonoraDesignSystem.Animation.bloomTransition, value: progress)
             )
         } else {
             AnyView(
                 Circle()
-                    .stroke(Color.insightGold.opacity(0.25), lineWidth: 10)
+                    .stroke(Color.sonoraCoral.opacity(0.3), lineWidth: 10)
                     .frame(width: size, height: size)
                     .opacity(0.7)
             )

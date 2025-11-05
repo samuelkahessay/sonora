@@ -465,7 +465,7 @@ public final class AppConfiguration: ObservableObject {
         case .distillSummary, .distillActions, .distillThemes, .distillReflection:
             return distillAnalysisTimeout / 2 // Half the distill timeout for focused component analysis
         case .liteDistill:
-            return min(distillAnalysisTimeout / 2, 10.0) // Lite Distill is even faster
+            return distillAnalysisTimeout / 2 // Same as component modes - GPT-5-nano with medium reasoning needs ~18s
         case .events:
             return contentAnalysisTimeout // Use same timeout as content analysis
         case .reminders:
