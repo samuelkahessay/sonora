@@ -12,6 +12,7 @@ import UIKit
 
 @main
 struct SonoraApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var themeManager = ThemeManager()
     private let modelContainer: ModelContainer
 

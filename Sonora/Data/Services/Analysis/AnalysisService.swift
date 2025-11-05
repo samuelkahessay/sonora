@@ -1,7 +1,32 @@
 import Foundation
+import UIKit
 
-final class AnalysisService: AnalysisServiceProtocol, Sendable {
+final class AnalysisService: AnalysisServiceProtocol, @unchecked Sendable {
     private let config = AppConfiguration.shared
+    private let logger: any LoggerProtocol = Logger.shared
+    private let analysisTracker: AnalysisTracker
+    private lazy var backgroundDelegate: AnalysisSessionDelegate = {
+        AnalysisSessionDelegate(tracker: analysisTracker, logger: logger)
+    }()
+    private lazy var backgroundSession: URLSession = {
+        let identifier: String
+        if let bundleId = Bundle.main.bundleIdentifier {
+            identifier = "\(bundleId).analysis.background"
+        } else {
+            identifier = "com.sonora.analysis.background"
+        }
+        let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
+        configuration.isDiscretionary = false
+        configuration.sessionSendsLaunchEvents = true
+        configuration.allowsCellularAccess = true
+        configuration.shouldUseExtendedBackgroundIdleMode = true
+        configuration.networkServiceType = .responsiveData
+        return URLSession(configuration: configuration, delegate: backgroundDelegate, delegateQueue: nil)
+    }()
+
+    init() {
+        self.analysisTracker = AnalysisTracker(logger: Logger.shared)
+    }
 
     func analyze<T: Codable & Sendable>(
         mode: AnalysisMode,
@@ -59,7 +84,19 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
             throw AnalysisError.networkError("Failed to encode request: \(error.localizedDescription)")
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        // Use background URLSession for reliability when phone is locked
+        let dataTask = backgroundSession.dataTask(with: request)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await withCheckedThrowingContinuation { continuation in
+                Task {
+                    await analysisTracker.register(task: dataTask, continuation: continuation)
+                    dataTask.resume()
+                }
+            }
+        } catch {
+            throw AnalysisError.networkError("Request failed: \(error.localizedDescription)")
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AnalysisError.networkError("Invalid response")
@@ -116,5 +153,131 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
     /// Free tier lite distill analysis
     func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData> {
         try await analyze(mode: .liteDistill, transcript: transcript, responseType: LiteDistillData.self, historicalContext: nil, isPro: false)
+    }
+}
+
+// MARK: - Background Session Support
+
+/// Actor that tracks analysis data tasks and their continuations
+///
+/// This enables background URLSession tasks to communicate their results back to the async/await world.
+/// Similar to UploadTracker but for data tasks instead of upload tasks.
+private actor AnalysisTracker {
+    enum AnalysisTrackerError: Error {
+        case missingResponse
+    }
+
+    private var continuations: [Int: CheckedContinuation<(Data, URLResponse), Error>] = [:]
+    private var buffers: [Int: Data] = [:]
+    private let logger: any LoggerProtocol
+
+    init(logger: any LoggerProtocol) {
+        self.logger = logger
+    }
+
+    func register(task: URLSessionTask, continuation: CheckedContinuation<(Data, URLResponse), Error>) {
+        continuations[task.taskIdentifier] = continuation
+        buffers[task.taskIdentifier] = Data()
+    }
+
+    func appendData(taskIdentifier: Int, data: Data) {
+        if buffers[taskIdentifier] != nil {
+            buffers[taskIdentifier]?.append(data)
+        } else {
+            buffers[taskIdentifier] = data
+        }
+    }
+
+    func complete(task: URLSessionTask, error: Error?) {
+        let identifier = task.taskIdentifier
+        let continuation = continuations.removeValue(forKey: identifier)
+        let collectedData = buffers.removeValue(forKey: identifier) ?? Data()
+
+        guard let continuation else {
+            logger.debug("AnalysisTracker: No continuation for task \(identifier)", category: .network, context: nil)
+            return
+        }
+
+        if let error {
+            continuation.resume(throwing: error)
+            return
+        }
+
+        guard let response = task.response else {
+            continuation.resume(throwing: AnalysisTrackerError.missingResponse)
+            return
+        }
+
+        continuation.resume(returning: (collectedData, response))
+    }
+}
+
+extension AnalysisTracker.AnalysisTrackerError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .missingResponse:
+            return "Analysis request finished without a server response"
+        }
+    }
+}
+
+/// URLSession delegate for handling background analysis requests
+///
+/// This delegate is critical for background analysis to work when the phone is locked.
+/// It receives data chunks, handles task completion, and notifies AppDelegate when done.
+private final class AnalysisSessionDelegate: NSObject, URLSessionDataDelegate, URLSessionTaskDelegate, @unchecked Sendable {
+    private let tracker: AnalysisTracker
+    private let logger: any LoggerProtocol
+
+    init(tracker: AnalysisTracker, logger: any LoggerProtocol) {
+        self.tracker = tracker
+        self.logger = logger
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        Task {
+            await tracker.appendData(taskIdentifier: dataTask.taskIdentifier, data: data)
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        Task {
+            await tracker.complete(task: task, error: error)
+        }
+    }
+
+    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        logger.debug("AnalysisSessionDelegate: finished events for background session", category: .network, context: nil)
+
+        // Notify iOS that we're done processing background URLSession events
+        // This is critical for background analysis to work when the phone is locked
+        DispatchQueue.main.async { [logger] in
+            guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
+                logger.warning("AnalysisSessionDelegate: Could not get AppDelegate to call completion handler", category: .network, context: nil, error: nil)
+                return
+            }
+
+            // Look up completion handler for this specific session
+            guard let identifier = session.configuration.identifier else {
+                logger.warning("AnalysisSessionDelegate: Session has no identifier", category: .network, context: nil, error: nil)
+                return
+            }
+
+            if let completionHandler = appDelegate.backgroundSessionCompletionHandlers[identifier] {
+                logger.info("AnalysisSessionDelegate: Calling completion handler for session: \(identifier)", category: .network, context: nil)
+                completionHandler()
+                appDelegate.backgroundSessionCompletionHandlers.removeValue(forKey: identifier)
+            } else {
+                logger.debug("AnalysisSessionDelegate: No completion handler for session \(identifier) (app may have been in foreground)", category: .network, context: nil)
+            }
+        }
+    }
+
+    func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
+        if let error {
+            logger.error("AnalysisSessionDelegate: session invalidated", category: .network, context: nil, error: error)
+        } else {
+            logger.debug("AnalysisSessionDelegate: session invalidated without error", category: .network, context: nil)
+        }
     }
 }

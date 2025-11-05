@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import UIKit
 
 final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
     private let config = AppConfiguration.shared
@@ -278,6 +279,29 @@ private final class BackgroundSessionDelegate: NSObject, URLSessionDataDelegate,
 
     func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
         logger.debug("BackgroundSessionDelegate: finished events for background session", category: .network, context: nil)
+
+        // Notify iOS that we're done processing background URLSession events
+        // This is critical for background transcription to work when the phone is locked
+        DispatchQueue.main.async { [logger] in
+            guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
+                logger.warning("BackgroundSessionDelegate: Could not get AppDelegate to call completion handler", category: .network, context: nil, error: nil)
+                return
+            }
+
+            // Look up completion handler for this specific session
+            guard let identifier = session.configuration.identifier else {
+                logger.warning("BackgroundSessionDelegate: Session has no identifier", category: .network, context: nil, error: nil)
+                return
+            }
+
+            if let completionHandler = appDelegate.backgroundSessionCompletionHandlers[identifier] {
+                logger.info("BackgroundSessionDelegate: Calling completion handler for session: \(identifier)", category: .network, context: nil)
+                completionHandler()
+                appDelegate.backgroundSessionCompletionHandlers.removeValue(forKey: identifier)
+            } else {
+                logger.debug("BackgroundSessionDelegate: No completion handler for session \(identifier) (app may have been in foreground)", category: .network, context: nil)
+            }
+        }
     }
 
     func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
