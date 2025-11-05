@@ -41,6 +41,27 @@ extension Color {
 
     /// Depth Purple: Rich purple for premium features and depth
     static let depthPurple = Color(hexString: "#6B4C93")
+
+    // MARK: - Logo Gradient Colors
+    // These colors are extracted from the app icon and represent the core brand identity
+
+    /// Sonora Coral: Bright, warm coral (logo left side) - inviting and energetic
+    static let sonoraCoral = Color(hexString: "#FF995E")
+
+    /// Sonora Salmon: Softer coral/salmon for smooth transitions
+    static let sonoraSalmon = Color(hexString: "#EB725C")
+
+    /// Sonora Warm Pink: Warm pink blend point in the gradient
+    static let sonoraWarmPink = Color(hexString: "#C95B68")
+
+    /// Sonora Magenta: Rich magenta/plum (logo center-right) - transformation
+    static let sonoraMagenta = Color(hexString: "#A64F6F")
+
+    /// Sonora Plum: Deep magenta plum - depth and richness
+    static let sonoraPlum = Color(hexString: "#663967")
+
+    /// Sonora Deep Purple: Deepest purple (logo right side) - contemplative depth
+    static let sonoraDarkPurple = Color(hexString: "#413166")
 }
 
 // MARK: - Semantic Color Mappings

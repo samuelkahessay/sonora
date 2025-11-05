@@ -106,22 +106,44 @@ struct SonicBloomRecordButton: View {
     private var mainButtonBackground: some View {
         Circle()
             .fill(
-                RadialGradient(
-                    colors: [
-                        isRecording ? Color.recordingActive : Color.recordingInactive.opacity(0.8),
-                        isRecording ? Color.recordingActive.opacity(0.8) : Color.recordingInactive.opacity(0.6)
+                LinearGradient(
+                    colors: isRecording ? [
+                        // Active: Bright, energized gold with subtle warmth
+                        Color.recordingActive,
+                        Color(hexString: "#E5C158"),  // Lighter gold
+                        Color.recordingActive.opacity(0.95)
+                    ] : [
+                        // Idle: Match the app icon gradient - inviting and recognizable
+                        Color.sonoraCoral,     // #FF995E - Bright coral (logo left)
+                        Color.sonoraWarmPink,  // #C95B68 - Warm pink (logo blend)
+                        Color.sonoraPlum       // #663967 - Deep magenta (logo right)
                     ],
-                    center: .center,
-                    startRadius: 0,
-                    endRadius: buttonSize * 0.6
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
             )
             .overlay(
                 Circle()
                     .stroke(
-                        Color.clarityWhite.opacity(isRecording ? 0.3 : 0.1),
+                        Color.clarityWhite.opacity(isRecording ? 0.4 : 0.2),
                         lineWidth: 2
                     )
+            )
+            .overlay(
+                // Inner glow for luminosity
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color.white.opacity(isRecording ? 0.3 : 0.2),
+                                Color.clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: buttonSize * 0.35
+                        )
+                    )
+                    .blendMode(.overlay)
             )
             .brandShadow()
     }
