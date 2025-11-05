@@ -70,6 +70,81 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, Sendable {
                               "cacheHit": true,
                               "latencyMs": cachedResult.latency_ms
                           ]))
+
+            // For cached results, simulate quick progress updates if progressHandler provided
+            // This ensures Pro users always see progressive feedback
+            if let progressHandler = progressHandler, isPro {
+                Task { @MainActor in
+                    // Quick simulated progress for cached results (feels more responsive than instant load)
+                    progressHandler(AnalysisStreamingUpdate(
+                        component: "base",
+                        completedCount: 1,
+                        totalCount: 4,
+                        partialData: PartialDistillData(
+                            summary: cachedResult.data.summary,
+                            actionItems: cachedResult.data.action_items,
+                            reflectionQuestions: cachedResult.data.reflection_questions,
+                            thinkingPatterns: nil,
+                            philosophicalEchoes: nil,
+                            valuesInsights: nil
+                        ),
+                        isFinal: false
+                    ))
+
+                    // Small delay to show progressive UI briefly
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+
+                    progressHandler(AnalysisStreamingUpdate(
+                        component: "thinkingPatterns",
+                        completedCount: 2,
+                        totalCount: 4,
+                        partialData: PartialDistillData(
+                            summary: cachedResult.data.summary,
+                            actionItems: cachedResult.data.action_items,
+                            reflectionQuestions: cachedResult.data.reflection_questions,
+                            thinkingPatterns: cachedResult.data.thinkingPatterns,
+                            philosophicalEchoes: nil,
+                            valuesInsights: nil
+                        ),
+                        isFinal: false
+                    ))
+
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+
+                    progressHandler(AnalysisStreamingUpdate(
+                        component: "philosophicalEchoes",
+                        completedCount: 3,
+                        totalCount: 4,
+                        partialData: PartialDistillData(
+                            summary: cachedResult.data.summary,
+                            actionItems: cachedResult.data.action_items,
+                            reflectionQuestions: cachedResult.data.reflection_questions,
+                            thinkingPatterns: cachedResult.data.thinkingPatterns,
+                            philosophicalEchoes: cachedResult.data.philosophicalEchoes,
+                            valuesInsights: nil
+                        ),
+                        isFinal: false
+                    ))
+
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+
+                    progressHandler(AnalysisStreamingUpdate(
+                        component: "valuesInsights",
+                        completedCount: 4,
+                        totalCount: 4,
+                        partialData: PartialDistillData(
+                            summary: cachedResult.data.summary,
+                            actionItems: cachedResult.data.action_items,
+                            reflectionQuestions: cachedResult.data.reflection_questions,
+                            thinkingPatterns: cachedResult.data.thinkingPatterns,
+                            philosophicalEchoes: cachedResult.data.philosophicalEchoes,
+                            valuesInsights: cachedResult.data.valuesInsights
+                        ),
+                        isFinal: false
+                    ))
+                }
+            }
+
             return cachedResult
         }
         _ = cacheTimer.finish(additionalInfo: "Cache MISS - proceeding to API call")

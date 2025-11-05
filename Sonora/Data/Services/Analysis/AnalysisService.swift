@@ -216,7 +216,9 @@ final class AnalysisService: AnalysisServiceProtocol, @unchecked Sendable {
         do {
             (bytes, response) = try await URLSession.shared.bytes(for: request)
         } catch {
-            print("❌ AnalysisService (SSE): Stream connection failed, attempting fallback to non-streaming")
+            print("❌ AnalysisService (SSE): Stream connection failed - \(error.localizedDescription)")
+            print("❌ AnalysisService (SSE): Error details - \(error)")
+            print("⚠️ AnalysisService (SSE): Falling back to non-streaming mode (progressive loader will not show)")
             // Graceful fallback: retry without streaming
             return try await analyze(
                 mode: mode,
@@ -238,8 +240,10 @@ final class AnalysisService: AnalysisServiceProtocol, @unchecked Sendable {
 
         // Check if response is actually SSE
         let contentType = httpResponse.value(forHTTPHeaderField: "Content-Type") ?? ""
+        print("📡 AnalysisService (SSE): Received Content-Type: '\(contentType)'")
         if !contentType.contains("text/event-stream") {
-            print("⚠️ AnalysisService (SSE): Server didn't return SSE stream, falling back to non-streaming")
+            print("❌ AnalysisService (SSE): Server didn't return SSE stream (Content-Type: '\(contentType)')")
+            print("⚠️ AnalysisService (SSE): Falling back to non-streaming mode (progressive loader will not show)")
             // Server didn't support streaming - fall back
             return try await analyze(
                 mode: mode,
@@ -250,7 +254,8 @@ final class AnalysisService: AnalysisServiceProtocol, @unchecked Sendable {
             )
         }
 
-        print("📡 AnalysisService (SSE): Streaming started, parsing events...")
+        print("✅ AnalysisService (SSE): Content-Type check passed, streaming started")
+        print("📡 AnalysisService (SSE): Parsing SSE events...")
 
         // Parse SSE events
         var buffer = ""
@@ -283,36 +288,45 @@ final class AnalysisService: AnalysisServiceProtocol, @unchecked Sendable {
                         continue
                     }
 
-                    print("📡 AnalysisService (SSE): Received event: \(type)")
+                    print("📡 AnalysisService (SSE): Received event type: '\(type)'")
 
                     switch type {
                     case "interim":
                         // Parse interim progress update
-                        if let jsonData = data.data(using: .utf8),
-                           let interimData = try? decoder.decode(InterimEventData.self, from: jsonData) {
-
-                            // Convert server's partialData to PartialDistillData
-                            let partialData = interimData.partialData.map { serverData -> PartialDistillData in
-                                PartialDistillData(
-                                    summary: serverData.summary,
-                                    actionItems: serverData.actionItems,
-                                    reflectionQuestions: serverData.reflectionQuestions,
-                                    thinkingPatterns: serverData.thinkingPatterns,
-                                    philosophicalEchoes: serverData.philosophicalEchoes,
-                                    valuesInsights: serverData.valuesInsights
-                                )
-                            }
-
-                            let update = AnalysisStreamingUpdate(
-                                component: interimData.component,
-                                completedCount: interimData.completedCount,
-                                totalCount: interimData.totalCount,
-                                partialData: partialData,
-                                isFinal: false
-                            )
-                            onProgress(update)
-                            print("📡 AnalysisService (SSE): Progress: \(interimData.completedCount)/\(interimData.totalCount) - \(interimData.component ?? "unknown")")
+                        guard let jsonData = data.data(using: .utf8) else {
+                            print("⚠️ AnalysisService (SSE): Failed to convert interim data to UTF8")
+                            continue
                         }
+
+                        guard let interimData = try? decoder.decode(InterimEventData.self, from: jsonData) else {
+                            print("❌ AnalysisService (SSE): Failed to decode interim event data")
+                            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                                print("❌ AnalysisService (SSE): Raw data: \(jsonString)")
+                            }
+                            continue
+                        }
+
+                        // Convert server's partialData to PartialDistillData
+                        let partialData = interimData.partialData.map { serverData -> PartialDistillData in
+                            PartialDistillData(
+                                summary: serverData.summary,
+                                actionItems: serverData.actionItems,
+                                reflectionQuestions: serverData.reflectionQuestions,
+                                thinkingPatterns: serverData.thinkingPatterns,
+                                philosophicalEchoes: serverData.philosophicalEchoes,
+                                valuesInsights: serverData.valuesInsights
+                            )
+                        }
+
+                        let update = AnalysisStreamingUpdate(
+                            component: interimData.component,
+                            completedCount: interimData.completedCount,
+                            totalCount: interimData.totalCount,
+                            partialData: partialData,
+                            isFinal: false
+                        )
+                        onProgress(update)
+                        print("✅ AnalysisService (SSE): Progress update delivered: \(interimData.completedCount)/\(interimData.totalCount) - \(interimData.component ?? "unknown")")
 
                     case "final":
                         // Parse final complete response

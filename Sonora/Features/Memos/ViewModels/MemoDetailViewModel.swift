@@ -263,9 +263,15 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     func performDistill(transcript: String, memoId: UUID) async {
         print("📝 MemoDetailViewModel: Starting Distill analysis (with SSE streaming)")
 
-        // Reset streaming state
+        // Initialize streaming state with starting progress (ensures progressive UI always shows for Pro)
         await MainActor.run {
-            distillProgress = nil
+            distillProgress = AnalysisStreamingUpdate(
+                component: "Preparing analysis...",
+                completedCount: 0,
+                totalCount: 4,
+                partialData: nil,
+                isFinal: false
+            )
             partialDistillData = nil
         }
 
