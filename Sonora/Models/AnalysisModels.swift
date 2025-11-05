@@ -795,3 +795,89 @@ public struct ValuesInsight: Codable, Sendable, Equatable {
         self.tensions = tensions
     }
 }
+
+// MARK: - SSE Streaming Models
+
+/// Represents a progressive update during SSE streaming of analysis results
+public struct AnalysisStreamingUpdate: Sendable, Equatable {
+    /// Partial text accumulated so far (for single-call streaming like lite-distill)
+    public let partialText: String?
+
+    /// Which component just completed (e.g., "base", "thinkingPatterns", "philosophicalEchoes")
+    public let component: String?
+
+    /// Number of components completed so far
+    public let completedCount: Int
+
+    /// Total number of components expected
+    public let totalCount: Int
+
+    /// Partial data for distill results (accumulated as components complete)
+    public let partialData: PartialDistillData?
+
+    /// Whether this is the final complete response
+    public let isFinal: Bool
+
+    public init(
+        partialText: String? = nil,
+        component: String? = nil,
+        completedCount: Int = 0,
+        totalCount: Int = 1,
+        partialData: PartialDistillData? = nil,
+        isFinal: Bool = false
+    ) {
+        self.partialText = partialText
+        self.component = component
+        self.completedCount = completedCount
+        self.totalCount = totalCount
+        self.partialData = partialData
+        self.isFinal = isFinal
+    }
+
+    public static func == (lhs: AnalysisStreamingUpdate, rhs: AnalysisStreamingUpdate) -> Bool {
+        return lhs.partialText == rhs.partialText &&
+               lhs.component == rhs.component &&
+               lhs.completedCount == rhs.completedCount &&
+               lhs.totalCount == rhs.totalCount &&
+               lhs.partialData == rhs.partialData &&
+               lhs.isFinal == rhs.isFinal
+    }
+}
+
+/// Partial distill data accumulated during streaming (fields populated progressively)
+public struct PartialDistillData: Codable, Sendable, Equatable {
+    // Base distill components (available after first interim event)
+    public var summary: String?
+    public var actionItems: [DistillData.ActionItem]?
+    public var reflectionQuestions: [String]?
+
+    // Pro components (populated as Pro mode API calls complete)
+    public var thinkingPatterns: [ThinkingPattern]?
+    public var philosophicalEchoes: [PhilosophicalEcho]?
+    public var valuesInsights: ValuesInsight?
+
+    public init(
+        summary: String? = nil,
+        actionItems: [DistillData.ActionItem]? = nil,
+        reflectionQuestions: [String]? = nil,
+        thinkingPatterns: [ThinkingPattern]? = nil,
+        philosophicalEchoes: [PhilosophicalEcho]? = nil,
+        valuesInsights: ValuesInsight? = nil
+    ) {
+        self.summary = summary
+        self.actionItems = actionItems
+        self.reflectionQuestions = reflectionQuestions
+        self.thinkingPatterns = thinkingPatterns
+        self.philosophicalEchoes = philosophicalEchoes
+        self.valuesInsights = valuesInsights
+    }
+
+    public static func == (lhs: PartialDistillData, rhs: PartialDistillData) -> Bool {
+        return lhs.summary == rhs.summary &&
+               lhs.actionItems == rhs.actionItems &&
+               lhs.reflectionQuestions == rhs.reflectionQuestions &&
+               lhs.thinkingPatterns == rhs.thinkingPatterns &&
+               lhs.philosophicalEchoes == rhs.philosophicalEchoes &&
+               lhs.valuesInsights == rhs.valuesInsights
+    }
+}

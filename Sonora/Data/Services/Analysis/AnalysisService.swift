@@ -24,6 +24,18 @@ final class AnalysisService: AnalysisServiceProtocol, @unchecked Sendable {
         return URLSession(configuration: configuration, delegate: backgroundDelegate, delegateQueue: nil)
     }()
 
+    // Dedicated session for analysis with extended timeouts (better for large JSON responses than background session)
+    private lazy var analysisSession: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 180.0  // 3 minutes for Pro mode with 4 parallel calls
+        configuration.timeoutIntervalForResource = 240.0 // 4 minutes resource timeout
+        configuration.allowsCellularAccess = true
+        configuration.networkServiceType = .responsiveData
+        configuration.waitsForConnectivity = true
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        return URLSession(configuration: configuration)
+    }()
+
     init() {
         self.analysisTracker = AnalysisTracker(logger: Logger.shared)
     }
@@ -84,16 +96,11 @@ final class AnalysisService: AnalysisServiceProtocol, @unchecked Sendable {
             throw AnalysisError.networkError("Failed to encode request: \(error.localizedDescription)")
         }
 
-        // Use background URLSession for reliability when phone is locked
-        let dataTask = backgroundSession.dataTask(with: request)
+        // Use dedicated analysis session with proper timeout configuration
+        // Note: Regular URLSession with extended timeouts is better for large JSON responses than background sessions
         let (data, response): (Data, URLResponse)
         do {
-            (data, response) = try await withCheckedThrowingContinuation { continuation in
-                Task {
-                    await analysisTracker.register(task: dataTask, continuation: continuation)
-                    dataTask.resume()
-                }
-            }
+            (data, response) = try await analysisSession.data(for: request)
         } catch {
             throw AnalysisError.networkError("Request failed: \(error.localizedDescription)")
         }
@@ -121,11 +128,224 @@ final class AnalysisService: AnalysisServiceProtocol, @unchecked Sendable {
             return envelope
         } catch {
             print("❌ AnalysisService: JSON decode error: \(error)")
-            if let body = String(data: data, encoding: .utf8) {
-                print("❌ AnalysisService: Raw response: \(body)")
+
+            // Enhanced error debugging
+            print("❌ AnalysisService: Data size received: \(data.count) bytes")
+
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .typeMismatch(let type, let context):
+                    print("❌ AnalysisService: Type mismatch - expected \(type), path: \(context.codingPath)")
+                    print("❌ AnalysisService: Context: \(context.debugDescription)")
+                case .valueNotFound(let type, let context):
+                    print("❌ AnalysisService: Value not found - \(type), path: \(context.codingPath)")
+                    print("❌ AnalysisService: Context: \(context.debugDescription)")
+                case .keyNotFound(let key, let context):
+                    print("❌ AnalysisService: Key not found - \(key.stringValue), path: \(context.codingPath)")
+                    print("❌ AnalysisService: Context: \(context.debugDescription)")
+                case .dataCorrupted(let context):
+                    print("❌ AnalysisService: Data corrupted at path: \(context.codingPath)")
+                    print("❌ AnalysisService: Context: \(context.debugDescription)")
+                @unknown default:
+                    print("❌ AnalysisService: Unknown decoding error")
+                }
             }
+
+            if let body = String(data: data, encoding: .utf8) {
+                print("❌ AnalysisService: Raw response (first 500 chars): \(String(body.prefix(500)))")
+                if body.count > 500 {
+                    print("❌ AnalysisService: Response truncated - total length: \(body.count)")
+                }
+            } else {
+                print("❌ AnalysisService: Unable to decode response data as UTF-8 string")
+            }
+
             throw AnalysisError.decodingError(error.localizedDescription)
         }
+    }
+
+    // MARK: - SSE Streaming Support
+
+    /// Analyze with Server-Sent Events (SSE) streaming for progressive updates
+    func analyzeWithStreaming<T: Codable & Sendable>(
+        mode: AnalysisMode,
+        transcript: String,
+        responseType: T.Type,
+        historicalContext: [HistoricalMemoContext]? = nil,
+        isPro: Bool = false,
+        onProgress: @escaping @Sendable (AnalysisStreamingUpdate) -> Void
+    ) async throws -> AnalyzeEnvelope<T> {
+        let analyzeURL = config.apiBaseURL.appendingPathComponent("analyze")
+        print("📡 AnalysisService (SSE): Using API URL: \(analyzeURL.absoluteString)")
+
+        // Sanitize transcript
+        let safeTranscript = AnalysisGuardrails.sanitizeTranscriptForLLM(transcript)
+
+        var requestBody: [String: Any] = [
+            "mode": mode.rawValue,
+            "transcript": safeTranscript,
+            "isPro": isPro,
+            "stream": true  // Request SSE streaming
+        ]
+
+        // Include historical context if provided
+        if let historicalContext = historicalContext, !historicalContext.isEmpty {
+            if let encoded = try? JSONEncoder().encode(historicalContext),
+               let jsonArray = try? JSONSerialization.jsonObject(with: encoded) as? [[String: Any]] {
+                requestBody["historicalContext"] = jsonArray
+                print("📡 AnalysisService (SSE): Including \(historicalContext.count) historical memos")
+            }
+        }
+
+        var request = URLRequest(url: analyzeURL)
+        request.httpMethod = "POST"
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")  // Request SSE
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = config.timeoutInterval(for: mode)
+
+        print("📡 AnalysisService (SSE): Timeout: \(request.timeoutInterval)s, isPro: \(isPro)")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            throw AnalysisError.networkError("Failed to encode request: \(error.localizedDescription)")
+        }
+
+        // Use URLSession.shared for streaming (not background session)
+        let (bytes, response): (URLSession.AsyncBytes, URLResponse)
+        do {
+            (bytes, response) = try await URLSession.shared.bytes(for: request)
+        } catch {
+            print("❌ AnalysisService (SSE): Stream connection failed, attempting fallback to non-streaming")
+            // Graceful fallback: retry without streaming
+            return try await analyze(
+                mode: mode,
+                transcript: transcript,
+                responseType: responseType,
+                historicalContext: historicalContext,
+                isPro: isPro
+            )
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AnalysisError.networkError("Invalid response")
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            print("❌ AnalysisService (SSE): Server error \(httpResponse.statusCode)")
+            throw AnalysisError.serverError(httpResponse.statusCode)
+        }
+
+        // Check if response is actually SSE
+        let contentType = httpResponse.value(forHTTPHeaderField: "Content-Type") ?? ""
+        if !contentType.contains("text/event-stream") {
+            print("⚠️ AnalysisService (SSE): Server didn't return SSE stream, falling back to non-streaming")
+            // Server didn't support streaming - fall back
+            return try await analyze(
+                mode: mode,
+                transcript: transcript,
+                responseType: responseType,
+                historicalContext: historicalContext,
+                isPro: isPro
+            )
+        }
+
+        print("📡 AnalysisService (SSE): Streaming started, parsing events...")
+
+        // Parse SSE events
+        var buffer = ""
+        var finalEnvelope: AnalyzeEnvelope<T>?
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        do {
+            for try await byte in bytes {
+                buffer.append(String(decoding: [byte], as: UTF8.self))
+
+                // Process complete events (terminated by \n\n)
+                while let range = buffer.range(of: "\n\n") {
+                    let rawEvent = String(buffer[..<range.lowerBound])
+                    buffer.removeSubrange(..<range.upperBound)
+
+                    // Parse event
+                    var eventType: String?
+                    var eventData: String?
+
+                    for line in rawEvent.split(separator: "\n") {
+                        if line.hasPrefix("event:") {
+                            eventType = String(line.dropFirst("event:".count)).trimmingCharacters(in: .whitespaces)
+                        } else if line.hasPrefix("data:") {
+                            eventData = String(line.dropFirst("data:".count)).trimmingCharacters(in: .whitespaces)
+                        }
+                    }
+
+                    guard let type = eventType, let data = eventData else {
+                        continue
+                    }
+
+                    print("📡 AnalysisService (SSE): Received event: \(type)")
+
+                    switch type {
+                    case "interim":
+                        // Parse interim progress update
+                        if let jsonData = data.data(using: .utf8),
+                           let interimData = try? decoder.decode(InterimEventData.self, from: jsonData) {
+
+                            // Convert server's partialData to PartialDistillData
+                            let partialData = interimData.partialData.map { serverData -> PartialDistillData in
+                                PartialDistillData(
+                                    summary: serverData.summary,
+                                    actionItems: serverData.actionItems,
+                                    reflectionQuestions: serverData.reflectionQuestions,
+                                    thinkingPatterns: serverData.thinkingPatterns,
+                                    philosophicalEchoes: serverData.philosophicalEchoes,
+                                    valuesInsights: serverData.valuesInsights
+                                )
+                            }
+
+                            let update = AnalysisStreamingUpdate(
+                                component: interimData.component,
+                                completedCount: interimData.completedCount,
+                                totalCount: interimData.totalCount,
+                                partialData: partialData,
+                                isFinal: false
+                            )
+                            onProgress(update)
+                            print("📡 AnalysisService (SSE): Progress: \(interimData.completedCount)/\(interimData.totalCount) - \(interimData.component ?? "unknown")")
+                        }
+
+                    case "final":
+                        // Parse final complete response
+                        if let jsonData = data.data(using: .utf8) {
+                            finalEnvelope = try decoder.decode(AnalyzeEnvelope<T>.self, from: jsonData)
+                            print("📡 AnalysisService (SSE): Final event received")
+
+                            // Send final progress update
+                            onProgress(AnalysisStreamingUpdate(isFinal: true))
+                        }
+
+                    case "error":
+                        print("❌ AnalysisService (SSE): Server sent error event: \(data)")
+                        throw AnalysisError.serverError(500)
+
+                    default:
+                        print("⚠️ AnalysisService (SSE): Unknown event type: \(type)")
+                    }
+                }
+            }
+        } catch {
+            print("❌ AnalysisService (SSE): Stream parsing error: \(error)")
+            throw AnalysisError.networkError("Stream parsing failed: \(error.localizedDescription)")
+        }
+
+        guard let envelope = finalEnvelope else {
+            print("❌ AnalysisService (SSE): Stream ended without final event")
+            throw AnalysisError.networkError("Stream ended without final event")
+        }
+
+        print("✅ AnalysisService (SSE): Streaming completed")
+        print("✅ AnalysisService (SSE): Model: \(envelope.model), Tokens: \(envelope.tokens.input) in, \(envelope.tokens.output) out")
+        return envelope
     }
 
     // MARK: - Convenience Methods
@@ -153,6 +373,25 @@ final class AnalysisService: AnalysisServiceProtocol, @unchecked Sendable {
     /// Free tier lite distill analysis
     func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData> {
         try await analyze(mode: .liteDistill, transcript: transcript, responseType: LiteDistillData.self, historicalContext: nil, isPro: false)
+    }
+
+    // MARK: - SSE Streaming Convenience Methods
+
+    /// Analyze distill with SSE streaming for progressive updates
+    func analyzeDistillStreaming(
+        transcript: String,
+        historicalContext: [HistoricalMemoContext]? = nil,
+        isPro: Bool,
+        onProgress: @escaping @Sendable (AnalysisStreamingUpdate) -> Void
+    ) async throws -> AnalyzeEnvelope<DistillData> {
+        try await analyzeWithStreaming(
+            mode: .distill,
+            transcript: transcript,
+            responseType: DistillData.self,
+            historicalContext: historicalContext,
+            isPro: isPro,
+            onProgress: onProgress
+        )
     }
 }
 
@@ -280,4 +519,24 @@ private final class AnalysisSessionDelegate: NSObject, URLSessionDataDelegate, U
             logger.debug("AnalysisSessionDelegate: session invalidated without error", category: .network, context: nil)
         }
     }
+}
+
+// MARK: - SSE Event Data Models
+
+/// Server interim event data structure (matches server's SSE interim event format)
+private struct InterimEventData: Codable {
+    let component: String?
+    let completedCount: Int
+    let totalCount: Int
+    let partialData: ServerPartialData?
+}
+
+/// Server's partial data structure (matches server's interim event partialData field)
+private struct ServerPartialData: Codable {
+    let summary: String?
+    let actionItems: [DistillData.ActionItem]?
+    let reflectionQuestions: [String]?
+    let thinkingPatterns: [ThinkingPattern]?
+    let philosophicalEchoes: [PhilosophicalEcho]?
+    let valuesInsights: ValuesInsight?
 }

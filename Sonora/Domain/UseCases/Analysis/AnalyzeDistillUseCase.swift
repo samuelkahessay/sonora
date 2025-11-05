@@ -3,7 +3,12 @@ import Foundation
 /// Use case for performing comprehensive Distill analysis on transcript with repository caching
 /// Provides mentor-like insights including summary, action items, themes, and reflection questions
 protocol AnalyzeDistillUseCaseProtocol: Sendable {
-    func execute(transcript: String, memoId: UUID, isPro: Bool) async throws -> AnalyzeEnvelope<DistillData>
+    func execute(
+        transcript: String,
+        memoId: UUID,
+        isPro: Bool,
+        progressHandler: (@MainActor @Sendable (AnalysisStreamingUpdate) -> Void)?
+    ) async throws -> AnalyzeEnvelope<DistillData>
 }
 
 /// Use case runs off main thread; repository operations automatically hop to main actor.
@@ -35,7 +40,12 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, Sendable {
     }
 
     // MARK: - Use Case Execution
-    func execute(transcript: String, memoId: UUID, isPro: Bool) async throws -> AnalyzeEnvelope<DistillData> {
+    func execute(
+        transcript: String,
+        memoId: UUID,
+        isPro: Bool,
+        progressHandler: (@MainActor @Sendable (AnalysisStreamingUpdate) -> Void)? = nil
+    ) async throws -> AnalyzeEnvelope<DistillData> {
         let correlationId = UUID().uuidString
         let context = LogContext(correlationId: correlationId, additionalInfo: ["memoId": memoId.uuidString, "isPro": String(isPro)])
 
@@ -84,13 +94,33 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, Sendable {
             let historicalContext = await buildHistoricalContext.execute(currentMemoId: memoId)
             logger.debug("Built historical context with \(historicalContext.count) memos", category: .analysis, context: context)
 
-            // Call service to perform analysis
+            // Call service to perform analysis (with or without streaming)
             let analysisTimer = PerformanceTimer(operation: "Distill Analysis API Call", category: .analysis)
-            let result = try await analysisService.analyzeDistill(
-                transcript: transcript,
-                historicalContext: historicalContext.isEmpty ? nil : historicalContext,
-                isPro: isPro
-            )
+            let result: AnalyzeEnvelope<DistillData>
+
+            if let progressHandler = progressHandler {
+                // Use SSE streaming with progressive updates
+                logger.debug("Using SSE streaming for progressive updates", category: .analysis, context: context)
+                result = try await analysisService.analyzeDistillStreaming(
+                    transcript: transcript,
+                    historicalContext: historicalContext.isEmpty ? nil : historicalContext,
+                    isPro: isPro,
+                    onProgress: { update in
+                        // Forward progress updates to UI on main actor
+                        Task { @MainActor in
+                            progressHandler(update)
+                        }
+                    }
+                )
+            } else {
+                // Use standard non-streaming analysis
+                logger.debug("Using standard non-streaming analysis", category: .analysis, context: context)
+                result = try await analysisService.analyzeDistill(
+                    transcript: transcript,
+                    historicalContext: historicalContext.isEmpty ? nil : historicalContext,
+                    isPro: isPro
+                )
+            }
 
             // Guardrails: validate structure before persisting
             guard AnalysisGuardrails.validate(distill: result.data) else {

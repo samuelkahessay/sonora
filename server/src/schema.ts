@@ -76,7 +76,8 @@ export const RequestSchema = z.object({
   ]),
   transcript: z.string().min(10).max(10000),
   historicalContext: z.array(HistoricalMemoContextSchema).max(10).optional(),
-  isPro: z.boolean().default(false) // Pro subscription flag - server includes pro modes when true (defaults to false if not provided)
+  isPro: z.boolean().default(false), // Pro subscription flag - server includes pro modes when true (defaults to false if not provided)
+  stream: z.boolean().default(false) // SSE streaming flag - server sends progressive updates via Server-Sent Events when true
 });
 
 export const DistillDataSchema = z.object({

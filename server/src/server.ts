@@ -3,6 +3,7 @@ import cors from 'cors';
 import multer from 'multer';
 import { z } from 'zod';
 import fs from 'fs';
+import { randomUUID } from 'crypto';
 import { FormData, File } from 'undici';
 import { RequestSchema, DistillDataSchema, LiteDistillDataSchema, EventsDataSchema, RemindersDataSchema, ModelSettings, AnalysisJsonSchemas } from './schema.js';
 import { buildPrompt } from './prompts.js';
@@ -501,7 +502,20 @@ function validateAnalysisData(mode: string, parsedData: any): any {
     case 'distill':
       return DistillDataSchema.parse(parsedData);
     case 'lite-distill':
-      return LiteDistillDataSchema.parse(parsedData);
+      const validated = LiteDistillDataSchema.parse(parsedData);
+
+      // Ensure personalInsight has an ID (iOS requirement)
+      if (!validated.personalInsight.id) {
+        validated.personalInsight.id = randomUUID();
+      }
+
+      // Ensure all simpleTodos have IDs (iOS requirement)
+      validated.simpleTodos = validated.simpleTodos.map(todo => ({
+        ...todo,
+        id: todo.id || randomUUID()
+      }));
+
+      return validated;
     case 'distill-summary':
       return { summary: parsedData.summary };
     case 'distill-actions':
@@ -525,6 +539,12 @@ function validateAnalysisData(mode: string, parsedData: any): any {
   }
 }
 
+// SSE Helper: Send Server-Sent Events to client
+function sendSSEEvent(res: express.Response, event: string, data: Record<string, unknown>) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
 // Main analyze endpoint
 app.post('/analyze', async (req, res) => {
   const startTime = Date.now();
@@ -542,16 +562,258 @@ app.post('/analyze', async (req, res) => {
     console.log('🔍 [DEBUG] isPro field in body:', req.body.isPro, '(type:', typeof req.body.isPro, ')');
 
     // Validate request
-    const { mode, transcript, historicalContext, isPro } = RequestSchema.parse(req.body);
+    const { mode, transcript, historicalContext, isPro, stream } = RequestSchema.parse(req.body);
+
+    // Detect if streaming is requested via Accept header or stream parameter
+    const wantsStream =
+      (req.headers['accept'] || '').toLowerCase().includes('text/event-stream') ||
+      stream === true;
 
     // Log parsed values
     console.log('✅ [DEBUG] Parsed isPro:', isPro, '(type:', typeof isPro, ')');
     console.log('🎯 [DEBUG] Condition check: mode === "distill":', mode === 'distill', '&& isPro === true:', isPro === true);
+    console.log('📡 [DEBUG] Streaming requested:', wantsStream, '(header:', req.headers['accept'], ', param:', stream, ')');
 
-    // SIMPLIFIED NON-STREAMING PATH: Handle pro modes aggregation for distill mode
+    // SSE STREAMING PATH: Pro distill with progressive updates
+    if (mode === 'distill' && isPro === true && wantsStream) {
+      try {
+        console.log('📡 Starting SSE streaming for Pro distill');
+
+        // Set SSE headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+        const { system: baseSystem, user: baseUser } = buildPrompt(mode, transcript, historicalContext);
+        const baseSettings = ModelSettings[mode] || { verbosity: 'low', reasoningEffort: 'medium' };
+        const hasHistoricalContext = historicalContext && historicalContext.length > 0;
+        const useStrictSchema = !(mode === 'distill' && hasHistoricalContext);
+        const baseSchema = useStrictSchema ? AnalysisJsonSchemas[mode] : undefined;
+
+        // Step 1: Execute base distill analysis
+        console.log('📡 [SSE] Executing base distill...');
+        const { jsonText: baseJsonText, usage: baseUsage } = await createChatJSON({
+          system: baseSystem,
+          user: baseUser,
+          verbosity: baseSettings.verbosity,
+          reasoningEffort: baseSettings.reasoningEffort,
+          schema: baseSchema
+        });
+
+        // Parse base data
+        let baseData: any;
+        try {
+          baseData = JSON.parse(baseJsonText);
+        } catch {
+          const stripped = baseJsonText.trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+          baseData = JSON.parse(stripped);
+        }
+        const validatedBaseData = validateAnalysisData(mode, baseData);
+
+        // Send interim event: base component completed (1/4)
+        sendSSEEvent(res, 'interim', {
+          component: 'base',
+          completedCount: 1,
+          totalCount: 4,
+          partialData: {
+            summary: (validatedBaseData as any).summary,
+            actionItems: (validatedBaseData as any).action_items,
+            reflectionQuestions: (validatedBaseData as any).reflection_questions
+          }
+        });
+        console.log('📡 [SSE] Sent base distill interim event (1/4)');
+
+        // Step 2: Execute Pro components in parallel
+        console.log('📡 [SSE] Executing Pro components...');
+        const [cognitiveResult, philosophicalResult, valuesResult] = await Promise.allSettled([
+          // Thinking patterns
+          (async () => {
+            const { system, user } = buildPrompt('thinking-patterns', transcript);
+            return await createChatCompletionsJSON({
+              system,
+              user,
+              model: process.env.SONORA_MODEL || 'gpt-5-nano'
+            });
+          })(),
+          // Philosophical echoes
+          (async () => {
+            const { system, user } = buildPrompt('philosophical-echoes', transcript);
+            return await createChatCompletionsJSON({
+              system,
+              user,
+              model: process.env.SONORA_MODEL || 'gpt-5-nano'
+            });
+          })(),
+          // Values recognition
+          (async () => {
+            const { system, user } = buildPrompt('values-recognition', transcript);
+            return await createChatCompletionsJSON({
+              system,
+              user,
+              model: process.env.SONORA_MODEL || 'gpt-5-nano'
+            });
+          })()
+        ]);
+
+        // Aggregate tokens
+        let totalTokens = { input: baseUsage.input, output: baseUsage.output };
+        let componentCount = 1; // Base already sent
+
+        // Process thinking patterns result
+        if (cognitiveResult.status === 'fulfilled') {
+          const { jsonText, usage } = cognitiveResult.value;
+          totalTokens.input += usage.input;
+          totalTokens.output += usage.output;
+          try {
+            const parsed = JSON.parse(jsonText);
+            const validated = validateAnalysisData('thinking-patterns', parsed);
+            (validatedBaseData as any).thinkingPatterns = validated.thinkingPatterns;
+
+            // Send interim event (2/4)
+            componentCount++;
+            sendSSEEvent(res, 'interim', {
+              component: 'thinkingPatterns',
+              completedCount: componentCount,
+              totalCount: 4,
+              partialData: {
+                summary: (validatedBaseData as any).summary,
+                actionItems: (validatedBaseData as any).action_items,
+                reflectionQuestions: (validatedBaseData as any).reflection_questions,
+                thinkingPatterns: validated.thinkingPatterns
+              }
+            });
+            console.log(`📡 [SSE] Sent thinking patterns interim event (${componentCount}/4)`);
+          } catch (err) {
+            console.warn('⚠️ Thinking patterns parsing failed:', err);
+            (validatedBaseData as any).thinkingPatterns = [];
+          }
+        } else {
+          console.warn('⚠️ Cognitive clarity request failed:', cognitiveResult.reason);
+          (validatedBaseData as any).thinkingPatterns = [];
+        }
+
+        // Process philosophical echoes result
+        if (philosophicalResult.status === 'fulfilled') {
+          const { jsonText, usage } = philosophicalResult.value;
+          totalTokens.input += usage.input;
+          totalTokens.output += usage.output;
+          try {
+            const parsed = JSON.parse(jsonText);
+            const validated = validateAnalysisData('philosophical-echoes', parsed);
+            (validatedBaseData as any).philosophicalEchoes = validated.philosophicalEchoes;
+
+            // Send interim event (3/4)
+            componentCount++;
+            sendSSEEvent(res, 'interim', {
+              component: 'philosophicalEchoes',
+              completedCount: componentCount,
+              totalCount: 4,
+              partialData: {
+                summary: (validatedBaseData as any).summary,
+                actionItems: (validatedBaseData as any).action_items,
+                reflectionQuestions: (validatedBaseData as any).reflection_questions,
+                thinkingPatterns: (validatedBaseData as any).thinkingPatterns,
+                philosophicalEchoes: validated.philosophicalEchoes
+              }
+            });
+            console.log(`📡 [SSE] Sent philosophical echoes interim event (${componentCount}/4)`);
+          } catch (err) {
+            console.warn('⚠️ Philosophical echoes parsing failed:', err);
+            (validatedBaseData as any).philosophicalEchoes = [];
+          }
+        } else {
+          console.warn('⚠️ Philosophical echoes request failed:', philosophicalResult.reason);
+          (validatedBaseData as any).philosophicalEchoes = [];
+        }
+
+        // Process values insights result
+        if (valuesResult.status === 'fulfilled') {
+          const { jsonText, usage } = valuesResult.value;
+          totalTokens.input += usage.input;
+          totalTokens.output += usage.output;
+          try {
+            const parsed = JSON.parse(jsonText);
+            const validated = validateAnalysisData('values-recognition', parsed);
+            (validatedBaseData as any).valuesInsights = {
+              coreValues: validated.coreValues,
+              tensions: validated.tensions
+            };
+
+            // Send interim event (4/4)
+            componentCount++;
+            sendSSEEvent(res, 'interim', {
+              component: 'valuesInsights',
+              completedCount: componentCount,
+              totalCount: 4,
+              partialData: {
+                summary: (validatedBaseData as any).summary,
+                actionItems: (validatedBaseData as any).action_items,
+                reflectionQuestions: (validatedBaseData as any).reflection_questions,
+                thinkingPatterns: (validatedBaseData as any).thinkingPatterns,
+                philosophicalEchoes: (validatedBaseData as any).philosophicalEchoes,
+                valuesInsights: (validatedBaseData as any).valuesInsights
+              }
+            });
+            console.log(`📡 [SSE] Sent values insights interim event (${componentCount}/4)`);
+          } catch (err) {
+            console.warn('⚠️ Values recognition parsing failed:', err);
+            (validatedBaseData as any).valuesInsights = null;
+          }
+        } else {
+          console.warn('⚠️ Values recognition request failed:', valuesResult.reason);
+          (validatedBaseData as any).valuesInsights = null;
+        }
+
+        // Build moderation text from combined data
+        let textForModeration = `${(validatedBaseData as any).summary}\n${((validatedBaseData as any).action_items || []).map((a: any) => a.text).join(' \n')}\n${((validatedBaseData as any).reflection_questions || []).join(' \n')}`;
+        if ((validatedBaseData as any).thinkingPatterns) {
+          textForModeration += `\n${((validatedBaseData as any).thinkingPatterns || []).map((p: any) => `${p.observation} ${p.reframe || ''}`).join(' \n')}`;
+        }
+        if ((validatedBaseData as any).philosophicalEchoes) {
+          textForModeration += `\n${((validatedBaseData as any).philosophicalEchoes || []).map((e: any) => `${e.connection} ${e.quote || ''}`).join(' \n')}`;
+        }
+        if ((validatedBaseData as any).valuesInsights) {
+          textForModeration += `\n${((validatedBaseData as any).valuesInsights.coreValues || []).map((v: any) => `${v.name} ${v.evidence}`).join(' \n')}`;
+        }
+        const moderation = await createModeration(String(textForModeration || '').slice(0, 8000));
+
+        const latency_ms = Date.now() - startTime;
+
+        // Send final event with complete data
+        sendSSEEvent(res, 'final', {
+          mode,
+          data: validatedBaseData,
+          model: process.env.SONORA_MODEL || 'gpt-5-nano',
+          tokens: totalTokens,
+          latency_ms,
+          moderation
+        });
+        console.log('📡 [SSE] Sent final event, closing stream');
+
+        res.end();
+        return;
+      } catch (sseError) {
+        console.error('❌ [SSE] Streaming error:', sseError);
+        // Fallback: send error event and close stream
+        try {
+          sendSSEEvent(res, 'error', {
+            message: 'Streaming failed, falling back to non-streaming',
+            error: String(sseError)
+          });
+          res.end();
+        } catch {
+          // If even error sending fails, just end the response
+          res.end();
+        }
+        return;
+      }
+    }
+
+    // NON-STREAMING PATH: Handle pro modes aggregation for distill mode
     if (mode === 'distill' && isPro === true) {
       // Pro user requesting distill - fetch all pro modes data in parallel
-      console.log('📝 Distill analysis with Pro modes enabled');
+      console.log('📝 Distill analysis with Pro modes enabled (non-streaming)');
 
       const { system: baseSystem, user: baseUser } = buildPrompt(mode, transcript, historicalContext);
       const baseSettings = ModelSettings[mode] || { verbosity: 'low', reasoningEffort: 'medium' };
@@ -628,9 +890,11 @@ app.post('/analyze', async (req, res) => {
           console.log(`✅ Thinking patterns: ${validated.thinkingPatterns.length} patterns`);
         } catch (err) {
           console.warn('⚠️ Thinking patterns parsing failed:', err);
+          (validatedBaseData as any).thinkingPatterns = [];
         }
       } else {
         console.warn('⚠️ Cognitive clarity request failed:', cognitiveResult.reason);
+        (validatedBaseData as any).thinkingPatterns = [];
       }
 
       // Add philosophical echoes if successful
@@ -645,9 +909,11 @@ app.post('/analyze', async (req, res) => {
           console.log(`✅ Philosophical echoes: ${validated.philosophicalEchoes.length} echoes`);
         } catch (err) {
           console.warn('⚠️ Philosophical echoes parsing failed:', err);
+          (validatedBaseData as any).philosophicalEchoes = [];
         }
       } else {
         console.warn('⚠️ Philosophical echoes request failed:', philosophicalResult.reason);
+        (validatedBaseData as any).philosophicalEchoes = [];
       }
 
       // Add values insights if successful
@@ -665,9 +931,11 @@ app.post('/analyze', async (req, res) => {
           console.log(`✅ Values insights: ${validated.coreValues.length} values`);
         } catch (err) {
           console.warn('⚠️ Values recognition parsing failed:', err);
+          (validatedBaseData as any).valuesInsights = null;
         }
       } else {
         console.warn('⚠️ Values recognition request failed:', valuesResult.reason);
+        (validatedBaseData as any).valuesInsights = null;
       }
 
       // Build moderation text from combined data

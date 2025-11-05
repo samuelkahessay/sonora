@@ -65,21 +65,37 @@ struct AnalysisSectionView: View {
                 .debugBorder(showDebugBorders, color: DistillLayout.debugButtonBorder, cornerRadius: DistillLayout.buttonCornerRadius)
             }
 
-            // Loading State
+            // Loading State - with SSE streaming support
             if viewModel.isAnalyzing {
-                let loaderMessage = DistillCopy.loaderMessages[safe: loaderMessageIndex] ?? DistillCopy.loaderMessages.first ?? "Distilling your voice"
-                HStack(spacing: 12) {
-                    LoadingIndicator(size: .small)
-                    Text(loaderMessage)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .id(loaderMessageIndex)
-                    Spacer()
+                // Show progressive streaming UI if SSE updates are available
+                if let progress = viewModel.distillProgress {
+                    VStack(spacing: 16) {
+                        // Progress indicator with component status
+                        DistillProgressSectionView(progress: progress)
+
+                        // Partial results appearing progressively
+                        if let partialData = viewModel.partialDistillData {
+                            DistillPartialResultView(partialData: partialData)
+                        }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .animation(.easeInOut(duration: 0.3), value: viewModel.partialDistillData)
+                } else {
+                    // Standard loading indicator (cache loading or non-streaming fallback)
+                    let loaderMessage = DistillCopy.loaderMessages[safe: loaderMessageIndex] ?? DistillCopy.loaderMessages.first ?? "Distilling your voice"
+                    HStack(spacing: 12) {
+                        LoadingIndicator(size: .small)
+                        Text(loaderMessage)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .id(loaderMessageIndex)
+                        Spacer()
+                    }
+                    .padding()
+                    .background(Color.semantic(.brandPrimary).opacity(0.05))
+                    .cornerRadius(8)
+                    .animation(SonoraDesignSystem.Animation.loaderMessage, value: loaderMessageIndex)
                 }
-                .padding()
-                .background(Color.semantic(.brandPrimary).opacity(0.05))
-                .cornerRadius(8)
-                .animation(SonoraDesignSystem.Animation.loaderMessage, value: loaderMessageIndex)
             }
 
             // Results with AI disclaimer (only when there are results)

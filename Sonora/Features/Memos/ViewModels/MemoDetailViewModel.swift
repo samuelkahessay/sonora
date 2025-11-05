@@ -36,6 +36,12 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     /// Whether a cached Distill result exists (loaded asynchronously)
     @Published var hasCachedDistill: Bool = false
 
+    // MARK: - SSE Streaming State
+    /// Progressive distill update during SSE streaming
+    @Published var distillProgress: AnalysisStreamingUpdate?
+    /// Partial distill data accumulated during streaming
+    @Published var partialDistillData: PartialDistillData?
+
     // MARK: - Current Memo
     internal var currentMemo: Memo?
 
@@ -255,16 +261,36 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     // MARK: - Distill Methods
 
     func performDistill(transcript: String, memoId: UUID) async {
-        print("📝 MemoDetailViewModel: Starting Distill analysis")
+        print("📝 MemoDetailViewModel: Starting Distill analysis (with SSE streaming)")
+
+        // Reset streaming state
+        await MainActor.run {
+            distillProgress = nil
+            partialDistillData = nil
+        }
 
         do {
             let startTime = CFAbsoluteTimeGetCurrent()
-            let envelope = try await analyzeDistillUseCase.execute(transcript: transcript, memoId: memoId, isPro: storeKitService.isPro)
+            let envelope = try await analyzeDistillUseCase.execute(
+                transcript: transcript,
+                memoId: memoId,
+                isPro: storeKitService.isPro,
+                progressHandler: { @MainActor [weak self] update in
+                    // Update streaming state on main actor
+                    self?.distillProgress = update
+                    self?.partialDistillData = update.partialData
+                    print("📡 MemoDetailViewModel: Progress update - \(update.completedCount)/\(update.totalCount)")
+                }
+            )
             let duration = CFAbsoluteTimeGetCurrent() - startTime
 
             await MainActor.run {
                 analysisPayload = .distill(envelope.data, envelope)
                 isAnalyzing = false
+
+                // Clear streaming state on completion
+                distillProgress = nil
+                partialDistillData = nil
 
                 // Determine cache status based on response time and latency
                 let wasCached = duration < 1.0 || envelope.latency_ms < 1_000
