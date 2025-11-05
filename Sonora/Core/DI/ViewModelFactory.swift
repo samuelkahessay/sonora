@@ -140,7 +140,14 @@ final class DefaultViewModelFactory: ViewModelFactory {
             startTranscriptionUseCase: startTranscriptionUseCase,
             retryTranscriptionUseCase: retryTranscriptionUseCase,
             getTranscriptionStateUseCase: getTranscriptionStateUseCase,
-            analyzeDistillUseCase: AnalyzeDistillUseCase(analysisService: container.analysisService(), analysisRepository: analysisRepository, logger: logger, eventBus: eventBus, operationCoordinator: operationCoordinator),
+            analyzeDistillUseCase: AnalyzeDistillUseCase(
+                analysisService: container.analysisService(),
+                analysisRepository: analysisRepository,
+                buildHistoricalContext: container.buildHistoricalContextUseCase(),
+                logger: logger,
+                eventBus: eventBus,
+                operationCoordinator: operationCoordinator
+            ),
             analyzeLiteDistillUseCase: container.analyzeLiteDistillUseCase(),
             renameMemoUseCase: RenameMemoUseCase(memoRepository: memoRepository),
             createTranscriptShareFileUseCase: container.createTranscriptShareFileUseCase(),

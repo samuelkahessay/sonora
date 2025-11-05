@@ -261,6 +261,17 @@ final class TitleGenerationCoordinator: ObservableObject {
                 stateByMemo[memoId] = .success(shortTitle)
                 metrics = metrics(for: jobRepository.fetchAllJobs())
                 logger.info("Auto title adopted from short transcript", category: .system, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "title": shortTitle]))
+
+                // Transition to idle after brief delay so card uses memo.displayName
+                Task {
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                    await MainActor.run { [weak self] in
+                        guard let self else { return }
+                        if case .success = self.stateByMemo[memoId] {
+                            self.stateByMemo[memoId] = .idle
+                        }
+                    }
+                }
             }
             return
         }
@@ -297,6 +308,17 @@ final class TitleGenerationCoordinator: ObservableObject {
                 stateByMemo[memoId] = .success(title)
                 metrics = metrics(for: jobRepository.fetchAllJobs())
                 logger.info("Auto title generated", category: .system, context: LogContext(additionalInfo: ["memoId": memoId.uuidString, "title": title]))
+
+                // Transition to idle after brief delay so card uses memo.displayName
+                Task {
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                    await MainActor.run { [weak self] in
+                        guard let self else { return }
+                        if case .success = self.stateByMemo[memoId] {
+                            self.stateByMemo[memoId] = .idle
+                        }
+                    }
+                }
                 return
             }
             throw TitleServiceError.validationFailed

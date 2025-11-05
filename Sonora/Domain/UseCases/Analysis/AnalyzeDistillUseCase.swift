@@ -12,6 +12,7 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, Sendable {
     // MARK: - Dependencies
     private let analysisService: any AnalysisServiceProtocol
     private let analysisRepository: any AnalysisRepository
+    private let buildHistoricalContext: any BuildHistoricalContextUseCaseProtocol
     private let logger: any LoggerProtocol
     private let eventBus: any EventBusProtocol
     private let operationCoordinator: any OperationCoordinatorProtocol
@@ -20,12 +21,14 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, Sendable {
     init(
         analysisService: any AnalysisServiceProtocol,
         analysisRepository: any AnalysisRepository,
+        buildHistoricalContext: any BuildHistoricalContextUseCaseProtocol,
         logger: any LoggerProtocol = Logger.shared,
         eventBus: any EventBusProtocol,
         operationCoordinator: any OperationCoordinatorProtocol
     ) {
         self.analysisService = analysisService
         self.analysisRepository = analysisRepository
+        self.buildHistoricalContext = buildHistoricalContext
         self.logger = logger
         self.eventBus = eventBus
         self.operationCoordinator = operationCoordinator
@@ -77,9 +80,17 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, Sendable {
                           level: .warning,
                           context: LogContext(correlationId: correlationId, additionalInfo: ["cacheHit": false]))
 
+            // Build historical context for pattern detection
+            let historicalContext = await buildHistoricalContext.execute(currentMemoId: memoId)
+            logger.debug("Built historical context with \(historicalContext.count) memos", category: .analysis, context: context)
+
             // Call service to perform analysis
             let analysisTimer = PerformanceTimer(operation: "Distill Analysis API Call", category: .analysis)
-            let result = try await analysisService.analyzeDistill(transcript: transcript, isPro: isPro)
+            let result = try await analysisService.analyzeDistill(
+                transcript: transcript,
+                historicalContext: historicalContext.isEmpty ? nil : historicalContext,
+                isPro: isPro
+            )
 
             // Guardrails: validate structure before persisting
             guard AnalysisGuardrails.validate(distill: result.data) else {

@@ -27,9 +27,13 @@ internal struct ThinkingPatternsSectionView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Thinking Patterns section, Pro feature, \(patterns.count) patterns detected")
 
-            VStack(alignment: .leading, spacing: patternSpacing) {
-                ForEach(patterns) { pattern in
-                    ThinkingPatternCard(pattern: pattern)
+            if patterns.isEmpty {
+                EmptyThinkingPatternsState()
+            } else {
+                VStack(alignment: .leading, spacing: patternSpacing) {
+                    ForEach(patterns) { pattern in
+                        ThinkingPatternCard(pattern: pattern)
+                    }
                 }
             }
         }
@@ -116,5 +120,34 @@ private struct ThinkingPatternCard: View {
         .cornerRadius(SonoraDesignSystem.Spacing.cardRadius)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Thinking pattern: \(pattern.type.displayName). \(pattern.observation)")
+    }
+}
+
+/// Empty state shown when no thinking patterns are detected
+private struct EmptyThinkingPatternsState: View {
+    @ScaledMetric private var emptyStatePadding: CGFloat = 12
+    @ScaledMetric private var emptyStateSpacing: CGFloat = 8
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: emptyStateSpacing) {
+            Text("Clear and balanced communication")
+                .font(.body)
+                .foregroundColor(.semantic(.textSecondary))
+                .fontWeight(.medium)
+
+            Text("No concerning speech patterns detected in this memo. Your thinking appears clear and well-grounded.")
+                .font(.callout)
+                .foregroundColor(.semantic(.textTertiary))
+                .lineSpacing(2)
+                .multilineTextAlignment(.leading)
+        }
+        .padding(emptyStatePadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            Color.semantic(.success).opacity(0.05)
+        )
+        .cornerRadius(SonoraDesignSystem.Spacing.cardRadius)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("No concerning thinking patterns detected. Clear and balanced communication.")
     }
 }

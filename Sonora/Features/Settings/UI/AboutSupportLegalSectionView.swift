@@ -31,6 +31,29 @@ struct AboutSupportLegalSectionView: View {
                     .buttonStyle(.plain)
                     #endif
                 }
+
+                Divider().background(Color.semantic(.separator))
+
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    sectionHeader("Important Notice")
+                    HStack(alignment: .top, spacing: Spacing.sm) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.semantic(.brandPrimary))
+                            .frame(width: 28)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Not a Substitute for Professional Help")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.semantic(.textPrimary))
+
+                            Text("Sonora is a thinking tool for verbal processors, not therapy or mental health treatment. If you're experiencing mental health concerns, please consult a licensed professional.")
+                                .font(.caption)
+                                .foregroundColor(.semantic(.textSecondary))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
             }
         }
     }

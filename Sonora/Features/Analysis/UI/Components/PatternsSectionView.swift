@@ -24,9 +24,13 @@ internal struct PatternsSectionView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Patterns and Connections section, \(patterns.count) patterns detected")
 
-            VStack(alignment: .leading, spacing: patternSpacing) {
-                ForEach(patterns) { pattern in
-                    PatternCard(pattern: pattern)
+            if patterns.isEmpty {
+                EmptyPatternState()
+            } else {
+                VStack(alignment: .leading, spacing: patternSpacing) {
+                    ForEach(patterns) { pattern in
+                        PatternCard(pattern: pattern)
+                    }
                 }
             }
         }
@@ -143,5 +147,34 @@ private struct RelatedMemoRow: View {
         } else {
             return "\(days / 30) months ago"
         }
+    }
+}
+
+/// Empty state shown when no patterns are detected
+private struct EmptyPatternState: View {
+    @ScaledMetric private var emptyStatePadding: CGFloat = 12
+    @ScaledMetric private var emptyStateSpacing: CGFloat = 8
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: emptyStateSpacing) {
+            Text("Patterns emerge from multiple memos")
+                .font(.body)
+                .foregroundColor(.semantic(.textSecondary))
+                .fontWeight(.medium)
+
+            Text("As you create more voice memos, I'll identify recurring themes and connections across your thoughts.")
+                .font(.callout)
+                .foregroundColor(.semantic(.textTertiary))
+                .lineSpacing(2)
+                .multilineTextAlignment(.leading)
+        }
+        .padding(emptyStatePadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            Color.semantic(.brandPrimary).opacity(0.03)
+        )
+        .cornerRadius(SonoraDesignSystem.Spacing.cardRadius)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("No patterns detected yet. Patterns emerge from multiple memos.")
     }
 }

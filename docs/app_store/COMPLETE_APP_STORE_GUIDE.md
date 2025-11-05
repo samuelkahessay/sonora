@@ -257,6 +257,9 @@ PERFECT FOR:
 WHY SONORA?
 Unlike other voice apps, Sonora combines powerful AI capabilities with a privacy-first approach. Your recordings stay local until YOU choose to transcribe them. No subscriptions, no tracking, just pure functionality.
 
+IMPORTANT NOTICE:
+Sonora is a thinking tool for verbal processors, not therapy or mental health treatment. If you're experiencing mental health concerns, please consult a licensed professional.
+
 TECHNICAL EXCELLENCE:
 Built with Clean Architecture principles, featuring 97% protocol-based dependency injection and modern async/await concurrency. Sonora represents the gold standard for iOS app development.
 
@@ -827,6 +830,8 @@ PRIVACY & COMPLIANCE NOTES:
 - All AI-generated content clearly labeled as such
 - Content moderation applied to prevent harmful outputs
 - Local storage by default; cloud processing user-initiated only
+- App includes disclaimer: "Sonora is a thinking tool, not therapy or mental health treatment"
+- No clinical or therapeutic claims made; observational language analysis only
 
 TECHNICAL IMPLEMENTATION:
 - Uses UIBackgroundModes: audio for legitimate background recording

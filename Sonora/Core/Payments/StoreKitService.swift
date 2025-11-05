@@ -28,7 +28,7 @@ public final class StoreKitService: StoreKitServiceProtocol, @unchecked Sendable
         static let proFlag = "storekit.isPro.cached"
         static let proTs = "storekit.isPro.cached.ts"
     }
-    private let cacheTTL: TimeInterval = 3_600 // 1 hour
+    private let cacheTTL: TimeInterval = 900 // 15 minutes
 
     // MARK: - State
     private let userDefaults: UserDefaults

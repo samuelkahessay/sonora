@@ -40,7 +40,7 @@ export const ModelSettings = {
   'distill-actions':      { verbosity: 'low', reasoningEffort: 'low' },       // Just action items extraction
   'distill-themes':       { verbosity: 'low', reasoningEffort: 'low' },       // Just themes identification
   'distill-reflection':   { verbosity: 'low', reasoningEffort: 'medium' },    // Just coaching questions
-  'cognitive-clarity':    { verbosity: 'medium', reasoningEffort: 'high' },   // Pro: Beck/Ellis CBT distortions
+  'thinking-patterns':    { verbosity: 'medium', reasoningEffort: 'high' },   // Pro: Linguistic speech patterns
   'philosophical-echoes': { verbosity: 'medium', reasoningEffort: 'high' },   // Pro: Ancient wisdom connections
   'values-recognition':   { verbosity: 'medium', reasoningEffort: 'high' },   // Pro: Core values + tensions
   events:                 { verbosity: 'low', reasoningEffort: 'medium' },    // Calendar event extraction
@@ -70,7 +70,7 @@ export const RequestSchema = z.object({
     'distill-actions',
     'distill-themes',
     'distill-reflection',
-    'cognitive-clarity',
+    'thinking-patterns',
     'philosophical-echoes',
     'values-recognition'
   ]),
@@ -646,7 +646,7 @@ export const AnalysisJsonSchemas = {
   'distill-actions': DistillActionsJsonSchema,
   'distill-themes': DistillThemesJsonSchema,
   'distill-reflection': DistillReflectionJsonSchema,
-  'cognitive-clarity': ThinkingPatternsJsonSchema,
+  'thinking-patterns': ThinkingPatternsJsonSchema,
   'philosophical-echoes': PhilosophicalEchoesJsonSchema,
   'values-recognition': ValuesRecognitionJsonSchema,
   events: EventsJsonSchema,
@@ -666,7 +666,7 @@ export const ResponseSchema = z.object({
     'distill-actions',
     'distill-themes',
     'distill-reflection',
-    'cognitive-clarity',
+    'thinking-patterns',
     'philosophical-echoes',
     'values-recognition'
   ]),

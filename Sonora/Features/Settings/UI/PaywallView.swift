@@ -133,22 +133,30 @@ struct PaywallView: View {
 
     private var benefits: some View {
         VStack(alignment: .leading, spacing: 12) {
-            benefitRow("Unlimited recording (remove 60 min/month limit)")
-            benefitRow("Advanced AI analysis (Themes, Todos, Content)")
-            benefitRow("Calendar & Reminder creation")
-            benefitRow("Premium export options")
+            benefitRow(icon: "brain.head.profile", text: "Thinking Patterns", description: "Identify speech patterns and reframe negative thoughts")
+            benefitRow(icon: "link.circle", text: "Cross-memo insights", description: "Connect themes and detect patterns across your voice journal")
+            benefitRow(icon: "book.closed", text: "Philosophical wisdom", description: "Link your thoughts to Stoicism, Buddhism, and existentialism")
+            benefitRow(icon: "heart.circle", text: "Values recognition", description: "Discover your core values and inner tensions")
+            benefitRow(icon: "calendar.badge.clock", text: "Smart action items", description: "Auto-create calendar events and reminders with one tap")
+            benefitRow(icon: "infinity", text: "Unlimited recording", description: "No monthly limits on voice memos")
         }
         .padding(.top, 4)
     }
 
-    private func benefitRow(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "checkmark.seal.fill")
+    private func benefitRow(icon: String, text: String, description: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
                 .foregroundColor(.semantic(.brandPrimary))
-                .font(.body)
-            Text(text)
-                .foregroundColor(.semantic(.textPrimary))
-                .font(.body)
+                .font(.title3)
+                .frame(width: 24, height: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(text)
+                    .foregroundColor(.semantic(.textPrimary))
+                    .font(.body.weight(.semibold))
+                Text(description)
+                    .foregroundColor(.semantic(.textSecondary))
+                    .font(.caption)
+            }
         }
     }
 

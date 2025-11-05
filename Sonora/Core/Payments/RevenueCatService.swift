@@ -21,7 +21,7 @@ public final class RevenueCatService: NSObject, StoreKitServiceProtocol, @unchec
 
     // MARK: - State
     private let userDefaults: UserDefaults
-    private let cacheTTL: TimeInterval = 3_600 // 1 hour
+    private let cacheTTL: TimeInterval = 900 // 15 minutes
     private let subject: CurrentValueSubject<Bool, Never>
     private var initializationContinuation: CheckedContinuation<Void, Never>?
     private var _isInitialized: Bool = false

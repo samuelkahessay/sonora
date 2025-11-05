@@ -12,6 +12,7 @@ struct DistillResultView: View {
     // Pro gating (Action Items: detection visible to all; adds gated later)
     private var isPro: Bool { DIContainer.shared.storeKitService().isPro }
     @State private var showPaywall: Bool = false
+    @State private var appearAnimated = false
     @SwiftUI.Environment(\.diContainer)
     var container: DIContainer
 
@@ -27,43 +28,53 @@ struct DistillResultView: View {
             // Summary Section
             if let summary = effectiveSummary {
                 DistillSummarySectionView(summary: summary)
+                    .transition(.opacity.combined(with: .offset(y: -10)))
             }
 
-            // Patterns & Connections Section
-            if let patterns = effectivePatterns, !patterns.isEmpty {
-                PatternsSectionView(patterns: patterns)
-            }
+            // Patterns & Connections Section (always show, with empty state if needed)
+            PatternsSectionView(patterns: effectivePatterns ?? [])
+                .transition(.opacity.combined(with: .offset(y: -10)))
 
             // Action Items Section (host both tasks and detections)
             actionItemsHostSection
+                .transition(.opacity.combined(with: .offset(y: -10)))
 
             // Reflection Questions Section
             if let reflectionQuestions = effectiveReflectionQuestions, !reflectionQuestions.isEmpty {
                 ReflectionQuestionsSectionView(questions: reflectionQuestions)
+                    .transition(.opacity.combined(with: .offset(y: -10)))
             }
 
-            // Pro-tier analysis sections
+            // Pro-tier analysis sections with enhanced visual separation
             if isPro {
-                // Thinking Patterns Section
-                if let thinkingPatterns = effectiveThinkingPatterns, !thinkingPatterns.isEmpty {
-                    ThinkingPatternsSectionView(patterns: thinkingPatterns)
-                }
+                Divider()
+                    .padding(.vertical, 8)
+                    .transition(.opacity)
+
+                // Thinking Patterns Section (always show for Pro users, with empty state if needed)
+                ThinkingPatternsSectionView(patterns: effectiveThinkingPatterns ?? [])
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
 
                 // Philosophical Echoes Section
                 if let philosophicalEchoes = effectivePhilosophicalEchoes, !philosophicalEchoes.isEmpty {
                     PhilosophicalEchoesSectionView(echoes: philosophicalEchoes)
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
 
                 // Values Recognition Section
                 if let valuesInsights = effectiveValuesInsights {
                     ValuesInsightSectionView(insight: valuesInsights)
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
             }
 
             // Copy results action (also triggers smart transcript expand via notification)
             copyAction
+                .transition(.opacity)
         }
         .textSelection(.enabled)
+        .opacity(appearAnimated ? 1 : 0)
+        .offset(y: appearAnimated ? 0 : 10)
         .sheet(isPresented: $showPaywall) { PaywallView() }
         .onAppear {
             Logger.shared.debug(
@@ -117,6 +128,11 @@ struct DistillResultView: View {
             }
 
             initializeViewModelIfNeeded()
+
+            // Trigger fade-in animation
+            withAnimation(.easeOut(duration: 0.4)) {
+                appearAnimated = true
+            }
         }
     }
 

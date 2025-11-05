@@ -70,3 +70,4 @@ Guidelines
 - Uses system components/colors and respects light/dark mode?
 
 That’s it. Build, inject via protocols, keep domain pure, and prefer native UI.
+- ALWAYS use XCodeBuild MCP to test builds

@@ -20,7 +20,7 @@ MODES=(
   "distill-summary"
   "distill-actions"
   "distill-reflection"
-  "cognitive-clarity"
+  "thinking-patterns"
   "philosophical-echoes"
   "values-recognition"
 )
@@ -185,11 +185,11 @@ EOF
           test_passed=false
         fi
         ;;
-      "cognitive-clarity")
-        if jq -e '.data.cognitivePatterns | type == "array"' "$output_file" >/dev/null 2>&1; then
-          echo -e "${GREEN}[PASS]${NC} Valid cognitive clarity structure"
+      "thinking-patterns")
+        if jq -e '.data.thinkingPatterns | type == "array"' "$output_file" >/dev/null 2>&1; then
+          echo -e "${GREEN}[PASS]${NC} Valid thinking patterns structure"
         else
-          echo -e "${RED}[FAIL]${NC} Invalid cognitive clarity structure"
+          echo -e "${RED}[FAIL]${NC} Invalid thinking patterns structure"
           test_passed=false
         fi
         ;;

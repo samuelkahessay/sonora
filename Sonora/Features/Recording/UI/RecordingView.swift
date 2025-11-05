@@ -109,7 +109,7 @@ struct RecordingView: View {
                         if viewModel.quotaBlocked {
                             NotificationBanner(
                                 type: .warning,
-                                message: "You’ve reached your monthly recording limit. Upgrade to Pro to keep recording.",
+                                message: "You've reached your monthly recording limit. Upgrade to Pro to keep recording.",
                                 compact: false,
                                 onPrimaryAction: {
                                     viewModel.showingPaywall = true
@@ -117,6 +117,18 @@ struct RecordingView: View {
                                 primaryTitle: "Upgrade"
                             ) {
                                     viewModel.quotaBlocked = false
+                            }
+                        } else if viewModel.isQuotaLow {
+                            NotificationBanner(
+                                type: .warning,
+                                message: "Only \(viewModel.quotaRemainingMinutes) minutes left this month. Upgrade to Pro for unlimited recording.",
+                                compact: false,
+                                onPrimaryAction: {
+                                    viewModel.showingPaywall = true
+                                },
+                                primaryTitle: "Upgrade"
+                            ) {
+                                // Dismissible but will reappear while quota is low
                             }
                         }
                         promptContent
@@ -152,8 +164,8 @@ struct RecordingView: View {
                                 .transition(.scale.combined(with: .opacity))
                             }
 
-                            // Monthly usage meter (Free only)
-                            if false { // usage meter disabled per request
+                            // Monthly usage meter (Free only) - Smart visibility
+                            if viewModel.shouldShowQuotaIndicator && !viewModel.isQuotaLow {
                                 Text("This month • \(viewModel.monthlyUsageMinutes) of 60 min used")
                                     .font(.caption)
                                     .foregroundColor(.semantic(.textSecondary))

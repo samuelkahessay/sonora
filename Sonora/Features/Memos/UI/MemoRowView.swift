@@ -121,6 +121,7 @@ struct MemoRowView: View {
                 isFirstInSection: isFirstInSection,
                 isLastInSection: isLastInSection
             )
+                .id(memo.id.uuidString + (memo.customTitle ?? "")) // Force re-render when title changes
                 .contentShape(Rectangle())
         }
         .contentShape(Rectangle())

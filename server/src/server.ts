@@ -514,7 +514,7 @@ function validateAnalysisData(mode: string, parsedData: any): any {
       return EventsDataSchema.parse(parsedData);
     case 'reminders':
       return RemindersDataSchema.parse(parsedData);
-    case 'cognitive-clarity':
+    case 'thinking-patterns':
       return { thinkingPatterns: parsedData.thinkingPatterns || [] };
     case 'philosophical-echoes':
       return { philosophicalEchoes: parsedData.philosophicalEchoes || [] };
@@ -569,9 +569,9 @@ app.post('/analyze', async (req, res) => {
           reasoningEffort: baseSettings.reasoningEffort,
           schema: baseSchema
         }),
-        // Cognitive clarity (Beck/Ellis CBT)
+        // Thinking patterns (linguistic speech patterns)
         (async () => {
-          const { system, user } = buildPrompt('cognitive-clarity', transcript);
+          const { system, user } = buildPrompt('thinking-patterns', transcript);
           return await createChatCompletionsJSON({
             system,
             user,
@@ -623,7 +623,7 @@ app.post('/analyze', async (req, res) => {
         totalTokens.output += usage.output;
         try {
           const parsed = JSON.parse(jsonText);
-          const validated = validateAnalysisData('cognitive-clarity', parsed);
+          const validated = validateAnalysisData('thinking-patterns', parsed);
           (validatedBaseData as any).thinkingPatterns = validated.thinkingPatterns;
           console.log(`✅ Thinking patterns: ${validated.thinkingPatterns.length} patterns`);
         } catch (err) {
@@ -702,7 +702,7 @@ app.post('/analyze', async (req, res) => {
     const schema = useStrictSchema ? AnalysisJsonSchemas[mode as keyof typeof AnalysisJsonSchemas] : undefined;
 
     // Route Pro-specific modes to Chat Completions API, all others to Responses API
-    const isProMode = ['cognitive-clarity', 'philosophical-echoes', 'values-recognition'].includes(mode);
+    const isProMode = ['thinking-patterns', 'philosophical-echoes', 'values-recognition'].includes(mode);
 
     const { jsonText, usage } = isProMode
       ? await createChatCompletionsJSON({
@@ -775,7 +775,7 @@ app.post('/analyze', async (req, res) => {
         case 'reminders':
           textForModeration = `${(vd.reminders || []).map((r: any) => r.title).join(' \n')}`;
           break;
-        case 'cognitive-clarity':
+        case 'thinking-patterns':
           textForModeration = `${(vd.thinkingPatterns || []).map((p: any) => `${p.observation} ${p.reframe || ''}`).join(' \n')}`;
           break;
         case 'philosophical-echoes':

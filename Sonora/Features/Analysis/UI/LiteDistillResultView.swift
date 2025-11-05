@@ -11,35 +11,55 @@ struct LiteDistillResultView: View {
     @ScaledMetric private var sectionSpacing: CGFloat = 20
     @ScaledMetric private var headerSpacing: CGFloat = 6
     @ScaledMetric private var contentSpacing: CGFloat = 12
+    @State private var appearAnimated = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: sectionSpacing) {
             // Summary Section
             summarySectionView
+                .transition(.opacity.combined(with: .offset(y: -10)))
 
             // Key Themes Section
             if !data.keyThemes.isEmpty {
                 keyThemesSectionView
+                    .transition(.opacity.combined(with: .offset(y: -10)))
             }
 
             // Personal Insight (hero component)
             personalInsightSectionView
+                .transition(.opacity.combined(with: .scale(scale: 0.95).combined(with: .offset(y: -5))))
+
+            // Pro Upgrade CTA (positioned after high-engagement moment)
+            proUpgradeCTAView
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                .animation(.easeOut(duration: 0.35).delay(0.1), value: appearAnimated)
 
             // Simple To-dos Section (if any)
             if !data.simpleTodos.isEmpty {
                 simpleTodosSectionView
+                    .transition(.opacity.combined(with: .offset(y: -10)))
             }
 
             // Reflection Question Section
             reflectionQuestionSectionView
+                .transition(.opacity.combined(with: .offset(y: -10)))
 
             // Closing Note
             closingNoteSectionView
+                .transition(.opacity)
 
             // Copy results action
             copyAction
+                .transition(.opacity)
         }
         .textSelection(.enabled)
+        .opacity(appearAnimated ? 1 : 0)
+        .offset(y: appearAnimated ? 0 : 10)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.4)) {
+                appearAnimated = true
+            }
+        }
     }
 
     // MARK: - Section Views
@@ -116,6 +136,10 @@ struct LiteDistillResultView: View {
 
             PersonalInsightCardView(insight: data.personalInsight)
         }
+    }
+
+    private var proUpgradeCTAView: some View {
+        ProUpgradeCTACard()
     }
 
     private var simpleTodosSectionView: some View {

@@ -85,6 +85,23 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         return nil
     }
 
+    // MARK: - Quota Management
+
+    /// Minutes remaining in monthly quota (free tier only)
+    var quotaRemainingMinutes: Int {
+        max(0, 60 - monthlyUsageMinutes)
+    }
+
+    /// Whether quota is running low (<10 minutes remaining)
+    var isQuotaLow: Bool {
+        !isProUser && quotaRemainingMinutes < 10
+    }
+
+    /// Whether to show quota indicator (free users only)
+    var shouldShowQuotaIndicator: Bool {
+        !isProUser
+    }
+
     /// Whether the recording operation can be cancelled
     var canCancelRecording: Bool {
         guard currentRecordingOperationId != nil else { return false }

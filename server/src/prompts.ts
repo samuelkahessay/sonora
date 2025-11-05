@@ -202,7 +202,7 @@ export function buildPrompt(mode: string, transcript: string, historicalContext?
         `"sourceText":"exact phrase(s) that led to detection"` +
         `}]}`;
       break;
-    case 'cognitive-clarity':
+    case 'thinking-patterns':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n\n` +
         `You are an observant language analyst.\n` +
         `Your role: Identify recurring speech patterns and linguistic habits in how people express themselves.\n\n` +
