@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import UIKit
 
 final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
     private let config = AppConfiguration.shared
@@ -278,6 +279,15 @@ private final class BackgroundSessionDelegate: NSObject, URLSessionDataDelegate,
 
     func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
         logger.debug("BackgroundSessionDelegate: finished events for background session", category: .network, context: nil)
+
+        // Notify AppDelegate that this session has completed
+        if let identifier = session.configuration.identifier {
+            Task { @MainActor in
+                if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+                    appDelegate.notifyBackgroundSessionCompleted(identifier: identifier)
+                }
+            }
+        }
     }
 
     func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {

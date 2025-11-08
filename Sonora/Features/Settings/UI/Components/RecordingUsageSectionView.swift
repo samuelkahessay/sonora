@@ -99,9 +99,9 @@ struct UpgradeCallToActionView: View {
                     .font(SonoraDesignSystem.Typography.headingSmall)
                 VStack(alignment: .leading, spacing: 6) {
                     bullet("Unlimited recording (remove 60 min/month limit)")
-                    bullet("Advanced AI analysis (Themes, Todos, Content)")
-                    bullet("Calendar & Reminder creation")
-                    bullet("Premium export options")
+                    bullet("Full Distill insights (vs. Lite Distill on Free)")
+                    bullet("Advanced analysis with patterns & connections across memos")
+                    bullet("Calendar event & reminder creation from your voice")
                 }
                 Button("Upgrade to Pro") { showPaywall = true }
                     .buttonStyle(.borderedProminent)

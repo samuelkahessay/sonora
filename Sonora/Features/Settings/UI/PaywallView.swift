@@ -114,7 +114,7 @@ struct PaywallView: View {
             Text("Upgrade to Sonora Pro")
                 .font(.title2.weight(.semibold))
                 .foregroundColor(.semantic(.textPrimary))
-            Text("Clarity without limits. Deeper insights when you’re ready.")
+            Text("Unlimited recording. Advanced insights. Turn your voice into action.")
                 .font(.subheadline)
                 .foregroundColor(.semantic(.textSecondary))
         }
@@ -134,9 +134,9 @@ struct PaywallView: View {
     private var benefits: some View {
         VStack(alignment: .leading, spacing: 12) {
             benefitRow("Unlimited recording (remove 60 min/month limit)")
-            benefitRow("Advanced AI analysis (Themes, Todos, Content)")
-            benefitRow("Calendar & Reminder creation")
-            benefitRow("Premium export options")
+            benefitRow("Full Distill insights (vs. Lite Distill on Free)")
+            benefitRow("Advanced analysis with patterns & connections across memos")
+            benefitRow("Calendar event & reminder creation from your voice")
         }
         .padding(.top, 4)
     }

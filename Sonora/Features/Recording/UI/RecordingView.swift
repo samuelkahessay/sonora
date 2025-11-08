@@ -60,6 +60,27 @@ struct RecordingView: View {
         }
     }
 
+    // Monthly quota badge for free users
+    @ViewBuilder
+    private var quotaBadge: some View {
+        if !viewModel.isProUser {
+            HStack(spacing: 4) {
+                Image(systemName: "clock.fill")
+                    .font(.caption2)
+                Text("\(60 - viewModel.monthlyUsageMinutes) min left this month")
+            }
+            .font(.caption2)
+            .foregroundColor(.semantic(.textSecondary))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(Color.semantic(.fillSecondary))
+            )
+            .accessibilityLabel("\(60 - viewModel.monthlyUsageMinutes) minutes remaining this month")
+        }
+    }
+
     // Extracted main content to help the compiler
     private var contentView: some View {
         NavigationStack {
@@ -114,10 +135,15 @@ struct RecordingView: View {
                                     viewModel.quotaBlocked = false
                             }
                         }
-                        promptContent
-                        .padding(.horizontal, 16) // horizontal breathing room for prompt text
-                        .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
-                        .padding(.bottom, 18) // bottom breathing room before record button
+
+                        // Show prompt only when idle (hide during recording/paused)
+                        if viewModel.recordingState == .idle {
+                            promptContent
+                                .padding(.horizontal, 16) // horizontal breathing room for prompt text
+                                .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
+                                .padding(.bottom, 18) // bottom breathing room before record button
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
 
                         // Recording cluster: button(s), timer overlay (tighter spacing)
                         VStack(spacing: SonoraDesignSystem.Spacing.md) {
@@ -146,13 +172,8 @@ struct RecordingView: View {
                                 .transition(.scale.combined(with: .opacity))
                             }
 
-                            // Monthly usage meter (Free only)
-                            if false { // usage meter disabled per request
-                                Text("This month • \(viewModel.monthlyUsageMinutes) of 60 min used")
-                                    .font(.caption)
-                                    .foregroundColor(.semantic(.textSecondary))
-                                    .accessibilityLabel("This month, \(viewModel.monthlyUsageMinutes) of 60 minutes used")
-                            }
+                            // Monthly quota badge (Free users only)
+                            quotaBadge
 
                             // Timer overlay area (fixed height to avoid layout shifts)
                             ZStack(alignment: .top) {
