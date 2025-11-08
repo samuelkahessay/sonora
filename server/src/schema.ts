@@ -40,9 +40,6 @@ export const ModelSettings = {
   'distill-actions':      { verbosity: 'low', reasoningEffort: 'low' },       // Just action items extraction
   'distill-themes':       { verbosity: 'low', reasoningEffort: 'low' },       // Just themes identification
   'distill-reflection':   { verbosity: 'low', reasoningEffort: 'medium' },    // Just coaching questions
-  'cognitive-clarity':    { verbosity: 'medium', reasoningEffort: 'high' },   // Pro: Beck/Ellis CBT distortions
-  'philosophical-echoes': { verbosity: 'medium', reasoningEffort: 'high' },   // Pro: Ancient wisdom connections
-  'values-recognition':   { verbosity: 'medium', reasoningEffort: 'high' },   // Pro: Core values + tensions
   events:                 { verbosity: 'low', reasoningEffort: 'medium' },    // Calendar event extraction
   reminders:              { verbosity: 'low', reasoningEffort: 'low' }        // Reminder extraction
 } as const;
@@ -69,10 +66,7 @@ export const RequestSchema = z.object({
     'distill-summary',
     'distill-actions',
     'distill-themes',
-    'distill-reflection',
-    'cognitive-clarity',
-    'philosophical-echoes',
-    'values-recognition'
+    'distill-reflection'
   ]),
   transcript: z.string().min(10).max(10000),
   historicalContext: z.array(HistoricalMemoContextSchema).max(10).optional()
@@ -177,52 +171,6 @@ export const LiteDistillDataSchema = z.object({
   })),
   reflectionQuestion: z.string(),
   closingNote: z.string()
-});
-
-// Pro Tier Analysis Schemas
-
-// Cognitive Clarity - Beck/Ellis CBT framework for identifying thinking distortions
-export const CognitiveClarityDataSchema = z.object({
-  cognitivePatterns: z.array(z.object({
-    id: z.string().optional(),
-    type: z.enum([
-      'all-or-nothing',
-      'catastrophizing',
-      'mind-reading',
-      'overgeneralization',
-      'should-statements',
-      'emotional-reasoning'
-    ]),
-    observation: z.string(),
-    reframe: z.string().optional()
-  }))
-});
-
-// Philosophical Echoes - Connections to ancient wisdom traditions
-export const PhilosophicalEchoesDataSchema = z.object({
-  philosophicalEchoes: z.array(z.object({
-    id: z.string().optional(),
-    tradition: z.enum(['stoicism', 'buddhism', 'existentialism', 'socratic']),
-    connection: z.string(),
-    quote: z.string().optional(),
-    source: z.string().optional()
-  }))
-});
-
-// Values Recognition - Core values and competing priorities
-export const ValuesRecognitionDataSchema = z.object({
-  coreValues: z.array(z.object({
-    id: z.string().optional(),
-    name: z.string(),
-    evidence: z.string(),
-    confidence: z.number().min(0).max(1)
-  })),
-  tensions: z.array(z.object({
-    id: z.string().optional(),
-    value1: z.string(),
-    value2: z.string(),
-    observation: z.string()
-  })).optional()
 });
 
 // JSON Schemas for GPT-5 Responses API validation
@@ -477,131 +425,6 @@ export const DistillReflectionJsonSchema = {
   }
 };
 
-// Pro Tier JSON Schemas for GPT-5 Responses API
-
-export const CognitiveClarityJsonSchema = {
-  name: "cognitive_clarity_response",
-  schema: {
-    type: "object",
-    properties: {
-      cognitivePatterns: {
-        type: "array",
-        description: "Beck/Ellis CBT cognitive distortions detected. Return empty array if none found.",
-        items: {
-          type: "object",
-          properties: {
-            type: {
-              type: "string",
-              enum: ["all-or-nothing", "catastrophizing", "mind-reading", "overgeneralization", "should-statements", "emotional-reasoning"],
-              description: "Type of cognitive distortion"
-            },
-            observation: {
-              type: "string",
-              description: "Specific observation from the transcript with evidence"
-            },
-            reframe: {
-              type: "string",
-              description: "Optional: A gentler way to think about this"
-            }
-          },
-          required: ["type", "observation"]
-        }
-      }
-    },
-    required: ["cognitivePatterns"],
-    additionalProperties: false
-  }
-};
-
-export const PhilosophicalEchoesJsonSchema = {
-  name: "philosophical_echoes_response",
-  schema: {
-    type: "object",
-    properties: {
-      philosophicalEchoes: {
-        type: "array",
-        description: "Connections to ancient wisdom traditions. Return empty array if no clear connections.",
-        items: {
-          type: "object",
-          properties: {
-            tradition: {
-              type: "string",
-              enum: ["stoicism", "buddhism", "existentialism", "socratic"],
-              description: "Wisdom tradition this insight connects to"
-            },
-            connection: {
-              type: "string",
-              description: "2-3 sentences explaining how their insight echoes this tradition"
-            },
-            quote: {
-              type: "string",
-              description: "Optional: Relevant quote from the tradition"
-            },
-            source: {
-              type: "string",
-              description: "Optional: Attribution (e.g., 'Marcus Aurelius, Meditations')"
-            }
-          },
-          required: ["tradition", "connection"]
-        }
-      }
-    },
-    required: ["philosophicalEchoes"],
-    additionalProperties: false
-  }
-};
-
-export const ValuesRecognitionJsonSchema = {
-  name: "values_recognition_response",
-  schema: {
-    type: "object",
-    properties: {
-      coreValues: {
-        type: "array",
-        description: "2-4 core values revealed in this memo based on energy, emphasis, emotion",
-        items: {
-          type: "object",
-          properties: {
-            name: {
-              type: "string",
-              description: "The value name (e.g., 'Authenticity', 'Family', 'Achievement')"
-            },
-            evidence: {
-              type: "string",
-              description: "Specific moment from the memo that reveals this value"
-            },
-            confidence: {
-              type: "number",
-              description: "Confidence score: 0.9-1.0 = explicit, 0.7-0.89 = strong implicit, <0.7 = omit"
-            }
-          },
-          required: ["name", "evidence", "confidence"]
-        },
-        minItems: 2,
-        maxItems: 4
-      },
-      tensions: {
-        type: "array",
-        description: "Optional: Value tensions (competing priorities). Return empty array if no clear tensions.",
-        items: {
-          type: "object",
-          properties: {
-            value1: { type: "string", description: "First value in tension" },
-            value2: { type: "string", description: "Second value in tension" },
-            observation: {
-              type: "string",
-              description: "How this tension manifests in their life"
-            }
-          },
-          required: ["value1", "value2", "observation"]
-        }
-      }
-    },
-    required: ["coreValues", "tensions"],
-    additionalProperties: false
-  }
-};
-
 // Mapping analysis types to their JSON schemas
 export const AnalysisJsonSchemas = {
   distill: DistillJsonSchema,
@@ -610,9 +433,6 @@ export const AnalysisJsonSchemas = {
   'distill-actions': DistillActionsJsonSchema,
   'distill-themes': DistillThemesJsonSchema,
   'distill-reflection': DistillReflectionJsonSchema,
-  'cognitive-clarity': CognitiveClarityJsonSchema,
-  'philosophical-echoes': PhilosophicalEchoesJsonSchema,
-  'values-recognition': ValuesRecognitionJsonSchema,
   events: EventsJsonSchema,
   reminders: RemindersJsonSchema
 } as const;
@@ -629,10 +449,7 @@ export const ResponseSchema = z.object({
     'distill-summary',
     'distill-actions',
     'distill-themes',
-    'distill-reflection',
-    'cognitive-clarity',
-    'philosophical-echoes',
-    'values-recognition'
+    'distill-reflection'
   ]),
   data: z.union([
     EventsDataSchema,
@@ -642,10 +459,7 @@ export const ResponseSchema = z.object({
     DistillSummaryDataSchema,
     DistillActionsDataSchema,
     DistillThemesDataSchema,
-    DistillReflectionDataSchema,
-    CognitiveClarityDataSchema,
-    PhilosophicalEchoesDataSchema,
-    ValuesRecognitionDataSchema
+    DistillReflectionDataSchema
   ]),
   model: ModelSchema,
   tokens: z.object({
@@ -669,10 +483,7 @@ export type DistillSummaryData = z.infer<typeof DistillSummaryDataSchema>;
 export type DistillActionsData = z.infer<typeof DistillActionsDataSchema>;
 export type DistillThemesData = z.infer<typeof DistillThemesDataSchema>;
 export type DistillReflectionData = z.infer<typeof DistillReflectionDataSchema>;
-export type CognitiveClarityData = z.infer<typeof CognitiveClarityDataSchema>;
-export type PhilosophicalEchoesData = z.infer<typeof PhilosophicalEchoesDataSchema>;
-export type ValuesRecognitionData = z.infer<typeof ValuesRecognitionDataSchema>;
 export type EventsData = z.infer<typeof EventsDataSchema>;
 export type RemindersData = z.infer<typeof RemindersDataSchema>;
-export type DataOut = DistillData | LiteDistillData | DistillSummaryData | DistillActionsData | DistillThemesData | DistillReflectionData | CognitiveClarityData | PhilosophicalEchoesData | ValuesRecognitionData | EventsData | RemindersData;
+export type DataOut = DistillData | LiteDistillData | DistillSummaryData | DistillActionsData | DistillThemesData | DistillReflectionData | EventsData | RemindersData;
 export type ResponseData = z.infer<typeof ResponseSchema>;

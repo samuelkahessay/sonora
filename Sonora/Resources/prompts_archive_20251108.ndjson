@@ -1,0 +1,83 @@
+# Generated from PromptCatalogStatic on migration. Edit freely; one object per line. Comments and blanks are ignored.
+{"id": "growth_micro_win_today", "text": "What's one small win this [DayPart], [Name]?", "category": "growth", "depth": "light", "dayParts": ["morning"], "weekParts": ["startOfWeek"], "weight": 2}
+{"id": "growth_stretch_one_percent", "text": "Where can you improve 1% this [WeekPart]?", "category": "growth", "depth": "medium"}
+{"id": "growth_lesson_from_setback", "text": "Name a recent setback and the lesson you learned.", "category": "growth", "depth": "deep", "dayParts": ["evening"]}
+{"id": "growth_three_highlights", "text": "Capture three [WeekPart] highlights so far.", "category": "growth", "depth": "light", "weekParts": ["midWeek"]}
+{"id": "growth_next_tiny_step", "text": "What's the next tiny step right now, [Name]?", "category": "growth", "depth": "light"}
+{"id": "growth_gratitude_for_progress", "text": "What progress are you grateful for this [WeekPart]?", "category": "growth", "depth": "medium", "dayParts": ["evening"], "weekParts": ["endOfWeek"]}
+{"id": "growth_teach_someone", "text": "What could you teach someone today to reinforce your learning?", "category": "growth", "depth": "medium", "dayParts": ["afternoon"], "weekParts": ["midWeek"]}
+{"id": "work_unblock_one_task", "text": "Which single task can you unblock this [DayPart]?", "category": "work", "depth": "light", "dayParts": ["afternoon"], "weekParts": ["midWeek"]}
+{"id": "work_define_top_three", "text": "Define your top three priorities for the [WeekPart].", "category": "work", "depth": "medium", "dayParts": ["morning"], "weekParts": ["startOfWeek"]}
+{"id": "work_midweek_checkpoint", "text": "Mid-week checkpoint: what's on track, what's not?", "category": "work", "depth": "medium", "dayParts": ["afternoon"], "weekParts": ["midWeek"], "weight": 2}
+{"id": "work_delegate_or_drop", "text": "What can you delegate or drop to move faster?", "category": "work", "depth": "medium"}
+{"id": "work_meeting_prep", "text": "What's your desired outcome for the next meeting?", "category": "work", "depth": "light", "dayParts": ["morning"], "weekParts": ["midWeek"]}
+{"id": "work_after_action_review", "text": "After-action review: what went well, what to improve?", "category": "work", "depth": "deep", "dayParts": ["evening"], "weekParts": ["endOfWeek"]}
+{"id": "work_flow_session_plan", "text": "Plan a focused flow session: when and on what?", "category": "work", "depth": "medium", "dayParts": ["morning"], "weekParts": ["startOfWeek", "midWeek"]}
+{"id": "relationships_share_a_thank_you", "text": "Who deserves a genuine thank you this [WeekPart], [Name]?", "category": "relationships", "depth": "light", "dayParts": ["evening"], "weekParts": ["endOfWeek"]}
+{"id": "relationships_check_in_one_person", "text": "Who could use a quick check-in from you today?", "category": "relationships", "depth": "light", "dayParts": ["afternoon"]}
+{"id": "relationships_repair_micro_moment", "text": "Name a small moment you'd like to repair or revisit.", "category": "relationships", "depth": "deep", "dayParts": ["evening"]}
+{"id": "relationships_celebrate_small_win", "text": "Celebrate a small win with someone you care about.", "category": "relationships", "depth": "light", "dayParts": ["night"], "weekParts": ["endOfWeek"]}
+{"id": "relationships_plan_connection", "text": "Plan one meaningful connection for the [WeekPart].", "category": "relationships", "depth": "medium", "dayParts": ["morning"], "weekParts": ["startOfWeek", "midWeek"]}
+{"id": "relationships_express_boundary_kindly", "text": "What boundary can you express kindly and clearly?", "category": "relationships", "depth": "deep", "dayParts": ["afternoon"], "weekParts": ["midWeek"]}
+{"id": "relationships_ask_for_help", "text": "Where could you ask for help this [DayPart]?", "category": "relationships", "depth": "medium"}
+{"id": "relationships_reach_out_old_friend", "text": "Reach out to an old friend—what's the first thing you'd say?", "category": "relationships", "depth": "medium", "dayParts": ["evening"]}
+{"id": "creative_new_angle_on_old_idea", "text": "Try a new angle on an old idea this [DayPart].", "category": "creative", "depth": "light", "dayParts": ["morning", "afternoon"]}
+{"id": "creative_constraints_challenge", "text": "Set one constraint and create within it.", "category": "creative", "depth": "medium"}
+{"id": "creative_mashup_two_things", "text": "Mash up two unrelated things from today—what do you get?", "category": "creative", "depth": "light", "dayParts": ["afternoon"]}
+{"id": "creative_remove_one_element", "text": "Remove one element from your idea—what changes?", "category": "creative", "depth": "light"}
+{"id": "creative_switch_medium", "text": "Switch mediums—how would your idea look in another format?", "category": "creative", "depth": "medium", "dayParts": ["evening"]}
+{"id": "creative_divergent_ideas", "text": "Spin up three divergent versions of your idea.", "category": "creative", "depth": "deep", "dayParts": ["morning"]}
+{"id": "creative_capture_random_detail", "text": "Capture a random detail from today as a spark.", "category": "creative", "depth": "light", "dayParts": ["night"]}
+{"id": "creative_storyboard_next_step", "text": "Storyboard the very next step for your idea.", "category": "creative", "depth": "medium", "dayParts": ["morning"], "weekParts": ["startOfWeek", "midWeek"]}
+{"id": "goals_weekly_review", "text": "Weekly review: what mattered most this [WeekPart]?", "category": "goals", "depth": "deep", "dayParts": ["evening"], "weekParts": ["endOfWeek"], "weight": 2}
+{"id": "goals_next_milestone", "text": "What's the next milestone, and why does it matter?", "category": "goals", "depth": "medium", "dayParts": ["morning"], "weekParts": ["startOfWeek"]}
+{"id": "goals_success_definition", "text": "Define success for the next [WeekPart] in one sentence.", "category": "goals", "depth": "medium"}
+{"id": "goals_risk_one_thing", "text": "What's one risk worth taking this [WeekPart]?", "category": "goals", "depth": "deep", "dayParts": ["afternoon"], "weekParts": ["midWeek"]}
+{"id": "goals_today_top_one", "text": "If you did only one thing today, what would it be?", "category": "goals", "depth": "light", "dayParts": ["morning"]}
+{"id": "goals_remove_nonessential", "text": "Remove one nonessential commitment to create space.", "category": "goals", "depth": "light"}
+{"id": "goals_habit_streak", "text": "How's your habit streak? What's the next link?", "category": "goals", "depth": "medium", "dayParts": ["night"]}
+{"id": "goals_reflect_quarter", "text": "Reflect on this quarter: one win, one lesson.", "category": "goals", "depth": "deep", "dayParts": ["evening"], "weekParts": ["midWeek", "endOfWeek"]}
+{"id": "mindfulness_name_three_calm_things", "text": "Name three calm things around you right now.", "category": "mindfulness", "depth": "light", "dayParts": ["night"]}
+{"id": "mindfulness_let_go_thought", "text": "Notice a sticky thought and let it pass.", "category": "mindfulness", "depth": "medium", "dayParts": ["night"]}
+{"id": "mindfulness_gratitude_three", "text": "Name three things you're grateful for this [WeekPart].", "category": "mindfulness", "depth": "light", "dayParts": ["evening"], "weekParts": ["endOfWeek"]}
+{"id": "mindfulness_mindful_walk", "text": "Take a mindful walk; describe what you observe.", "category": "mindfulness", "depth": "light", "dayParts": ["morning", "afternoon"]}
+{"id": "mindfulness_emotion_labeling", "text": "Take 30 seconds to describe how you're feeling and why.", "category": "mindfulness", "depth": "deep", "dayParts": ["afternoon"]}
+{"id": "mindfulness_intention_for_day", "text": "Set an intention for this [DayPart], [Name].", "category": "mindfulness", "depth": "light", "dayParts": ["morning"], "weekParts": ["startOfWeek"]}
+{"id": "lindy_004", "text": "In what ways are you still the same person you were five years ago, and in what ways have you grown?", "category": "growth", "depth": "deep"}
+{"id": "lindy_006", "text": "If you could observe your thoughts and actions from outside yourself, what patterns would you notice?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_009", "text": "What would those who know you best say is your greatest strength and your greatest weakness?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_010", "text": "If you had to choose only three values to guide your decisions this [WeekPart], what would they be and why?", "category": "goals", "depth": "medium", "weekParts": ["startOfWeek", "midWeek"]}
+{"id": "lindy_030", "text": "What assumptions are you making about someone that might be preventing you from understanding them better?", "category": "relationships", "depth": "medium"}
+{"id": "lindy_031", "text": "Who in your life deserves gratitude this [WeekPart] that you haven't expressed recently?", "category": "relationships", "depth": "light", "weekParts": ["endOfWeek"]}
+{"id": "lindy_032", "text": "How can you be more present and attentive in your relationships?", "category": "relationships", "depth": "light"}
+{"id": "lindy_043", "text": "How can you bring more intention and mindfulness to routine activities?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_046", "text": "What would you tell a dear friend facing the same difficulties?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_055", "text": "How would you advise a close friend who was having the exact same thoughts you're having?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_062", "text": "What assumption are you making that you haven't examined or questioned?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_068", "text": "What would you discover if you approached this problem with genuine curiosity instead of predetermined answers?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_085", "text": "What went well this [DayPart], what went poorly, and what can you improve tomorrow?", "category": "goals", "depth": "light", "dayParts": ["evening"]}
+{"id": "lindy_087", "text": "What progress did you make toward your most important goals, however small?", "category": "goals", "depth": "light"}
+{"id": "lindy_088", "text": "How did you grow today, and what lesson will you carry forward?", "category": "goals", "depth": "light"}
+{"id": "lindy_089", "text": "What moment today are you most grateful for, and why?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_091", "text": "What would you do differently if you could replay today with the wisdom you have now?", "category": "goals", "depth": "medium"}
+{"id": "lindy_093", "text": "What recurring thought patterns have you noticed this [WeekPart], and what might they be telling you?", "category": "creative", "depth": "medium", "weekParts": ["midWeek", "endOfWeek"]}
+{"id": "lindy_094", "text": "What's the underlying emotion or need beneath your scattered thoughts right now?", "category": "mindfulness", "depth": "medium"}
+{"id": "lindy_095", "text": "If you had to summarize your mental state in one word, what would it be and why?", "category": "mindfulness", "depth": "light"}
+{"id": "lindy_096", "text": "What theme keeps emerging when you let your mind wander freely?", "category": "creative", "depth": "light"}
+{"id": "lindy_097", "text": "What clarity is trying to emerge from the chaos of your current thinking?", "category": "creative", "depth": "medium"}
+{"id": "lindy_098", "text": "If your stream of consciousness had a soundtrack, what would it sound like today?", "category": "creative", "depth": "light"}
+{"id": "delight_001", "text": "What made you smile today that you don't want to forget?", "category": "mindfulness", "depth": "light", "dayParts": ["evening", "night"]}
+{"id": "delight_002", "text": "Describe something beautiful you noticed this [DayPart].", "category": "creative", "depth": "light"}
+{"id": "delight_003", "text": "What's something you're excited about right now, no matter how small?", "category": "growth", "depth": "light"}
+{"id": "delight_004", "text": "What's the most interesting thing you learned today?", "category": "creative", "depth": "light", "dayParts": ["evening", "night"]}
+{"id": "delight_005", "text": "Capture a moment of unexpected joy from this [WeekPart].", "category": "mindfulness", "depth": "light", "weekParts": ["endOfWeek"]}
+{"id": "delight_006", "text": "What are you looking forward to this [WeekPart]?", "category": "mindfulness", "depth": "light", "weekParts": ["startOfWeek", "midWeek"]}
+{"id": "delight_007", "text": "What's a tiny pleasure you experienced today?", "category": "mindfulness", "depth": "light", "dayParts": ["evening", "night"]}
+{"id": "delight_008", "text": "Describe a random moment that made you laugh.", "category": "creative", "depth": "light"}
+{"id": "delight_009", "text": "What went surprisingly well this [DayPart]?", "category": "growth", "depth": "light"}
+{"id": "delight_010", "text": "What's something you're curious about right now?", "category": "creative", "depth": "light"}
+{"id": "delight_011", "text": "What sound, smell, or taste stood out to you today?", "category": "mindfulness", "depth": "light", "dayParts": ["evening"]}
+{"id": "delight_012", "text": "What's a small thing that brought you comfort this [WeekPart]?", "category": "mindfulness", "depth": "light"}
+{"id": "delight_013", "text": "Capture an interesting conversation or exchange from today.", "category": "relationships", "depth": "light", "dayParts": ["evening", "night"]}
+{"id": "delight_014", "text": "What's something new you noticed about a familiar place or person?", "category": "creative", "depth": "light"}
+{"id": "delight_015", "text": "What's making you feel energized or inspired right now?", "category": "growth", "depth": "light"}

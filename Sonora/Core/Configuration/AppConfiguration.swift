@@ -470,9 +470,6 @@ public final class AppConfiguration: ObservableObject {
             return contentAnalysisTimeout // Use same timeout as content analysis
         case .reminders:
             return contentAnalysisTimeout // Use same timeout as content analysis
-        // Pro-tier modes use extended timeout for deeper reasoning (high reasoning effort on GPT-5)
-        case .cognitiveClarityCBT, .philosophicalEchoes, .valuesRecognition:
-            return proModeAnalysisTimeout // Extended timeout (420s default) for GPT-5 deep reasoning
         }
     }
 

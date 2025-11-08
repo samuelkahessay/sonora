@@ -168,7 +168,7 @@ The meditation practice I started two weeks ago is starting to show results. I'm
 
             // Create memo via repository
             let memoRepo = container.memoRepository()
-            let newMemo = await memoRepo.handleNewRecording(at: audioURL)
+            let newMemo = memoRepo.handleNewRecording(at: audioURL)
 
             // Inject completed transcription state
             let transcriptionRepo = container.transcriptionRepository()

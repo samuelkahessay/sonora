@@ -63,24 +63,6 @@ struct DistillResultView: View {
                 ReflectionQuestionsSkeleton()
             }
 
-            // Pro-tier analysis sections
-            if isPro {
-                // Cognitive Clarity (CBT) Section
-                if let cognitivePatterns = effectiveCognitivePatterns, !cognitivePatterns.isEmpty {
-                    CognitiveClaritySectionView(patterns: cognitivePatterns)
-                }
-
-                // Philosophical Echoes Section
-                if let philosophicalEchoes = effectivePhilosophicalEchoes, !philosophicalEchoes.isEmpty {
-                    PhilosophicalEchoesSectionView(echoes: philosophicalEchoes)
-                }
-
-                // Values Recognition Section
-                if let valuesInsights = effectiveValuesInsights {
-                    ValuesInsightSectionView(insight: valuesInsights)
-                }
-            }
-
             // Copy results action (also triggers smart transcript expand via notification)
             copyAction
         }
@@ -141,18 +123,6 @@ struct DistillResultView: View {
 
     private var effectiveReflectionQuestions: [String]? {
         data?.reflection_questions ?? partialData?.reflectionQuestions
-    }
-
-    private var effectiveCognitivePatterns: [CognitivePattern]? {
-        data?.cognitivePatterns ?? partialData?.cognitivePatterns
-    }
-
-    private var effectivePhilosophicalEchoes: [PhilosophicalEcho]? {
-        data?.philosophicalEchoes ?? partialData?.philosophicalEchoes
-    }
-
-    private var effectiveValuesInsights: ValuesInsight? {
-        data?.valuesInsights ?? partialData?.valuesInsights
     }
 
     // Use domain-deduplicated results directly
@@ -282,50 +252,6 @@ struct DistillResultView: View {
         if let questions = effectiveReflectionQuestions, !questions.isEmpty {
             let list = questions.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
             parts.append("Reflection Questions:\n" + list)
-        }
-        // Pro-tier analysis sections
-        if isPro {
-            // Cognitive Clarity
-            if let cognitivePatterns = effectiveCognitivePatterns, !cognitivePatterns.isEmpty {
-                var lines: [String] = ["Cognitive Clarity (CBT):"]
-                for pattern in cognitivePatterns {
-                    lines.append("• \(pattern.type.displayName): \(pattern.observation)")
-                    if let reframe = pattern.reframe {
-                        lines.append("  Reframe: \(reframe)")
-                    }
-                }
-                parts.append(lines.joined(separator: "\n"))
-            }
-            // Philosophical Echoes
-            if let echoes = effectivePhilosophicalEchoes, !echoes.isEmpty {
-                var lines: [String] = ["Philosophical Echoes:"]
-                for echo in echoes {
-                    lines.append("• \(echo.tradition.displayName): \(echo.connection)")
-                    if let quote = echo.quote {
-                        lines.append("  \"\(quote)\"")
-                        if let source = echo.source {
-                            lines.append("  — \(source)")
-                        }
-                    }
-                }
-                parts.append(lines.joined(separator: "\n"))
-            }
-            // Values Recognition
-            if let valuesInsights = effectiveValuesInsights {
-                var lines: [String] = ["Values Recognition:"]
-                lines.append("Core Values:")
-                for value in valuesInsights.coreValues {
-                    lines.append("• \(value.name) (\(value.confidenceCategory) confidence)")
-                    lines.append("  \(value.evidence)")
-                }
-                if let tensions = valuesInsights.tensions, !tensions.isEmpty {
-                    lines.append("Value Tensions:")
-                    for tension in tensions {
-                        lines.append("• \(tension.value1) ↔ \(tension.value2): \(tension.observation)")
-                    }
-                }
-                parts.append(lines.joined(separator: "\n"))
-            }
         }
         let events = eventsForUI
         let reminders = remindersForUI

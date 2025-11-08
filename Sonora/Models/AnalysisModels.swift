@@ -12,11 +12,6 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
     case distillThemes = "distill-themes"
     case distillReflection = "distill-reflection"
 
-    // Pro-tier analysis modes (CBT, wisdom, values)
-    case cognitiveClarityCBT = "cognitive-clarity"
-    case philosophicalEchoes = "philosophical-echoes"
-    case valuesRecognition = "values-recognition"
-
     // UI-visible analysis modes (excludes internal component modes)
     public static var uiVisibleCases: [Self] {
         [.distill, .events, .reminders]
@@ -42,9 +37,6 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
         case .distillActions: return "Actions"
         case .distillThemes: return "Themes"
         case .distillReflection: return "Reflection"
-        case .cognitiveClarityCBT: return "Cognitive Clarity"
-        case .philosophicalEchoes: return "Philosophical Echoes"
-        case .valuesRecognition: return "Values Recognition"
         }
     }
 
@@ -58,9 +50,6 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
         case .distillActions: return "checkmark.circle.fill"
         case .distillThemes: return "tag.circle"
         case .distillReflection: return "questionmark.circle"
-        case .cognitiveClarityCBT: return "brain.head.profile"
-        case .philosophicalEchoes: return "book.closed"
-        case .valuesRecognition: return "heart.circle"
         }
     }
 
@@ -89,28 +78,6 @@ public struct TokenUsage: Codable, Sendable {
     public let output: Int
 }
 
-// MARK: - Streaming Support
-
-/// Handler for analysis streaming updates
-public typealias AnalysisStreamingHandler = @Sendable (AnalysisStreamingUpdate) -> Void
-
-/// Represents a streaming update from the analysis service
-public struct AnalysisStreamingUpdate: Sendable, Equatable {
-    /// Partial text received so far (accumulated)
-    public let partialText: String
-    /// Whether this is the final complete response
-    public let isFinal: Bool
-
-    public init(partialText: String, isFinal: Bool) {
-        self.partialText = partialText
-        self.isFinal = isFinal
-    }
-
-    public static func == (lhs: AnalysisStreamingUpdate, rhs: AnalysisStreamingUpdate) -> Bool {
-        lhs.partialText == rhs.partialText && lhs.isFinal == rhs.isFinal
-    }
-}
-
 public struct DistillData: Codable, Sendable {
     // Core fields (all tiers)
     public let summary: String
@@ -119,11 +86,6 @@ public struct DistillData: Codable, Sendable {
     public let patterns: [Pattern]?
     public let events: [EventsData.DetectedEvent]?
     public let reminders: [RemindersData.DetectedReminder]?
-
-    // Pro-tier fields (parallel API calls for enhanced analysis)
-    public let cognitivePatterns: [CognitivePattern]?
-    public let philosophicalEchoes: [PhilosophicalEcho]?
-    public let valuesInsights: ValuesInsight?
 
     public struct ActionItem: Codable, Sendable, Equatable {
         public enum Priority: String, Codable, Sendable, Equatable {
@@ -177,10 +139,7 @@ public struct DistillData: Codable, Sendable {
         reflection_questions: [String],
         patterns: [Pattern]? = nil,
         events: [EventsData.DetectedEvent]? = nil,
-        reminders: [RemindersData.DetectedReminder]? = nil,
-        cognitivePatterns: [CognitivePattern]? = nil,
-        philosophicalEchoes: [PhilosophicalEcho]? = nil,
-        valuesInsights: ValuesInsight? = nil
+        reminders: [RemindersData.DetectedReminder]? = nil
     ) {
         self.summary = summary
         self.action_items = action_items
@@ -188,9 +147,6 @@ public struct DistillData: Codable, Sendable {
         self.patterns = patterns
         self.events = events
         self.reminders = reminders
-        self.cognitivePatterns = cognitivePatterns
-        self.philosophicalEchoes = philosophicalEchoes
-        self.valuesInsights = valuesInsights
     }
 }
 
@@ -209,24 +165,6 @@ public struct DistillThemesData: Codable, Sendable {
 
 public struct DistillReflectionData: Codable, Sendable {
     public let reflection_questions: [String]
-}
-
-// MARK: - Pro-Tier Analysis Response Data Models
-
-/// Response wrapper for cognitive-clarity analysis (Beck/Ellis CBT patterns)
-public struct CognitiveClarityData: Codable, Sendable {
-    public let cognitivePatterns: [CognitivePattern]
-}
-
-/// Response wrapper for philosophical-echoes analysis (wisdom connections)
-public struct PhilosophicalEchoesData: Codable, Sendable {
-    public let philosophicalEchoes: [PhilosophicalEcho]
-}
-
-/// Response wrapper for values-recognition analysis (core values + tensions)
-public struct ValuesRecognitionData: Codable, Sendable {
-    public let coreValues: [ValuesInsight.DetectedValue]
-    public let tensions: [ValuesInsight.ValueTension]?
 }
 
 // MARK: - EventKit Data Models
@@ -522,201 +460,5 @@ public struct LiteDistillData: Codable, Sendable, Equatable {
         self.simpleTodos = simpleTodos
         self.reflectionQuestion = reflectionQuestion
         self.closingNote = closingNote
-    }
-}
-
-// MARK: - Pro Tier Analysis Models
-
-/// Cognitive pattern detection based on Beck/Ellis CBT framework
-/// Helps users identify thinking distortions with optional reframes
-/// Pro-tier feature: parallel API call for cognitive clarity
-public struct CognitivePattern: Codable, Sendable, Identifiable, Equatable {
-    public let id: String
-    public let type: CognitiveDistortion
-    public let observation: String
-    public let reframe: String?
-
-    public enum CognitiveDistortion: String, Codable, Sendable, Equatable {
-        case allOrNothing = "all-or-nothing"
-        case catastrophizing = "catastrophizing"
-        case mindReading = "mind-reading"
-        case overgeneralization = "overgeneralization"
-        case shouldStatements = "should-statements"
-        case emotionalReasoning = "emotional-reasoning"
-
-        var displayName: String {
-            switch self {
-            case .allOrNothing: return "All-or-Nothing"
-            case .catastrophizing: return "Catastrophizing"
-            case .mindReading: return "Mind Reading"
-            case .overgeneralization: return "Overgeneralization"
-            case .shouldStatements: return "Should Statements"
-            case .emotionalReasoning: return "Emotional Reasoning"
-            }
-        }
-
-        var iconName: String {
-            switch self {
-            case .allOrNothing: return "line.diagonal"
-            case .catastrophizing: return "exclamationmark.triangle"
-            case .mindReading: return "bubble.left.and.bubble.right"
-            case .overgeneralization: return "arrow.triangle.branch"
-            case .shouldStatements: return "hand.raised"
-            case .emotionalReasoning: return "heart.circle"
-            }
-        }
-
-        var description: String {
-            switch self {
-            case .allOrNothing:
-                return "Seeing things in black-and-white categories"
-            case .catastrophizing:
-                return "Expecting the worst-case scenario"
-            case .mindReading:
-                return "Assuming you know what others think"
-            case .overgeneralization:
-                return "Drawing broad conclusions from single events"
-            case .shouldStatements:
-                return "Using 'should', 'must', 'ought' creates pressure"
-            case .emotionalReasoning:
-                return "Believing feelings reflect reality"
-            }
-        }
-    }
-
-    public init(
-        id: String = UUID().uuidString,
-        type: CognitiveDistortion,
-        observation: String,
-        reframe: String? = nil
-    ) {
-        self.id = id
-        self.type = type
-        self.observation = observation
-        self.reframe = reframe
-    }
-}
-
-/// Connection between user insights and ancient wisdom traditions
-/// Links personal reflections to 2,000+ years of philosophical thought
-/// Pro-tier feature: parallel API call for philosophical echoes
-public struct PhilosophicalEcho: Codable, Sendable, Identifiable, Equatable {
-    public let id: String
-    public let tradition: PhilosophicalTradition
-    public let connection: String
-    public let quote: String?
-    public let source: String?
-
-    public enum PhilosophicalTradition: String, Codable, Sendable, Equatable {
-        case stoicism = "stoicism"
-        case buddhism = "buddhism"
-        case existentialism = "existentialism"
-        case socratic = "socratic"
-
-        var displayName: String {
-            switch self {
-            case .stoicism: return "Stoicism"
-            case .buddhism: return "Buddhism"
-            case .existentialism: return "Existentialism"
-            case .socratic: return "Socratic Inquiry"
-            }
-        }
-
-        var iconName: String {
-            switch self {
-            case .stoicism: return "laurel.leading"
-            case .buddhism: return "leaf"
-            case .existentialism: return "figure.walk"
-            case .socratic: return "questionmark.bubble"
-            }
-        }
-
-        var colorHint: String {
-            switch self {
-            case .stoicism: return "green"
-            case .buddhism: return "orange"
-            case .existentialism: return "purple"
-            case .socratic: return "blue"
-            }
-        }
-    }
-
-    public init(
-        id: String = UUID().uuidString,
-        tradition: PhilosophicalTradition,
-        connection: String,
-        quote: String? = nil,
-        source: String? = nil
-    ) {
-        self.id = id
-        self.tradition = tradition
-        self.connection = connection
-        self.quote = quote
-        self.source = source
-    }
-}
-
-/// Values recognition - identifies what matters to the user
-/// Detects core values and tensions between competing priorities
-/// Pro-tier feature: parallel API call for values analysis
-public struct ValuesInsight: Codable, Sendable, Equatable {
-    public let coreValues: [DetectedValue]
-    public let tensions: [ValueTension]?
-
-    /// A value that matters to the user, detected from their voice memo
-    public struct DetectedValue: Codable, Sendable, Identifiable, Equatable {
-        public let id: String
-        public let name: String           // e.g., "Authenticity", "Family", "Achievement"
-        public let evidence: String       // What in the memo revealed this value
-        public let confidence: Float      // 0.0-1.0
-
-        public init(
-            id: String = UUID().uuidString,
-            name: String,
-            evidence: String,
-            confidence: Float
-        ) {
-            self.id = id
-            self.name = name
-            self.evidence = evidence
-            self.confidence = confidence
-        }
-
-        // Confidence categories for UI
-        public var confidenceCategory: String {
-            switch confidence {
-            case 0.8...1.0: return "High"
-            case 0.6..<0.8: return "Medium"
-            default: return "Low"
-            }
-        }
-    }
-
-    /// A tension between two competing values
-    public struct ValueTension: Codable, Sendable, Identifiable, Equatable {
-        public let id: String
-        public let value1: String         // e.g., "Achievement"
-        public let value2: String         // e.g., "Rest"
-        public let observation: String    // How this tension manifests
-
-        public init(
-            id: String = UUID().uuidString,
-            value1: String,
-            value2: String,
-            observation: String
-        ) {
-            self.id = id
-            self.value1 = value1
-            self.value2 = value2
-            self.observation = observation
-        }
-    }
-
-    public init(
-        coreValues: [DetectedValue],
-        tensions: [ValueTension]? = nil
-    ) {
-        self.coreValues = coreValues
-        self.tensions = tensions
     }
 }

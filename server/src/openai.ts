@@ -1,4 +1,5 @@
 import { AnalysisJsonSchemas } from './schema.js';
+import { chatCompletionsSupportsTemperature } from './caps.js';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.SONORA_MODEL || 'gpt-5-nano';
@@ -25,44 +26,6 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Enhanced logging for GPT-5-nano debugging
-function logResponseDetails(data: any, startTime: number, requestParams: any) {
-  const isDev = process.env.NODE_ENV === 'development';
-  const responseTime = Date.now() - startTime;
-  
-  if (isDev) {
-    console.log('🔍 GPT-5-nano Response Debug:', {
-      responseTime: `${responseTime}ms`,
-      requestParams: {
-        model: requestParams.model,
-        reasoningEffort: requestParams.reasoning?.effort,
-        verbosity: requestParams.text?.verbosity,
-        hasSchema: !!requestParams.text?.format?.json_schema
-      },
-      responseStructure: {
-        hasOutput: Array.isArray(data?.output),
-        outputLength: data?.output?.length,
-        outputTypes: data?.output?.map((item: any) => item?.type),
-        hasUsage: !!data?.usage,
-        usageFields: data?.usage ? Object.keys(data.usage) : []
-      }
-    });
-    
-    // Log full response structure in development only
-    console.log('📋 Full Response Structure:', JSON.stringify(data, null, 2));
-  }
-  
-  // Always log performance metrics
-  console.log('⏱️  GPT-5-nano Performance:', {
-    responseTime: `${responseTime}ms`,
-    reasoning: requestParams.reasoning?.effort,
-    inputTokens: data?.usage?.input_tokens || 0,
-    outputTokens: data?.usage?.output_tokens || 0,
-    reasoningTokens: data?.usage?.reasoning_tokens || 0,
-    totalTokens: (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0) + (data?.usage?.reasoning_tokens || 0)
-  });
-}
-
 async function requestWithRetry<T>(fn: () => Promise<T>): Promise<{ result: T; retryCount: number }> {
   const maxRetries = 3;
   for (let i = 0; i <= maxRetries; i++) {
@@ -77,223 +40,6 @@ async function requestWithRetry<T>(fn: () => Promise<T>): Promise<{ result: T; r
     }
   }
   throw new Error('Unexpected retry loop exit');
-}
-
-// NEW: Responses API
-export async function createChatJSON({
-  system,
-  user,
-  verbosity = 'low',
-  reasoningEffort = 'medium',
-  schema,
-  model,
-}: {
-  system: string;
-  user: string;
-  verbosity?: Verbosity;
-  reasoningEffort?: ReasoningEffort;
-  schema?: { name: string; schema: any };
-  model?: string; // optional override
-}): Promise<CreateChatResult> {
-  const { result } = await requestWithRetry(async () => {
-    const startTime = Date.now();
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-    try {
-      const requestBody = {
-        model: model || MODEL,
-        // Messages as structured content blocks for Responses API
-        input: [
-          { role: 'system', content: [{ type: 'input_text', text: system }] },
-          { role: 'user', content: [{ type: 'input_text', text: user }] }
-        ],
-        // GPT-5 knobs
-        reasoning: { effort: reasoningEffort },
-        // Updated parameter locations for Responses API
-        text: { 
-          format: schema ? {
-            type: 'json_schema',
-            name: schema.name,    // Name at format level
-            schema: schema.schema // Schema directly at format level
-          } : { 
-            type: 'json_object' 
-          },
-          verbosity: verbosity
-        }
-      };
-
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        signal: controller.signal,
-        body: JSON.stringify(requestBody)
-      });
-      clearTimeout(timeout);
-      
-      if (!response.ok) {
-        const text = await response.text().catch(() => '');
-        // Do not emit upstream response bodies to logs in production
-        const isDev = process.env.NODE_ENV === 'development';
-        const errorMessage = `GPT-5-nano Responses API error: ${response.status} - ${response.statusText}`;
-        console.error('🚨 Responses API Error:', {
-          status: response.status,
-          statusText: response.statusText,
-          // Only include upstream body in development to avoid leaking content
-          ...(isDev ? { responseBody: text } : { bodyLength: text ? text.length : 0 }),
-          requestParams: {
-            model: requestBody.model,
-            reasoningEffort: requestBody.reasoning?.effort,
-            verbosity: requestBody.text?.verbosity,
-            schemaName: schema?.name
-          }
-        });
-        throw new Error(errorMessage);
-      }
-      
-      const data: any = await response.json();
-      
-      // Log response details for debugging and performance monitoring
-      logResponseDetails(data, startTime, requestBody);
-
-      // Enhanced extraction with comprehensive fallback parsing
-      let text = '';
-      let extractionMethod = '';
-      
-      try {
-        // Strategy 1: GPT-5-nano with reasoning - output[1] is message object
-        if (Array.isArray(data?.output) && data.output.length > 1) {
-          const messageObj = data.output[1];
-          if (messageObj?.type === 'message' && Array.isArray(messageObj?.content)) {
-            const textContent = messageObj.content.find((c: any) => c?.type === 'output_text');
-            if (textContent?.text) {
-              text = textContent.text;
-              extractionMethod = 'reasoning-response-structure';
-            }
-          }
-        }
-        
-        // Strategy 2: GPT-5-nano without reasoning - output[0] is direct message
-        if (!text && Array.isArray(data?.output) && data.output.length === 1) {
-          const messageObj = data.output[0];
-          if (messageObj?.type === 'message' && Array.isArray(messageObj?.content)) {
-            const textContent = messageObj.content.find((c: any) => c?.type === 'output_text');
-            if (textContent?.text) {
-              text = textContent.text;
-              extractionMethod = 'direct-message-structure';
-            }
-          }
-        }
-        
-        // Strategy 3: Legacy/compatibility - top-level output_text
-        if (!text && typeof data?.output_text === 'string') {
-          text = data.output_text;
-          extractionMethod = 'legacy-output-text';
-        }
-        
-        // Strategy 4: Fallback - any text content in first output
-        if (!text && Array.isArray(data?.output) && data.output[0]?.content) {
-          const first = data.output[0];
-          const contentArr = Array.isArray(first?.content) ? first.content : [];
-          
-          // Try explicit output_text type first
-          const outText = contentArr.find((c: any) => c?.type === 'output_text');
-          if (outText?.text) {
-            text = outText.text;
-            extractionMethod = 'fallback-output-text-type';
-          } else {
-            // Try any output_text or text field
-            const anyOutputText = contentArr.find((c: any) => c?.type === 'output_text' && typeof c?.text === 'string');
-            const anyText = contentArr.find((c: any) => typeof c?.text === 'string');
-            if (anyOutputText?.text) {
-              text = anyOutputText.text;
-              extractionMethod = 'fallback-any-output-text';
-            } else if (anyText?.text) {
-              text = anyText.text;
-              extractionMethod = 'fallback-any-text';
-            }
-          }
-        }
-        
-        if (process.env.NODE_ENV === 'development' && extractionMethod) {
-          console.log(`✅ Text extracted using: ${extractionMethod}`);
-        }
-        
-      } catch (parseError) {
-        console.error('🚨 Error during response parsing:', parseError);
-        throw new Error(`Failed to parse GPT-5-nano response structure: ${parseError}`);
-      }
-
-      // Enhanced error handling for missing text response
-      if (!text) {
-        const debugInfo = {
-          hasOutput: Array.isArray(data?.output),
-          outputLength: data?.output?.length,
-          outputTypes: data?.output?.map((item: any) => item?.type),
-          hasOutputText: !!data?.output_text,
-          schemaUsed: schema?.name,
-          reasoningEffort: reasoningEffort,
-          verbosity: verbosity
-        };
-        const isDev = process.env.NODE_ENV === 'development';
-        console.error('🚨 GPT-5-nano Response Parsing Failed:', debugInfo);
-        // Avoid logging full model output in production; structure-only
-        if (isDev) {
-          console.error('📋 Full response data:', JSON.stringify(data, null, 2));
-        } else {
-          console.error('📋 Response redacted (production):', {
-            outputCount: Array.isArray(data?.output) ? data.output.length : 0,
-            hasUsage: !!data?.usage,
-            usageKeys: data?.usage ? Object.keys(data.usage) : []
-          });
-        }
-        
-        throw new Error(`No text content found in GPT-5-nano Responses API response. Debug info: ${JSON.stringify(debugInfo)}`);
-      }
-
-      // Enhanced token usage tracking with reasoning breakdown
-      const usage = {
-        input: data?.usage?.input_tokens ?? 0,
-        output: data?.usage?.output_tokens ?? 0,
-        reasoning: data?.usage?.reasoning_tokens ?? undefined
-      };
-      
-      // Validate expected JSON structure if schema was provided
-      if (schema && text) {
-        try {
-          const parsed = JSON.parse(text);
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`🔍 Schema validation for ${schema.name}:`, {
-              hasRequiredFields: true, // Basic validation - could be enhanced
-              responseLength: text.length,
-              parsedKeys: Object.keys(parsed)
-            });
-          }
-        } catch (jsonError) {
-          const isDev = process.env.NODE_ENV === 'development';
-          // Avoid logging extracted content in production
-          const payload: any = {
-            error: (jsonError as any)?.message || String(jsonError),
-            textLength: text.length,
-            schemaName: schema.name
-          };
-          if (isDev) {
-            payload.textPreview = text.substring(0, 200);
-          }
-          console.error('🚨 JSON parsing failed after successful text extraction:', payload);
-          // Don't throw here - let the caller handle JSON parsing
-        }
-      }
-
-      return { jsonText: String(text).trim(), usage };
-    } catch (e) {
-      clearTimeout(timeout);
-      throw e;
-    }
-  });
-  return result;
 }
 
 // Chat Completions API for Pro-tier modes (less strict schema validation)
@@ -312,14 +58,16 @@ export async function createChatCompletionsJSON({
     const timeout = setTimeout(() => controller.abort(), 30000);
 
     try {
-      const requestBody = {
+      const requestBody: Record<string, any> = {
         model: model || MODEL,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user }
         ],
         response_format: { type: 'json_object' },
-        temperature: 1.0
+      };
+      if (chatCompletionsSupportsTemperature(requestBody.model)) {
+        requestBody.temperature = 1.0;
       };
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {

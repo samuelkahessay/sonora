@@ -254,7 +254,7 @@ struct SonoraMemocCard: View {
         case .streaming:
             let show = memo.customTitle == nil || memo.customTitle?.isEmpty == true
             return show
-        case .success(let title):
+        case .success:
             return false
         case .failed:
             return false

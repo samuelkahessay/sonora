@@ -770,7 +770,7 @@ struct MemoDetailView: View {
             }()
             let show = !hasCustomTitle
             return show
-        case .success(let title):
+        case .success:
             return false
         case .failed:
             return false

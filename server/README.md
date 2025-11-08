@@ -159,21 +159,9 @@ fly secrets set OPENAI_API_KEY=sk-... CORS_ORIGIN=https://sonora.app SONORA_MODE
 fly deploy
 ```
 
-### Streaming policy and fallbacks
+### Analysis streaming
 
-The server follows a strict fallback order for analysis requests made with `Accept: text/event-stream`:
-
-1. gpt-5 via Chat Completions streaming
-2. If streaming is rejected or fails, fall back to non‑streaming gpt‑5 (Responses API)
-3. If that also fails, fall back to gpt‑4o‑mini via Chat Completions streaming
-
-Notes:
-- Some accounts may not have GPT‑5 streaming enabled; the server automatically uses the non‑streaming GPT‑5 path, then 4o‑mini streaming.
-- Non‑streaming requests (no `Accept: text/event-stream`) always use `SONORA_MODEL` (default `gpt-5-nano`, configurable).
-
-Probe endpoint:
-
-- `GET /keycheck-stream?model=gpt-5` checks whether the current `OPENAI_API_KEY` can start a streaming session for the given model (defaults to `gpt-5`).
+Analysis requests are non‑streaming. The server returns a single JSON response for `/analyze` with model, usage, latency, and validated data. Title generation may still use streaming, but the `/keycheck-stream` probe and analysis SSE have been removed.
 
 ## Response Schemas
 

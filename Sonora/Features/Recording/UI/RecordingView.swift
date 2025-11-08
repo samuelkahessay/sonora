@@ -18,11 +18,6 @@ struct RecordingView: View {
     private var colorScheme: ColorScheme
     @SwiftUI.Environment(\.accessibilityReduceMotion)
     private var reduceMotion: Bool
-    @AppStorage("hasSeenInspireMe") private var hasSeenInspireMe: Bool = false
-    @AppStorage("settings.showGuidedPrompts") private var showGuidedPrompts: Bool = true
-    @State private var idlePulseTask: Task<Void, Never>?
-    @State private var inspireButtonScale: CGFloat = 1.0
-    @State private var inspireButtonOpacity: Double = 1.0
 
     enum AccessibleElement {
         case recordButton
@@ -120,12 +115,11 @@ struct RecordingView: View {
                             }
                         }
                         promptContent
+                        .padding(.horizontal, 16) // horizontal breathing room for prompt text
                         .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
-                        .opacity(showGuidedPrompts ? 1 : 0)
-                        .accessibilityHidden(!showGuidedPrompts)
-                        .allowsHitTesting(showGuidedPrompts)
+                        .padding(.bottom, 18) // bottom breathing room before record button
 
-                        // Recording cluster: button(s), timer overlay, inspire me (tighter spacing)
+                        // Recording cluster: button(s), timer overlay (tighter spacing)
                         VStack(spacing: SonoraDesignSystem.Spacing.md) {
                             if viewModel.recordingState == .idle {
                                 // Sonic Bloom recording button with brand identity
@@ -172,32 +166,6 @@ struct RecordingView: View {
                                 UIAccessibility.isReduceMotionEnabled ? nil : .easeInOut(duration: 0.25),
                                 value: viewModel.recordingState.isActive
                             )
-
-                            if showGuidedPrompts {
-                                Button(action: {
-                                    HapticManager.shared.playSelection()
-                                    promptViewModel.refresh(excludingCurrent: true)
-                                    hasSeenInspireMe = true
-                                    resetIdlePulse()
-                                }) {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "lightbulb.fill")
-                                            .font(.system(size: 28, weight: .regular))
-                                            .foregroundColor(.yellow)
-                                            .scaleEffect(inspireButtonScale)
-                                            .opacity(inspireButtonOpacity)
-                                        Text("Inspire Me")
-                                            .font(SonoraDesignSystem.Typography.insightSerif)
-                                            .foregroundColor(colorScheme == .dark ? .white : .semantic(.textPrimary))
-                                    }
-                                    .minTouchTarget()
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("Inspire Me")
-                                .accessibilityHint(getInspireMeAccessibilityHint())
-                                .onAppear { setupInspireMeAnimation() }
-                                .onDisappear { cancelIdlePulse() }
-                            }
                         }
                         .padding(.top, SonoraDesignSystem.Spacing.xl) // add extra separation from prompt card
                     }
@@ -215,11 +183,7 @@ struct RecordingView: View {
 
             .onAppear {
                 viewModel.onViewAppear()
-                if showGuidedPrompts {
-                    promptViewModel.loadInitial()
-                } else {
-                    promptViewModel.clear()
-                }
+                promptViewModel.loadInitial()
             }
             .initialFocus {
                 if viewModel.hasPermission {
@@ -250,24 +214,15 @@ struct RecordingView: View {
                     FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
                         focusedElement = .statusText
                     }
-                    cancelIdlePulse()
                 } else {
                     FocusManager.shared.delayedFocus(after: FocusManager.quickDelay) {
                         focusedElement = .recordButton
                     }
-                    resetIdlePulse()
                 }
             }
             .onChange(of: viewModel.isInCountdown) { _, isInCountdown in
                 if isInCountdown {
                     focusedElement = .statusText
-                }
-            }
-            .onChange(of: showGuidedPrompts) { _, isEnabled in
-                if isEnabled {
-                    promptViewModel.loadInitial()
-                } else {
-                    promptViewModel.clear()
                 }
             }
             .alert("Recording Stopped", isPresented: $viewModel.showAutoStopAlert) {
@@ -290,11 +245,6 @@ struct RecordingView: View {
                             viewModel.stopRecording()
                         }
                     }
-                    // Resume idle pulse when returning active
-                    resetIdlePulse()
-                } else {
-                    // Stop any attention animation when not active
-                    cancelIdlePulse()
                 }
             }
         }
@@ -459,56 +409,6 @@ private extension RecordingView {
         case .recording: return .semantic(.textPrimary)
         case .paused: return .semantic(.warning)
         case .idle: return .semantic(.textSecondary)
-        }
-    }
-
-    // MARK: - Inspire Me Animation & Accessibility
-
-    func setupInspireMeAnimation() {
-        // First-launch gentle pulse
-        if !hasSeenInspireMe { animateInspireMe(cycles: 3) }
-        resetIdlePulse()
-    }
-
-    func animateInspireMe(cycles: Int) {
-        guard !reduceMotion else { return }
-        withAnimation(.easeInOut(duration: 1.2).repeatCount(cycles, autoreverses: true)) {
-            inspireButtonScale = 1.05
-            inspireButtonOpacity = 0.85
-        }
-        let total = Double(cycles) * 1.2
-        DispatchQueue.main.asyncAfter(deadline: .now() + total) {
-            withAnimation(.easeOut(duration: 0.3)) {
-                inspireButtonScale = 1.0
-                inspireButtonOpacity = 1.0
-            }
-        }
-    }
-
-    func resetIdlePulse() {
-        cancelIdlePulse()
-        idlePulseTask = Task { [isRecording = viewModel.isRecording] in
-            // Wait 6s of inactivity, then a brief two-cycle pulse
-            try? await Task.sleep(nanoseconds: 6_000_000_000)
-            if Task.isCancelled { return }
-            if isRecording { return }
-            if reduceMotion { return }
-            animateInspireMe(cycles: 2)
-        }
-    }
-
-    func cancelIdlePulse() {
-        idlePulseTask?.cancel()
-        idlePulseTask = nil
-    }
-
-func getInspireMeAccessibilityHint() -> String {
-        if !hasSeenInspireMe {
-            return "Need inspiration? Double tap to get a conversation starter"
-        } else if idlePulseTask != nil {
-            return "Stuck for ideas? Double tap for a new prompt"
-        } else {
-            return "Double tap to shuffle a new prompt"
         }
     }
 }

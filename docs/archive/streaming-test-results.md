@@ -1,8 +1,10 @@
-# AI Analysis Streaming Test Results
+# [Archived] AI Analysis Streaming Test Results
 
-**Date:** 2025-10-04
-**Server:** https://sonora.fly.dev
-**Status:** ✅ All Tests Passing
+Note (Nov 2025): Analysis streaming for `/analyze` has been removed from Sonora. This document is kept for historical reference only. Do not use any streaming test scripts or endpoints referenced below; they have been deleted. Title generation may still use streaming, but analysis is now non‑streaming.
+
+**Date (original):** 2025-10-04
+**Server (historical):** https://sonora.fly.dev
+**Status (historical):** ✅ All Tests Passing
 
 ---
 
@@ -225,35 +227,13 @@ Client constructs final AnalyzeEnvelope<T>
 
 ---
 
-## Testing Artifacts
+## Testing Artifacts (Archived)
 
-### Test Scripts
-1. **Server Streaming Test:** `server/test_streaming.sh`
-   - Automated SSE validation
-   - JSON structure verification
-   - Performance measurement
+The following artifacts previously validated analysis streaming and have been removed:
+- server/test_streaming.sh (deleted)
+- SonoraTests/Networking/AnalysisStreamingTests.swift (deleted)
 
-2. **Swift Integration Tests:** `SonoraTests/Networking/AnalysisStreamingTests.swift`
-   - Progress handler validation
-   - Error handling verification
-   - Performance benchmarking
-
-### Running Tests
-
-**Server-side:**
-```bash
-cd server
-bash test_streaming.sh
-```
-
-**Client-side:**
-```bash
-# From Xcode or CLI
-xcodebuild test \
-  -scheme SonoraTests \
-  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
-  -only-testing:SonoraTests/AnalysisStreamingTests
-```
+Current behavior: analysis is non‑streaming. See `server/README.md` for up‑to‑date guidance.
 
 ---
 
@@ -312,8 +292,8 @@ The AI analysis streaming implementation is **production-ready** with comprehens
 
 ---
 
-**Test Artifacts:**
-- Server test script: `/server/test_streaming.sh`
-- Swift tests: `/SonoraTests/Networking/AnalysisStreamingTests.swift`
-- Server implementation: `/server/src/server.ts:519-663`
-- Client implementation: `/Sonora/Data/Services/Analysis/AnalysisService.swift:67-170`
+**Test Artifacts (Historical):**
+- Server streaming test script (removed)
+- Swift streaming tests (removed)
+- Historical server implementation snapshot
+- Historical client implementation snapshot
