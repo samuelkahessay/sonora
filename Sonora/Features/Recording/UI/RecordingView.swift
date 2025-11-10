@@ -136,14 +136,12 @@ struct RecordingView: View {
                             }
                         }
 
-                        // Show prompt only when idle (hide during recording/paused)
-                        if viewModel.recordingState == .idle {
-                            promptContent
-                                .padding(.horizontal, 16) // horizontal breathing room for prompt text
-                                .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
-                                .padding(.bottom, 18) // bottom breathing room before record button
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                        }
+                        // Keep prompt structure always visible to prevent layout shift
+                        // When recording/paused, show empty space to maintain layout
+                        promptContent
+                            .padding(.horizontal, 16) // horizontal breathing room for prompt text
+                            .padding(.top, SonoraDesignSystem.Spacing.lg) // breathing room below nav
+                            .padding(.bottom, 18) // bottom breathing room before record button
 
                         // Recording cluster: button(s), timer overlay (tighter spacing)
                         VStack(spacing: SonoraDesignSystem.Spacing.md) {
@@ -376,7 +374,13 @@ struct RecordingView: View {
 extension RecordingView {
     private var promptContent: some View {
         Group {
-            if let prompt = promptViewModel.currentPrompt {
+            // When recording or paused, show empty text to maintain layout without visible prompt
+            if viewModel.recordingState != .idle {
+                Text("")
+                    .font(SonoraDesignSystem.Typography.insightSerif)
+                    .frame(maxWidth: .infinity)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if let prompt = promptViewModel.currentPrompt {
                 DynamicPromptCard(prompt: prompt) {
                     promptViewModel.refresh(excludingCurrent: true)
                 }
