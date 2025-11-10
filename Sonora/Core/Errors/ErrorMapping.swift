@@ -29,6 +29,10 @@ public final class ErrorMapping {
             return serviceError.asSonoraError
         }
 
+        if let analysisError = error as? AnalysisError {
+            return mapAnalysisError(analysisError)
+        }
+
         // Handle NSError cases
         if let nsError = error as NSError? {
             return mapNSError(nsError)
@@ -336,6 +340,46 @@ public final class ErrorMapping {
             return .transcriptionFailed("Sonora didn't quite catch that")
         case .transcriptionFailed(let reason):
             return .transcriptionFailed(reason)
+        }
+    }
+
+    // MARK: - AnalysisError Mapping
+
+    /// Maps AnalysisError to appropriate SonoraError cases
+    private static func mapAnalysisError(_ error: AnalysisError) -> SonoraError {
+        switch error {
+        case .invalidURL:
+            return .networkBadRequest("Invalid URL")
+        case .noData:
+            return .networkInvalidResponse
+        case .decodingError(let message):
+            return .dataDecodingFailed(message)
+        case .serverError(let code):
+            return .networkServerError(code, nil)
+        case .timeout:
+            return .analysisTimeout
+        case .networkError(let message):
+            return .networkServerError(0, message)
+        case .invalidResponse:
+            return .networkInvalidResponse
+        case .serviceUnavailable:
+            return .analysisServiceUnavailable
+        case .paymentRequired:
+            return .networkPaymentRequired
+        case .emptyTranscript:
+            return .analysisInvalidInput("Transcript is empty")
+        case .transcriptTooShort:
+            return .analysisInvalidInput("Transcript is too short")
+        case .analysisServiceError(let message):
+            return .analysisProcessingFailed(message)
+        case .systemBusy:
+            return .analysisServiceUnavailable
+        case .cacheError(let message):
+            return .storageReadFailed(message)
+        case .repositoryError(let message):
+            return .storageReadFailed(message)
+        case .invalidMemoId:
+            return .analysisInvalidInput("Invalid memo ID")
         }
     }
 }

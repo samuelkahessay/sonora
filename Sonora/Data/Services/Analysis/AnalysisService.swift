@@ -60,8 +60,12 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = config.timeoutInterval(for: mode)
 
-        // Add Pro entitlement header for events and reminders (requires Pro subscription)
-        if mode == .events || mode == .reminders {
+        // Add Pro entitlement header for Pro-tier features
+        // Parallel distill components (.distillSummary, .distillActions, .distillReflection)
+        // and detection modes (.events, .reminders) require Pro subscription
+        if mode == .events || mode == .reminders ||
+           mode == .distill || mode == .distillSummary || mode == .distillActions ||
+           mode == .distillThemes || mode == .distillReflection {
             request.setValue("1", forHTTPHeaderField: "X-Entitlement-Pro")
         }
 
@@ -109,6 +113,10 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
             print("❌ AnalysisService: Server error \(httpResponse.statusCode)")
             if let body = String(data: data, encoding: .utf8) {
                 print("❌ AnalysisService: Response body: \(body)")
+            }
+            // Handle 402 Payment Required specifically
+            if httpResponse.statusCode == 402 {
+                throw AnalysisError.paymentRequired
             }
             throw AnalysisError.serverError(httpResponse.statusCode)
         }

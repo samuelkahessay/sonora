@@ -4,7 +4,7 @@ import SwiftUI
 
 /// Skeleton loading view for summary section during parallel distill processing
 struct SummarySkeleton: View {
-    @State private var shimmerPhase: CGFloat = 0
+    @State private var shimmerPhase: CGFloat = -0.5
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -33,17 +33,19 @@ struct SummarySkeleton: View {
         }
         .onAppear {
             withAnimation(Animation.linear(duration: 1.5).repeatForever(autoreverses: false)) {
-                shimmerPhase = 1
+                shimmerPhase = 1.5
             }
         }
     }
 
     private var shimmerGradient: LinearGradient {
-        LinearGradient(
+        // Create smooth continuous shimmer by allowing phase to sweep from -0.5 to 1.5
+        // This ensures the shimmer wave fully enters and exits the view
+        return LinearGradient(
             gradient: Gradient(stops: [
-                .init(color: Color.semantic(.fillSecondary), location: max(0, shimmerPhase - 0.3)),
-                .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: shimmerPhase),
-                .init(color: Color.semantic(.fillSecondary), location: min(1, shimmerPhase + 0.3))
+                .init(color: Color.semantic(.fillSecondary), location: shimmerPhase - 0.3),
+                .init(color: Color.semantic(.fillSecondary).opacity(0.5), location: shimmerPhase),
+                .init(color: Color.semantic(.fillSecondary), location: shimmerPhase + 0.3)
             ]),
             startPoint: .leading,
             endPoint: .trailing
@@ -55,7 +57,7 @@ struct SummarySkeleton: View {
 
 /// Skeleton loading view for reflection questions section during parallel distill processing
 struct ReflectionQuestionsSkeleton: View {
-    @State private var shimmerPhase: CGFloat = 0
+    @State private var shimmerPhase: CGFloat = -0.5
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -79,7 +81,7 @@ struct ReflectionQuestionsSkeleton: View {
         }
         .onAppear {
             withAnimation(Animation.linear(duration: 1.5).repeatForever(autoreverses: false)) {
-                shimmerPhase = 1
+                shimmerPhase = 1.5
             }
         }
     }
@@ -118,11 +120,13 @@ struct ReflectionQuestionsSkeleton: View {
     }
 
     private var shimmerGradient: LinearGradient {
-        LinearGradient(
+        // Create smooth continuous shimmer by allowing phase to sweep from -0.5 to 1.5
+        // This ensures the shimmer wave fully enters and exits the view
+        return LinearGradient(
             gradient: Gradient(stops: [
-                .init(color: Color.semantic(.fillSecondary), location: max(0, shimmerPhase - 0.3)),
-                .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: shimmerPhase),
-                .init(color: Color.semantic(.fillSecondary), location: min(1, shimmerPhase + 0.3))
+                .init(color: Color.semantic(.fillSecondary), location: shimmerPhase - 0.3),
+                .init(color: Color.semantic(.fillSecondary).opacity(0.5), location: shimmerPhase),
+                .init(color: Color.semantic(.fillSecondary), location: shimmerPhase + 0.3)
             ]),
             startPoint: .leading,
             endPoint: .trailing
@@ -143,7 +147,7 @@ struct ReflectionQuestionsSkeleton: View {
 struct SkeletonLine: View {
     let width: CGFloat?
     let height: CGFloat
-    @State private var shimmerPhase: CGFloat = 0
+    @State private var shimmerPhase: CGFloat = -0.5
 
     init(width: CGFloat? = nil, height: CGFloat = 14) {
         self.width = width
@@ -156,17 +160,19 @@ struct SkeletonLine: View {
             .frame(width: width, height: height)
             .onAppear {
                 withAnimation(Animation.linear(duration: 1.5).repeatForever(autoreverses: false)) {
-                    shimmerPhase = 1
+                    shimmerPhase = 1.5
                 }
             }
     }
 
     private var shimmerGradient: LinearGradient {
-        LinearGradient(
+        // Create smooth continuous shimmer by allowing phase to sweep from -0.5 to 1.5
+        // This ensures the shimmer wave fully enters and exits the view
+        return LinearGradient(
             gradient: Gradient(stops: [
-                .init(color: Color.semantic(.fillSecondary), location: max(0, shimmerPhase - 0.3)),
-                .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: shimmerPhase),
-                .init(color: Color.semantic(.fillSecondary), location: min(1, shimmerPhase + 0.3))
+                .init(color: Color.semantic(.fillSecondary), location: shimmerPhase - 0.3),
+                .init(color: Color.semantic(.fillSecondary).opacity(0.5), location: shimmerPhase),
+                .init(color: Color.semantic(.fillSecondary), location: shimmerPhase + 0.3)
             ]),
             startPoint: .leading,
             endPoint: .trailing

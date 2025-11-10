@@ -12,6 +12,7 @@ enum AnalysisError: LocalizedError {
     case networkError(String)
     case invalidResponse
     case serviceUnavailable
+    case paymentRequired
 
     // MARK: - Business Logic Errors
     case emptyTranscript
@@ -43,6 +44,8 @@ enum AnalysisError: LocalizedError {
             return "Invalid response from analysis service"
         case .serviceUnavailable:
             return "Analysis service is currently unavailable"
+        case .paymentRequired:
+            return "This feature requires an active subscription"
 
         // Business Logic Errors
         case .emptyTranscript:
@@ -83,6 +86,8 @@ enum AnalysisError: LocalizedError {
             return "The analysis service returned an unexpected response. Please try again."
         case .serviceUnavailable:
             return "Please try again later when the analysis service is available."
+        case .paymentRequired:
+            return "Please check your subscription status in Settings or upgrade to access this feature."
 
         // Business Logic Errors
         case .emptyTranscript:

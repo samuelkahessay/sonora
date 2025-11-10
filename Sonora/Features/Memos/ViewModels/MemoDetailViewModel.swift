@@ -326,7 +326,11 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
                 }
             }
         } catch {
-            // Error state already handled in the stream task above.
+            // Error state already handled in the stream task above, but ensure progress state is cleared
+            await MainActor.run {
+                distillProgress = nil
+                partialDistillData = nil
+            }
         }
     }
 
