@@ -44,7 +44,7 @@ struct SummarySkeleton: View {
         let middle = max(0, min(1, shimmerPhase))
         let end = max(0, min(1, shimmerPhase + 0.3))
 
-        LinearGradient(
+        return LinearGradient(
             gradient: Gradient(stops: [
                 .init(color: Color.semantic(.fillSecondary), location: start),
                 .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: middle),
@@ -128,7 +128,7 @@ struct ReflectionQuestionsSkeleton: View {
         let middle = max(0, min(1, shimmerPhase))
         let end = max(0, min(1, shimmerPhase + 0.3))
 
-        LinearGradient(
+        return LinearGradient(
             gradient: Gradient(stops: [
                 .init(color: Color.semantic(.fillSecondary), location: start),
                 .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: middle),
@@ -177,7 +177,7 @@ struct SkeletonLine: View {
         let middle = max(0, min(1, shimmerPhase))
         let end = max(0, min(1, shimmerPhase + 0.3))
 
-        LinearGradient(
+        return LinearGradient(
             gradient: Gradient(stops: [
                 .init(color: Color.semantic(.fillSecondary), location: start),
                 .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: middle),
