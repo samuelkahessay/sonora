@@ -660,7 +660,7 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
         let envelope = AnalyzeEnvelope(
             mode: mode,
             data: data,
-            model: "gpt-5-nano",
+            model: "gpt-5-mini",
             tokens: TokenUsage(input: 0, output: 0), // Simplified for now
             latency_ms: 0, // Simplified for now
             moderation: nil

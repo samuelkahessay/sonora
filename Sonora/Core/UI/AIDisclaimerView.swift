@@ -59,7 +59,7 @@ struct AIDisclaimerView: View {
         var backgroundColor: Color {
             switch self {
             case .compact:
-                return .semantic(.info).opacity(0.1)
+                return .semantic(.brandPrimary).opacity(0.1)
             case .detailed:
                 return .semantic(.fillSecondary)
             case .inline:
@@ -70,7 +70,7 @@ struct AIDisclaimerView: View {
         var foregroundColor: Color {
             switch self {
             case .compact:
-                return .semantic(.info)
+                return .semantic(.brandPrimary)
             case .detailed:
                 return .semantic(.textSecondary)
             case .inline:
@@ -110,7 +110,7 @@ struct AIDisclaimerView: View {
 
             Text(contentType.displayName)
                 .font(.caption)
-                .foregroundColor(.semantic(.textSecondary))
+                .foregroundColor(style.foregroundColor)
         }
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)

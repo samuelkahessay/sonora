@@ -420,6 +420,7 @@ struct MemoDetailView: View {
                 Text("Transcription")
                     .font(.system(.headline, design: .serif))
                     .fontWeight(.semibold)
+                    .foregroundColor(.semantic(.brandPrimary))
 
                 Spacer()
                 if viewModel.transcriptionState.isFailed {
@@ -486,6 +487,7 @@ struct MemoDetailView: View {
                     Text("Transcription")
                         .font(.system(.headline, design: .serif))
                         .fontWeight(.semibold)
+                        .foregroundColor(.semantic(.brandPrimary))
                     Spacer()
                     if viewModel.transcriptionState.isInProgress {
                         LoadingIndicator(size: .small)

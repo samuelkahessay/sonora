@@ -35,7 +35,8 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
             moderation: nil
         )
 
-        let analysisService = MockAnalysisService(liteDistillResult: expectedEnvelope)
+        let analysisService = MockAnalysisService()
+        analysisService.liteDistillEnvelope = expectedEnvelope
         let repository = InMemoryAnalysisRepositoryStub()
         let logger = CapturingLogger()
         let eventBus = NoopEventBus()
@@ -89,9 +90,9 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
             moderation: nil
         )
 
-        let analysisService = MockAnalysisService(liteDistillResult: nil)
+        let analysisService = MockAnalysisService()
         let repository = InMemoryAnalysisRepositoryStub()
-        repository.saveAnalysisResult(cachedEnvelope, for: memoId, mode: .liteDistill)
+        await repository.saveAnalysisResult(cachedEnvelope, for: memoId, mode: .liteDistill)
 
         let logger = CapturingLogger()
         let eventBus = NoopEventBus()
@@ -144,7 +145,8 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
             moderation: nil
         )
 
-        let analysisService = MockAnalysisService(liteDistillResult: apiEnvelope)
+        let analysisService = MockAnalysisService()
+        analysisService.liteDistillEnvelope = apiEnvelope
         let repository = InMemoryAnalysisRepositoryStub()
         let logger = CapturingLogger()
         let eventBus = NoopEventBus()
@@ -166,7 +168,7 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
         XCTAssertEqual(analysisService.apiCallCount, 1)
 
         // Verify result was cached
-        let cached: AnalyzeEnvelope<LiteDistillData>? = repository.getAnalysisResult(
+        let cached: AnalyzeEnvelope<LiteDistillData>? = await repository.getAnalysisResult(
             for: memoId,
             mode: .liteDistill,
             responseType: LiteDistillData.self
@@ -182,7 +184,7 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
         let memoId = UUID()
         let emptyTranscript = ""
 
-        let analysisService = MockAnalysisService(liteDistillResult: nil)
+        let analysisService = MockAnalysisService()
         let repository = InMemoryAnalysisRepositoryStub()
         let logger = CapturingLogger()
         let eventBus = NoopEventBus()
@@ -211,7 +213,7 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
         let memoId = UUID()
         let shortTranscript = "Hi"  // Less than 10 characters
 
-        let analysisService = MockAnalysisService(liteDistillResult: nil)
+        let analysisService = MockAnalysisService()
         let repository = InMemoryAnalysisRepositoryStub()
         let logger = CapturingLogger()
         let eventBus = NoopEventBus()
@@ -240,7 +242,7 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
         let memoId = UUID()
         let whitespaceTranscript = "     \n\t   "
 
-        let analysisService = MockAnalysisService(liteDistillResult: nil)
+        let analysisService = MockAnalysisService()
         let repository = InMemoryAnalysisRepositoryStub()
         let logger = CapturingLogger()
         let eventBus = NoopEventBus()
@@ -271,7 +273,7 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
         let memoId = UUID()
         let transcript = "Valid transcript for testing concurrency"
 
-        let analysisService = MockAnalysisService(liteDistillResult: nil)
+        let analysisService = MockAnalysisService()
         let repository = InMemoryAnalysisRepositoryStub()
         let logger = CapturingLogger()
         let eventBus = NoopEventBus()
@@ -322,7 +324,8 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
             moderation: nil
         )
 
-        let analysisService = MockAnalysisService(liteDistillResult: envelope)
+        let analysisService = MockAnalysisService()
+        analysisService.liteDistillEnvelope = envelope
         let repository = InMemoryAnalysisRepositoryStub()
         let logger = CapturingLogger()
         let eventBus = NoopEventBus()
@@ -374,7 +377,8 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
             moderation: nil
         )
 
-        let analysisService = MockAnalysisService(liteDistillResult: envelope)
+        let analysisService = MockAnalysisService()
+        analysisService.liteDistillEnvelope = envelope
         let repository = InMemoryAnalysisRepositoryStub()
         let logger = CapturingLogger()
         let eventBus = CapturingEventBus()
@@ -407,10 +411,8 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
         let memoId = UUID()
         let transcript = "Testing failure without event"
 
-        let analysisService = MockAnalysisService(
-            liteDistillResult: nil,
-            shouldThrowError: true
-        )
+        let analysisService = MockAnalysisService()
+        analysisService.shouldThrowError = true
         let repository = InMemoryAnalysisRepositoryStub()
         let logger = CapturingLogger()
         let eventBus = CapturingEventBus()
@@ -443,10 +445,8 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
         let memoId = UUID()
         let transcript = "Testing network error handling"
 
-        let analysisService = MockAnalysisService(
-            liteDistillResult: nil,
-            shouldThrowError: true
-        )
+        let analysisService = MockAnalysisService()
+        analysisService.shouldThrowError = true
         let repository = InMemoryAnalysisRepositoryStub()
         let logger = CapturingLogger()
         let eventBus = NoopEventBus()
@@ -476,10 +476,8 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
         let memoId = UUID()
         let transcript = "Testing API error operation cleanup"
 
-        let analysisService = MockAnalysisService(
-            liteDistillResult: nil,
-            shouldThrowError: true
-        )
+        let analysisService = MockAnalysisService()
+        analysisService.shouldThrowError = true
         let repository = InMemoryAnalysisRepositoryStub()
         let logger = CapturingLogger()
         let eventBus = NoopEventBus()
@@ -510,84 +508,53 @@ final class AnalyzeLiteDistillUseCaseTests: XCTestCase {
 // MARK: - Test Doubles
 
 @MainActor
-private final class MockAnalysisService: ObservableObject, AnalysisServiceProtocol, @unchecked Sendable {
-    private let liteDistillEnvelope: AnalyzeEnvelope<LiteDistillData>?
-    private let shouldThrowError: Bool
-    private(set) var apiCallCount = 0
-
-    init(liteDistillResult: AnalyzeEnvelope<LiteDistillData>?, shouldThrowError: Bool = false) {
-        self.liteDistillEnvelope = liteDistillResult
-        self.shouldThrowError = shouldThrowError
-    }
-
-    func analyze<T>(mode: AnalysisMode, transcript: String, responseType: T.Type, historicalContext: [HistoricalMemoContext]?) async throws -> AnalyzeEnvelope<T> {
-        fatalError("Use analyzeLiteDistill for this test")
-    }
-
-    func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData> {
-        apiCallCount += 1
-
-        if shouldThrowError {
-            throw NSError(domain: "TestError", code: 500, userInfo: [NSLocalizedDescriptionKey: "Mock API error"])
-        }
-
-        guard let envelope = liteDistillEnvelope else {
-            fatalError("liteDistillEnvelope not set for mock")
-        }
-
-        return envelope
-    }
-
-    func analyzeDistill(transcript: String, historicalContext: [HistoricalMemoContext]?) async throws -> AnalyzeEnvelope<DistillData> { fatalError("Not stubbed") }
-    func analyzeDistill(transcript: String) async throws -> AnalyzeEnvelope<DistillData> { fatalError("Not stubbed") }
-    func analyzeDistillSummary(transcript: String) async throws -> AnalyzeEnvelope<DistillSummaryData> { fatalError("Not stubbed") }
-    func analyzeDistillActions(transcript: String) async throws -> AnalyzeEnvelope<DistillActionsData> { fatalError("Not stubbed") }
-    func analyzeDistillThemes(transcript: String) async throws -> AnalyzeEnvelope<DistillThemesData> { fatalError("Not stubbed") }
-    func analyzeDistillReflection(transcript: String) async throws -> AnalyzeEnvelope<DistillReflectionData> { fatalError("Not stubbed") }
-}
-
-@MainActor
 private final class InMemoryAnalysisRepositoryStub: AnalysisRepository {
     private var storage: [UUID: [AnalysisMode: Any]] = [:]
 
-    func saveAnalysisResult<T>(_ result: AnalyzeEnvelope<T>, for memoId: UUID, mode: AnalysisMode) {
+    func saveAnalysisResult<T>(_ result: AnalyzeEnvelope<T>, for memoId: UUID, mode: AnalysisMode) async {
         var memoStorage = storage[memoId] ?? [:]
         memoStorage[mode] = result
         storage[memoId] = memoStorage
     }
 
-    func getAnalysisResult<T>(for memoId: UUID, mode: AnalysisMode, responseType: T.Type) -> AnalyzeEnvelope<T>? {
+    func getAnalysisResult<T>(for memoId: UUID, mode: AnalysisMode, responseType: T.Type) async -> AnalyzeEnvelope<T>? {
         guard let memoStorage = storage[memoId], let envelope = memoStorage[mode] as? AnalyzeEnvelope<T> else {
             return nil
         }
         return envelope
     }
 
-    func hasAnalysisResult(for memoId: UUID, mode: AnalysisMode) -> Bool {
+    func hasAnalysisResult(for memoId: UUID, mode: AnalysisMode) async -> Bool {
         storage[memoId]?[mode] != nil
     }
 
-    func deleteAnalysisResults(for memoId: UUID) {
+    func deleteAnalysisResults(for memoId: UUID) async {
         storage[memoId] = nil
     }
 
-    func deleteAnalysisResult(for memoId: UUID, mode: AnalysisMode) {
+    func deleteAnalysisResult(for memoId: UUID, mode: AnalysisMode) async {
         storage[memoId]?[mode] = nil
     }
 
-    func getAllAnalysisResults(for memoId: UUID) -> [AnalysisMode: Any] {
-        storage[memoId] ?? [:]
+    func getAllAnalysisResults(for memoId: UUID) async -> AnalysisResultsSummary {
+        let modeKeys: [AnalysisMode]
+        if let keys = storage[memoId]?.keys {
+            modeKeys = Array(keys)
+        } else {
+            modeKeys = []
+        }
+        return AnalysisResultsSummary(availableModes: Set(modeKeys))
     }
 
-    func clearCache() {
+    func clearCache() async {
         storage.removeAll()
     }
 
-    func getCacheSize() -> Int {
+    func getCacheSize() async -> Int {
         storage.reduce(0) { $0 + $1.value.count }
     }
 
-    func getAnalysisHistory(for memoId: UUID) -> [(mode: AnalysisMode, timestamp: Date)] {
+    func getAnalysisHistory(for memoId: UUID) async -> [(mode: AnalysisMode, timestamp: Date)] {
         []
     }
 }

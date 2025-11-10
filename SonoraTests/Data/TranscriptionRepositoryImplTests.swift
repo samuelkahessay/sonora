@@ -41,82 +41,82 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
 
     // MARK: - Save and Get Tests
 
-    func test_saveAndGetTranscriptionState_Success() throws {
+    func test_saveAndGetTranscriptionState_Success() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
         // Save in progress
-        repository.saveTranscriptionState(.inProgress, for: memo.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo.id)
 
         // Get
-        let retrieved = repository.getTranscriptionState(for: memo.id)
+        let retrieved = await repository.getTranscriptionState(for: memo.id)
 
         XCTAssertTrue(retrieved.isInProgress)
     }
 
-    func test_saveTranscriptionText_SavesCompletedState() throws {
+    func test_saveTranscriptionText_SavesCompletedState() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
-        repository.saveTranscriptionText("Test transcription text", for: memo.id)
+        await repository.saveTranscriptionText("Test transcription text", for: memo.id)
 
-        let text = repository.getTranscriptionText(for: memo.id)
+        let text = await repository.getTranscriptionText(for: memo.id)
         XCTAssertEqual(text, "Test transcription text")
 
-        let state = repository.getTranscriptionState(for: memo.id)
+        let state = await repository.getTranscriptionState(for: memo.id)
         XCTAssertTrue(state.isCompleted)
     }
 
-    func test_getTranscriptionState_NonExistent_ReturnsNotStarted() throws {
+    func test_getTranscriptionState_NonExistent_ReturnsNotStarted() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
 
-        let state = repository.getTranscriptionState(for: UUID())
+        let state = await repository.getTranscriptionState(for: UUID())
 
         XCTAssertTrue(state.isNotStarted)
     }
 
     // MARK: - State Transition Tests
 
-    func test_stateTransitions_NotStartedToCompleted() throws {
+    func test_stateTransitions_NotStartedToCompleted() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
         // Initial state
-        var state = repository.getTranscriptionState(for: memo.id)
+        var state = await repository.getTranscriptionState(for: memo.id)
         XCTAssertTrue(state.isNotStarted)
 
         // To in progress
-        repository.saveTranscriptionState(.inProgress, for: memo.id)
-        state = repository.getTranscriptionState(for: memo.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo.id)
+        state = await repository.getTranscriptionState(for: memo.id)
         XCTAssertTrue(state.isInProgress)
 
         // To completed
-        repository.saveTranscriptionState(.completed("Final text"), for: memo.id)
-        state = repository.getTranscriptionState(for: memo.id)
+        await repository.saveTranscriptionState(.completed("Final text"), for: memo.id)
+        state = await repository.getTranscriptionState(for: memo.id)
         XCTAssertTrue(state.isCompleted)
         XCTAssertEqual(state.text, "Final text")
     }
 
-    func test_stateTransitions_InProgressToFailed() throws {
+    func test_stateTransitions_InProgressToFailed() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
-        repository.saveTranscriptionState(.inProgress, for: memo.id)
-        repository.saveTranscriptionState(.failed("Network error"), for: memo.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo.id)
+        await repository.saveTranscriptionState(.failed("Network error"), for: memo.id)
 
-        let state = repository.getTranscriptionState(for: memo.id)
+        let state = await repository.getTranscriptionState(for: memo.id)
         XCTAssertTrue(state.isFailed)
         XCTAssertEqual(state.errorMessage, "Network error")
     }
 
     // MARK: - Publisher Tests
 
-    func test_stateChangesPublisher_EmitsOnSave() throws {
+    func test_stateChangesPublisher_EmitsOnSave() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -128,7 +128,7 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
             }
 
         // Save state
-        repository.saveTranscriptionState(.inProgress, for: memo.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo.id)
 
         XCTAssertEqual(receivedChanges.count, 1)
         XCTAssertEqual(receivedChanges[0].memoId, memo.id)
@@ -138,7 +138,7 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_stateChangesPublisher_EmitsOnUpdate() throws {
+    func test_stateChangesPublisher_EmitsOnUpdate() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -150,9 +150,9 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
             }
 
         // Initial save
-        repository.saveTranscriptionState(.inProgress, for: memo.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo.id)
         // Update
-        repository.saveTranscriptionState(.completed("Done"), for: memo.id)
+        await repository.saveTranscriptionState(.completed("Done"), for: memo.id)
 
         XCTAssertEqual(receivedChanges.count, 2)
         XCTAssertTrue(receivedChanges[0].currentState.isInProgress)
@@ -162,7 +162,7 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_stateChangesPublisher_ForSpecificMemo_OnlyEmitsRelevantChanges() throws {
+    func test_stateChangesPublisher_ForSpecificMemo_OnlyEmitsRelevantChanges() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo1 = try makeTestMemo(in: context, id: UUID())
@@ -175,9 +175,9 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
             }
 
         // Save for both memos
-        repository.saveTranscriptionState(.inProgress, for: memo1.id)
-        repository.saveTranscriptionState(.inProgress, for: memo2.id)
-        repository.saveTranscriptionState(.completed("Done"), for: memo1.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo1.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo2.id)
+        await repository.saveTranscriptionState(.completed("Done"), for: memo1.id)
 
         // Should only receive changes for memo1
         XCTAssertEqual(memo1Changes.count, 2)
@@ -186,7 +186,7 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_stateChangesPublisher_EmitsOnGetForNonExistent() throws {
+    func test_stateChangesPublisher_EmitsOnGetForNonExistent() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memoId = UUID()
@@ -198,7 +198,7 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
             }
 
         // Getting non-existent state should emit discovery event
-        _ = repository.getTranscriptionState(for: memoId)
+        _ = await repository.getTranscriptionState(for: memoId)
 
         XCTAssertEqual(receivedChanges.count, 1)
         XCTAssertEqual(receivedChanges[0].memoId, memoId)
@@ -209,27 +209,28 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
 
     // MARK: - Delete Tests
 
-    func test_deleteTranscriptionData_RemovesState() throws {
+    func test_deleteTranscriptionData_RemovesState() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
-        repository.saveTranscriptionState(.completed("Test"), for: memo.id)
-        XCTAssertTrue(repository.getTranscriptionState(for: memo.id).isCompleted)
+        await repository.saveTranscriptionState(.completed("Test"), for: memo.id)
+        let stateBeforeDeletion = await repository.getTranscriptionState(for: memo.id)
+        XCTAssertTrue(stateBeforeDeletion.isCompleted)
 
-        repository.deleteTranscriptionData(for: memo.id)
+        await repository.deleteTranscriptionData(for: memo.id)
 
         // Should return notStarted after deletion
-        let state = repository.getTranscriptionState(for: memo.id)
+        let state = await repository.getTranscriptionState(for: memo.id)
         XCTAssertTrue(state.isNotStarted)
     }
 
-    func test_deleteTranscriptionData_EmitsStateChangeEvent() throws {
+    func test_deleteTranscriptionData_EmitsStateChangeEvent() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
-        repository.saveTranscriptionState(.completed("Test"), for: memo.id)
+        await repository.saveTranscriptionState(.completed("Test"), for: memo.id)
 
         var receivedChanges: [TranscriptionStateChange] = []
         let cancellable = repository.stateChangesPublisher
@@ -237,7 +238,7 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
                 receivedChanges.append(change)
             }
 
-        repository.deleteTranscriptionData(for: memo.id)
+        await repository.deleteTranscriptionData(for: memo.id)
 
         // Should emit deletion event
         XCTAssertEqual(receivedChanges.count, 1)
@@ -249,7 +250,7 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
 
     // MARK: - Batch Retrieval Tests
 
-    func test_getTranscriptionStates_ReturnsBatchResults() throws {
+    func test_getTranscriptionStates_ReturnsBatchResults() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
 
@@ -257,11 +258,11 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
         let memo2 = try makeTestMemo(in: context, id: UUID())
         let memo3 = try makeTestMemo(in: context, id: UUID())
 
-        repository.saveTranscriptionState(.completed("Text 1"), for: memo1.id)
-        repository.saveTranscriptionState(.inProgress, for: memo2.id)
-        repository.saveTranscriptionState(.failed("Error"), for: memo3.id)
+        await repository.saveTranscriptionState(.completed("Text 1"), for: memo1.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo2.id)
+        await repository.saveTranscriptionState(.failed("Error"), for: memo3.id)
 
-        let states = repository.getTranscriptionStates(for: [memo1.id, memo2.id, memo3.id])
+        let states = await repository.getTranscriptionStates(for: [memo1.id, memo2.id, memo3.id])
 
         XCTAssertEqual(states.count, 3)
         XCTAssertTrue(states[memo1.id]?.isCompleted ?? false)
@@ -269,25 +270,25 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
         XCTAssertTrue(states[memo3.id]?.isFailed ?? false)
     }
 
-    func test_getTranscriptionStates_EmptyArray_ReturnsEmpty() throws {
+    func test_getTranscriptionStates_EmptyArray_ReturnsEmpty() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
 
-        let states = repository.getTranscriptionStates(for: [])
+        let states = await repository.getTranscriptionStates(for: [])
 
         XCTAssertTrue(states.isEmpty)
     }
 
-    func test_getTranscriptionStates_UsesCacheFirst() throws {
+    func test_getTranscriptionStates_UsesCacheFirst() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
         // Save and ensure it's cached
-        repository.saveTranscriptionState(.completed("Cached"), for: memo.id)
+        await repository.saveTranscriptionState(.completed("Cached"), for: memo.id)
 
         // Batch retrieval should use cache
-        let states = repository.getTranscriptionStates(for: [memo.id])
+        let states = await repository.getTranscriptionStates(for: [memo.id])
 
         XCTAssertEqual(states.count, 1)
         XCTAssertEqual(states[memo.id]?.text, "Cached")
@@ -295,29 +296,31 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
 
     // MARK: - Cache Tests
 
-    func test_clearTranscriptionCache_RemovesAllCachedStates() throws {
+    func test_clearTranscriptionCache_RemovesAllCachedStates() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
-        repository.saveTranscriptionState(.completed("Test"), for: memo.id)
+        await repository.saveTranscriptionState(.completed("Test"), for: memo.id)
 
         // Verify cached
-        XCTAssertFalse(repository.transcriptionStates.isEmpty)
+        let cachedStatesBefore = await repository.transcriptionStates
+        XCTAssertFalse(cachedStatesBefore.isEmpty)
 
-        repository.clearTranscriptionCache()
+        await repository.clearTranscriptionCache()
 
         // Cache should be empty
-        XCTAssertTrue(repository.transcriptionStates.isEmpty)
+        let cachedStatesAfter = await repository.transcriptionStates
+        XCTAssertTrue(cachedStatesAfter.isEmpty)
 
         // But data should still be in persistent store
-        let state = repository.getTranscriptionState(for: memo.id)
+        let state = await repository.getTranscriptionState(for: memo.id)
         XCTAssertTrue(state.isCompleted)
     }
 
     // MARK: - Metadata Tests
 
-    func test_saveAndGetTranscriptionMetadata() throws {
+    func test_saveAndGetTranscriptionMetadata() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -331,9 +334,9 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
             detectedLanguage: "en"
         )
 
-        repository.saveTranscriptionMetadata(metadata, for: memo.id)
+        await repository.saveTranscriptionMetadata(metadata, for: memo.id)
 
-        let retrieved = repository.getTranscriptionMetadata(for: memo.id)
+        let retrieved = await repository.getTranscriptionMetadata(for: memo.id)
 
         XCTAssertNotNil(retrieved)
         XCTAssertEqual(retrieved?.memoId, memo.id)
@@ -341,45 +344,49 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
         XCTAssertEqual(retrieved?.detectedLanguage, "en")
     }
 
-    func test_getTranscriptionMetadata_NonExistent_ReturnsNil() throws {
+    func test_getTranscriptionMetadata_NonExistent_ReturnsNil() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
 
-        let metadata = repository.getTranscriptionMetadata(for: UUID())
+        let metadata = await repository.getTranscriptionMetadata(for: UUID())
 
         XCTAssertNil(metadata)
     }
 
     // MARK: - TranscriptionStates Dictionary Tests
 
-    func test_transcriptionStates_ReflectsCurrentState() throws {
+    func test_transcriptionStates_ReflectsCurrentState() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
-        XCTAssertTrue(repository.transcriptionStates.isEmpty)
+        let initialStates = await repository.transcriptionStates
+        XCTAssertTrue(initialStates.isEmpty)
 
-        repository.saveTranscriptionState(.inProgress, for: memo.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo.id)
 
-        XCTAssertEqual(repository.transcriptionStates.count, 1)
-        XCTAssertTrue(repository.transcriptionStates[memo.id.uuidString]?.isInProgress ?? false)
+        let updatedStates = await repository.transcriptionStates
+        XCTAssertEqual(updatedStates.count, 1)
+        XCTAssertTrue(updatedStates[memo.id.uuidString]?.isInProgress ?? false)
     }
 
-    func test_transcriptionStates_UpdatesOnStateChange() throws {
+    func test_transcriptionStates_UpdatesOnStateChange() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
-        repository.saveTranscriptionState(.inProgress, for: memo.id)
-        XCTAssertTrue(repository.transcriptionStates[memo.id.uuidString]?.isInProgress ?? false)
+        await repository.saveTranscriptionState(.inProgress, for: memo.id)
+        let statesAfterInProgress = await repository.transcriptionStates
+        XCTAssertTrue(statesAfterInProgress[memo.id.uuidString]?.isInProgress ?? false)
 
-        repository.saveTranscriptionState(.completed("Done"), for: memo.id)
-        XCTAssertTrue(repository.transcriptionStates[memo.id.uuidString]?.isCompleted ?? false)
+        await repository.saveTranscriptionState(.completed("Done"), for: memo.id)
+        let statesAfterCompletion = await repository.transcriptionStates
+        XCTAssertTrue(statesAfterCompletion[memo.id.uuidString]?.isCompleted ?? false)
     }
 
     // MARK: - Edge Cases
 
-    func test_multipleConcurrentStateChanges() throws {
+    func test_multipleConcurrentStateChanges() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
 
@@ -394,11 +401,11 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
             }
 
         // Rapid state changes
-        repository.saveTranscriptionState(.inProgress, for: memo1.id)
-        repository.saveTranscriptionState(.inProgress, for: memo2.id)
-        repository.saveTranscriptionState(.completed("Done 1"), for: memo1.id)
-        repository.saveTranscriptionState(.inProgress, for: memo3.id)
-        repository.saveTranscriptionState(.completed("Done 2"), for: memo2.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo1.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo2.id)
+        await repository.saveTranscriptionState(.completed("Done 1"), for: memo1.id)
+        await repository.saveTranscriptionState(.inProgress, for: memo3.id)
+        await repository.saveTranscriptionState(.completed("Done 2"), for: memo2.id)
 
         XCTAssertEqual(allChanges.count, 5)
         XCTAssertEqual(Set(allChanges.map { $0.memoId }).count, 3)
@@ -406,15 +413,15 @@ final class TranscriptionRepositoryImplTests: XCTestCase {
         cancellable.cancel()
     }
 
-    func test_saveTranscriptionStateWithoutMemo_StillWorks() throws {
+    func test_saveTranscriptionStateWithoutMemo_StillWorks() async throws {
         let context = try makeInMemoryContext()
         let repository = TranscriptionRepositoryImpl(context: context)
 
         // Save for non-existent memo
         let orphanId = UUID()
-        repository.saveTranscriptionState(.completed("Orphan text"), for: orphanId)
+        await repository.saveTranscriptionState(.completed("Orphan text"), for: orphanId)
 
-        let state = repository.getTranscriptionState(for: orphanId)
+        let state = await repository.getTranscriptionState(for: orphanId)
         XCTAssertTrue(state.isCompleted)
         XCTAssertEqual(state.text, "Orphan text")
     }

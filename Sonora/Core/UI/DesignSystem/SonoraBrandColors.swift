@@ -24,12 +24,7 @@ extension Color {
     static let insightGold = Color(hexString: "#D4AF37")
 
     // MARK: - Secondary Palette
-
-    /// Reflection Gray: Soft blue-gray for secondary text and subtle elements
-    static let reflectionGray = Color(hexString: "#8B9DC3")
-
-    /// Whisper Blue: Ultra-light blue for backgrounds and gentle highlights
-    static let whisperBlue = Color(hexString: "#E8F0FF")
+    // Note: whisperBlue and reflectionGray have been removed in favor of logo-based colors
 
     /// Growth Green: Muted teal for progress indicators and positive actions
     static let growthGreen = Color(hexString: "#4A9B8E")
@@ -62,6 +57,18 @@ extension Color {
 
     /// Sonora Deep Purple: Deepest purple (logo right side) - contemplative depth
     static let sonoraDarkPurple = Color(hexString: "#413166")
+
+    // MARK: - Logo Color Tints & Utilities
+    // Commonly-used opacity variants of logo colors for backgrounds and UI elements
+
+    /// Very light salmon tint for backgrounds (replaces whisperBlue)
+    static let salmonTint = sonoraSalmon.opacity(0.1)
+
+    /// Medium salmon for secondary text and UI elements (replaces reflectionGray)
+    static let salmonSecondary = sonoraSalmon.opacity(0.6)
+
+    /// Light salmon for subtle UI elements
+    static let salmonLight = sonoraSalmon.opacity(0.3)
 }
 
 // MARK: - Semantic Color Mappings
@@ -73,8 +80,8 @@ extension Color {
     /// Active recording state - uses Insight Gold for premium feel
     static let recordingActive = insightGold
 
-    /// Inactive recording state - uses Reflection Gray for subtle presence
-    static let recordingInactive = reflectionGray
+    /// Inactive recording state - uses Salmon with reduced opacity
+    static let recordingInactive = sonoraSalmon.opacity(0.6)
 
     // MARK: - Interface Elements
 
@@ -89,8 +96,8 @@ extension Color {
     /// Primary text on light backgrounds
     static let textPrimary = sonoraDep
 
-    /// Secondary text and metadata
-    static let textSecondary = reflectionGray
+    /// Secondary text and metadata - uses Salmon with reduced opacity for warmth
+    static let textSecondary = sonoraSalmon.opacity(0.6)
 
     /// Text on dark or colored backgrounds
     static let textOnColored = clarityWhite

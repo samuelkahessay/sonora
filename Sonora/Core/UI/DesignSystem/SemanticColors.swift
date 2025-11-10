@@ -4,7 +4,7 @@ import SwiftUI
 // No hard-coded RGB values; only system semantic colors are used as fallbacks.
 enum SemanticColor: String, CaseIterable {
     // Brand
-    case brandPrimary = "brand/Primary"
+    case brandPrimary = "brand/BrandPrimary"
     case brandSecondary = "brand/Secondary"
     case accent = "brand/Accent"
 
@@ -39,7 +39,7 @@ extension SemanticColor {
     var fallbackUIColor: UIColor {
         switch self {
         // Brand
-        case .brandPrimary: return .systemBlue
+        case .brandPrimary: return .systemOrange // Fallback to orange (closest to Salmon)
         case .brandSecondary: return .systemIndigo
         case .accent: return .systemOrange
 

@@ -54,7 +54,7 @@ final class AnalysisRepositoryImplTests: XCTestCase {
 
     // MARK: - Save and Retrieve Tests
 
-    func test_saveAndGetAnalysisResult_Success() throws {
+    func test_saveAndGetAnalysisResult_Success() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -68,10 +68,10 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         let envelope = makeTestAnalysisResult(mode: .distill, data: testData)
 
         // Save
-        repository.saveAnalysisResult(envelope, for: memo.id, mode: .distill)
+        await repository.saveAnalysisResult(envelope, for: memo.id, mode: .distill)
 
         // Retrieve
-        let retrieved = repository.getAnalysisResult(
+        let retrieved = await repository.getAnalysisResult(
             for: memo.id,
             mode: .distill,
             responseType: TestData.self
@@ -84,7 +84,7 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         XCTAssertEqual(retrieved?.latency_ms, 250)
     }
 
-    func test_saveMultipleModesForSameMemo_Success() throws {
+    func test_saveMultipleModesForSameMemo_Success() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -103,16 +103,16 @@ final class AnalysisRepositoryImplTests: XCTestCase {
             data: TestData(text: "Events result")
         )
 
-        repository.saveAnalysisResult(distillEnvelope, for: memo.id, mode: .distill)
-        repository.saveAnalysisResult(eventsEnvelope, for: memo.id, mode: .events)
+        await repository.saveAnalysisResult(distillEnvelope, for: memo.id, mode: .distill)
+        await repository.saveAnalysisResult(eventsEnvelope, for: memo.id, mode: .events)
 
         // Retrieve both
-        let distillResult = repository.getAnalysisResult(
+        let distillResult = await repository.getAnalysisResult(
             for: memo.id,
             mode: .distill,
             responseType: TestData.self
         )
-        let eventsResult = repository.getAnalysisResult(
+        let eventsResult = await repository.getAnalysisResult(
             for: memo.id,
             mode: .events,
             responseType: TestData.self
@@ -122,7 +122,7 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         XCTAssertEqual(eventsResult?.data.text, "Events result")
     }
 
-    func test_getAnalysisResult_NonExistent_ReturnsNil() throws {
+    func test_getAnalysisResult_NonExistent_ReturnsNil() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -131,7 +131,7 @@ final class AnalysisRepositoryImplTests: XCTestCase {
             let text: String
         }
 
-        let result = repository.getAnalysisResult(
+        let result = await repository.getAnalysisResult(
             for: memo.id,
             mode: .distill,
             responseType: TestData.self
@@ -142,7 +142,7 @@ final class AnalysisRepositoryImplTests: XCTestCase {
 
     // MARK: - Memory Cache Tests
 
-    func test_getAnalysisResult_UsesMemoryCache() throws {
+    func test_getAnalysisResult_UsesMemoryCache() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -153,13 +153,14 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         let envelope = makeTestAnalysisResult(mode: .distill, data: TestData(text: "Test"))
 
         // Save (populates cache)
-        repository.saveAnalysisResult(envelope, for: memo.id, mode: .distill)
+        await repository.saveAnalysisResult(envelope, for: memo.id, mode: .distill)
 
         // Verify cache is populated (getCacheSize should be 1)
-        XCTAssertEqual(repository.getCacheSize(), 1)
+        let cacheSizeAfterSave = await repository.getCacheSize()
+        XCTAssertEqual(cacheSizeAfterSave, 1)
 
         // Retrieve (should hit memory cache)
-        let result = repository.getAnalysisResult(
+        let result = await repository.getAnalysisResult(
             for: memo.id,
             mode: .distill,
             responseType: TestData.self
@@ -169,7 +170,7 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         XCTAssertEqual(result?.data.text, "Test")
     }
 
-    func test_clearCache_RemovesMemoryCache() throws {
+    func test_clearCache_RemovesMemoryCache() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -179,14 +180,16 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         }
         let envelope = makeTestAnalysisResult(mode: .distill, data: TestData(text: "Test"))
 
-        repository.saveAnalysisResult(envelope, for: memo.id, mode: .distill)
-        XCTAssertEqual(repository.getCacheSize(), 1)
+        await repository.saveAnalysisResult(envelope, for: memo.id, mode: .distill)
+        let cacheSizeBeforeClear = await repository.getCacheSize()
+        XCTAssertEqual(cacheSizeBeforeClear, 1)
 
-        repository.clearCache()
-        XCTAssertEqual(repository.getCacheSize(), 0)
+        await repository.clearCache()
+        let cacheSizeAfterClear = await repository.getCacheSize()
+        XCTAssertEqual(cacheSizeAfterClear, 0)
 
         // Data should still be retrievable from store
-        let result = repository.getAnalysisResult(
+        let result = await repository.getAnalysisResult(
             for: memo.id,
             mode: .distill,
             responseType: TestData.self
@@ -196,7 +199,7 @@ final class AnalysisRepositoryImplTests: XCTestCase {
 
     // MARK: - HasAnalysisResult Tests
 
-    func test_hasAnalysisResult_ExistsInCache_ReturnsTrue() throws {
+    func test_hasAnalysisResult_ExistsInCache_ReturnsTrue() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -206,13 +209,15 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         }
         let envelope = makeTestAnalysisResult(mode: .distill, data: TestData(text: "Test"))
 
-        repository.saveAnalysisResult(envelope, for: memo.id, mode: .distill)
+        await repository.saveAnalysisResult(envelope, for: memo.id, mode: .distill)
 
-        XCTAssertTrue(repository.hasAnalysisResult(for: memo.id, mode: .distill))
-        XCTAssertFalse(repository.hasAnalysisResult(for: memo.id, mode: .events))
+        let hasDistillResult = await repository.hasAnalysisResult(for: memo.id, mode: .distill)
+        let hasEventsResult = await repository.hasAnalysisResult(for: memo.id, mode: .events)
+        XCTAssertTrue(hasDistillResult)
+        XCTAssertFalse(hasEventsResult)
     }
 
-    func test_hasAnalysisResult_ExistsInStoreOnly_ReturnsTrue() throws {
+    func test_hasAnalysisResult_ExistsInStoreOnly_ReturnsTrue() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -222,23 +227,25 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         }
         let envelope = makeTestAnalysisResult(mode: .distill, data: TestData(text: "Test"))
 
-        repository.saveAnalysisResult(envelope, for: memo.id, mode: .distill)
-        repository.clearCache()
+        await repository.saveAnalysisResult(envelope, for: memo.id, mode: .distill)
+        await repository.clearCache()
 
-        XCTAssertTrue(repository.hasAnalysisResult(for: memo.id, mode: .distill))
+        let hasStoredResult = await repository.hasAnalysisResult(for: memo.id, mode: .distill)
+        XCTAssertTrue(hasStoredResult)
     }
 
-    func test_hasAnalysisResult_DoesNotExist_ReturnsFalse() throws {
+    func test_hasAnalysisResult_DoesNotExist_ReturnsFalse() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
-        XCTAssertFalse(repository.hasAnalysisResult(for: memo.id, mode: .distill))
+        let hasResult = await repository.hasAnalysisResult(for: memo.id, mode: .distill)
+        XCTAssertFalse(hasResult)
     }
 
     // MARK: - Delete Tests
 
-    func test_deleteAnalysisResult_RemovesSpecificMode() throws {
+    func test_deleteAnalysisResult_RemovesSpecificMode() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -248,25 +255,27 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         }
 
         // Save multiple modes
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .distill, data: TestData(text: "Distill")),
             for: memo.id,
             mode: .distill
         )
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .events, data: TestData(text: "Events")),
             for: memo.id,
             mode: .events
         )
 
         // Delete only distill
-        repository.deleteAnalysisResult(for: memo.id, mode: .distill)
+        await repository.deleteAnalysisResult(for: memo.id, mode: .distill)
 
-        XCTAssertFalse(repository.hasAnalysisResult(for: memo.id, mode: .distill))
-        XCTAssertTrue(repository.hasAnalysisResult(for: memo.id, mode: .events))
+        let hasDistillResult = await repository.hasAnalysisResult(for: memo.id, mode: .distill)
+        let hasEventsResult = await repository.hasAnalysisResult(for: memo.id, mode: .events)
+        XCTAssertFalse(hasDistillResult)
+        XCTAssertTrue(hasEventsResult)
     }
 
-    func test_deleteAnalysisResults_RemovesAllForMemo() throws {
+    func test_deleteAnalysisResults_RemovesAllForMemo() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo1 = try makeTestMemo(in: context, id: UUID())
@@ -277,27 +286,29 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         }
 
         // Save for both memos
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .distill, data: TestData(text: "Memo1")),
             for: memo1.id,
             mode: .distill
         )
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .distill, data: TestData(text: "Memo2")),
             for: memo2.id,
             mode: .distill
         )
 
         // Delete all for memo1
-        repository.deleteAnalysisResults(for: memo1.id)
+        await repository.deleteAnalysisResults(for: memo1.id)
 
-        XCTAssertFalse(repository.hasAnalysisResult(for: memo1.id, mode: .distill))
-        XCTAssertTrue(repository.hasAnalysisResult(for: memo2.id, mode: .distill))
+        let memo1HasResults = await repository.hasAnalysisResult(for: memo1.id, mode: .distill)
+        let memo2HasResults = await repository.hasAnalysisResult(for: memo2.id, mode: .distill)
+        XCTAssertFalse(memo1HasResults)
+        XCTAssertTrue(memo2HasResults)
     }
 
     // MARK: - GetAllAnalysisResults Tests
 
-    func test_getAllAnalysisResults_ReturnsAllModesForMemo() throws {
+    func test_getAllAnalysisResults_ReturnsAllModesForMemo() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -307,38 +318,39 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         }
 
         // Save multiple modes
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .distill, data: TestData(text: "Distill")),
             for: memo.id,
             mode: .distill
         )
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .events, data: TestData(text: "Events")),
             for: memo.id,
             mode: .events
         )
 
-        let allResults = repository.getAllAnalysisResults(for: memo.id)
+        let allResults = await repository.getAllAnalysisResults(for: memo.id)
 
         XCTAssertEqual(allResults.count, 2)
-        XCTAssertNotNil(allResults[.distill])
-        XCTAssertNotNil(allResults[.events])
-        XCTAssertNil(allResults[.reminders])
+        XCTAssertTrue(allResults.availableModes.contains(.distill))
+        XCTAssertTrue(allResults.availableModes.contains(.events))
+        XCTAssertFalse(allResults.availableModes.contains(.reminders))
     }
 
-    func test_getAllAnalysisResults_EmptyMemo_ReturnsEmpty() throws {
+    func test_getAllAnalysisResults_EmptyMemo_ReturnsEmpty() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
 
-        let allResults = repository.getAllAnalysisResults(for: memo.id)
+        let allResults = await repository.getAllAnalysisResults(for: memo.id)
 
-        XCTAssertTrue(allResults.isEmpty)
+        XCTAssertEqual(allResults.count, 0)
+        XCTAssertTrue(allResults.availableModes.isEmpty)
     }
 
     // MARK: - Analysis History Tests
 
-    func test_getAnalysisHistory_ReturnsTimestampedModes() throws {
+    func test_getAnalysisHistory_ReturnsTimestampedModes() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -348,7 +360,7 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         }
 
         // Save with delays to ensure different timestamps
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .distill, data: TestData(text: "First")),
             for: memo.id,
             mode: .distill
@@ -357,13 +369,13 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         // Small delay to ensure different timestamp
         Thread.sleep(forTimeInterval: 0.01)
 
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .events, data: TestData(text: "Second")),
             for: memo.id,
             mode: .events
         )
 
-        let history = repository.getAnalysisHistory(for: memo.id)
+        let history = await repository.getAnalysisHistory(for: memo.id)
 
         XCTAssertEqual(history.count, 2)
         XCTAssertTrue(history.contains(where: { $0.mode == .distill }))
@@ -376,7 +388,7 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         XCTAssertNotNil(eventsTimestamp)
     }
 
-    func test_getAnalysisHistory_ClearsWithDeleteAll() throws {
+    func test_getAnalysisHistory_ClearsWithDeleteAll() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -385,24 +397,24 @@ final class AnalysisRepositoryImplTests: XCTestCase {
             let text: String
         }
 
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .distill, data: TestData(text: "Test")),
             for: memo.id,
             mode: .distill
         )
 
-        var history = repository.getAnalysisHistory(for: memo.id)
+        var history = await repository.getAnalysisHistory(for: memo.id)
         XCTAssertEqual(history.count, 1)
 
-        repository.deleteAnalysisResults(for: memo.id)
+        await repository.deleteAnalysisResults(for: memo.id)
 
-        history = repository.getAnalysisHistory(for: memo.id)
+        history = await repository.getAnalysisHistory(for: memo.id)
         XCTAssertTrue(history.isEmpty)
     }
 
     // MARK: - Edge Cases
 
-    func test_saveAnalysisResult_OverwritesSameMode() throws {
+    func test_saveAnalysisResult_OverwritesSameMode() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo = try makeTestMemo(in: context)
@@ -412,21 +424,21 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         }
 
         // Save first version
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .distill, data: TestData(text: "Version 1")),
             for: memo.id,
             mode: .distill
         )
 
         // Save second version (should create new record, not overwrite)
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .distill, data: TestData(text: "Version 2")),
             for: memo.id,
             mode: .distill
         )
 
         // Should retrieve most recent
-        let result = repository.getAnalysisResult(
+        let result = await repository.getAnalysisResult(
             for: memo.id,
             mode: .distill,
             responseType: TestData.self
@@ -435,12 +447,12 @@ final class AnalysisRepositoryImplTests: XCTestCase {
         XCTAssertEqual(result?.data.text, "Version 2")
 
         // History should have both entries
-        let history = repository.getAnalysisHistory(for: memo.id)
+        let history = await repository.getAnalysisHistory(for: memo.id)
         let distillCount = history.filter { $0.mode == .distill }.count
         XCTAssertEqual(distillCount, 2, "Should track history of multiple saves")
     }
 
-    func test_getCacheSize_ReflectsCurrentState() throws {
+    func test_getCacheSize_ReflectsCurrentState() async throws {
         let context = try makeInMemoryContext()
         let repository = AnalysisRepositoryImpl(context: context)
         let memo1 = try makeTestMemo(in: context, id: UUID())
@@ -450,24 +462,28 @@ final class AnalysisRepositoryImplTests: XCTestCase {
             let text: String
         }
 
-        XCTAssertEqual(repository.getCacheSize(), 0)
+        let initialCacheSize = await repository.getCacheSize()
+        XCTAssertEqual(initialCacheSize, 0)
 
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .distill, data: TestData(text: "Test1")),
             for: memo1.id,
             mode: .distill
         )
-        XCTAssertEqual(repository.getCacheSize(), 1)
+        let cacheSizeAfterMemo1 = await repository.getCacheSize()
+        XCTAssertEqual(cacheSizeAfterMemo1, 1)
 
-        repository.saveAnalysisResult(
+        await repository.saveAnalysisResult(
             makeTestAnalysisResult(mode: .events, data: TestData(text: "Test2")),
             for: memo2.id,
             mode: .events
         )
-        XCTAssertEqual(repository.getCacheSize(), 2)
+        let cacheSizeAfterMemo2 = await repository.getCacheSize()
+        XCTAssertEqual(cacheSizeAfterMemo2, 2)
 
-        repository.clearCache()
-        XCTAssertEqual(repository.getCacheSize(), 0)
+        await repository.clearCache()
+        let cacheSizeAfterClear = await repository.getCacheSize()
+        XCTAssertEqual(cacheSizeAfterClear, 0)
     }
 }
 #endif

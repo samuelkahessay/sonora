@@ -72,7 +72,7 @@ Note: Treat subdirectories as the single source of truth; do not duplicate model
 
 #### Semantic Colors (Quick Guide)
 - Use `Color.semantic(_:)` everywhere in views; avoid `.red/.blue/.orange`, `Color(red:...)`, and direct `UIColor.*`.
-- Tokens: `brand/Primary`, `bg/Primary`, `bg/Secondary`, `text/Primary`, `text/Secondary`, `text/Inverted`, `fill/Primary`, `fill/Secondary`, `separator/Primary`, and state tokens `success/warning/error/info`.
+- Tokens: `brand/BrandPrimary`, `bg/Primary`, `bg/Secondary`, `text/Primary`, `text/Secondary`, `text/Inverted`, `fill/Primary`, `fill/Secondary`, `separator/Primary`, and state tokens `success/warning/error/info`.
 - Examples:
   - Button tint: `.tint(.semantic(.brandPrimary))` (destructive: `.semantic(.error)`)
   - Card background: `.background(Color.semantic(.bgSecondary))`

@@ -80,11 +80,11 @@ struct MemoEmptyStateView: View {
         HStack(spacing: SonoraDesignSystem.Spacing.iconToTextSpacing) {
             Image(systemName: "mic.circle")
                 .font(.caption)
-                .foregroundColor(.reflectionGray)
+                .foregroundColor(.salmonSecondary)
 
             Text("Tap the bloom button to begin")
                 .font(SonoraDesignSystem.Typography.caption)
-                .foregroundColor(.reflectionGray)
+                .foregroundColor(.salmonSecondary)
         }
         .opacity(messageOpacity * 0.6)
         .padding(.top, SonoraDesignSystem.Spacing.md)

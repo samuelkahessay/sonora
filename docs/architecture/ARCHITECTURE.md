@@ -72,7 +72,7 @@ Centralize all colors via the semantic system in `Core/UI/DesignSystem`.
 
 - Access tokens: `Color.semantic(_:)` with `SemanticColor` cases. Do not use `.red/.blue/.orange`, `Color(red:...)`, `.primary/.secondary`, or `UIColor.*` in views.
 - Common tokens:
-  - Brand: `brand/Primary`, `brand/Secondary`, `brand/Accent`
+  - Brand: `brand/BrandPrimary`, `brand/Secondary`, `brand/Accent`
   - Backgrounds: `bg/Primary`, `bg/Secondary`, `bg/Tertiary`
   - Text: `text/Primary`, `text/Secondary`, `text/Inverted` (for tinted surfaces)
   - Fills/Separators: `fill/Primary`, `fill/Secondary`, `separator/Primary`

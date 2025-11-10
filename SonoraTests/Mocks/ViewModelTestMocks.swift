@@ -78,7 +78,7 @@ final class MockRetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol {
 final class MockGetTranscriptionStateUseCase: GetTranscriptionStateUseCaseProtocol {
     var statesByMemo: [UUID: TranscriptionState] = [:]
 
-    func execute(memo: Memo) -> TranscriptionState {
+    func execute(memo: Memo) async -> TranscriptionState {
         return statesByMemo[memo.id] ?? .notStarted
     }
 }
@@ -228,9 +228,15 @@ final class MockMemoRepository: MemoRepository {
     var playbackProgressPublisher: AnyPublisher<PlaybackProgress, Never> {
         _playbackProgressPublisher.eraseToAnyPublisher()
     }
+    var playbackStatePublisher: AnyPublisher<MemoPlaybackState, Never> {
+        _playbackStatePublisher.eraseToAnyPublisher()
+    }
 
     private let _memosPublisher = PassthroughSubject<[Memo], Never>()
     private let _playbackProgressPublisher = PassthroughSubject<PlaybackProgress, Never>()
+    private let _playbackStatePublisher = CurrentValueSubject<MemoPlaybackState, Never>(
+        MemoPlaybackState(playingMemo: nil, isPlaying: false)
+    )
 
     func loadMemos() {
         _memosPublisher.send(memos)
@@ -304,11 +310,13 @@ final class MockMemoRepository: MemoRepository {
     func playMemo(_ memo: Memo) {
         playingMemo = memo
         isPlaying = true
+        emitPlaybackState()
     }
 
     func stopPlaying() {
         playingMemo = nil
         isPlaying = false
+        emitPlaybackState()
     }
 
     func seek(to time: TimeInterval, for memo: Memo) {
@@ -321,22 +329,30 @@ final class MockMemoRepository: MemoRepository {
             ))
         }
     }
+
+    private func emitPlaybackState() {
+        _playbackStatePublisher.send(MemoPlaybackState(playingMemo: playingMemo, isPlaying: isPlaying))
+    }
 }
 
 @MainActor
 final class MockTranscriptionRepository: TranscriptionRepository {
-    var transcriptionStates: [String: TranscriptionState] = [:]
+    private var stateStorage: [String: TranscriptionState] = [:]
+    private var textByMemoId: [UUID: String] = [:]
+    private var metadataByMemoId: [UUID: TranscriptionMetadata] = [:]
+
+    var transcriptionStates: [String: TranscriptionState] {
+        get async { stateStorage }
+    }
     var stateChangesPublisher: AnyPublisher<TranscriptionStateChange, Never> {
         _stateChangesPublisher.eraseToAnyPublisher()
     }
 
     private let _stateChangesPublisher = PassthroughSubject<TranscriptionStateChange, Never>()
-    private var textByMemoId: [UUID: String] = [:]
-    private var metadataByMemoId: [UUID: TranscriptionMetadata] = [:]
 
-    func saveTranscriptionState(_ state: TranscriptionState, for memoId: UUID) {
-        let previousState = transcriptionStates[memoId.uuidString]
-        transcriptionStates[memoId.uuidString] = state
+    func saveTranscriptionState(_ state: TranscriptionState, for memoId: UUID) async {
+        let previousState = stateStorage[memoId.uuidString]
+        stateStorage[memoId.uuidString] = state
         _stateChangesPublisher.send(TranscriptionStateChange(
             memoId: memoId,
             previousState: previousState,
@@ -344,42 +360,42 @@ final class MockTranscriptionRepository: TranscriptionRepository {
         ))
     }
 
-    func getTranscriptionState(for memoId: UUID) -> TranscriptionState {
-        return transcriptionStates[memoId.uuidString] ?? .notStarted
+    func getTranscriptionState(for memoId: UUID) async -> TranscriptionState {
+        return stateStorage[memoId.uuidString] ?? .notStarted
     }
 
-    func deleteTranscriptionData(for memoId: UUID) {
-        transcriptionStates.removeValue(forKey: memoId.uuidString)
+    func deleteTranscriptionData(for memoId: UUID) async {
+        stateStorage.removeValue(forKey: memoId.uuidString)
         textByMemoId.removeValue(forKey: memoId)
         metadataByMemoId.removeValue(forKey: memoId)
     }
 
-    func getTranscriptionText(for memoId: UUID) -> String? {
+    func getTranscriptionText(for memoId: UUID) async -> String? {
         return textByMemoId[memoId]
     }
 
-    func saveTranscriptionText(_ text: String, for memoId: UUID) {
+    func saveTranscriptionText(_ text: String, for memoId: UUID) async {
         textByMemoId[memoId] = text
     }
 
-    func getTranscriptionMetadata(for memoId: UUID) -> TranscriptionMetadata? {
+    func getTranscriptionMetadata(for memoId: UUID) async -> TranscriptionMetadata? {
         return metadataByMemoId[memoId]
     }
 
-    func saveTranscriptionMetadata(_ metadata: TranscriptionMetadata, for memoId: UUID) {
+    func saveTranscriptionMetadata(_ metadata: TranscriptionMetadata, for memoId: UUID) async {
         metadataByMemoId[memoId] = metadata
     }
 
-    func clearTranscriptionCache() {
-        transcriptionStates.removeAll()
+    func clearTranscriptionCache() async {
+        stateStorage.removeAll()
         textByMemoId.removeAll()
         metadataByMemoId.removeAll()
     }
 
-    func getTranscriptionStates(for memoIds: [UUID]) -> [UUID: TranscriptionState] {
+    func getTranscriptionStates(for memoIds: [UUID]) async -> [UUID: TranscriptionState] {
         var result: [UUID: TranscriptionState] = [:]
         for memoId in memoIds {
-            result[memoId] = getTranscriptionState(for: memoId)
+            result[memoId] = stateStorage[memoId.uuidString] ?? .notStarted
         }
         return result
     }

@@ -550,36 +550,53 @@ app.post('/analyze', async (req, res) => {
     }
 
     // NON-STREAMING PATH: All modes use Chat Completions API with fallback chain
-    // Try GPT-5 first, fallback to GPT-4o-mini on error
+    // Try gpt-5-mini → gpt-5-nano → gpt-4o on error
     let jsonText: string;
     let usage: { input: number; output: number; reasoning?: number };
-    let selectedModel = process.env.SONORA_MODEL || 'gpt-5-nano';
+    let selectedModel = process.env.SONORA_MODEL || 'gpt-5-mini';
 
     try {
-      // Try GPT-5 family first
+      // Try gpt-5-mini first (best quality + speed)
       const result = await createChatCompletionsJSON({
         system,
         user,
-        model: selectedModel
+        model: selectedModel,
+        mode
       });
       jsonText = result.jsonText;
       usage = result.usage;
-    } catch (gpt5Error) {
-      console.warn(`GPT-5 failed, falling back to gpt-4o-mini. Reason: ${(gpt5Error as any)?.message}`);
+    } catch (gpt5MiniError) {
+      console.warn(`gpt-5-mini failed, trying gpt-5-nano. Reason: ${(gpt5MiniError as any)?.message}`);
 
-      // Fallback to GPT-4o-mini
+      // Fallback to gpt-5-nano
       try {
-        selectedModel = 'gpt-4o-mini';
+        selectedModel = 'gpt-5-nano';
         const result = await createChatCompletionsJSON({
           system,
           user,
-          model: selectedModel
+          model: selectedModel,
+          mode
         });
         jsonText = result.jsonText;
         usage = result.usage;
-      } catch (fallbackError) {
-        console.error('Both GPT-5 and gpt-4o-mini failed:', (fallbackError as any)?.message);
-        throw fallbackError;
+      } catch (gpt5NanoError) {
+        console.warn(`gpt-5-nano failed, falling back to gpt-4o. Reason: ${(gpt5NanoError as any)?.message}`);
+
+        // Final fallback to gpt-4o
+        try {
+          selectedModel = 'gpt-4o';
+          const result = await createChatCompletionsJSON({
+            system,
+            user,
+            model: selectedModel,
+            mode
+          });
+          jsonText = result.jsonText;
+          usage = result.usage;
+        } catch (fallbackError) {
+          console.error('All models failed (gpt-5-mini, gpt-5-nano, gpt-4o):', (fallbackError as any)?.message);
+          throw fallbackError;
+        }
       }
     }
     
@@ -696,19 +713,19 @@ app.get('/keycheck', async (_req, res) => {
 
     const startTime = Date.now();
     const { jsonText, usage } = await createChatCompletionsJSON({
-      system: 'You are a GPT-5-nano validation service. Respond with valid JSON exactly as requested.',
-      user: 'Respond with this JSON object: {"ok":true,"model":"gpt-5-nano","test":"keycheck"}',
-      model: process.env.SONORA_MODEL || 'gpt-5-nano'
+      system: 'You are a GPT-5 validation service. Respond with valid JSON exactly as requested.',
+      user: 'Respond with this JSON object: {"ok":true,"model":"gpt-5-mini","test":"keycheck"}',
+      model: process.env.SONORA_MODEL || 'gpt-5-mini'
     });
     const responseTime = Date.now() - startTime;
-    
+
     const parsed = JSON.parse(jsonText);
     const isValid = !!parsed?.ok;
-    
-    return res.json({ 
-      ok: isValid, 
-      message: isValid ? 'GPT-5-nano key valid' : 'Invalid response from GPT-5-nano',
-      model: process.env.SONORA_MODEL || 'gpt-5-nano',
+
+    return res.json({
+      ok: isValid,
+      message: isValid ? 'GPT-5 key valid' : 'Invalid response from GPT-5',
+      model: process.env.SONORA_MODEL || 'gpt-5-mini',
       performance: {
         responseTime: `${responseTime}ms`,
         tokens: {
@@ -752,7 +769,7 @@ app.get('/test-gpt5', async (_req, res) => {
     for (const mode of modes) {
       const testStartTime = Date.now();
       try {
-        console.log(`🧪 Testing GPT-5-nano mode: ${mode}`);
+        console.log(`🧪 Testing GPT-5 mode: ${mode}`);
 
         // Get prompt for this mode
         const { system, user } = buildPrompt(mode, testTranscript);
@@ -760,7 +777,8 @@ app.get('/test-gpt5', async (_req, res) => {
         const { jsonText, usage } = await createChatCompletionsJSON({
           system,
           user,
-          model: process.env.SONORA_MODEL || 'gpt-5-nano'
+          model: process.env.SONORA_MODEL || 'gpt-5-mini',
+          mode
         });
         
         const responseTime = Date.now() - testStartTime;
@@ -840,8 +858,8 @@ app.get('/test-gpt5', async (_req, res) => {
     
     return res.json({
       success: successfulTests === modes.length,
-      message: `GPT-5-nano comprehensive test completed: ${successfulTests}/${modes.length} modes successful`,
-      model: process.env.SONORA_MODEL || 'gpt-5-nano',
+      message: `GPT-5 comprehensive test completed: ${successfulTests}/${modes.length} modes successful`,
+      model: process.env.SONORA_MODEL || 'gpt-5-mini',
       testSummary: {
         totalTime: `${totalTime}ms`,
         averageTimePerMode: `${Math.round(totalTime / modes.length)}ms`,
@@ -869,8 +887,8 @@ app.get('/test-gpt5', async (_req, res) => {
     console.error('🚨 GPT-5 test endpoint failed:', error.message);
     return res.status(500).json({
       success: false,
-      message: `GPT-5-nano test endpoint failed: ${error.message}`,
-      model: process.env.SONORA_MODEL || 'gpt-5-nano',
+      message: `GPT-5 test endpoint failed: ${error.message}`,
+      model: process.env.SONORA_MODEL || 'gpt-5-mini',
       error: error.message
     });
   }

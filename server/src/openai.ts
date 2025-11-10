@@ -2,7 +2,7 @@ import { AnalysisJsonSchemas } from './schema.js';
 import { chatCompletionsSupportsTemperature } from './caps.js';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const MODEL = process.env.SONORA_MODEL || 'gpt-5-nano';
+const MODEL = process.env.SONORA_MODEL || 'gpt-5-mini';
 
 if (!OPENAI_API_KEY) {
   throw new Error('OPENAI_API_KEY environment variable is required');
@@ -46,29 +46,76 @@ async function requestWithRetry<T>(fn: () => Promise<T>): Promise<{ result: T; r
 export async function createChatCompletionsJSON({
   system,
   user,
-  model
+  model,
+  mode
 }: {
   system: string;
   user: string;
   model?: string;
+  mode?: string;
 }): Promise<CreateChatResult> {
   const { result } = await requestWithRetry(async () => {
     const startTime = Date.now();
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    // Allow longer generations for GPT-5 family; align with client 180s
+    const timeout = setTimeout(() => controller.abort(), 180000);
 
     try {
+      // Token limits accounting for GPT-5 reasoning overhead (~600-800 tokens)
+      // Each mode needs: reasoning budget + output budget (~1000 tokens minimum)
+      const tokenLimits: Record<string, number> = {
+        'lite-distill': 1200,        // Full response: reasoning + 6 fields
+        'distill': 1500,             // Full Pro response: reasoning + 7 fields + patterns
+        'distill-summary': 1000,     // Single field BUT needs reasoning overhead
+        'distill-actions': 1000,     // Single field BUT needs reasoning overhead
+        'distill-themes': 1000,      // Single field BUT needs reasoning overhead
+        'distill-reflection': 1000,  // Single field BUT needs reasoning overhead
+        'events': 1000,              // Reasoning + event extraction
+        'reminders': 1000            // Reasoning + reminder extraction
+      };
+
+      const selectedModel = (model || MODEL);
+      const mLower = selectedModel.toLowerCase();
+
       const requestBody: Record<string, any> = {
-        model: model || MODEL,
+        model: selectedModel,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user }
-        ],
-        response_format: { type: 'json_object' },
+        ]
       };
+
+      // Use strict JSON Schema format for GPT-5 models; fall back to json_object otherwise
+      if (mLower.startsWith('gpt-5') && mode && (AnalysisJsonSchemas as any)[mode]) {
+        const schemaDef = (AnalysisJsonSchemas as any)[mode];
+        requestBody.response_format = {
+          type: 'json_schema',
+          json_schema: {
+            name: schemaDef.name,
+            schema: schemaDef.schema,
+            strict: true
+          }
+        };
+      } else {
+        requestBody.response_format = { type: 'json_object' };
+      }
+
+      // Apply token limit if mode is specified
+      if (mode && tokenLimits[mode]) {
+        if (mLower.startsWith('gpt-5')) {
+          requestBody.max_completion_tokens = tokenLimits[mode];
+        } else {
+          requestBody.max_tokens = tokenLimits[mode];
+        }
+      }
+
       if (chatCompletionsSupportsTemperature(requestBody.model)) {
         requestBody.temperature = 1.0;
-      };
+      }
+
+      if (mLower.startsWith('gpt-5')) {
+        requestBody.reasoning_effort = 'low';
+      }
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -84,12 +131,18 @@ export async function createChatCompletionsJSON({
 
       if (!response.ok) {
         const text = await response.text().catch(() => '');
-        const isDev = process.env.NODE_ENV === 'development';
         const errorMessage = `GPT Chat Completions API error: ${response.status} - ${response.statusText}`;
+        let errorJson: any;
+        try {
+          errorJson = JSON.parse(text);
+        } catch {}
         console.error('🚨 Chat Completions API Error:', {
           status: response.status,
           statusText: response.statusText,
-          ...(isDev ? { responseBody: text } : { bodyLength: text ? text.length : 0 }),
+          bodyLength: text ? text.length : 0,
+          bodyPreview: text ? text.slice(0, 400) : '',
+          errorMessage: errorJson?.error?.message,
+          errorType: errorJson?.error?.type,
           requestParams: {
             model: requestBody.model,
             temperature: requestBody.temperature,
@@ -112,16 +165,67 @@ export async function createChatCompletionsJSON({
       });
 
       // Extract content from Chat Completions response
-      const content = data?.choices?.[0]?.message?.content;
+      const message = data?.choices?.[0]?.message;
+      const refusal = message?.refusal;
+
+      const extractContent = (): string | undefined => {
+        const raw = message?.content;
+        if (typeof raw === 'string') {
+          return raw;
+        }
+        if (Array.isArray(raw)) {
+          const parts = raw
+            .map((part: any) => {
+              if (typeof part === 'string') return part;
+              if (typeof part?.text === 'string') return part.text;
+              if (Array.isArray(part?.text)) {
+                return part.text.filter((t: any) => typeof t === 'string').join('\n');
+              }
+              if (typeof part?.content === 'string') return part.content;
+              if (Array.isArray(part?.content)) {
+                return part.content.filter((t: any) => typeof t === 'string').join('\n');
+              }
+              if (part?.type === 'output_text' && typeof part?.text === 'string') {
+                return part.text;
+              }
+              if (part?.type === 'output_text' && Array.isArray(part?.text)) {
+                return part.text.filter((t: any) => typeof t === 'string').join('\n');
+              }
+              if (part?.type === 'tool_call' && typeof part?.input_json === 'string') {
+                return part.input_json;
+              }
+              return undefined;
+            })
+            .filter((p: string | undefined) => typeof p === 'string' && p.trim().length > 0) as string[];
+          if (parts.length > 0) {
+            return parts.join('\n');
+          }
+        }
+
+        if (Array.isArray(message?.tool_calls)) {
+          const toolJson = message.tool_calls
+            .map((call: any) => call?.function?.arguments)
+            .filter((args: any) => typeof args === 'string' && args.trim().length > 0);
+          if (toolJson.length > 0) {
+            return toolJson.join('\n');
+          }
+        }
+
+        return undefined;
+      };
+
+      const content = extractContent();
 
       if (!content) {
         const debugInfo = {
           hasChoices: Array.isArray(data?.choices),
           choicesLength: data?.choices?.length,
-          hasUsage: !!data?.usage
+          hasUsage: !!data?.usage,
+          hasRefusal: !!refusal,
+          refusalMessage: refusal || 'none'
         };
         console.error('🚨 Chat Completions Response Parsing Failed:', debugInfo);
-        throw new Error(`No content found in Chat Completions API response. Debug info: ${JSON.stringify(debugInfo)}`);
+        throw new Error(`No content found in Chat Completions API response. ${refusal ? `Refusal: ${refusal}` : `Debug info: ${JSON.stringify(debugInfo)}`}`);
       }
 
       // Extract token usage

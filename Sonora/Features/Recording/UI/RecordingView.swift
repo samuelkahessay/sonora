@@ -37,7 +37,7 @@ struct RecordingView: View {
             if colorScheme == .light {
                 LinearGradient(
                     gradient: Gradient(colors: [
-                        Color.whisperBlue.opacity(0.3),
+                        Color.salmonTint.opacity(0.3),
                         Color.clarityWhite
                     ]),
                     startPoint: .topLeading,

@@ -177,7 +177,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         var partialData = PartialDistillData()
         var completedCount = 0
         var combinedLatency = 0
-        let model = "gpt-5-nano"
+        let model = "gpt-5-mini"
         var combinedTokens = TokenUsage(input: 0, output: 0)
 
         // Build historical context for pattern detection
@@ -358,13 +358,13 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     private func saveComponentCache(data: DistillComponentData, latency: Int, tokens: TokenUsage, mode: AnalysisMode, memoId: UUID) async {
         switch data {
         case .summary(let summaryData):
-            let envelope = AnalyzeEnvelope(mode: mode, data: summaryData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+            let envelope = AnalyzeEnvelope(mode: mode, data: summaryData, model: "gpt-5-mini", tokens: tokens, latency_ms: latency, moderation: nil)
             await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
         case .actions(let actionsData):
-            let envelope = AnalyzeEnvelope(mode: mode, data: actionsData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+            let envelope = AnalyzeEnvelope(mode: mode, data: actionsData, model: "gpt-5-mini", tokens: tokens, latency_ms: latency, moderation: nil)
             await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
         case .reflection(let reflectionData):
-            let envelope = AnalyzeEnvelope(mode: mode, data: reflectionData, model: "gpt-5-nano", tokens: tokens, latency_ms: latency, moderation: nil)
+            let envelope = AnalyzeEnvelope(mode: mode, data: reflectionData, model: "gpt-5-mini", tokens: tokens, latency_ms: latency, moderation: nil)
             await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
         case .detections:
             // No cache persistence for detection bundle in this use case.

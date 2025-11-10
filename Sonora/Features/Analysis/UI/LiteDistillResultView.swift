@@ -320,7 +320,7 @@ private struct FlowLayout: Layout {
                     reflectionQuestion: "What would honoring your boundaries look like tomorrow?",
                     closingNote: "You're developing awareness of your needs—that's wisdom in practice."
                 ),
-                model: "gpt-5-nano",
+                model: "gpt-5-mini",
                 tokens: TokenUsage(input: 500, output: 150),
                 latency_ms: 800,
                 moderation: nil

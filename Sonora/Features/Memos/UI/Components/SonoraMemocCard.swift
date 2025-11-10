@@ -185,7 +185,7 @@ struct SonoraMemocCard: View {
                 Rectangle()
                     .fill(colorScheme == .dark
                           ? Color.clear
-                          : Color.whisperBlue.opacity(0.3))
+                          : Color.salmonTint.opacity(0.3))
             )
     }
 

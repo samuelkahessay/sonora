@@ -487,7 +487,7 @@ struct ContextualSectionHeader: View {
                     Capsule().fill(
                         colorScheme == .dark
                         ? Color.semantic(.fillSecondary)
-                        : Color.whisperBlue.opacity(0.6)
+                        : Color.salmonTint.opacity(0.6)
                     )
                 )
                 .alignmentGuide(.firstTextBaseline) { $0[.firstTextBaseline] }

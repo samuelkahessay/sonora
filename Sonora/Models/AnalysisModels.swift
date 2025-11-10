@@ -81,8 +81,11 @@ public struct TokenUsage: Codable, Sendable {
 public struct DistillData: Codable, Sendable {
     // Core fields (all tiers)
     public let summary: String
+    public let keyThemes: [String]?
+    public let personalInsight: PersonalInsight?
     public let action_items: [ActionItem]?
     public let reflection_questions: [String]
+    public let closingNote: String?
     public let patterns: [Pattern]?
     public let events: [EventsData.DetectedEvent]?
     public let reminders: [RemindersData.DetectedReminder]?
@@ -135,15 +138,21 @@ public struct DistillData: Codable, Sendable {
 
     public init(
         summary: String,
-        action_items: [ActionItem]?,
+        keyThemes: [String]? = nil,
+        personalInsight: PersonalInsight? = nil,
+        action_items: [ActionItem]? = nil,
         reflection_questions: [String],
+        closingNote: String? = nil,
         patterns: [Pattern]? = nil,
         events: [EventsData.DetectedEvent]? = nil,
         reminders: [RemindersData.DetectedReminder]? = nil
     ) {
         self.summary = summary
+        self.keyThemes = keyThemes
+        self.personalInsight = personalInsight
         self.action_items = action_items
         self.reflection_questions = reflection_questions
+        self.closingNote = closingNote
         self.patterns = patterns
         self.events = events
         self.reminders = reminders

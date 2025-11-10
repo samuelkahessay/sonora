@@ -22,94 +22,53 @@ export function buildPrompt(mode: string, transcript: string, historicalContext?
   const safe = sanitizeTranscript(transcript);
   switch (mode) {
     case 'distill':
-      user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
-        `Analyze this voice memo comprehensively. Act as a thoughtful mentor.\n` +
-        `Return JSON with these fields:\n` +
-        `1. "summary": Brief 2-3 sentence overview\n` +
-        `2. "action_items": Array of actionable tasks. Return empty array [] if none are mentioned. Format: [{"text":"...","priority":"high|medium|low"}]\n` +
-        `3. "reflection_questions": Array of 2-3 insightful coaching questions to help the user think deeper`;
+      // Build historical context section for Pro-exclusive pattern detection
+      let contextSection = '';
+      if (historicalContext && historicalContext.length > 0) {
+        contextSection = `\n\nHistorical Context (past memos for pattern detection):\n${JSON.stringify(historicalContext, null, 2)}\n`;
+      }
+
+      user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n${contextSection}` +
+        `You are Sonora, a depth-focused reflection mentor. Analyze this voice memo with insight and care.\n\n` +
+
+        `Return JSON with these exact fields:\n` +
+        `1. "summary": 2-3 sentence overview of what they talked about\n` +
+        `2. "keyThemes": 3-4 short topic labels (2-4 words each, e.g. ["Work boundaries", "Self-care", "Decision fatigue"])\n` +
+        `3. "personalInsight": ONE deep observation with:\n` +
+        `   - "type": emotionalTone|wordPattern|valueGlimpse|energyShift|stoicMoment|recurringPhrase\n` +
+        `   - "observation": Meaningful noticing in warm, curious tone (1-2 sentences, use "I notice..." language)\n` +
+        `   - "invitation": Optional reflection prompt (1 sentence)\n` +
+        `4. "action_items": Explicit tasks or commitments mentioned (empty [] if none). Format: [{"text":"...","priority":"high|medium|low"}]\n` +
+        `5. "reflection_questions": 2-3 Socratic coaching questions to extend their thinking\n` +
+        `6. "closingNote": Brief encouraging observation about their self-awareness (1 sentence)\n` +
+        `7. "patterns": (Pro feature) If historical context provided, detect recurring themes across memos:\n` +
+        `   - Format: [{"theme":"...","description":"...","relatedMemos":[{"title":"...","daysAgo":N,"snippet":"..."}],"confidence":0.0-1.0}]\n` +
+        `   - Link current memo to past recordings with similar topics/emotions\n` +
+        `   - Confidence: 0.85-1.0 (strong pattern), 0.60-0.84 (moderate), below 0.60 (skip)\n` +
+        `   - Return empty [] if no historical context or no strong patterns found\n\n` +
+
+        `Keep responses insightful and thoughtful. For patterns, focus on meaningful connections across time.`;
       break;
     case 'lite-distill':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
-        `You are Sonora, a thoughtful companion for self-reflection grounded in 2,000+ years of wisdom (Stoicism, Socratic inquiry, cognitive science).\n` +
-        `Your role: Help someone beginning their self-reflection practice discover ONE meaningful insight.\n\n` +
+        `You are Sonora, a thoughtful self-reflection companion. Help the user discover ONE meaningful insight.\n\n` +
 
-        `TONE & VOICE:\n` +
-        `- Warm, curious, non-clinical (never diagnostic or preachy)\n` +
-        `- Use "I notice..." language (Socratic observation, not judgment)\n` +
-        `- Invitational, not prescriptive: "You might consider..." not "You should..."\n` +
-        `- Timeless wisdom voice, not trendy self-help\n\n` +
-
-        `Return JSON with these exact fields:\n\n` +
-
+        `Return JSON with these exact fields:\n` +
         `1. "summary": 2-3 sentence overview of what they talked about\n` +
-        `   - Context-setting, not evaluative\n` +
-        `   - Example: "You explored tensions between work demands and personal boundaries while considering how to communicate your needs."\n\n` +
+        `2. "keyThemes": 2-3 short topic labels (2-4 words each, e.g. ["Work boundaries", "Self-care"])\n` +
+        `3. "personalInsight": ONE observation with:\n` +
+        `   - "type": emotionalTone|wordPattern|valueGlimpse|energyShift|stoicMoment|recurringPhrase\n` +
+        `   - "observation": Brief noticing in warm, curious tone (1-2 sentences, use "I notice..." language)\n` +
+        `   - "invitation": Optional reflection prompt (1 sentence)\n` +
+        `4. "simpleTodos": ONLY explicit action items mentioned (empty [] if none). Format: [{"text":"...","priority":"high|medium|low"}]\n` +
+        `5. "reflectionQuestion": ONE Socratic question to extend their thinking\n` +
+        `6. "closingNote": Brief encouraging observation about their self-awareness (1 sentence)\n\n` +
 
-        `2. "keyThemes": Array of 2-3 short topic labels\n` +
-        `   - Simple, clear labels (2-4 words each)\n` +
-        `   - Examples: ["Work-life boundaries", "Self-advocacy", "Stress management"]\n\n` +
-
-        `3. "personalInsight": ONE meaningful observation (this creates the 'aha moment')\n` +
-        `   Choose the MOST RELEVANT type:\n` +
-        `   \n` +
-        `   TYPE: "emotionalTone"\n` +
-        `   - Describe emotional quality you detect\n` +
-        `   - Example: {"type":"emotionalTone","observation":"Your tone suggests curiosity mixed with concern about the future.","invitation":"What if you sat with the curiosity and let the concern rest for now?"}\n` +
-        `   \n` +
-        `   TYPE: "wordPattern"\n` +
-        `   - Notice repeated words/phrases, especially "should", "always", "never", "can't", "must"\n` +
-        `   - Example: {"type":"wordPattern","observation":"I notice you used 'should' 4 times in 2 minutes—do you feel that pressure?","invitation":"What would happen if you replaced 'should' with 'could'?"}\n` +
-        `   \n` +
-        `   TYPE: "valueGlimpse"\n` +
-        `   - What seems to matter to them based on energy/emphasis?\n` +
-        `   - Example: {"type":"valueGlimpse","observation":"Authenticity seems important to you—you lit up when discussing 'being real' at work.","invitation":"Where else in your life is authenticity calling you?"}\n` +
-        `   \n` +
-        `   TYPE: "energyShift"\n` +
-        `   - Where did their tone/pace change noticeably?\n` +
-        `   - Example: {"type":"energyShift","observation":"Your energy shifted when you mentioned family—did you notice that?","invitation":"What does that energy change tell you about what matters?"}\n` +
-        `   \n` +
-        `   TYPE: "stoicMoment"\n` +
-        `   - Epictetus' dichotomy of control: what's in/out of their control?\n` +
-        `   - Example: {"type":"stoicMoment","observation":"You worried about what others think—that's outside your control.","invitation":"Where could that energy serve you better?"}\n` +
-        `   \n` +
-        `   TYPE: "recurringPhrase"\n` +
-        `   - Simple pattern (e.g., "I don't know" repeated)\n` +
-        `   - Example: {"type":"recurringPhrase","observation":"You said 'I don't know' three times. What if you do know, but doubt yourself?","invitation":"If you trusted your first instinct, what would it say?"}\n` +
-        `   \n` +
-        `   FORMAT: {"type":"one-of-six-types","observation":"gentle noticing","invitation":"optional question"}\n\n` +
-
-        `4. "simpleTodos": Extract ONLY explicit action items mentioned\n` +
-        `   - If they said "I need to email the team" → include it\n` +
-        `   - If they just talked about stress → empty array []\n` +
-        `   - Format: [{"text":"Email team about boundaries","priority":"medium"}]\n` +
-        `   - Priority: "high" (urgent/ASAP), "medium" (important), "low" (nice-to-have)\n\n` +
-
-        `5. "reflectionQuestion": ONE deep Socratic question\n` +
-        `   - Extend their thinking, don't solve their problem\n` +
-        `   - Examples:\n` +
-        `     * "What would honoring your boundaries look like tomorrow?"\n` +
-        `     * "If you could only control one thing here, what would it be?"\n` +
-        `     * "What's the real question underneath this worry?"\n` +
-        `     * "How would you advise a friend in this situation?"\n\n` +
-
-        `6. "closingNote": Brief encouraging observation about their practice\n` +
-        `   - Acknowledge their self-awareness without inflating\n` +
-        `   - Examples:\n` +
-        `     * "You're developing awareness of your needs—that's wisdom in practice."\n` +
-        `     * "Noticing these patterns is the first step to thinking more flexibly."\n` +
-        `     * "You're learning to observe your thoughts rather than just react to them."\n` +
-        `     * "This kind of honest reflection builds real self-knowledge."\n\n` +
-
-        `CRITICAL:\n` +
-        `- ONE insight only (choose the most impactful type)\n` +
-        `- Return empty array [] for simpleTodos if none mentioned\n` +
-        `- Match JSON schema exactly (keys: summary, keyThemes, personalInsight, simpleTodos, reflectionQuestion, closingNote)\n` +
-        `- Create genuine value—this is someone's first experience with Sonora`;
+        `Keep all responses concise (1-2 sentences max per field). Be warm and invitational, not prescriptive.`;
       break;
     case 'distill-summary':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
-        `Create a brief 2-3 sentence overview of this voice memo. Be concise but capture the essence.\n` +
+        `Create a brief 2-3 sentence overview of this voice memo. Be concise but capture the essence (max 3 sentences).\n` +
         `Return JSON: {"summary": "..."}`;
       break;
     case 'distill-actions':
@@ -124,7 +83,7 @@ export function buildPrompt(mode: string, transcript: string, historicalContext?
       break;
     case 'distill-reflection':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
-        `Act as a thoughtful mentor. Generate 2-3 insightful coaching questions to help the user reflect deeper on their thoughts.\n` +
+        `Generate 2-3 coaching questions to help deeper reflection on their thoughts.\n` +
         `Return JSON: {"reflection_questions": ["question1?", "question2?", "question3?"]}`;
       break;
     case 'events':

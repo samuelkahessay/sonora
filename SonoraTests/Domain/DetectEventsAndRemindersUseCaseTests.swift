@@ -243,7 +243,7 @@ final class DetectEventsAndRemindersUseCaseTests: XCTestCase {
 // MARK: - Helpers
 
 @MainActor
-private final class CapturingLogger: LoggerProtocol, @unchecked Sendable {
+private final class CapturingLogger: LoggerProtocol, Sendable {
     struct Entry {
         let level: LogLevel
         let category: LogCategory
@@ -332,44 +332,47 @@ private final class StubAnalysisService: ObservableObject, AnalysisServiceProtoc
 private final class InMemoryAnalysisRepositoryStub: AnalysisRepository {
     private var storage: [UUID: [AnalysisMode: Any]] = [:]
 
-    func saveAnalysisResult<T>(_ result: AnalyzeEnvelope<T>, for memoId: UUID, mode: AnalysisMode) {
+    func saveAnalysisResult<T>(_ result: AnalyzeEnvelope<T>, for memoId: UUID, mode: AnalysisMode) async {
         var memoStorage = storage[memoId] ?? [:]
         memoStorage[mode] = result
         storage[memoId] = memoStorage
     }
 
-    func getAnalysisResult<T>(for memoId: UUID, mode: AnalysisMode, responseType: T.Type) -> AnalyzeEnvelope<T>? {
+    func getAnalysisResult<T>(for memoId: UUID, mode: AnalysisMode, responseType: T.Type) async -> AnalyzeEnvelope<T>? {
         guard let memoStorage = storage[memoId], let envelope = memoStorage[mode] as? AnalyzeEnvelope<T> else {
             return nil
         }
         return envelope
     }
 
-    func hasAnalysisResult(for memoId: UUID, mode: AnalysisMode) -> Bool {
+    func hasAnalysisResult(for memoId: UUID, mode: AnalysisMode) async -> Bool {
         storage[memoId]?[mode] != nil
     }
 
-    func deleteAnalysisResults(for memoId: UUID) {
+    func deleteAnalysisResults(for memoId: UUID) async {
         storage[memoId] = nil
     }
 
-    func deleteAnalysisResult(for memoId: UUID, mode: AnalysisMode) {
-        storage[memoId]?[mode] = nil
+    func deleteAnalysisResult(for memoId: UUID, mode: AnalysisMode) async {
+        guard var memoStorage = storage[memoId] else { return }
+        memoStorage[mode] = nil
+        storage[memoId] = memoStorage.isEmpty ? nil : memoStorage
     }
 
-    func getAllAnalysisResults(for memoId: UUID) -> [AnalysisMode: Any] {
-        storage[memoId] ?? [:]
+    func getAllAnalysisResults(for memoId: UUID) async -> AnalysisResultsSummary {
+        let modes = storage[memoId].map { Array($0.keys) } ?? []
+        return AnalysisResultsSummary(availableModes: Set(modes))
     }
 
-    func clearCache() {
+    func clearCache() async {
         storage.removeAll()
     }
 
-    func getCacheSize() -> Int {
+    func getCacheSize() async -> Int {
         storage.reduce(0) { $0 + $1.value.count }
     }
 
-    func getAnalysisHistory(for memoId: UUID) -> [(mode: AnalysisMode, timestamp: Date)] {
+    func getAnalysisHistory(for memoId: UUID) async -> [(mode: AnalysisMode, timestamp: Date)] {
         []
     }
 }

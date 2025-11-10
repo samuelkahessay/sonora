@@ -115,7 +115,8 @@ public final class AppConfiguration: ObservableObject {
 
     /// Timeout for Distill analysis operations
     /// Can be overridden with SONORA_DISTILL_TIMEOUT environment variable
-    public private(set) var distillAnalysisTimeout: TimeInterval = 60.0
+    /// GPT-5 family responses can exceed 60s for long outputs; default to 180s.
+    public private(set) var distillAnalysisTimeout: TimeInterval = 180.0
 
     /// Timeout for content analysis operations
     /// Can be overridden with SONORA_CONTENT_TIMEOUT environment variable
@@ -131,7 +132,7 @@ public final class AppConfiguration: ObservableObject {
 
     /// Timeout for pro-tier analysis operations (Cognitive Clarity, Philosophical Echoes, Values Recognition)
     /// Can be overridden with SONORA_PRO_MODE_TIMEOUT environment variable
-    /// Pro modes require extended timeout for deep reasoning with GPT-5
+    /// Pro modes require extended timeout for deep reasoning and analysis
     public private(set) var proModeAnalysisTimeout: TimeInterval = 420.0
 
     /// Minimum transcript length required for analysis (characters)

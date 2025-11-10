@@ -74,11 +74,18 @@ export const RequestSchema = z.object({
 
 export const DistillDataSchema = z.object({
   summary: z.string(),
+  keyThemes: z.array(z.string()).min(2).max(4).optional(),
+  personalInsight: z.object({
+    type: z.enum(['emotionalTone', 'wordPattern', 'valueGlimpse', 'energyShift', 'stoicMoment', 'recurringPhrase']),
+    observation: z.string(),
+    invitation: z.string().optional()
+  }).optional(),
   action_items: z.array(z.object({
     text: z.string(),
     priority: z.enum(['high', 'medium', 'low'])
-  })),
+  })).optional(),
   reflection_questions: z.array(z.string()),
+  closingNote: z.string().optional(),
   patterns: z.array(z.object({
     id: z.string().optional(),
     theme: z.string(),
@@ -183,6 +190,27 @@ export const DistillJsonSchema = {
         type: "string",
         description: "Brief 2-3 sentence overview of the memo"
       },
+      keyThemes: {
+        type: "array",
+        description: "3-4 short topic labels (2-4 words each)",
+        items: { type: "string" },
+        minItems: 2,
+        maxItems: 4
+      },
+      personalInsight: {
+        type: "object",
+        description: "ONE meaningful observation about patterns or themes",
+        properties: {
+          type: {
+            type: "string",
+            enum: ["emotionalTone", "wordPattern", "valueGlimpse", "energyShift", "stoicMoment", "recurringPhrase"]
+          },
+          observation: { type: "string", description: "Brief noticing in warm, curious tone (1-2 sentences)" },
+          invitation: { type: "string", description: "Optional reflection prompt (1 sentence)" }
+        },
+        required: ["type", "observation"],
+        additionalProperties: false
+      },
       action_items: {
         type: "array",
         description: "Array of actionable tasks explicitly mentioned in the memo. Return empty array if none.",
@@ -202,9 +230,42 @@ export const DistillJsonSchema = {
         items: { type: "string" },
         minItems: 2,
         maxItems: 3
+      },
+      closingNote: {
+        type: "string",
+        description: "Brief encouraging observation about their self-awareness (1 sentence)"
+      },
+      patterns: {
+        type: "array",
+        description: "Pro feature: Recurring themes detected across historical memos. Return empty array if no historical context or no strong patterns.",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            theme: { type: "string" },
+            description: { type: "string" },
+            relatedMemos: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  memoId: { type: "string" },
+                  title: { type: "string" },
+                  daysAgo: { type: "number" },
+                  snippet: { type: "string" }
+                },
+                required: ["title"],
+                additionalProperties: false
+              }
+            },
+            confidence: { type: "number", minimum: 0, maximum: 1 }
+          },
+          required: ["theme", "description", "confidence"],
+          additionalProperties: false
+        }
       }
     },
-    required: ["summary", "action_items", "reflection_questions"],
+    required: ["summary", "reflection_questions"],
     additionalProperties: false
   }
 };

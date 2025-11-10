@@ -11,6 +11,12 @@ final class MockAnalysisService: AnalysisServiceProtocol {
     var shouldThrowError: Bool = false
     var errorToThrow: Error?
 
+    /// Track API call counts for verification in tests
+    private(set) var apiCallCount = 0
+
+    /// Optional pre-configured envelope for liteDistill (for test-specific results)
+    var liteDistillEnvelope: AnalyzeEnvelope<LiteDistillData>?
+
     // MARK: - AnalysisServiceProtocol Implementation
 
     func analyze<T: Codable & Sendable>(
@@ -65,7 +71,18 @@ final class MockAnalysisService: AnalysisServiceProtocol {
     }
 
     func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData> {
-        try await analyze(mode: .liteDistill, transcript: transcript, responseType: LiteDistillData.self, historicalContext: nil)
+        apiCallCount += 1
+
+        // If a pre-configured envelope is set, return it (for test-specific scenarios)
+        if let envelope = liteDistillEnvelope {
+            if shouldThrowError {
+                throw errorToThrow ?? AnalysisError.networkError("Mock error")
+            }
+            return envelope
+        }
+
+        // Otherwise use default mock generation
+        return try await analyze(mode: .liteDistill, transcript: transcript, responseType: LiteDistillData.self, historicalContext: nil)
     }
 
     // MARK: - Helper Methods
