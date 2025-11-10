@@ -39,11 +39,16 @@ struct SummarySkeleton: View {
     }
 
     private var shimmerGradient: LinearGradient {
+        // Ensure gradient stops are properly ordered and clamped to [0, 1]
+        let start = max(0, min(1, shimmerPhase - 0.3))
+        let middle = max(0, min(1, shimmerPhase))
+        let end = max(0, min(1, shimmerPhase + 0.3))
+
         LinearGradient(
             gradient: Gradient(stops: [
-                .init(color: Color.semantic(.fillSecondary), location: max(0, shimmerPhase - 0.3)),
-                .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: shimmerPhase),
-                .init(color: Color.semantic(.fillSecondary), location: min(1, shimmerPhase + 0.3))
+                .init(color: Color.semantic(.fillSecondary), location: start),
+                .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: middle),
+                .init(color: Color.semantic(.fillSecondary), location: end)
             ]),
             startPoint: .leading,
             endPoint: .trailing
@@ -118,11 +123,16 @@ struct ReflectionQuestionsSkeleton: View {
     }
 
     private var shimmerGradient: LinearGradient {
+        // Ensure gradient stops are properly ordered and clamped to [0, 1]
+        let start = max(0, min(1, shimmerPhase - 0.3))
+        let middle = max(0, min(1, shimmerPhase))
+        let end = max(0, min(1, shimmerPhase + 0.3))
+
         LinearGradient(
             gradient: Gradient(stops: [
-                .init(color: Color.semantic(.fillSecondary), location: max(0, shimmerPhase - 0.3)),
-                .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: shimmerPhase),
-                .init(color: Color.semantic(.fillSecondary), location: min(1, shimmerPhase + 0.3))
+                .init(color: Color.semantic(.fillSecondary), location: start),
+                .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: middle),
+                .init(color: Color.semantic(.fillSecondary), location: end)
             ]),
             startPoint: .leading,
             endPoint: .trailing
@@ -162,11 +172,16 @@ struct SkeletonLine: View {
     }
 
     private var shimmerGradient: LinearGradient {
+        // Ensure gradient stops are properly ordered and clamped to [0, 1]
+        let start = max(0, min(1, shimmerPhase - 0.3))
+        let middle = max(0, min(1, shimmerPhase))
+        let end = max(0, min(1, shimmerPhase + 0.3))
+
         LinearGradient(
             gradient: Gradient(stops: [
-                .init(color: Color.semantic(.fillSecondary), location: max(0, shimmerPhase - 0.3)),
-                .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: shimmerPhase),
-                .init(color: Color.semantic(.fillSecondary), location: min(1, shimmerPhase + 0.3))
+                .init(color: Color.semantic(.fillSecondary), location: start),
+                .init(color: Color.semantic(.fillSecondary).opacity(0.6), location: middle),
+                .init(color: Color.semantic(.fillSecondary), location: end)
             ]),
             startPoint: .leading,
             endPoint: .trailing

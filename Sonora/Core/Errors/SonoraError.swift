@@ -49,6 +49,7 @@ public enum SonoraError: LocalizedError, Equatable {
     case networkUnauthorized
     case networkForbidden
     case networkRateLimited
+    case networkPaymentRequired
 
     // MARK: - Configuration Errors
     case configurationMissing(String)
@@ -165,6 +166,8 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Access forbidden. You don't have permission to perform this action."
         case .networkRateLimited:
             return "Too many requests. Please wait and try again."
+        case .networkPaymentRequired:
+            return "This feature requires an active subscription."
 
         // Configuration Errors
         case .configurationMissing(let key):
@@ -251,6 +254,8 @@ public enum SonoraError: LocalizedError, Equatable {
             return "Wait for your quota to reset or upgrade your plan."
         case .analysisTimeout:
             return "Try again, or consider breaking longer recordings into shorter segments."
+        case .networkPaymentRequired:
+            return "Please check your subscription status in Settings or upgrade to access this feature."
         default:
             return "Please try again. If the problem persists, contact support."
         }
@@ -269,7 +274,7 @@ public enum SonoraError: LocalizedError, Equatable {
             return .analysis
         case .storagePermissionDenied, .storageSpaceInsufficient, .storageFileNotFound, .storageCorruptedData, .storageWriteFailed, .storageReadFailed, .storageDeleteFailed:
             return .storage
-        case .networkUnavailable, .networkTimeout, .networkServerError, .networkInvalidResponse, .networkBadRequest, .networkUnauthorized, .networkForbidden, .networkRateLimited:
+        case .networkUnavailable, .networkTimeout, .networkServerError, .networkInvalidResponse, .networkBadRequest, .networkUnauthorized, .networkForbidden, .networkRateLimited, .networkPaymentRequired:
             return .network
         case .configurationMissing, .configurationInvalid, .apiKeyMissing, .apiKeyInvalid, .endpointUnavailable:
             return .configuration

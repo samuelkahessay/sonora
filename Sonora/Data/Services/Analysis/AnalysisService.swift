@@ -110,6 +110,10 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
             if let body = String(data: data, encoding: .utf8) {
                 print("❌ AnalysisService: Response body: \(body)")
             }
+            // Handle 402 Payment Required specifically
+            if httpResponse.statusCode == 402 {
+                throw AnalysisError.paymentRequired
+            }
             throw AnalysisError.serverError(httpResponse.statusCode)
         }
 
