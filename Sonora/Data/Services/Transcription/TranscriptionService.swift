@@ -115,11 +115,29 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
         }
         req.timeoutInterval = config.transcriptionTimeoutInterval
 
-        logger.debug("Using API URL: \(transcribeURL.absoluteString)", category: .network, context: nil)
-        logger.debug("Timeout: \(req.timeoutInterval)s", category: .network, context: nil)
-        logger.debug("Making request: \(req.url?.absoluteString ?? "unknown")", category: .network, context: nil)
+        // Comprehensive request logging
+        logger.debug("━━━━━━━━━━ TRANSCRIPTION REQUEST START ━━━━━━━━━━", category: .network, context: nil)
+        logger.debug("🌐 Method: \(req.httpMethod ?? "UNKNOWN")", category: .network, context: nil)
+        logger.debug("🌐 URL: \(transcribeURL.absoluteString)", category: .network, context: nil)
+        logger.debug("🌐 Timeout: \(req.timeoutInterval)s", category: .network, context: nil)
+        logger.debug("🌐 Content-Type: multipart/form-data; boundary=\(form.boundary)", category: .network, context: nil)
+        if let contentLength {
+            logger.debug("🌐 Content-Length: \(contentLength) bytes", category: .network, context: nil)
+        }
+        logger.debug("🌐 File: \(url.lastPathComponent)", category: .network, context: nil)
+        logger.debug("🌐 MIME Type: \(mimeType(for: url))", category: .network, context: nil)
+        logger.debug("🌐 Language: \(language ?? "auto-detect")", category: .network, context: nil)
+        logger.debug("🌐 Response Format: verbose_json", category: .network, context: nil)
+        logger.debug("━━━━━━━━━━ REQUEST HEADERS ━━━━━━━━━━", category: .network, context: nil)
+        if let headers = req.allHTTPHeaderFields {
+            for (key, value) in headers {
+                logger.debug("  \(key): \(value)", category: .network, context: nil)
+            }
+        }
 
         let uploadTask = backgroundSession.uploadTask(with: req, fromFile: bodyURL)
+        logger.debug("🚀 Starting upload task (ID: \(uploadTask.taskIdentifier))...", category: .network, context: nil)
+
         let (data, resp): (Data, URLResponse)
         do {
             (data, resp) = try await withCheckedThrowingContinuation { continuation in
@@ -129,18 +147,44 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
                 }
             }
         } catch {
+            logger.error("❌ Upload task failed", category: .network, context: nil, error: error)
+            logger.debug("❌ Error details: \(error.localizedDescription)", category: .network, context: nil)
+            if let urlError = error as? URLError {
+                logger.debug("❌ URLError code: \(urlError.code.rawValue)", category: .network, context: nil)
+                logger.debug("❌ URLError domain: \(urlError.errorCode)", category: .network, context: nil)
+            }
             throw APIError(message: error.localizedDescription)
         }
+
         guard let http = resp as? HTTPURLResponse else {
+            logger.error("❌ Invalid response type: \(type(of: resp))", category: .network, context: nil, error: APIError(message: "No HTTP response"))
             throw APIError(message: "No HTTP response")
         }
-        logger.debug("Response status: \(http.statusCode)", category: .network, context: nil)
+
+        // Comprehensive response logging
+        logger.debug("━━━━━━━━━━ TRANSCRIPTION RESPONSE START ━━━━━━━━━━", category: .network, context: nil)
+        logger.debug("📥 Status Code: \(http.statusCode)", category: .network, context: nil)
+        logger.debug("📥 Status Description: \(HTTPURLResponse.localizedString(forStatusCode: http.statusCode))", category: .network, context: nil)
+        logger.debug("📥 Response URL: \(http.url?.absoluteString ?? "unknown")", category: .network, context: nil)
+        logger.debug("━━━━━━━━━━ RESPONSE HEADERS ━━━━━━━━━━", category: .network, context: nil)
+        for (key, value) in http.allHeaderFields {
+            logger.debug("  \(key): \(value)", category: .network, context: nil)
+        }
+        logger.debug("━━━━━━━━━━ RESPONSE BODY ━━━━━━━━━━", category: .network, context: nil)
+        logger.debug("📥 Body Size: \(data.count) bytes", category: .network, context: nil)
 
         guard (200...299).contains(http.statusCode) else {
             let text = String(data: data, encoding: .utf8) ?? ""
-            logger.error("Server error \(http.statusCode): \(text)", category: .network, context: nil, error: APIError(message: text))
+            logger.error("━━━━━━━━━━ SERVER ERROR ━━━━━━━━━━", category: .network, context: nil, error: APIError(message: text))
+            logger.error("❌ Status Code: \(http.statusCode)", category: .network, context: nil, error: nil)
+            logger.error("❌ Response Body: \(text)", category: .network, context: nil, error: nil)
+            logger.error("❌ Full URL: \(transcribeURL.absoluteString)", category: .network, context: nil, error: nil)
+            logger.error("❌ Language: \(language ?? "auto-detect")", category: .network, context: nil, error: nil)
+            logger.error("━━━━━━━━━━ SERVER ERROR END ━━━━━━━━━━", category: .network, context: nil, error: nil)
             throw APIError(message: "Server error \(http.statusCode): \(text)")
         }
+
+        logger.debug("✅ Transcription request succeeded", category: .network, context: nil)
 
         // Try first with a structured payload
         struct Payload: Decodable {
@@ -159,6 +203,12 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
             }
         }
 
+        // Log raw response body for debugging
+        if let bodyString = String(data: data, encoding: .utf8) {
+            let preview = String(bodyString.prefix(500))
+            logger.debug("📥 Response Body Preview: \(preview)", category: .network, context: nil)
+        }
+
         do {
             let payload = try JSONDecoder().decode(Payload.self, from: data)
             let text = payload.text ?? ""
@@ -169,11 +219,21 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
                 avgLogProb: payload.avgLogProb,
                 duration: payload.duration
             )
-            logger.info("Cloud transcription completed", category: .transcription, context: LogContext(additionalInfo: ["preview": String(text.prefix(50))]))
+            logger.info("✅ Cloud transcription completed successfully", category: .transcription, context: LogContext(additionalInfo: [
+                "preview": String(text.prefix(50)),
+                "detectedLanguage": payload.detectedLanguage ?? "unknown",
+                "confidence": String(format: "%.2f", payload.confidence ?? 0.0),
+                "duration": String(format: "%.2fs", payload.duration ?? 0.0)
+            ]))
+            logger.debug("━━━━━━━━━━ TRANSCRIPTION RESPONSE END ━━━━━━━━━━", category: .network, context: nil)
             return response
         } catch {
+            logger.debug("⚠️ Primary JSON decode failed, attempting fallback parsing", category: .transcription, context: nil)
+            logger.debug("⚠️ Decode error: \(error.localizedDescription)", category: .transcription, context: nil)
+
             // Fallback to permissive JSON parsing if structure changes
             if let obj = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                logger.debug("📝 Fallback JSON object keys: \(obj.keys.joined(separator: ", "))", category: .transcription, context: nil)
                 let text = (obj["text"] as? String) ?? ""
                 let detectedLanguage = (obj["detected_language"] as? String)
                 let confidence = (obj["confidence"] as? Double)
@@ -186,12 +246,15 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
                     avgLogProb: avgLogProb,
                     duration: duration
                 )
-                logger.info("Cloud transcription completed (fallback parse)", category: .transcription, context: LogContext(additionalInfo: ["preview": String(text.prefix(50))]))
+                logger.info("✅ Cloud transcription completed (fallback parse)", category: .transcription, context: LogContext(additionalInfo: ["preview": String(text.prefix(50))]))
+                logger.debug("━━━━━━━━━━ TRANSCRIPTION RESPONSE END ━━━━━━━━━━", category: .network, context: nil)
                 return response
             }
             // As last resort, just treat body as text
+            logger.debug("⚠️ Fallback JSON parse failed, treating response as raw text", category: .transcription, context: nil)
             let text = String(data: data, encoding: .utf8) ?? ""
-            logger.info("Cloud transcription completed (raw text)", category: .transcription, context: LogContext(additionalInfo: ["preview": String(text.prefix(50))]))
+            logger.info("✅ Cloud transcription completed (raw text)", category: .transcription, context: LogContext(additionalInfo: ["preview": String(text.prefix(50))]))
+            logger.debug("━━━━━━━━━━ TRANSCRIPTION RESPONSE END ━━━━━━━━━━", category: .network, context: nil)
             return TranscriptionResponse(text: text, detectedLanguage: nil, confidence: nil, avgLogProb: nil, duration: nil)
         }
     }
@@ -266,12 +329,25 @@ private final class BackgroundSessionDelegate: NSObject, URLSessionDataDelegate,
     }
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        logger.debug("📦 BackgroundSessionDelegate: Received \(data.count) bytes for task \(dataTask.taskIdentifier)", category: .network, context: nil)
         Task {
             await tracker.appendData(taskIdentifier: dataTask.taskIdentifier, data: data)
         }
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error {
+            logger.error("❌ BackgroundSessionDelegate: Task \(task.taskIdentifier) completed with error", category: .network, context: nil, error: error)
+            logger.debug("❌ Error details: \(error.localizedDescription)", category: .network, context: nil)
+            if let urlError = error as? URLError {
+                logger.debug("❌ URLError code: \(urlError.code.rawValue)", category: .network, context: nil)
+            }
+        } else {
+            logger.debug("✅ BackgroundSessionDelegate: Task \(task.taskIdentifier) completed successfully", category: .network, context: nil)
+            if let httpResponse = task.response as? HTTPURLResponse {
+                logger.debug("✅ Final status code: \(httpResponse.statusCode)", category: .network, context: nil)
+            }
+        }
         Task {
             await tracker.complete(task: task, error: error)
         }
