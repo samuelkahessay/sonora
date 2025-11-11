@@ -132,7 +132,7 @@ final class TitleService: TitleServiceProtocol, @unchecked Sendable {
                             languageHint: languageHint,
                             progress: progress
                         )
-                        logger.info("✅ Title generation completed (streaming)", category: .network, context: LogContext(additionalInfo: ["title": result ?? "nil"]))
+                        logger.info("✅ Title generation completed (streaming)", category: .network, context: LogContext(additionalInfo: ["title": result]))
                         logger.debug("━━━━━━━━━━ TITLE GENERATION END ━━━━━━━━━━", category: .network, context: nil)
                         return result
                     } catch let streamingError as TitleServiceError {
@@ -147,7 +147,7 @@ final class TitleService: TitleServiceProtocol, @unchecked Sendable {
 
                 logger.debug("🌐 Attempting legacy title generation", category: .network, context: nil)
                 let title = try await performLegacyRequest(request: legacyRequest, languageHint: languageHint)
-                logger.info("✅ Title generation completed (legacy)", category: .network, context: LogContext(additionalInfo: ["title": title ?? "nil"]))
+                logger.info("✅ Title generation completed (legacy)", category: .network, context: LogContext(additionalInfo: ["title": title]))
                 logger.debug("━━━━━━━━━━ TITLE GENERATION END ━━━━━━━━━━", category: .network, context: nil)
                 return title
             } catch {

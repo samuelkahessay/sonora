@@ -91,7 +91,7 @@ final class ModerationService: ObservableObject, ModerationServiceProtocol {
             let result = try JSONDecoder().decode(ModerationResult.self, from: data)
             logger.info("✅ Moderation completed successfully", category: .network, context: LogContext(additionalInfo: [
                 "flagged": String(result.flagged),
-                "categories": result.categories.filter { $0.value }.keys.joined(separator: ", ")
+                "categories": result.categories?.filter { $0.value }.keys.joined(separator: ", ") ?? "none"
             ]))
             logger.debug("━━━━━━━━━━ MODERATION RESPONSE END ━━━━━━━━━━", category: .network, context: nil)
             return result
