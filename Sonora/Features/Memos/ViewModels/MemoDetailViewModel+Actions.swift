@@ -129,7 +129,7 @@ extension MemoDetailViewModel {
                         await performLiteDistill(transcript: transcript, memoId: memo.id)
                     }
 
-                case .distillSummary, .distillActions, .distillThemes, .distillReflection:
+                case .distillSummary, .distillActions, .distillThemes, .distillPersonalInsight, .distillClosingNote, .distillReflection:
                     await performRegularDistill(transcript: transcript, memoId: memo.id)
 
                 case .liteDistill:

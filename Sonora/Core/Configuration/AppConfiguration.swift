@@ -463,7 +463,7 @@ public final class AppConfiguration: ObservableObject {
         case .distill:
             return distillAnalysisTimeout
         // Distill component modes use half the distill timeout (no artificial clamping)
-        case .distillSummary, .distillActions, .distillThemes, .distillReflection:
+        case .distillSummary, .distillActions, .distillThemes, .distillPersonalInsight, .distillClosingNote, .distillReflection:
             return distillAnalysisTimeout / 2 // Half the distill timeout for focused component analysis
         case .liteDistill:
             return min(distillAnalysisTimeout / 2, 10.0) // Lite Distill is even faster
