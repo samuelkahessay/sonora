@@ -462,9 +462,10 @@ public final class AppConfiguration: ObservableObject {
         switch mode {
         case .distill:
             return distillAnalysisTimeout
-        // Distill component modes use half the distill timeout (no artificial clamping)
+        // Distill component modes need generous timeout to account for parallel request queuing.
+        // When 6 requests hit OpenAI simultaneously, later requests get queued, requiring ~120-150s.
         case .distillSummary, .distillActions, .distillThemes, .distillPersonalInsight, .distillClosingNote, .distillReflection:
-            return distillAnalysisTimeout / 2 // Half the distill timeout for focused component analysis
+            return 150.0 // Increased from 90s to accommodate OpenAI queuing when running 6 parallel requests
         case .liteDistill:
             return min(distillAnalysisTimeout / 2, 10.0) // Lite Distill is even faster
         case .events:
