@@ -22,8 +22,11 @@ public struct DistillProgressUpdate: Sendable, Equatable {
 /// Partial distill data that gets built up progressively
 public struct PartialDistillData: Sendable, Equatable {
     public var summary: String?
+    public var keyThemes: [String]?
+    public var personalInsight: PersonalInsight?
     public var actionItems: [DistillData.ActionItem]?
     public var reflectionQuestions: [String]?
+    public var closingNote: String?
     public var patterns: [DistillData.Pattern]?
     public var events: [EventsData.DetectedEvent]?
     public var reminders: [RemindersData.DetectedReminder]?
@@ -37,8 +40,11 @@ public struct PartialDistillData: Sendable, Equatable {
 
         return DistillData(
             summary: summary,
+            keyThemes: keyThemes,
+            personalInsight: personalInsight,
             action_items: actionItems,
             reflection_questions: reflectionQuestions,
+            closingNote: closingNote,
             patterns: patterns,
             events: events,
             reminders: reminders
@@ -50,8 +56,11 @@ extension PartialDistillData {
     public static func == (lhs: PartialDistillData, rhs: PartialDistillData) -> Bool {
         // Compare simple fields directly
         guard lhs.summary == rhs.summary,
+              lhs.keyThemes == rhs.keyThemes,
+              lhs.personalInsight == rhs.personalInsight,
               lhs.actionItems == rhs.actionItems,
               lhs.reflectionQuestions == rhs.reflectionQuestions,
+              lhs.closingNote == rhs.closingNote,
               lhs.patterns == rhs.patterns else {
             return false
         }
@@ -66,8 +75,11 @@ extension PartialDistillData {
 
 enum DistillComponentData: Sendable {
     case summary(DistillSummaryData)
+    case themes(DistillThemesData)
+    case personalInsight(DistillPersonalInsightData)
     case actions(DistillActionsData)
     case reflection(DistillReflectionData)
+    case closingNote(DistillClosingNoteData)
     case detections(EventsData?, RemindersData?)
     case patterns([DistillData.Pattern]?)
 }
@@ -86,7 +98,14 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     private let storeKitService: any StoreKitServiceProtocol
 
     // MARK: - Constants
-    private let componentModes: [AnalysisMode] = [.distillSummary, .distillActions, .distillReflection]
+    private let componentModes: [AnalysisMode] = [
+        .distillSummary,
+        .distillThemes,
+        .distillPersonalInsight,
+        .distillActions,
+        .distillReflection,
+        .distillClosingNote
+    ]
 
     // MARK: - Initialization
     init(
@@ -321,6 +340,14 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
             if let result = await analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillSummaryData.self) {
                 return (.summary(result.data), result.latency_ms, result.tokens)
             }
+        case .distillThemes:
+            if let result = await analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillThemesData.self) {
+                return (.themes(result.data), result.latency_ms, result.tokens)
+            }
+        case .distillPersonalInsight:
+            if let result = await analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillPersonalInsightData.self) {
+                return (.personalInsight(result.data), result.latency_ms, result.tokens)
+            }
         case .distillActions:
             if let result = await analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillActionsData.self) {
                 return (.actions(result.data), result.latency_ms, result.tokens)
@@ -328,6 +355,10 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         case .distillReflection:
             if let result = await analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillReflectionData.self) {
                 return (.reflection(result.data), result.latency_ms, result.tokens)
+            }
+        case .distillClosingNote:
+            if let result = await analysisRepository.getAnalysisResult(for: memoId, mode: mode, responseType: DistillClosingNoteData.self) {
+                return (.closingNote(result.data), result.latency_ms, result.tokens)
             }
         default:
             break
@@ -344,12 +375,21 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         case .distillSummary:
             let envelope = try await analysisService.analyzeDistillSummary(transcript: transcript)
             return (.summary(envelope.data), envelope.latency_ms, envelope.tokens)
+        case .distillThemes:
+            let envelope = try await analysisService.analyzeDistillThemes(transcript: transcript)
+            return (.themes(envelope.data), envelope.latency_ms, envelope.tokens)
+        case .distillPersonalInsight:
+            let envelope = try await analysisService.analyzeDistillPersonalInsight(transcript: transcript)
+            return (.personalInsight(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillActions:
             let envelope = try await analysisService.analyzeDistillActions(transcript: transcript)
             return (.actions(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillReflection:
             let envelope = try await analysisService.analyzeDistillReflection(transcript: transcript)
             return (.reflection(envelope.data), envelope.latency_ms, envelope.tokens)
+        case .distillClosingNote:
+            let envelope = try await analysisService.analyzeDistillClosingNote(transcript: transcript)
+            return (.closingNote(envelope.data), envelope.latency_ms, envelope.tokens)
         default:
             throw AnalysisError.invalidResponse
         }
@@ -360,11 +400,20 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         case .summary(let summaryData):
             let envelope = AnalyzeEnvelope(mode: mode, data: summaryData, model: "gpt-5-mini", tokens: tokens, latency_ms: latency, moderation: nil)
             await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+        case .themes(let themesData):
+            let envelope = AnalyzeEnvelope(mode: mode, data: themesData, model: "gpt-5-mini", tokens: tokens, latency_ms: latency, moderation: nil)
+            await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+        case .personalInsight(let insightData):
+            let envelope = AnalyzeEnvelope(mode: mode, data: insightData, model: "gpt-5-mini", tokens: tokens, latency_ms: latency, moderation: nil)
+            await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
         case .actions(let actionsData):
             let envelope = AnalyzeEnvelope(mode: mode, data: actionsData, model: "gpt-5-mini", tokens: tokens, latency_ms: latency, moderation: nil)
             await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
         case .reflection(let reflectionData):
             let envelope = AnalyzeEnvelope(mode: mode, data: reflectionData, model: "gpt-5-mini", tokens: tokens, latency_ms: latency, moderation: nil)
+            await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
+        case .closingNote(let closingData):
+            let envelope = AnalyzeEnvelope(mode: mode, data: closingData, model: "gpt-5-mini", tokens: tokens, latency_ms: latency, moderation: nil)
             await analysisRepository.saveAnalysisResult(envelope, for: memoId, mode: mode)
         case .detections:
             // No cache persistence for detection bundle in this use case.
@@ -379,10 +428,16 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         switch data {
         case .summary(let summaryData):
             partialData.summary = summaryData.summary
+        case .themes(let themesData):
+            partialData.keyThemes = themesData.keyThemes
+        case .personalInsight(let insightData):
+            partialData.personalInsight = insightData.personalInsight
         case .actions(let actionsData):
             partialData.actionItems = actionsData.action_items
         case .reflection(let reflectionData):
             partialData.reflectionQuestions = reflectionData.reflection_questions
+        case .closingNote(let closingData):
+            partialData.closingNote = closingData.closingNote
         case .detections(let ev, let rem):
             partialData.events = ev?.events
             partialData.reminders = rem?.reminders

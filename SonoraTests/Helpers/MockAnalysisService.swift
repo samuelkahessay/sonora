@@ -66,8 +66,16 @@ final class MockAnalysisService: AnalysisServiceProtocol {
         try await analyze(mode: .distillThemes, transcript: transcript, responseType: DistillThemesData.self, historicalContext: nil)
     }
 
+    func analyzeDistillPersonalInsight(transcript: String) async throws -> AnalyzeEnvelope<DistillPersonalInsightData> {
+        try await analyze(mode: .distillPersonalInsight, transcript: transcript, responseType: DistillPersonalInsightData.self, historicalContext: nil)
+    }
+
     func analyzeDistillReflection(transcript: String) async throws -> AnalyzeEnvelope<DistillReflectionData> {
         try await analyze(mode: .distillReflection, transcript: transcript, responseType: DistillReflectionData.self, historicalContext: nil)
+    }
+
+    func analyzeDistillClosingNote(transcript: String) async throws -> AnalyzeEnvelope<DistillClosingNoteData> {
+        try await analyze(mode: .distillClosingNote, transcript: transcript, responseType: DistillClosingNoteData.self, historicalContext: nil)
     }
 
     func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData> {
@@ -128,7 +136,21 @@ final class MockAnalysisService: AnalysisServiceProtocol {
 
         case is DistillThemesData.Type:
             return DistillThemesData(
-                key_themes: ["Productivity", "Collaboration", "Time management"]
+                keyThemes: ["Productivity", "Collaboration", "Time management"]
+            ) as! T
+
+        case is DistillPersonalInsightData.Type:
+            return DistillPersonalInsightData(
+                personalInsight: PersonalInsight(
+                    type: .emotionalTone,
+                    observation: "You seem energized when collaborating",
+                    invitation: "Consider scheduling more team activities"
+                )
+            ) as! T
+
+        case is DistillClosingNoteData.Type:
+            return DistillClosingNoteData(
+                closingNote: "Keep up the great work!"
             ) as! T
 
         case is DistillData.Type:
