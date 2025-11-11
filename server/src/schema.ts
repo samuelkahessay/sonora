@@ -39,6 +39,8 @@ export const ModelSettings = {
   'distill-summary':      { verbosity: 'low', reasoningEffort: 'low' },       // Just the overview
   'distill-actions':      { verbosity: 'low', reasoningEffort: 'low' },       // Just action items extraction
   'distill-themes':       { verbosity: 'low', reasoningEffort: 'low' },       // Just themes identification
+  'distill-personalInsight': { verbosity: 'low', reasoningEffort: 'medium' }, // Just personal insight
+  'distill-closingNote':  { verbosity: 'low', reasoningEffort: 'low' },       // Just closing note
   'distill-reflection':   { verbosity: 'low', reasoningEffort: 'medium' },    // Just coaching questions
   events:                 { verbosity: 'low', reasoningEffort: 'medium' },    // Calendar event extraction
   reminders:              { verbosity: 'low', reasoningEffort: 'low' }        // Reminder extraction
@@ -66,6 +68,8 @@ export const RequestSchema = z.object({
     'distill-summary',
     'distill-actions',
     'distill-themes',
+    'distill-personalInsight',
+    'distill-closingNote',
     'distill-reflection'
   ]),
   transcript: z.string().min(10).max(10000),
@@ -154,7 +158,19 @@ export const DistillActionsDataSchema = z.object({
 });
 
 export const DistillThemesDataSchema = z.object({
-  key_themes: z.array(z.string())
+  keyThemes: z.array(z.string())
+});
+
+export const DistillPersonalInsightDataSchema = z.object({
+  personalInsight: z.object({
+    type: z.enum(['emotionalTone', 'wordPattern', 'valueGlimpse', 'energyShift', 'stoicMoment', 'recurringPhrase']),
+    observation: z.string(),
+    invitation: z.string().optional()
+  })
+});
+
+export const DistillClosingNoteDataSchema = z.object({
+  closingNote: z.string()
 });
 
 export const DistillReflectionDataSchema = z.object({
@@ -453,17 +469,57 @@ export const DistillActionsJsonSchema = {
 export const DistillThemesJsonSchema = {
   name: "distill_themes_response",
   schema: {
-    type: "object", 
+    type: "object",
     properties: {
-      key_themes: {
+      keyThemes: {
         type: "array",
-        description: "2-4 main themes/topics extracted from the memo",
+        description: "3-4 main themes/topics extracted from the memo (2-4 words each)",
         items: { type: "string" },
         minItems: 2,
         maxItems: 4
       }
     },
-    required: ["key_themes"],
+    required: ["keyThemes"],
+    additionalProperties: false
+  }
+};
+
+export const DistillPersonalInsightJsonSchema = {
+  name: "distill_personal_insight_response",
+  schema: {
+    type: "object",
+    properties: {
+      personalInsight: {
+        type: "object",
+        description: "ONE meaningful observation about patterns or themes",
+        properties: {
+          type: {
+            type: "string",
+            enum: ["emotionalTone", "wordPattern", "valueGlimpse", "energyShift", "stoicMoment", "recurringPhrase"]
+          },
+          observation: { type: "string", description: "Meaningful noticing in warm, curious tone (1-2 sentences)" },
+          invitation: { type: "string", description: "Optional reflection prompt (1 sentence)" }
+        },
+        required: ["type", "observation"],
+        additionalProperties: false
+      }
+    },
+    required: ["personalInsight"],
+    additionalProperties: false
+  }
+};
+
+export const DistillClosingNoteJsonSchema = {
+  name: "distill_closing_note_response",
+  schema: {
+    type: "object",
+    properties: {
+      closingNote: {
+        type: "string",
+        description: "Brief encouraging observation about their self-awareness (1 sentence)"
+      }
+    },
+    required: ["closingNote"],
     additionalProperties: false
   }
 };
@@ -493,6 +549,8 @@ export const AnalysisJsonSchemas = {
   'distill-summary': DistillSummaryJsonSchema,
   'distill-actions': DistillActionsJsonSchema,
   'distill-themes': DistillThemesJsonSchema,
+  'distill-personalInsight': DistillPersonalInsightJsonSchema,
+  'distill-closingNote': DistillClosingNoteJsonSchema,
   'distill-reflection': DistillReflectionJsonSchema,
   events: EventsJsonSchema,
   reminders: RemindersJsonSchema
@@ -510,6 +568,8 @@ export const ResponseSchema = z.object({
     'distill-summary',
     'distill-actions',
     'distill-themes',
+    'distill-personalInsight',
+    'distill-closingNote',
     'distill-reflection'
   ]),
   data: z.union([
@@ -520,6 +580,8 @@ export const ResponseSchema = z.object({
     DistillSummaryDataSchema,
     DistillActionsDataSchema,
     DistillThemesDataSchema,
+    DistillPersonalInsightDataSchema,
+    DistillClosingNoteDataSchema,
     DistillReflectionDataSchema
   ]),
   model: ModelSchema,
@@ -543,8 +605,10 @@ export type LiteDistillData = z.infer<typeof LiteDistillDataSchema>;
 export type DistillSummaryData = z.infer<typeof DistillSummaryDataSchema>;
 export type DistillActionsData = z.infer<typeof DistillActionsDataSchema>;
 export type DistillThemesData = z.infer<typeof DistillThemesDataSchema>;
+export type DistillPersonalInsightData = z.infer<typeof DistillPersonalInsightDataSchema>;
+export type DistillClosingNoteData = z.infer<typeof DistillClosingNoteDataSchema>;
 export type DistillReflectionData = z.infer<typeof DistillReflectionDataSchema>;
 export type EventsData = z.infer<typeof EventsDataSchema>;
 export type RemindersData = z.infer<typeof RemindersDataSchema>;
-export type DataOut = DistillData | LiteDistillData | DistillSummaryData | DistillActionsData | DistillThemesData | DistillReflectionData | EventsData | RemindersData;
+export type DataOut = DistillData | LiteDistillData | DistillSummaryData | DistillActionsData | DistillThemesData | DistillPersonalInsightData | DistillClosingNoteData | DistillReflectionData | EventsData | RemindersData;
 export type ResponseData = z.infer<typeof ResponseSchema>;
