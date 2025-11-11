@@ -265,12 +265,12 @@ export const DistillJsonSchema = {
               items: {
                 type: "object",
                 properties: {
-                  memoId: { type: "string" },
+                  memoId: { type: ["string", "null"] },
                   title: { type: "string" },
-                  daysAgo: { type: "number" },
-                  snippet: { type: "string" }
+                  daysAgo: { type: ["number", "null"] },
+                  snippet: { type: ["string", "null"] }
                 },
-                required: ["title"],
+                required: ["memoId", "title", "daysAgo", "snippet"],
                 additionalProperties: false
               }
             },
