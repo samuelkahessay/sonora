@@ -111,7 +111,12 @@ test('POST /analyze returns parsed payloads for personal insight and closing not
   assert.equal(personalResponse.status, 200);
   const personalBody = await personalResponse.json();
   assert.equal(personalBody.mode, 'distill-personalInsight');
-  assert.deepEqual(personalBody.data, PERSONAL_INSIGHT_RESPONSE);
+  // Verify the structure, but check UUID separately since it's generated
+  assert.ok(personalBody.data.personalInsight.id, 'personalInsight should have an id');
+  assert.match(personalBody.data.personalInsight.id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'id should be a valid UUID');
+  assert.equal(personalBody.data.personalInsight.type, PERSONAL_INSIGHT_RESPONSE.personalInsight.type);
+  assert.equal(personalBody.data.personalInsight.observation, PERSONAL_INSIGHT_RESPONSE.personalInsight.observation);
+  assert.equal(personalBody.data.personalInsight.invitation, PERSONAL_INSIGHT_RESPONSE.personalInsight.invitation);
 
   const closingResponse = await fetch(url('/analyze'), {
     method: 'POST',

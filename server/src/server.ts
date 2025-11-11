@@ -8,6 +8,7 @@ import cors from 'cors';
 import multer from 'multer';
 import { z } from 'zod';
 import fs from 'fs';
+import { randomUUID } from 'crypto';
 import { FormData, File } from 'undici';
 import pinoHttp from 'pino-http';
 import { RequestSchema, DistillDataSchema, LiteDistillDataSchema, EventsDataSchema, RemindersDataSchema, AnalysisJsonSchemas, DistillThemesDataSchema, DistillPersonalInsightDataSchema, DistillClosingNoteDataSchema } from './schema.js';
@@ -575,8 +576,16 @@ function validateAnalysisData(mode: string, parsedData: any): any {
           : [];
       return DistillThemesDataSchema.parse({ keyThemes });
     }
-    case 'distill-personalInsight':
-      return DistillPersonalInsightDataSchema.parse(parsedData);
+    case 'distill-personalInsight': {
+      // Add UUID to personalInsight if not present
+      const dataWithId = {
+        personalInsight: {
+          ...parsedData.personalInsight,
+          id: parsedData.personalInsight?.id || randomUUID()
+        }
+      };
+      return DistillPersonalInsightDataSchema.parse(dataWithId);
+    }
     case 'distill-closingNote':
       return DistillClosingNoteDataSchema.parse(parsedData);
     case 'distill-reflection':

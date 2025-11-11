@@ -163,6 +163,7 @@ export const DistillThemesDataSchema = z.object({
 
 export const DistillPersonalInsightDataSchema = z.object({
   personalInsight: z.object({
+    id: z.string(),
     type: z.enum(['emotionalTone', 'wordPattern', 'valueGlimpse', 'energyShift', 'stoicMoment', 'recurringPhrase']),
     observation: z.string(),
     invitation: z.string().nullable().optional()

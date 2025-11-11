@@ -418,6 +418,19 @@ public struct PersonalInsight: Codable, Sendable, Identifiable, Equatable {
         self.observation = observation
         self.invitation = invitation
     }
+
+    // Custom decoder for backward compatibility - generates UUID if server doesn't send id
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        self.type = try container.decode(InsightType.self, forKey: .type)
+        self.observation = try container.decode(String.self, forKey: .observation)
+        self.invitation = try container.decodeIfPresent(String.self, forKey: .invitation)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, type, observation, invitation
+    }
 }
 
 /// Simple to-do for free tier (no EventKit integration)
@@ -456,6 +469,18 @@ public struct SimpleTodo: Codable, Sendable, Identifiable, Equatable {
         self.id = id
         self.text = text
         self.priority = priority
+    }
+
+    // Custom decoder for backward compatibility - generates UUID if server doesn't send id
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        self.text = try container.decode(String.self, forKey: .text)
+        self.priority = try container.decode(Priority.self, forKey: .priority)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, text, priority
     }
 }
 
