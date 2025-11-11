@@ -2,6 +2,7 @@ import { AnalysisJsonSchemas } from './schema.js';
 import { chatCompletionsSupportsTemperature } from './caps.js';
 import logger from './logging/logger.js';
 import { getCorrelationId } from './middleware/correlation.js';
+import { Sentry } from './instrumentation.js';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.SONORA_MODEL || 'gpt-5-mini';
@@ -30,18 +31,82 @@ async function sleep(ms: number): Promise<void> {
 
 async function requestWithRetry<T>(fn: () => Promise<T>): Promise<{ result: T; retryCount: number }> {
   const maxRetries = 3;
+  let lastError: any;
+
   for (let i = 0; i <= maxRetries; i++) {
     try {
       const result = await fn();
+
+      // If we had retries, log success
+      if (i > 0) {
+        Sentry.addBreadcrumb({
+          category: 'openai',
+          message: `Request succeeded after ${i} retries`,
+          level: 'info',
+          data: {
+            retryCount: i,
+            correlationId: getCorrelationId(),
+          },
+        });
+      }
+
       return { result, retryCount: i };
     } catch (err: any) {
+      lastError = err;
       const isRetryable = err?.name === 'AbortError' || String(err?.message || '').includes('rate') || String(err?.message || '').includes('timeout') || String(err?.message || '').includes('5');
-      if (i === maxRetries || !isRetryable) throw err;
+
+      // Add breadcrumb for retry attempt
+      Sentry.addBreadcrumb({
+        category: 'openai',
+        message: `Request failed, retry ${i}/${maxRetries}`,
+        level: isRetryable ? 'warning' : 'error',
+        data: {
+          attempt: i + 1,
+          maxRetries: maxRetries + 1,
+          isRetryable,
+          errorName: err?.name,
+          errorMessage: err?.message,
+          correlationId: getCorrelationId(),
+        },
+      });
+
+      if (i === maxRetries || !isRetryable) {
+        // Capture exception with Sentry on final failure
+        Sentry.captureException(err, {
+          level: 'error',
+          tags: {
+            service: 'openai',
+            operation: 'requestWithRetry',
+            retryable: String(isRetryable),
+          },
+          extra: {
+            retryCount: i,
+            maxRetries,
+            correlationId: getCorrelationId(),
+          },
+        });
+        throw err;
+      }
+
       const backoff = 400 * Math.pow(2, i) + Math.floor(Math.random() * 200);
       await sleep(backoff);
     }
   }
-  throw new Error('Unexpected retry loop exit');
+
+  // This should never happen, but if it does, capture it
+  const error = new Error('Unexpected retry loop exit');
+  Sentry.captureException(error, {
+    level: 'fatal',
+    tags: {
+      service: 'openai',
+      operation: 'requestWithRetry',
+    },
+    extra: {
+      lastError,
+      correlationId: getCorrelationId(),
+    },
+  });
+  throw error;
 }
 
 // Chat Completions API for Pro-tier modes (less strict schema validation)
@@ -140,6 +205,8 @@ export async function createChatCompletionsJSON({
         try {
           errorJson = JSON.parse(text);
         } catch {}
+
+        // Log with Pino
         logger.error({
           correlationId: getCorrelationId(),
           service: 'openai',
@@ -156,7 +223,27 @@ export async function createChatCompletionsJSON({
             responseFormat: requestBody.response_format
           }
         }, 'Chat Completions API Error');
-        throw new Error(errorMessage);
+
+        // Capture with Sentry
+        const error = new Error(errorMessage);
+        Sentry.captureException(error, {
+          level: response.status >= 500 ? 'error' : 'warning',
+          tags: {
+            service: 'openai',
+            operation: 'chatCompletions',
+            status: String(response.status),
+            errorType: errorJson?.error?.type || 'unknown',
+          },
+          extra: {
+            statusText: response.statusText,
+            errorMessage: errorJson?.error?.message,
+            model: requestBody.model,
+            mode: mode,
+            correlationId: getCorrelationId(),
+          },
+        });
+
+        throw error;
       }
 
       const data: any = await response.json();
@@ -237,13 +324,34 @@ export async function createChatCompletionsJSON({
           hasRefusal: !!refusal,
           refusalMessage: refusal || 'none'
         };
+
+        // Log with Pino
         logger.error({
           correlationId: getCorrelationId(),
           service: 'openai',
           operation: 'chatCompletions',
           debugInfo,
         }, 'Chat Completions Response Parsing Failed');
-        throw new Error(`No content found in Chat Completions API response. ${refusal ? `Refusal: ${refusal}` : `Debug info: ${JSON.stringify(debugInfo)}`}`);
+
+        // Capture with Sentry
+        const errorMessage = `No content found in Chat Completions API response. ${refusal ? `Refusal: ${refusal}` : `Debug info: ${JSON.stringify(debugInfo)}`}`;
+        const error = new Error(errorMessage);
+        Sentry.captureException(error, {
+          level: 'error',
+          tags: {
+            service: 'openai',
+            operation: 'chatCompletions',
+            issue: 'response_parsing',
+          },
+          extra: {
+            debugInfo,
+            model: requestBody.model,
+            mode: mode,
+            correlationId: getCorrelationId(),
+          },
+        });
+
+        throw error;
       }
 
       // Extract token usage

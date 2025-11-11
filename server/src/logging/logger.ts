@@ -1,5 +1,6 @@
 import pino from 'pino';
 import { getCorrelationId } from '../middleware/correlation.js';
+import { createSentryHook } from './sentry-transport.js';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -85,6 +86,19 @@ const logger = pino({
   mixin: () => {
     const correlationId = getCorrelationId();
     return correlationId ? { correlationId } : {};
+  },
+
+  // Send logs to Sentry as breadcrumbs
+  hooks: {
+    logMethod(inputArgs, method, level) {
+      // Send to Sentry before logging
+      if (inputArgs.length >= 1) {
+        const logObj = typeof inputArgs[0] === 'object' ? inputArgs[0] : {};
+        createSentryHook()(logObj, level);
+      }
+      // Continue with normal logging
+      return method.apply(this, inputArgs);
+    },
   },
 });
 

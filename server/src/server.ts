@@ -1,3 +1,8 @@
+// IMPORTANT: Sentry instrumentation must be imported FIRST for proper ESM initialization
+import './instrumentation.js';
+import { Sentry } from './instrumentation.js';
+import { setupExpressErrorHandler } from '@sentry/node';
+
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
@@ -1026,9 +1031,26 @@ app.use((req, res) => {
   res.status(404).json({ error: 'NotFound' });
 });
 
+// Sentry error handler - must come after all routes but before other error handlers
+setupExpressErrorHandler(app);
+
 // Global error handler
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Capture exception with Sentry (if not already captured)
+  Sentry.captureException(error, {
+    tags: {
+      handler: 'global_error_handler',
+    },
+    extra: {
+      url: req.url,
+      method: req.method,
+      correlationId: (req as any).correlationId,
+    },
+  });
+
+  // Log with Pino (preserves existing logging)
   logger.error({ error, url: req.url, method: req.method }, 'Unhandled error');
+
   if (!res.headersSent) {
     res.status(500).json({ error: 'Internal' });
   }
