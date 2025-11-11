@@ -38,13 +38,30 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
 
     // MARK: - Single-file Transcription
     func transcribe(url: URL) async throws -> String {
-        let response = try await transcribe(url: url, language: config.preferredTranscriptionLanguage)
+        let response = try await transcribe(
+            url: url,
+            language: config.preferredTranscriptionLanguage,
+            context: nil
+        )
         return response.text
     }
 
-    func transcribe(url: URL, language: String?) async throws -> TranscriptionResponse {
-        let context = LogContext(additionalInfo: ["file": url.lastPathComponent, "language": language ?? "auto"])
-        logger.debug("Starting cloud transcription", category: .transcription, context: context)
+    func transcribe(
+        url: URL,
+        language: String?,
+        context: TranscriptionRequestContext?
+    ) async throws -> TranscriptionResponse {
+        let effectiveContext = context ?? TranscriptionRequestContext(
+            correlationId: UUID().uuidString,
+            memoId: nil,
+            chunkIndex: nil,
+            chunkCount: nil
+        )
+        let logContext = LogContext(
+            correlationId: effectiveContext.correlationId,
+            additionalInfo: ["file": url.lastPathComponent, "language": language ?? "auto"]
+        )
+        logger.debug("Starting cloud transcription", category: .transcription, context: logContext)
 
         // Validate language code if provided (Whisper-supported code)
         if let language = language, !language.isEmpty {
@@ -55,14 +72,14 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
 
         // First attempt: include language if present
         do {
-            return try await sendTranscriptionRequest(url: url, language: language)
+            return try await sendTranscriptionRequest(url: url, language: language, context: effectiveContext)
         } catch {
             // If the server rejects language hint, fallback once without it
             if let apiErr = error as? APIError,
                let language = language, !language.isEmpty,
                Self.shouldFallbackWithoutLanguage(apiError: apiErr) {
-                logger.debug("Fallback: retrying without language hint", category: .transcription, context: context)
-                return try await sendTranscriptionRequest(url: url, language: nil)
+                logger.debug("Fallback: retrying without language hint", category: .transcription, context: logContext)
+                return try await sendTranscriptionRequest(url: url, language: nil, context: effectiveContext)
             }
             throw error
         }
@@ -95,7 +112,11 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
         return false
     }
 
-    private func sendTranscriptionRequest(url: URL, language: String?) async throws -> TranscriptionResponse {
+    private func sendTranscriptionRequest(
+        url: URL,
+        language: String?,
+        context: TranscriptionRequestContext?
+    ) async throws -> TranscriptionResponse {
         var form = MultipartForm()
         if let language, !language.isEmpty { form.addTextField(name: "language", value: language) }
         // Stabilize output; keep in-source language
@@ -132,6 +153,19 @@ final class TranscriptionService: TranscriptionAPI, @unchecked Sendable {
         if let headers = req.allHTTPHeaderFields {
             for (key, value) in headers {
                 logger.debug("  \(key): \(value)", category: .network, context: nil)
+            }
+        }
+
+        if let context {
+            req.setValue(context.correlationId, forHTTPHeaderField: "X-Correlation-ID")
+            if let memoId = context.memoId {
+                req.setValue(memoId.uuidString, forHTTPHeaderField: "X-Memo-ID")
+            }
+            if let chunkIndex = context.chunkIndex {
+                req.setValue(String(chunkIndex), forHTTPHeaderField: "X-Chunk-Index")
+            }
+            if let chunkCount = context.chunkCount {
+                req.setValue(String(chunkCount), forHTTPHeaderField: "X-Chunk-Count")
             }
         }
 

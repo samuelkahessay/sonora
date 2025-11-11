@@ -21,6 +21,7 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol, Sendab
     // MARK: - Use Case Execution
     func execute(memo: Memo) async throws {
         print("🔄 RetryTranscriptionUseCase: Retrying transcription for memo: \(memo.filename)")
+        let correlationId = UUID().uuidString
 
         // Check current transcription state
         let currentState = await transcriptionRepository.getTranscriptionState(for: memo.id)
@@ -58,7 +59,13 @@ final class RetryTranscriptionUseCase: RetryTranscriptionUseCaseProtocol, Sendab
         do {
             // Perform transcription retry with the configured language hint
             let preferredLanguage = AppConfiguration.shared.preferredTranscriptionLanguage
-            let response = try await transcriptionAPI.transcribe(url: memo.fileURL, language: preferredLanguage)
+            let requestContext = TranscriptionRequestContext(
+                correlationId: correlationId,
+                memoId: memo.id,
+                chunkIndex: nil,
+                chunkCount: 1
+            )
+            let response = try await transcriptionAPI.transcribe(url: memo.fileURL, language: preferredLanguage, context: requestContext)
             // Save original text; metadata will store both versions
             let originalText = response.text
             print("✅ RetryTranscriptionUseCase: Transcription retry completed for \(memo.filename) [lang=\(preferredLanguage ?? "auto")]")

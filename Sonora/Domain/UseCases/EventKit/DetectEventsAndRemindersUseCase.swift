@@ -225,17 +225,20 @@ final class DetectEventsAndRemindersUseCase: DetectEventsAndRemindersUseCaseProt
                     context: context)
 
         // Use cloud analysis for events/reminders when available
+        let requestContext = AnalysisRequestContext(correlationId: correlationId, memoId: memoId)
         async let eventsResult: AnalyzeEnvelope<EventsData> = analysisService.analyze(
             mode: .events,
             transcript: transcript,
             responseType: EventsData.self,
-            historicalContext: nil
+            historicalContext: nil,
+            context: requestContext
         )
         async let remindersResult: AnalyzeEnvelope<RemindersData> = analysisService.analyze(
             mode: .reminders,
             transcript: transcript,
             responseType: RemindersData.self,
-            historicalContext: nil
+            historicalContext: nil,
+            context: requestContext
         )
 
         // Process results and filter by confidence

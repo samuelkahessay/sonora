@@ -79,7 +79,8 @@ final class AnalyzeDistillUseCase: AnalyzeDistillUseCaseProtocol, Sendable {
 
             // Call service to perform analysis
             let analysisTimer = PerformanceTimer(operation: "Distill Analysis API Call", category: .analysis)
-            let result = try await analysisService.analyzeDistill(transcript: transcript)
+            let requestContext = AnalysisRequestContext(correlationId: correlationId, memoId: memoId)
+            let result = try await analysisService.analyzeDistill(transcript: transcript, context: requestContext)
 
             // Guardrails: validate structure before persisting
             guard AnalysisGuardrails.validate(distill: result.data) else {

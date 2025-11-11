@@ -1,5 +1,7 @@
 import { AnalysisJsonSchemas } from './schema.js';
 import { chatCompletionsSupportsTemperature } from './caps.js';
+import logger from './logging/logger.js';
+import { getCorrelationId } from './middleware/correlation.js';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.SONORA_MODEL || 'gpt-5-mini';
@@ -117,11 +119,13 @@ export async function createChatCompletionsJSON({
         requestBody.reasoning_effort = 'low';
       }
 
+      const correlationId = getCorrelationId();
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(correlationId && { 'X-Correlation-ID': correlationId })
         },
         signal: controller.signal,
         body: JSON.stringify(requestBody)
@@ -136,7 +140,10 @@ export async function createChatCompletionsJSON({
         try {
           errorJson = JSON.parse(text);
         } catch {}
-        console.error('🚨 Chat Completions API Error:', {
+        logger.error({
+          correlationId: getCorrelationId(),
+          service: 'openai',
+          operation: 'chatCompletions',
           status: response.status,
           statusText: response.statusText,
           bodyLength: text ? text.length : 0,
@@ -148,7 +155,7 @@ export async function createChatCompletionsJSON({
             temperature: requestBody.temperature,
             responseFormat: requestBody.response_format
           }
-        });
+        }, 'Chat Completions API Error');
         throw new Error(errorMessage);
       }
 
@@ -156,13 +163,19 @@ export async function createChatCompletionsJSON({
       const latency = Date.now() - startTime;
 
       // Log performance metrics
-      console.log('⏱️  Chat Completions Performance:', {
-        responseTime: `${latency}ms`,
+      logger.info({
+        correlationId: getCorrelationId(),
+        service: 'openai',
+        operation: 'chatCompletions',
+        latency_ms: latency,
         model: requestBody.model,
-        inputTokens: data?.usage?.prompt_tokens || 0,
-        outputTokens: data?.usage?.completion_tokens || 0,
-        totalTokens: data?.usage?.total_tokens || 0
-      });
+        tokens: {
+          input: data?.usage?.prompt_tokens || 0,
+          output: data?.usage?.completion_tokens || 0,
+          reasoning: data?.usage?.completion_tokens_details?.reasoning_tokens,
+          total: data?.usage?.total_tokens || 0
+        }
+      }, 'Chat Completions completed');
 
       // Extract content from Chat Completions response
       const message = data?.choices?.[0]?.message;
@@ -224,7 +237,12 @@ export async function createChatCompletionsJSON({
           hasRefusal: !!refusal,
           refusalMessage: refusal || 'none'
         };
-        console.error('🚨 Chat Completions Response Parsing Failed:', debugInfo);
+        logger.error({
+          correlationId: getCorrelationId(),
+          service: 'openai',
+          operation: 'chatCompletions',
+          debugInfo,
+        }, 'Chat Completions Response Parsing Failed');
         throw new Error(`No content found in Chat Completions API response. ${refusal ? `Refusal: ${refusal}` : `Debug info: ${JSON.stringify(debugInfo)}`}`);
       }
 
@@ -248,11 +266,13 @@ export async function createModeration(text: string): Promise<ModerationOutput> 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
+    const correlationId = getCorrelationId();
     const response = await fetch('https://api.openai.com/v1/moderations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(correlationId && { 'X-Correlation-ID': correlationId })
       },
       signal: controller.signal,
       body: JSON.stringify({

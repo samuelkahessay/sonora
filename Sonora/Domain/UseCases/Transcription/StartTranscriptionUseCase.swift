@@ -55,7 +55,8 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
 
     // MARK: - Use Case Execution
     internal func execute(memo: Memo) async throws {
-        let context = LogContext(additionalInfo: [
+        let correlationId = UUID().uuidString
+        let context = LogContext(correlationId: correlationId, additionalInfo: [
             "memoId": memo.id.uuidString,
             "filename": memo.filename
         ])
@@ -92,10 +93,10 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
             }
 
             if let lang = AppConfiguration.shared.preferredTranscriptionLanguage {
-                try await processPreferredLanguagePath(audioURL: audioURL, lang: lang, analysis: analysis, memo: memo, operationId: operationId, context: context)
+                try await processPreferredLanguagePath(audioURL: audioURL, lang: lang, analysis: analysis, memo: memo, operationId: operationId, context: context, correlationId: correlationId)
                 return
             } else {
-                try await processAutoDetectPath(audioURL: audioURL, analysis: analysis, memo: memo, operationId: operationId, context: context)
+                try await processAutoDetectPath(audioURL: audioURL, analysis: analysis, memo: memo, operationId: operationId, context: context, correlationId: correlationId)
                 return
             }
 
@@ -174,7 +175,16 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
             .joined(separator: " ")
     }
 
-    private func transcribeChunksWithLanguage(operationId: UUID, chunks: [ChunkFile], baseFraction: Double, fractionBudget: Double, language: String?, stageLabel: String) async throws -> [ChunkTranscriptionResult] {
+    private func transcribeChunksWithLanguage(
+        operationId: UUID,
+        chunks: [ChunkFile],
+        baseFraction: Double,
+        fractionBudget: Double,
+        language: String?,
+        stageLabel: String,
+        memo: Memo,
+        correlationId: String
+    ) async throws -> [ChunkTranscriptionResult] {
         guard !chunks.isEmpty else { return [] }
 
         // Configuration for parallel transcription
@@ -193,7 +203,13 @@ internal final class StartTranscriptionUseCase: StartTranscriptionUseCaseProtoco
         // Helper to transcribe a single chunk with preserved ordering information
         func transcribeSingleChunk(chunk: ChunkFile, index: Int, language: String?) async -> (Int, ChunkTranscriptionResult) {
             do {
-                let response = try await transcriptionAPI.transcribe(url: chunk.url, language: language)
+                let requestContext = TranscriptionRequestContext(
+                    correlationId: correlationId,
+                    memoId: memo.id,
+                    chunkIndex: index,
+                    chunkCount: totalCount
+                )
+                let response = try await transcriptionAPI.transcribe(url: chunk.url, language: language, context: requestContext)
                 return (index, ChunkTranscriptionResult(segment: chunk.segment, response: response))
             } catch {
                 logger.warning("Chunk transcription failed; continuing", category: .transcription, context: LogContext(additionalInfo: ["index": index, "lang": language ?? "auto-detect"]), error: error)
@@ -433,10 +449,16 @@ extension StartTranscriptionUseCase {
         logger.info("Transcription skipped (no speech)", category: .transcription, context: context)
     }
 
-    private func processPreferredLanguagePath(audioURL: URL, lang: String, analysis: AudioAnalysis, memo: Memo, operationId: UUID, context: LogContext) async throws {
+    private func processPreferredLanguagePath(audioURL: URL, lang: String, analysis: AudioAnalysis, memo: Memo, operationId: UUID, context: LogContext, correlationId: String) async throws {
         if !analysis.forceChunk && analysis.totalDurationSec < 90.0 {
             await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
-            let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang)
+            let requestContext = TranscriptionRequestContext(
+                correlationId: correlationId,
+                memoId: memo.id,
+                chunkIndex: nil,
+                chunkCount: 1
+            )
+            let resp = try await transcriptionAPI.transcribe(url: audioURL, language: lang, context: requestContext)
             let eval = qualityEvaluator.evaluateQuality(resp, text: resp.text)
             let textToSave = resp.text
             let (processedText, originalText) = await prepareTranscript(from: resp.text)
@@ -460,7 +482,16 @@ extension StartTranscriptionUseCase {
         let chunks = try await chunkManager.createChunks(from: audioURL, segments: analysis.segments)
         defer { Task { await chunkManager.cleanupChunks(chunks) } }
         await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
-        let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: lang, stageLabel: "Transcribing...")
+        let primary = try await transcribeChunksWithLanguage(
+            operationId: operationId,
+            chunks: chunks,
+            baseFraction: 0.2,
+            fractionBudget: 0.6,
+            language: lang,
+            stageLabel: "Transcribing...",
+            memo: memo,
+            correlationId: correlationId
+        )
         let aggregator = TranscriptionAggregator()
         let agg = aggregator.aggregate(primary)
         let textToSave = agg.text
@@ -480,17 +511,23 @@ extension StartTranscriptionUseCase {
         await finalize(using: payload)
     }
 
-    private func processAutoDetectPath(audioURL: URL, analysis: AudioAnalysis, memo: Memo, operationId: UUID, context: LogContext) async throws {
+    private func processAutoDetectPath(audioURL: URL, analysis: AudioAnalysis, memo: Memo, operationId: UUID, context: LogContext, correlationId: String) async throws {
         if !analysis.forceChunk && analysis.totalDurationSec < 60.0 {
             await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
-            let primaryResp = try await transcriptionAPI.transcribe(url: audioURL, language: nil)
+            let baseContext = TranscriptionRequestContext(
+                correlationId: correlationId,
+                memoId: memo.id,
+                chunkIndex: nil,
+                chunkCount: 1
+            )
+            let primaryResp = try await transcriptionAPI.transcribe(url: audioURL, language: nil, context: baseContext)
             let primaryEval = qualityEvaluator.evaluateQuality(primaryResp, text: primaryResp.text)
             var finalResp = primaryResp
             var finalEval = primaryEval
             if qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
                 await updateProgress(operationId: operationId, fraction: 0.82, step: "Low confidence. Retrying with English...")
                 do {
-                    let fallbackResp = try await transcriptionAPI.transcribe(url: audioURL, language: "en")
+                    let fallbackResp = try await transcriptionAPI.transcribe(url: audioURL, language: "en", context: baseContext)
                     let fallbackEval = qualityEvaluator.evaluateQuality(fallbackResp, text: fallbackResp.text)
                     let comparison = qualityEvaluator.compareTwoResults(primaryEval, fallbackEval)
                     switch comparison {
@@ -522,7 +559,7 @@ extension StartTranscriptionUseCase {
             return
         }
 
-        let result = try await performAutoChunked(audioURL: audioURL, analysis: analysis, operationId: operationId, context: context)
+        let result = try await performAutoChunked(audioURL: audioURL, analysis: analysis, memo: memo, operationId: operationId, context: context, correlationId: correlationId)
         let finalText = result.text
         let finalLanguage = result.lang
         await updateProgress(operationId: operationId, fraction: 0.97, step: "Finalizing transcription...")
@@ -542,12 +579,21 @@ extension StartTranscriptionUseCase {
         await finalize(using: payload)
     }
 
-    private func performAutoChunked(audioURL: URL, analysis: AudioAnalysis, operationId: UUID, context: LogContext) async throws -> (text: String, lang: String, qualityScore: Double?) {
+    private func performAutoChunked(audioURL: URL, analysis: AudioAnalysis, memo: Memo, operationId: UUID, context: LogContext, correlationId: String) async throws -> (text: String, lang: String, qualityScore: Double?) {
         await updateProgress(operationId: operationId, fraction: 0.1, step: "Preparing audio segments...")
         let chunks = try await chunkManager.createChunks(from: audioURL, segments: analysis.segments)
         defer { Task { await chunkManager.cleanupChunks(chunks) } }
         await updateProgress(operationId: operationId, fraction: 0.2, step: "Transcribing...")
-        let primary = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.2, fractionBudget: 0.6, language: nil, stageLabel: "Transcribing...")
+        let primary = try await transcribeChunksWithLanguage(
+            operationId: operationId,
+            chunks: chunks,
+            baseFraction: 0.2,
+            fractionBudget: 0.6,
+            language: nil,
+            stageLabel: "Transcribing...",
+            memo: memo,
+            correlationId: correlationId
+        )
         let aggregator = TranscriptionAggregator()
         let primaryAgg = aggregator.aggregate(primary)
         let primaryText = primaryAgg.text
@@ -560,7 +606,16 @@ extension StartTranscriptionUseCase {
         if qualityEvaluator.shouldTriggerFallback(primaryEval, threshold: languageFallbackConfig.confidenceThreshold) {
             await updateProgress(operationId: operationId, fraction: 0.82, step: "Low confidence. Retrying with English...")
             do {
-                let fallback = try await transcribeChunksWithLanguage(operationId: operationId, chunks: chunks, baseFraction: 0.82, fractionBudget: 0.12, language: "en", stageLabel: "Transcribing...")
+                let fallback = try await transcribeChunksWithLanguage(
+                    operationId: operationId,
+                    chunks: chunks,
+                    baseFraction: 0.82,
+                    fractionBudget: 0.12,
+                    language: "en",
+                    stageLabel: "Transcribing...",
+                    memo: memo,
+                    correlationId: correlationId
+                )
                 let fallbackAgg = aggregator.aggregate(fallback)
                 let fallbackText = fallbackAgg.text
                 let fallbackSummary = summarizeResponse(from: fallback, aggregatedText: fallbackText, overrideLanguage: "en")

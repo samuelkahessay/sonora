@@ -62,7 +62,8 @@ final class AnalyzeLiteDistillUseCase: AnalyzeLiteDistillUseCaseProtocol, Sendab
 
         do {
             // Execute single API call for Lite Distill
-            let result = try await analysisService.analyzeLiteDistill(transcript: transcript)
+            let requestContext = AnalysisRequestContext(correlationId: correlationId, memoId: memoId)
+            let result = try await analysisService.analyzeLiteDistill(transcript: transcript, context: requestContext)
 
             // Save result to cache
             await analysisRepository.saveAnalysisResult(result, for: memoId, mode: .liteDistill)

@@ -224,7 +224,7 @@ export const DistillJsonSchema = {
           observation: { type: "string", description: "Brief noticing in warm, curious tone (1-2 sentences)" },
           invitation: { type: ["string", "null"], description: "Optional reflection prompt (1 sentence)" }
         },
-        required: ["type", "observation"],
+        required: ["type", "observation", "invitation"],
         additionalProperties: false
       },
       action_items: {
@@ -320,7 +320,7 @@ export const LiteDistillJsonSchema = {
             description: "Optional: A question to invite deeper reflection"
           }
         },
-        required: ["type", "observation"],
+        required: ["type", "observation", "invitation"],
         additionalProperties: false
       },
       simpleTodos: {

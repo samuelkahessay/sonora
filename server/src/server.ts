@@ -4,11 +4,14 @@ import multer from 'multer';
 import { z } from 'zod';
 import fs from 'fs';
 import { FormData, File } from 'undici';
+import pinoHttp from 'pino-http';
 import { RequestSchema, DistillDataSchema, LiteDistillDataSchema, EventsDataSchema, RemindersDataSchema, AnalysisJsonSchemas } from './schema.js';
 import { buildPrompt } from './prompts.js';
 import { createChatCompletionsJSON, createModeration } from './openai.js';
 import { chatCompletionsSupportsTemperature } from './caps.js';
 import { sanitizeTranscript } from './sanitize.js';
+import { correlationMiddleware } from './middleware/correlation.js';
+import logger from './logging/logger.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -21,7 +24,7 @@ try {
   fs.mkdirSync('uploads', { recursive: true });
 } catch (error: any) {
   if (error.code !== 'EEXIST') {
-    console.warn('Could not create uploads directory:', error.message);
+    logger.warn({ error }, 'Could not create uploads directory');
   }
 }
 const upload = multer({ dest: 'uploads/' });
@@ -41,6 +44,32 @@ app.use(cors({
 
 // Body parser with size limit
 app.use(express.json({ limit: '256kb' }));
+
+// Correlation ID middleware (must be early in chain)
+app.use(correlationMiddleware);
+
+// HTTP request logging with pino
+app.use(pinoHttp({
+  logger,
+  customLogLevel: (req, res, err) => {
+    if (res.statusCode >= 500 || err) return 'error';
+    if (res.statusCode >= 400) return 'warn';
+    if (res.statusCode >= 300) return 'info';
+    return 'debug';
+  },
+  customSuccessMessage: (req, res) => {
+    return `${req.method} ${req.url} completed`;
+  },
+  customErrorMessage: (req, res, err) => {
+    return `${req.method} ${req.url} failed: ${err.message}`;
+  },
+  customAttributeKeys: {
+    req: 'request',
+    res: 'response',
+    err: 'error',
+    responseTime: 'latency_ms',
+  },
+}));
 
 // Health check
 app.get('/', (req, res) => {
@@ -211,7 +240,13 @@ app.post('/title', async (req, res) => {
 
         if (!response.ok || !response.body) {
           const text = await response.text().catch(() => '');
-          console.error('OpenRouter /title stream error:', response.status, response.statusText, text.slice(0, 200));
+          logger.error({
+            endpoint: '/title',
+            mode: 'stream',
+            status: response.status,
+            statusText: response.statusText,
+            responsePreview: text.slice(0, 200),
+          }, 'OpenRouter /title stream error');
           sendEvent('error', { error: 'UpstreamFailed', status: response.status });
           res.end();
           return;
@@ -245,7 +280,12 @@ app.post('/title', async (req, res) => {
             if (validated) {
               sendEvent('final', { title: validated });
             } else {
-              console.warn('Streaming title validation failed; using fallback');
+              logger.warn({
+                endpoint: '/title',
+                mode: 'stream',
+                candidate,
+                constraints,
+              }, 'Streaming title validation failed; using fallback');
               const fallback = validateTitle(buildFallbackTitle(sliced), {
                 maxChars: constraints.maxChars,
                 language,
@@ -268,7 +308,7 @@ app.post('/title', async (req, res) => {
               }
             }
           } catch (error) {
-            console.error('Failed to parse streaming chunk', error);
+            logger.error({ error, endpoint: '/title', mode: 'stream' }, 'Failed to parse streaming chunk');
           }
         };
 
@@ -295,7 +335,7 @@ app.post('/title', async (req, res) => {
         }
         return;
       } catch (error) {
-        console.error('Streaming /title error:', error);
+        logger.error({ error, endpoint: '/title', mode: 'stream' }, 'Streaming /title error');
         sendEvent('error', { error: 'Internal' });
         res.end();
         return;
@@ -310,7 +350,12 @@ app.post('/title', async (req, res) => {
 
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      console.error('OpenRouter /title error:', response.status, response.statusText, text.slice(0, 200));
+      logger.error({
+        endpoint: '/title',
+        status: response.status,
+        statusText: response.statusText,
+        responsePreview: text.slice(0, 200),
+      }, 'OpenRouter /title error');
       return res.status(502).json({ error: 'UpstreamFailed' });
     }
     const data: any = await response.json();
@@ -325,12 +370,13 @@ app.post('/title', async (req, res) => {
       return res.json({ title: validated });
     }
 
-    console.warn('Title validation failed; using fallback', {
+    logger.warn({
+      endpoint: '/title',
       candidate,
       maxChars: constraints.maxChars,
       language,
-      isShortTranscript
-    });
+      isShortTranscript,
+    }, 'Title validation failed; using fallback');
 
     const fallback = validateTitle(buildFallbackTitle(sliced), {
       maxChars: constraints.maxChars,
@@ -343,7 +389,7 @@ app.post('/title', async (req, res) => {
     if (e instanceof z.ZodError) {
       return res.status(400).json({ error: 'BadRequest', details: e.errors });
     }
-    console.error('Title generation error:', e?.message || String(e));
+    logger.error({ error: e, endpoint: '/title' }, 'Title generation error');
     return res.status(500).json({ error: 'Internal' });
   }
 });
@@ -367,7 +413,7 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
     // Optional language hint from client (ISO 639-1 or BCP-47)
     const langRaw = (req.body?.language as string | undefined)?.trim();
     if (langRaw) {
-      console.log('[transcribe] language hint =', langRaw);
+      logger.debug({ endpoint: '/transcribe', languageHint: langRaw }, 'Language hint provided');
     }
     if (langRaw && langRaw.length > 0) {
       form.append('language', langRaw);
@@ -437,7 +483,11 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
         form2.append('translate', 'false');
         form2.append('temperature', '0');
         if (PROMPTS[langRaw]) { form2.append('prompt', PROMPTS[langRaw]); }
-        console.warn(`[transcribe] Retrying without language (unsupported: ${langRaw})`);
+        logger.warn({
+          endpoint: '/transcribe',
+          languageHint: langRaw,
+          retry: true,
+        }, 'Retrying transcription without language parameter (unsupported)');
         response = await callOpenAI(form2);
         data = await response.json();
       }
@@ -445,9 +495,13 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
       if (!response.ok) {
         // Avoid logging upstream bodies; emit minimal error context
         const message = data?.error?.message || data?.message || 'transcription failed';
-        console.error('OpenAI transcription error:', { status: response.status, message });
-        return res.status(response.status).json({ 
-          error: message 
+        logger.error({
+          endpoint: '/transcribe',
+          status: response.status,
+          message,
+        }, 'OpenAI transcription error');
+        return res.status(response.status).json({
+          error: message
         });
       }
     }
@@ -474,13 +528,14 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
     const dur = typeof data?.duration === 'number' ? data.duration : undefined;
     const segCount = Array.isArray(data?.segments) ? data.segments.length : 0;
     try {
-      console.log(
-        `[transcribe] detected_language=${detectedLang ?? 'und'} avg_logprob=${
-          typeof avg_logprob === 'number' ? avg_logprob.toFixed(3) : 'n/a'
-        } confidence=${typeof confidence === 'number' ? confidence.toFixed(3) : 'n/a'} duration=${
-          typeof dur === 'number' ? dur.toFixed(2) : 'n/a'
-        } segments=${segCount}`
-      );
+      logger.info({
+        endpoint: '/transcribe',
+        detectedLanguage: detectedLang ?? 'und',
+        avgLogprob: typeof avg_logprob === 'number' ? avg_logprob.toFixed(3) : undefined,
+        confidence: typeof confidence === 'number' ? confidence.toFixed(3) : undefined,
+        duration: typeof dur === 'number' ? dur.toFixed(2) : undefined,
+        segmentCount: segCount,
+      }, 'Transcription completed');
     } catch {}
 
     res.json({ 
@@ -491,7 +546,7 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
       duration: typeof data.duration === 'number' ? data.duration : undefined
     });
   } catch (error: any) {
-    console.error('Transcription error:', error);
+    logger.error({ error, endpoint: '/transcribe' }, 'Transcription error');
     res.status(500).json({ error: 'server error' });
   }
 });
@@ -566,7 +621,13 @@ app.post('/analyze', async (req, res) => {
       jsonText = result.jsonText;
       usage = result.usage;
     } catch (gpt5MiniError) {
-      console.warn(`gpt-5-mini failed, trying gpt-5-nano. Reason: ${(gpt5MiniError as any)?.message}`);
+      logger.warn({
+        endpoint: '/analyze',
+        mode,
+        originalModel: selectedModel,
+        fallbackModel: 'gpt-5-nano',
+        error: (gpt5MiniError as any)?.message,
+      }, 'Model fallback: gpt-5-mini failed, trying gpt-5-nano');
 
       // Fallback to gpt-5-nano
       try {
@@ -580,7 +641,13 @@ app.post('/analyze', async (req, res) => {
         jsonText = result.jsonText;
         usage = result.usage;
       } catch (gpt5NanoError) {
-        console.warn(`gpt-5-nano failed, falling back to gpt-4o. Reason: ${(gpt5NanoError as any)?.message}`);
+        logger.warn({
+          endpoint: '/analyze',
+          mode,
+          originalModel: 'gpt-5-nano',
+          fallbackModel: 'gpt-4o',
+          error: (gpt5NanoError as any)?.message,
+        }, 'Model fallback: gpt-5-nano failed, falling back to gpt-4o');
 
         // Final fallback to gpt-4o
         try {
@@ -594,7 +661,12 @@ app.post('/analyze', async (req, res) => {
           jsonText = result.jsonText;
           usage = result.usage;
         } catch (fallbackError) {
-          console.error('All models failed (gpt-5-mini, gpt-5-nano, gpt-4o):', (fallbackError as any)?.message);
+          logger.error({
+            endpoint: '/analyze',
+            mode,
+            error: (fallbackError as any)?.message,
+            modelsAttempted: ['gpt-5-mini', 'gpt-5-nano', 'gpt-4o'],
+          }, 'All models failed');
           throw fallbackError;
         }
       }
@@ -698,7 +770,12 @@ app.post('/analyze', async (req, res) => {
     }
     
     // Generic server error
-    console.error('Server error:', error.message);
+    logger.error({
+      error,
+      endpoint: '/analyze',
+      mode: req.body?.mode,
+      latency_ms: latency,
+    }, 'Server error in /analyze endpoint');
     res.status(500).json({
       error: 'Internal',
       message: error.message || 'Unknown error',
@@ -737,9 +814,13 @@ app.get('/keycheck', async (_req, res) => {
       raw: parsed 
     });
   } catch (e: any) {
-    console.error('🚨 Keycheck failed:', e?.message);
-    return res.status(502).json({ 
-      ok: false, 
+    logger.error({
+      error: e,
+      endpoint: '/keycheck',
+      model: process.env.SONORA_MODEL || 'gpt-5-mini',
+    }, 'Keycheck failed');
+    return res.status(502).json({
+      ok: false,
       message: `GPT-5-nano test failed: ${e?.message || 'Unknown error'}`,
       model: process.env.SONORA_MODEL || 'gpt-5-mini'
     });
@@ -769,7 +850,7 @@ app.get('/test-gpt5', async (_req, res) => {
     for (const mode of modes) {
       const testStartTime = Date.now();
       try {
-        console.log(`🧪 Testing GPT-5 mode: ${mode}`);
+        logger.info({ endpoint: '/test-gpt5', mode }, 'Testing GPT-5 mode');
 
         // Get prompt for this mode
         const { system, user } = buildPrompt(mode, testTranscript);
@@ -836,8 +917,13 @@ app.get('/test-gpt5', async (_req, res) => {
         
       } catch (error: any) {
         const responseTime = Date.now() - testStartTime;
-        console.error(`🚨 Test failed for mode ${mode}:`, error.message);
-        
+        logger.error({
+          endpoint: '/test-gpt5',
+          mode,
+          error: error.message,
+          responseTime,
+        }, 'Test failed for mode');
+
         testResults.push({
           mode,
           success: false,
@@ -884,7 +970,11 @@ app.get('/test-gpt5', async (_req, res) => {
     });
     
   } catch (error: any) {
-    console.error('🚨 GPT-5 test endpoint failed:', error.message);
+    logger.error({
+      error,
+      endpoint: '/test-gpt5',
+      model: process.env.SONORA_MODEL || 'gpt-5-mini',
+    }, 'GPT-5 test endpoint failed');
     return res.status(500).json({
       success: false,
       message: `GPT-5 test endpoint failed: ${error.message}`,
@@ -917,12 +1007,12 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled error:', error.message);
+  logger.error({ error, url: req.url, method: req.method }, 'Unhandled error');
   if (!res.headersSent) {
     res.status(500).json({ error: 'Internal' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Sonora API server listening on port ${PORT}`);
+  logger.info({ port: PORT, environment: process.env.NODE_ENV || 'development' }, 'Sonora API server started');
 });

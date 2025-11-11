@@ -32,9 +32,12 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
         mode: AnalysisMode,
         transcript: String,
         responseType: T.Type,
-        historicalContext: [HistoricalMemoContext]? = nil
+        historicalContext: [HistoricalMemoContext]? = nil,
+        context: AnalysisRequestContext? = nil
     ) async throws -> AnalyzeEnvelope<T> {
         let analyzeURL = config.apiBaseURL.appendingPathComponent("analyze")
+        let requestContext = context ?? AnalysisRequestContext(correlationId: UUID().uuidString, memoId: nil)
+        let logContext = LogContext(correlationId: requestContext.correlationId, additionalInfo: ["mode": mode.rawValue])
 
         // Sanitize transcript to reduce prompt injection surface area on server
         let safeTranscript = AnalysisGuardrails.sanitizeTranscriptForLLM(transcript)
@@ -70,14 +73,19 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
             request.setValue("1", forHTTPHeaderField: "X-Entitlement-Pro")
         }
 
+        if let memoId = requestContext.memoId {
+            request.setValue(memoId.uuidString, forHTTPHeaderField: "X-Memo-ID")
+        }
+        request.setValue(requestContext.correlationId, forHTTPHeaderField: "X-Correlation-ID")
+
         // Comprehensive request logging
         logger.debug("━━━━━━━━━━ ANALYSIS REQUEST START ━━━━━━━━━━", category: .network, context: nil)
         logger.debug("🌐 Method: \(request.httpMethod ?? "UNKNOWN")", category: .network, context: nil)
         logger.debug("🌐 URL: \(analyzeURL.absoluteString)", category: .network, context: nil)
         logger.debug("🌐 Mode: \(mode.rawValue) (\(mode.displayName))", category: .network, context: nil)
         logger.debug("🌐 Timeout: \(request.timeoutInterval)s", category: .network, context: nil)
-        logger.debug("🌐 Transcript Length: \(transcript.count) chars (sanitized: \(safeTranscript.count))", category: .network, context: nil)
-        logger.debug("🌐 Pro Mode: \(isProMode ? "YES" : "NO")", category: .network, context: nil)
+        logger.debug("🌐 Transcript Length: \(transcript.count) chars (sanitized: \(safeTranscript.count))", category: .network, context: logContext)
+        logger.debug("🌐 Pro Mode: \(isProMode ? "YES" : "NO")", category: .network, context: logContext)
         logger.debug("━━━━━━━━━━ REQUEST HEADERS ━━━━━━━━━━", category: .network, context: nil)
         if let headers = request.allHTTPHeaderFields {
             for (key, value) in headers {
@@ -221,51 +229,52 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
     // Convenience methods for each analysis type
     func analyzeDistill(
         transcript: String,
-        historicalContext: [HistoricalMemoContext]?
+        historicalContext: [HistoricalMemoContext]? = nil,
+        context: AnalysisRequestContext? = nil
     ) async throws -> AnalyzeEnvelope<DistillData> {
         try await analyze(
             mode: .distill,
             transcript: transcript,
             responseType: DistillData.self,
-            historicalContext: historicalContext
+            historicalContext: historicalContext,
+            context: context
         )
     }
 
-    // Backward-compatible method without historical context
-    func analyzeDistill(transcript: String) async throws -> AnalyzeEnvelope<DistillData> {
-        try await analyzeDistill(transcript: transcript, historicalContext: nil)
+    func analyzeDistill(transcript: String, context: AnalysisRequestContext?) async throws -> AnalyzeEnvelope<DistillData> {
+        try await analyzeDistill(transcript: transcript, historicalContext: nil, context: context)
     }
 
     // MARK: - Distill Component Methods for Parallel Processing
 
-    func analyzeDistillSummary(transcript: String) async throws -> AnalyzeEnvelope<DistillSummaryData> {
-        try await analyze(mode: .distillSummary, transcript: transcript, responseType: DistillSummaryData.self, historicalContext: nil)
+    func analyzeDistillSummary(transcript: String, context: AnalysisRequestContext? = nil) async throws -> AnalyzeEnvelope<DistillSummaryData> {
+        try await analyze(mode: .distillSummary, transcript: transcript, responseType: DistillSummaryData.self, historicalContext: nil, context: context)
     }
 
-    func analyzeDistillThemes(transcript: String) async throws -> AnalyzeEnvelope<DistillThemesData> {
-        try await analyze(mode: .distillThemes, transcript: transcript, responseType: DistillThemesData.self, historicalContext: nil)
+    func analyzeDistillThemes(transcript: String, context: AnalysisRequestContext? = nil) async throws -> AnalyzeEnvelope<DistillThemesData> {
+        try await analyze(mode: .distillThemes, transcript: transcript, responseType: DistillThemesData.self, historicalContext: nil, context: context)
     }
 
-    func analyzeDistillPersonalInsight(transcript: String) async throws -> AnalyzeEnvelope<DistillPersonalInsightData> {
-        try await analyze(mode: .distillPersonalInsight, transcript: transcript, responseType: DistillPersonalInsightData.self, historicalContext: nil)
+    func analyzeDistillPersonalInsight(transcript: String, context: AnalysisRequestContext? = nil) async throws -> AnalyzeEnvelope<DistillPersonalInsightData> {
+        try await analyze(mode: .distillPersonalInsight, transcript: transcript, responseType: DistillPersonalInsightData.self, historicalContext: nil, context: context)
     }
 
-    func analyzeDistillActions(transcript: String) async throws -> AnalyzeEnvelope<DistillActionsData> {
-        try await analyze(mode: .distillActions, transcript: transcript, responseType: DistillActionsData.self, historicalContext: nil)
+    func analyzeDistillActions(transcript: String, context: AnalysisRequestContext? = nil) async throws -> AnalyzeEnvelope<DistillActionsData> {
+        try await analyze(mode: .distillActions, transcript: transcript, responseType: DistillActionsData.self, historicalContext: nil, context: context)
     }
 
-    func analyzeDistillReflection(transcript: String) async throws -> AnalyzeEnvelope<DistillReflectionData> {
-        try await analyze(mode: .distillReflection, transcript: transcript, responseType: DistillReflectionData.self, historicalContext: nil)
+    func analyzeDistillReflection(transcript: String, context: AnalysisRequestContext? = nil) async throws -> AnalyzeEnvelope<DistillReflectionData> {
+        try await analyze(mode: .distillReflection, transcript: transcript, responseType: DistillReflectionData.self, historicalContext: nil, context: context)
     }
 
-    func analyzeDistillClosingNote(transcript: String) async throws -> AnalyzeEnvelope<DistillClosingNoteData> {
-        try await analyze(mode: .distillClosingNote, transcript: transcript, responseType: DistillClosingNoteData.self, historicalContext: nil)
+    func analyzeDistillClosingNote(transcript: String, context: AnalysisRequestContext? = nil) async throws -> AnalyzeEnvelope<DistillClosingNoteData> {
+        try await analyze(mode: .distillClosingNote, transcript: transcript, responseType: DistillClosingNoteData.self, historicalContext: nil, context: context)
     }
 
     // MARK: - Free Tier Analysis
 
-    func analyzeLiteDistill(transcript: String) async throws -> AnalyzeEnvelope<LiteDistillData> {
-        try await analyze(mode: .liteDistill, transcript: transcript, responseType: LiteDistillData.self, historicalContext: nil)
+    func analyzeLiteDistill(transcript: String, context: AnalysisRequestContext? = nil) async throws -> AnalyzeEnvelope<LiteDistillData> {
+        try await analyze(mode: .liteDistill, transcript: transcript, responseType: LiteDistillData.self, historicalContext: nil, context: context)
     }
 }
 

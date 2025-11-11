@@ -1,20 +1,38 @@
 import Foundation
 
+/// Metadata attached to outbound transcription requests so the server and logs can correlate events.
+struct TranscriptionRequestContext: Sendable {
+    let correlationId: String
+    let memoId: UUID?
+    let chunkIndex: Int?
+    let chunkCount: Int?
+}
+
 /// Protocol for transcription services that handle audio-to-text conversion
 /// Provides a clean abstraction for the core transcription functionality
 protocol TranscriptionAPI: Sendable {
-    /// Transcribes audio content from the given URL to text
-    /// - Parameter url: The URL of the audio file to transcribe
-    /// - Returns: The transcribed text as a string
-    /// - Throws: TranscriptionError or networking errors if transcription fails
-    func transcribe(url: URL) async throws -> String
-
-    /// Transcribes audio content with an optional language hint and returns detailed response
+    /// Core transcription entry-point used by all higher-level helpers.
     /// - Parameters:
-    ///   - url: The URL of the audio file to transcribe
-    ///   - language: Optional ISO 639-1 language code (e.g., "en", "es", "fr")
-    /// - Returns: Detailed transcription response including optional metadata
-    func transcribe(url: URL, language: String?) async throws -> TranscriptionResponse
+    ///   - url: Local URL of the audio file.
+    ///   - language: Optional ISO 639-1 language hint.
+    ///   - context: Optional metadata for diagnostics/correlation.
+    func transcribe(
+        url: URL,
+        language: String?,
+        context: TranscriptionRequestContext?
+    ) async throws -> TranscriptionResponse
+}
+
+extension TranscriptionAPI {
+    /// Backward-compatible helper that preserves the existing call sites returning plain text.
+    func transcribe(url: URL) async throws -> String {
+        try await transcribe(url: url, language: nil, context: nil).text
+    }
+
+    /// Backward-compatible helper that preserves the existing call sites requesting metadata.
+    func transcribe(url: URL, language: String?) async throws -> TranscriptionResponse {
+        try await transcribe(url: url, language: language, context: nil)
+    }
 }
 
 /// Detailed transcription response, optionally including detected language and confidences

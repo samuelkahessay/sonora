@@ -162,6 +162,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                 transcript: transcript,
                 memoId: memoId,
                 progressHandler: progressHandler,
+                correlationId: correlationId,
                 context: context
             )
 
@@ -190,6 +191,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         transcript: String,
         memoId: UUID,
         progressHandler: @MainActor @escaping (DistillProgressUpdate) -> Void,
+        correlationId: String,
         context: LogContext
     ) async throws -> AnalyzeEnvelope<DistillData> {
 
@@ -220,6 +222,7 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
         }
 
         logger.analysis("Starting parallel execution of \(componentModes.count) components + patterns=\(enablePatterns)", context: context)
+        let requestContext = AnalysisRequestContext(correlationId: correlationId, memoId: memoId)
 
         // Execute all components in parallel using TaskGroup
         try await withThrowingTaskGroup(of: (AnalysisMode?, DistillComponentData, Int, TokenUsage).self) { group in
@@ -238,7 +241,8 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                     let result = try await executeComponentAnalysis(
                         mode: mode,
                         transcript: transcript,
-                        memoId: memoId
+                        memoId: memoId,
+                        context: requestContext
                     )
 
                     // Save component to cache
@@ -267,7 +271,8 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
                         logger.debug("Calling full distill mode with historical context for patterns", category: .analysis, context: context)
                         let envelope = try await analysisService.analyzeDistill(
                             transcript: transcript,
-                            historicalContext: historicalContext
+                            historicalContext: historicalContext,
+                            context: requestContext
                         )
                         // Extract only patterns from the full distill response
                         let patterns = envelope.data.patterns
@@ -369,26 +374,27 @@ final class AnalyzeDistillParallelUseCase: AnalyzeDistillParallelUseCaseProtocol
     private func executeComponentAnalysis(
         mode: AnalysisMode,
         transcript: String,
-        memoId: UUID
+        memoId: UUID,
+        context: AnalysisRequestContext
     ) async throws -> (data: DistillComponentData, latency_ms: Int, tokens: TokenUsage) {
         switch mode {
         case .distillSummary:
-            let envelope = try await analysisService.analyzeDistillSummary(transcript: transcript)
+            let envelope = try await analysisService.analyzeDistillSummary(transcript: transcript, context: context)
             return (.summary(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillThemes:
-            let envelope = try await analysisService.analyzeDistillThemes(transcript: transcript)
+            let envelope = try await analysisService.analyzeDistillThemes(transcript: transcript, context: context)
             return (.themes(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillPersonalInsight:
-            let envelope = try await analysisService.analyzeDistillPersonalInsight(transcript: transcript)
+            let envelope = try await analysisService.analyzeDistillPersonalInsight(transcript: transcript, context: context)
             return (.personalInsight(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillActions:
-            let envelope = try await analysisService.analyzeDistillActions(transcript: transcript)
+            let envelope = try await analysisService.analyzeDistillActions(transcript: transcript, context: context)
             return (.actions(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillReflection:
-            let envelope = try await analysisService.analyzeDistillReflection(transcript: transcript)
+            let envelope = try await analysisService.analyzeDistillReflection(transcript: transcript, context: context)
             return (.reflection(envelope.data), envelope.latency_ms, envelope.tokens)
         case .distillClosingNote:
-            let envelope = try await analysisService.analyzeDistillClosingNote(transcript: transcript)
+            let envelope = try await analysisService.analyzeDistillClosingNote(transcript: transcript, context: context)
             return (.closingNote(envelope.data), envelope.latency_ms, envelope.tokens)
         default:
             throw AnalysisError.invalidResponse
