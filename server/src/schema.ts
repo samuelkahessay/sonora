@@ -82,7 +82,7 @@ export const DistillDataSchema = z.object({
   personalInsight: z.object({
     type: z.enum(['emotionalTone', 'wordPattern', 'valueGlimpse', 'energyShift', 'stoicMoment', 'recurringPhrase']),
     observation: z.string(),
-    invitation: z.string().optional()
+    invitation: z.string().nullable()
   }).optional(),
   action_items: z.array(z.object({
     text: z.string(),
@@ -165,7 +165,7 @@ export const DistillPersonalInsightDataSchema = z.object({
   personalInsight: z.object({
     type: z.enum(['emotionalTone', 'wordPattern', 'valueGlimpse', 'energyShift', 'stoicMoment', 'recurringPhrase']),
     observation: z.string(),
-    invitation: z.string().optional()
+    invitation: z.string().nullable()
   })
 });
 
@@ -185,7 +185,7 @@ export const LiteDistillDataSchema = z.object({
     id: z.string().optional(),
     type: z.enum(['emotionalTone', 'wordPattern', 'valueGlimpse', 'energyShift', 'stoicMoment', 'recurringPhrase']),
     observation: z.string(),
-    invitation: z.string().optional()
+    invitation: z.string().nullable()
   }),
   simpleTodos: z.array(z.object({
     id: z.string().optional(),
@@ -222,9 +222,9 @@ export const DistillJsonSchema = {
             enum: ["emotionalTone", "wordPattern", "valueGlimpse", "energyShift", "stoicMoment", "recurringPhrase"]
           },
           observation: { type: "string", description: "Brief noticing in warm, curious tone (1-2 sentences)" },
-          invitation: { type: "string", description: "Optional reflection prompt (1 sentence)" }
+          invitation: { type: ["string", "null"], description: "Optional reflection prompt (1 sentence)" }
         },
-        required: ["type", "observation"],
+        required: ["type", "observation", "invitation"],
         additionalProperties: false
       },
       action_items: {
@@ -281,7 +281,7 @@ export const DistillJsonSchema = {
         }
       }
     },
-    required: ["summary", "reflection_questions"],
+    required: ["summary", "keyThemes", "personalInsight", "action_items", "reflection_questions", "closingNote", "patterns"],
     additionalProperties: false
   }
 };
@@ -498,9 +498,9 @@ export const DistillPersonalInsightJsonSchema = {
             enum: ["emotionalTone", "wordPattern", "valueGlimpse", "energyShift", "stoicMoment", "recurringPhrase"]
           },
           observation: { type: "string", description: "Meaningful noticing in warm, curious tone (1-2 sentences)" },
-          invitation: { type: "string", description: "Optional reflection prompt (1 sentence)" }
+          invitation: { type: ["string", "null"], description: "Optional reflection prompt (1 sentence)" }
         },
-        required: ["type", "observation"],
+        required: ["type", "observation", "invitation"],
         additionalProperties: false
       }
     },
