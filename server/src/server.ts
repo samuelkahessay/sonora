@@ -5,7 +5,7 @@ import { z } from 'zod';
 import fs from 'fs';
 import { FormData, File } from 'undici';
 import pinoHttp from 'pino-http';
-import { RequestSchema, DistillDataSchema, LiteDistillDataSchema, EventsDataSchema, RemindersDataSchema, AnalysisJsonSchemas, DistillPersonalInsightDataSchema, DistillClosingNoteDataSchema } from './schema.js';
+import { RequestSchema, DistillDataSchema, LiteDistillDataSchema, EventsDataSchema, RemindersDataSchema, AnalysisJsonSchemas, DistillThemesDataSchema, DistillPersonalInsightDataSchema, DistillClosingNoteDataSchema } from './schema.js';
 import { buildPrompt } from './prompts.js';
 import { createChatCompletionsJSON, createModeration } from './openai.js';
 import { chatCompletionsSupportsTemperature } from './caps.js';
@@ -562,8 +562,14 @@ function validateAnalysisData(mode: string, parsedData: any): any {
       return { summary: parsedData.summary };
     case 'distill-actions':
       return { action_items: parsedData.action_items || [] };
-    case 'distill-themes':
-      return { key_themes: parsedData.key_themes || [] };
+    case 'distill-themes': {
+      const keyThemes = Array.isArray(parsedData?.keyThemes)
+        ? parsedData.keyThemes
+        : Array.isArray(parsedData?.key_themes)
+          ? parsedData.key_themes
+          : [];
+      return DistillThemesDataSchema.parse({ keyThemes });
+    }
     case 'distill-personalInsight':
       return DistillPersonalInsightDataSchema.parse(parsedData);
     case 'distill-closingNote':
@@ -589,7 +595,8 @@ app.post('/analyze', async (req, res) => {
 
     // Pro entitlement gating: all modes except lite-distill require Pro subscription
     const proModes = ['distill', 'distill-summary', 'distill-actions',
-                      'distill-themes', 'distill-reflection', 'events', 'reminders'];
+                      'distill-themes', 'distill-personalInsight', 'distill-closingNote',
+                      'distill-reflection', 'events', 'reminders'];
 
     if (proModes.includes(mode)) {
       const proHeader = req.headers['x-entitlement-pro'];
@@ -722,7 +729,7 @@ app.post('/analyze', async (req, res) => {
           textForModeration = (vd.action_items || []).map((a: any) => a.text).join(' \n');
           break;
         case 'distill-themes':
-          textForModeration = (vd.key_themes || []).join(' \n');
+          textForModeration = (vd.keyThemes || []).join(' \n');
           break;
         case 'distill-personalInsight':
           textForModeration = [
