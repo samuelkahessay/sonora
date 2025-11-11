@@ -10,6 +10,8 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
     case distillSummary = "distill-summary"
     case distillActions = "distill-actions"
     case distillThemes = "distill-themes"
+    case distillPersonalInsight = "distill-personalInsight"
+    case distillClosingNote = "distill-closingNote"
     case distillReflection = "distill-reflection"
 
     // UI-visible analysis modes (excludes internal component modes)
@@ -36,6 +38,8 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
         case .distillSummary: return "Summary"
         case .distillActions: return "Actions"
         case .distillThemes: return "Themes"
+        case .distillPersonalInsight: return "Personal Insight"
+        case .distillClosingNote: return "Closing Note"
         case .distillReflection: return "Reflection"
         }
     }
@@ -49,6 +53,8 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
         case .distillSummary: return "text.quote"
         case .distillActions: return "checkmark.circle.fill"
         case .distillThemes: return "tag.circle"
+        case .distillPersonalInsight: return "lightbulb.max"
+        case .distillClosingNote: return "heart.text.square"
         case .distillReflection: return "questionmark.circle"
         }
     }
@@ -56,7 +62,7 @@ public enum AnalysisMode: String, Codable, CaseIterable, Sendable {
     // Helper to check if this is a distill component mode
     var isDistillComponent: Bool {
         switch self {
-        case .distillSummary, .distillActions, .distillThemes, .distillReflection:
+        case .distillSummary, .distillActions, .distillThemes, .distillPersonalInsight, .distillClosingNote, .distillReflection:
             return true
         default:
             return false
@@ -169,7 +175,15 @@ public struct DistillActionsData: Codable, Sendable {
 }
 
 public struct DistillThemesData: Codable, Sendable {
-    public let key_themes: [String]
+    public let keyThemes: [String]
+}
+
+public struct DistillPersonalInsightData: Codable, Sendable {
+    public let personalInsight: PersonalInsight
+}
+
+public struct DistillClosingNoteData: Codable, Sendable {
+    public let closingNote: String
 }
 
 public struct DistillReflectionData: Codable, Sendable {

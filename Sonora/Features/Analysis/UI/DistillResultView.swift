@@ -48,6 +48,16 @@ struct DistillResultView: View {
                 SummarySkeleton()
             }
 
+            // Key Themes Section
+            if let keyThemes = effectiveKeyThemes, !keyThemes.isEmpty {
+                KeyThemesSectionView(themes: keyThemes)
+            }
+
+            // Personal Insight Section
+            if let personalInsight = effectivePersonalInsight {
+                PersonalInsightSectionView(insight: personalInsight)
+            }
+
             // Patterns & Connections Section
             if let patterns = effectivePatterns, !patterns.isEmpty {
                 PatternsSectionView(patterns: patterns)
@@ -61,6 +71,11 @@ struct DistillResultView: View {
                 ReflectionQuestionsSectionView(questions: reflectionQuestions)
             } else if isShowingProgress {
                 ReflectionQuestionsSkeleton()
+            }
+
+            // Closing Note Section
+            if let closingNote = effectiveClosingNote {
+                ClosingNoteSectionView(note: closingNote)
             }
 
             // Copy results action (also triggers smart transcript expand via notification)
@@ -121,8 +136,20 @@ struct DistillResultView: View {
         data?.patterns ?? partialData?.patterns
     }
 
+    private var effectiveKeyThemes: [String]? {
+        data?.keyThemes ?? partialData?.keyThemes
+    }
+
+    private var effectivePersonalInsight: PersonalInsight? {
+        data?.personalInsight ?? partialData?.personalInsight
+    }
+
     private var effectiveReflectionQuestions: [String]? {
         data?.reflection_questions ?? partialData?.reflectionQuestions
+    }
+
+    private var effectiveClosingNote: String? {
+        data?.closingNote ?? partialData?.closingNote
     }
 
     // Use domain-deduplicated results directly
@@ -232,6 +259,21 @@ struct DistillResultView: View {
         if let s = effectiveSummary, !s.isEmpty {
             parts.append("Summary:\n" + s)
         }
+        // Key Themes
+        if let keyThemes = effectiveKeyThemes, !keyThemes.isEmpty {
+            parts.append("Key Themes:\n" + keyThemes.map { "• \($0)" }.joined(separator: "\n"))
+        }
+        // Personal Insight
+        if let personalInsight = effectivePersonalInsight {
+            var insightLines: [String] = [
+                "Personal Insight (\(personalInsight.type.displayName)):",
+                personalInsight.observation
+            ]
+            if let invitation = personalInsight.invitation {
+                insightLines.append(invitation)
+            }
+            parts.append(insightLines.joined(separator: "\n"))
+        }
         // Patterns & Connections
         if let patterns = effectivePatterns, !patterns.isEmpty {
             var patternLines: [String] = ["Patterns & Connections:"]
@@ -248,7 +290,6 @@ struct DistillResultView: View {
             }
             parts.append(patternLines.joined(separator: "\n"))
         }
-        // Key Themes intentionally omitted from Distill (Themes is a separate mode)
         if let questions = effectiveReflectionQuestions, !questions.isEmpty {
             let list = questions.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
             parts.append("Reflection Questions:\n" + list)
@@ -269,6 +310,10 @@ struct DistillResultView: View {
         } else if !(isShowingProgress && !isProgressComplete) {
             // Only append a "none" message when not mid-stream
             parts.append("Events & Reminders:\nNo events or reminders detected")
+        }
+        // Closing Note
+        if let closingNote = effectiveClosingNote {
+            parts.append("Note:\n\(closingNote)")
         }
         return parts.joined(separator: "\n\n")
     }

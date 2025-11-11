@@ -372,6 +372,10 @@ public struct OperationSummary: Sendable {
                 return "Extracting action items"
             case .distillThemes:
                 return "Identifying themes"
+            case .distillPersonalInsight:
+                return "Generating personal insight"
+            case .distillClosingNote:
+                return "Creating closing note"
             case .distillReflection:
                 return "Creating reflection questions"
             case .liteDistill:

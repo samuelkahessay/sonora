@@ -65,7 +65,7 @@ final class BuildHistoricalContextUseCase: BuildHistoricalContextUseCaseProtocol
             // Try to get cached themes
             var themes: [String]?
             if let cachedDistillThemes = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillThemes, responseType: DistillThemesData.self) {
-                themes = cachedDistillThemes.data.key_themes
+                themes = cachedDistillThemes.data.keyThemes
             }
 
             // Only include memos with at least a summary or themes

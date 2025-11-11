@@ -78,8 +78,23 @@ export function buildPrompt(mode: string, transcript: string, historicalContext?
       break;
     case 'distill-themes':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
-        `Identify 1–2 concise theme labels (2–3 words each). Keep it minimal.\n` +
-        `Return JSON: {"key_themes": ["General Reflection"]}`;
+        `Identify 3-4 concise theme labels (2-4 words each, e.g. ["Work boundaries", "Self-care", "Decision fatigue"]).\n` +
+        `Return JSON: {"keyThemes": ["General Reflection"]}`;
+      break;
+    case 'distill-personalInsight':
+      user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
+        `You are Sonora, a depth-focused reflection mentor. Provide ONE deep observation about this voice memo.\n` +
+        `Return JSON with:\n` +
+        `- "personalInsight": Object with:\n` +
+        `  - "type": one of: emotionalTone|wordPattern|valueGlimpse|energyShift|stoicMoment|recurringPhrase\n` +
+        `  - "observation": Meaningful noticing in warm, curious tone (1-2 sentences, use "I notice..." language)\n` +
+        `  - "invitation": Optional reflection prompt (1 sentence, can be null)\n` +
+        `Keep it insightful and thoughtful.`;
+      break;
+    case 'distill-closingNote':
+      user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
+        `You are Sonora, a depth-focused reflection mentor. Write a brief encouraging observation about the speaker's self-awareness.\n` +
+        `Return JSON: {"closingNote": "Brief encouraging observation (1 sentence)"}`;
       break;
     case 'distill-reflection':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +

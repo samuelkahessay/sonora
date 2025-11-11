@@ -61,11 +61,12 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
         request.timeoutInterval = config.timeoutInterval(for: mode)
 
         // Add Pro entitlement header for Pro-tier features
-        // Parallel distill components (.distillSummary, .distillActions, .distillReflection)
+        // Parallel distill components (.distillSummary, .distillActions, .distillReflection, etc.)
         // and detection modes (.events, .reminders) require Pro subscription
         if mode == .events || mode == .reminders ||
            mode == .distill || mode == .distillSummary || mode == .distillActions ||
-           mode == .distillThemes || mode == .distillReflection {
+           mode == .distillThemes || mode == .distillPersonalInsight ||
+           mode == .distillClosingNote || mode == .distillReflection {
             request.setValue("1", forHTTPHeaderField: "X-Entitlement-Pro")
         }
 
@@ -163,16 +164,24 @@ final class AnalysisService: AnalysisServiceProtocol, Sendable {
         try await analyze(mode: .distillSummary, transcript: transcript, responseType: DistillSummaryData.self, historicalContext: nil)
     }
 
-    func analyzeDistillActions(transcript: String) async throws -> AnalyzeEnvelope<DistillActionsData> {
-        try await analyze(mode: .distillActions, transcript: transcript, responseType: DistillActionsData.self, historicalContext: nil)
-    }
-
     func analyzeDistillThemes(transcript: String) async throws -> AnalyzeEnvelope<DistillThemesData> {
         try await analyze(mode: .distillThemes, transcript: transcript, responseType: DistillThemesData.self, historicalContext: nil)
     }
 
+    func analyzeDistillPersonalInsight(transcript: String) async throws -> AnalyzeEnvelope<DistillPersonalInsightData> {
+        try await analyze(mode: .distillPersonalInsight, transcript: transcript, responseType: DistillPersonalInsightData.self, historicalContext: nil)
+    }
+
+    func analyzeDistillActions(transcript: String) async throws -> AnalyzeEnvelope<DistillActionsData> {
+        try await analyze(mode: .distillActions, transcript: transcript, responseType: DistillActionsData.self, historicalContext: nil)
+    }
+
     func analyzeDistillReflection(transcript: String) async throws -> AnalyzeEnvelope<DistillReflectionData> {
         try await analyze(mode: .distillReflection, transcript: transcript, responseType: DistillReflectionData.self, historicalContext: nil)
+    }
+
+    func analyzeDistillClosingNote(transcript: String) async throws -> AnalyzeEnvelope<DistillClosingNoteData> {
+        try await analyze(mode: .distillClosingNote, transcript: transcript, responseType: DistillClosingNoteData.self, historicalContext: nil)
     }
 
     // MARK: - Free Tier Analysis
