@@ -594,6 +594,7 @@ app.post('/analyze', async (req, res) => {
     const { mode, transcript, historicalContext } = RequestSchema.parse(req.body);
 
     // Pro entitlement gating: all modes except lite-distill require Pro subscription
+    // All full-featured distill variants remain Pro-only; lite-distill is the lone free tier option
     const proModes = ['distill', 'distill-summary', 'distill-actions',
                       'distill-themes', 'distill-personalInsight', 'distill-closingNote',
                       'distill-reflection', 'events', 'reminders'];
