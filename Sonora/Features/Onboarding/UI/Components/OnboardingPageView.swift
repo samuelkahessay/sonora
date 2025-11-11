@@ -138,7 +138,7 @@ struct OnboardingPageView: View {
                             .frame(minHeight: 52)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(.sonoraSalmon)
+                        .tint(.sonoraMauve)
                         .controlSize(.large)
                         .buttonBorderShape(.roundedRectangle)
                         .disabled(isLoading)

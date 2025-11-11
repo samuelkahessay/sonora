@@ -33,7 +33,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                             .foregroundStyle(Color.semantic(.textOnColored))
                             .padding(.horizontal, 14)
                             .padding(.vertical, 6)
-                            .background(Capsule().fill(Color.semantic(.brandSecondary)))
+                            .background(Capsule().fill(Color.semantic(.brandPrimary)))
                     }
                     .buttonStyle(.plain)
                 }
@@ -113,7 +113,7 @@ struct PremiumLiveActivityView: View {
                     .foregroundStyle(Color.semantic(.textOnColored))
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
-                    .background(Capsule().fill(Color.semantic(.brandSecondary)))
+                    .background(Capsule().fill(Color.semantic(.brandPrimary)))
             }
             .buttonStyle(.plain)
         }

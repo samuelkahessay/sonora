@@ -33,7 +33,7 @@ struct NameEntryView: View {
                     VStack(spacing: Spacing.lg) {
                         Image(systemName: "waveform.badge.mic")
                             .font(.system(size: 64, weight: .medium))
-                            .foregroundStyle(Color.sonoraSalmon.gradient)
+                            .foregroundStyle(Color.sonoraMauve.gradient)
                             .symbolRenderingMode(.multicolor)
                             .accessibilityHidden(true)
 

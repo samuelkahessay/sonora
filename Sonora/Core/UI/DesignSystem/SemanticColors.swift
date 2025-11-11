@@ -39,7 +39,7 @@ extension SemanticColor {
     var fallbackUIColor: UIColor {
         switch self {
         // Brand
-        case .brandPrimary: return .systemOrange // Fallback to orange (closest to Salmon)
+        case .brandPrimary: return .systemPink // Fallback to pink (closest to Mauve)
         case .brandSecondary: return .systemIndigo
         case .accent: return .systemOrange
 

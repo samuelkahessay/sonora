@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Comprehensive visual mockup showing all places where Sonora Salmon (#EB725C) would replace blue.
+/// Comprehensive visual mockup showing all places where Sonora Mauve (#AD596C) is used throughout the app.
 /// This file is for preview/testing only and does not affect the running app.
 struct ColorMockupView: View {
     var body: some View {
@@ -8,6 +8,9 @@ struct ColorMockupView: View {
             VStack(spacing: 40) {
                 // Header
                 headerSection
+
+                // NEW: Color Comparison Section
+                newColorComparisonSection
 
                 // Decision Summary
                 decisionSummarySection
@@ -54,17 +57,211 @@ struct ColorMockupView: View {
                 .font(.system(.title, design: .serif))
                 .fontWeight(.bold)
 
-            Text("Sonora Salmon (#EB725C) Implementation Preview")
+            Text("Sonora Mauve (#AD596C) Implementation Preview")
                 .font(.headline)
-                .foregroundColor(.sonoraSalmon)
+                .foregroundColor(.sonoraMauve)
 
             Text("Visual mockup of ALL changes that would be made")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
         .padding()
-        .background(Color.sonoraSalmon.opacity(0.1))
+        .background(Color.sonoraMauve.opacity(0.1))
         .cornerRadius(16)
+    }
+
+    // MARK: - New Color Comparison
+
+    private var newColorComparisonSection: some View {
+        let currentMauve = Color(hexString: "#EB725C") // Old orange (pre-update)
+        let proposedMauve = Color(hexString: "#AD596C") // New dusty rose mauve
+
+        return VStack(alignment: .leading, spacing: 20) {
+            VStack(spacing: 8) {
+                Text("🆕 Proposed Color Update")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                Text("Comparing Current vs. Proposed Sonora Mauve")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            // Color swatches comparison
+            HStack(spacing: 16) {
+                // Current
+                VStack(spacing: 12) {
+                    Text("CURRENT")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+
+                    Rectangle()
+                        .fill(currentMauve)
+                        .frame(height: 100)
+                        .cornerRadius(12)
+                        .overlay(
+                            Text("#EB725C")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.white)
+                                .fontWeight(.semibold)
+                        )
+
+                    Text("RGB(235, 114, 92)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+
+                    Text("Orange/Halloween-y")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Image(systemName: "arrow.right")
+                    .foregroundColor(.secondary)
+                    .font(.title2)
+
+                // Proposed
+                VStack(spacing: 12) {
+                    Text("PROPOSED")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(proposedMauve)
+
+                    Rectangle()
+                        .fill(proposedMauve)
+                        .frame(height: 100)
+                        .cornerRadius(12)
+                        .overlay(
+                            Text("#AD596C")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.white)
+                                .fontWeight(.semibold)
+                        )
+
+                    Text("RGB(173, 89, 108)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+
+                    Text("Dusty Rose/Mauve")
+                        .font(.caption)
+                        .foregroundColor(proposedMauve)
+                }
+            }
+
+            Divider()
+
+            // Live Activity Stop Button Preview
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Live Activity Stop Button Preview")
+                    .font(.headline)
+
+                HStack(spacing: 20) {
+                    VStack(spacing: 8) {
+                        Text("CURRENT")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        // Current: Growth Green
+                        Text("Stop")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule()
+                                    .fill(Color(hexString: "#4A9B8E")) // Growth Green
+                            )
+
+                        Text("Growth Green")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Image(systemName: "arrow.right")
+                        .foregroundColor(.secondary)
+
+                    VStack(spacing: 8) {
+                        Text("PROPOSED")
+                            .font(.caption)
+                            .foregroundColor(proposedMauve)
+
+                        // Proposed: New Mauve
+                        Text("Stop")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule()
+                                    .fill(proposedMauve)
+                            )
+
+                        Text("Sonora Mauve")
+                            .font(.caption2)
+                            .foregroundColor(proposedMauve)
+                    }
+                }
+                .padding()
+                .background(Color.secondary.opacity(0.05))
+                .cornerRadius(12)
+            }
+
+            // UI Examples with new color
+            VStack(alignment: .leading, spacing: 12) {
+                Text("UI Examples with Proposed Color")
+                    .font(.headline)
+
+                // Play button example
+                HStack(spacing: 16) {
+                    VStack(spacing: 8) {
+                        Text("Play Button")
+                            .font(.caption)
+                        Button(action: {}) {
+                            Image(systemName: "play.fill")
+                                .font(.title3)
+                                .foregroundColor(.white)
+                                .frame(width: 44, height: 44)
+                                .background(proposedMauve)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    VStack(spacing: 8) {
+                        Text("Background Tint")
+                            .font(.caption)
+                        Rectangle()
+                            .fill(proposedMauve.opacity(0.1))
+                            .frame(width: 80, height: 50)
+                            .cornerRadius(8)
+                            .overlay(
+                                Text("10%")
+                                    .font(.caption2)
+                                    .foregroundColor(proposedMauve)
+                            )
+                    }
+
+                    VStack(spacing: 8) {
+                        Text("Secondary Text")
+                            .font(.caption)
+                        Text("Sample")
+                            .foregroundColor(proposedMauve.opacity(0.6))
+                            .padding(8)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(8)
+                    }
+                }
+                .padding()
+                .background(Color.secondary.opacity(0.05))
+                .cornerRadius(12)
+            }
+        }
+        .padding()
+        .background(proposedMauve.opacity(0.05))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(proposedMauve, lineWidth: 2)
+        )
     }
 
     // MARK: - Decision Summary
@@ -74,7 +271,7 @@ struct ColorMockupView: View {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
-                Text("Selected Color: Sonora Salmon")
+                Text("Selected Color: Sonora Mauve")
                     .font(.headline)
             }
 
@@ -116,7 +313,7 @@ struct ColorMockupView: View {
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.sonoraSalmon, lineWidth: 2)
+                .stroke(Color.sonoraMauve, lineWidth: 2)
         )
     }
 
@@ -147,23 +344,23 @@ struct ColorMockupView: View {
                     )
                 }
 
-                // Proposed (Salmon)
+                // Proposed (Mauve)
                 VStack(spacing: 12) {
-                    Text("WITH SONORA SALMON")
+                    Text("WITH SONORA MAUVE")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(.sonoraSalmon)
+                        .foregroundColor(.sonoraMauve)
 
                     fullAudioControlsMockup(
-                        buttonColor: .sonoraSalmon,
-                        label: "Sonora Salmon"
+                        buttonColor: .sonoraMauve,
+                        label: "Sonora Mauve"
                     )
                 }
             }
 
             changeNote(
                 token: "Color.semantic(.brandPrimary)",
-                change: ".systemBlue → .sonoraSalmon (#EB725C)"
+                change: ".systemBlue → .sonoraMauve (#EB725C)"
             )
         }
     }
@@ -197,15 +394,15 @@ struct ColorMockupView: View {
                     Text("WITH SONORA SALMON")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(.sonoraSalmon)
+                        .foregroundColor(.sonoraMauve)
 
-                    onboardingMockup(accentColor: .sonoraSalmon)
+                    onboardingMockup(accentColor: .sonoraMauve)
                 }
             }
 
             changeNote(
                 token: ".tint(.blue) & .foregroundStyle(.blue.gradient)",
-                change: "Replace with .sonoraSalmon gradient"
+                change: "Replace with .sonoraMauve gradient"
             )
         }
     }
@@ -219,7 +416,7 @@ struct ColorMockupView: View {
                 file: "Multiple files (RecordingView.swift:40, SonoraInsightCard.swift:335, etc.)"
             )
 
-            Text("Light blue backgrounds replaced with light salmon tints")
+            Text("Light blue backgrounds replaced with light mauve tints")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
@@ -245,16 +442,16 @@ struct ColorMockupView: View {
                     }
 
                     Image(systemName: "arrow.right")
-                        .foregroundColor(.sonoraSalmon)
+                        .foregroundColor(.sonoraMauve)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Proposed: Salmon Tint")
+                        Text("Proposed: Mauve Tint")
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundColor(.sonoraSalmon)
+                            .foregroundColor(.sonoraMauve)
 
                         Rectangle()
-                            .fill(Color.sonoraSalmon.opacity(0.1))
+                            .fill(Color.sonoraMauve.opacity(0.1))
                             .frame(height: 60)
                             .overlay(
                                 Text("Background Surface")
@@ -285,7 +482,7 @@ struct ColorMockupView: View {
 
             changeNote(
                 token: "Color.whisperBlue",
-                change: "Replace with Color.sonoraSalmon.opacity(0.1)"
+                change: "Replace with Color.sonoraMauve.opacity(0.1)"
             )
         }
     }
@@ -299,7 +496,7 @@ struct ColorMockupView: View {
                 file: "Multiple files (SonoraInsightCard.swift:157, MemoEmptyStateView.swift:83, etc.)"
             )
 
-            Text("Blue-gray secondary text replaced with salmon-based gray")
+            Text("Blue-gray secondary text replaced with mauve-based gray")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
@@ -327,26 +524,26 @@ struct ColorMockupView: View {
                     }
 
                     Image(systemName: "arrow.right")
-                        .foregroundColor(.sonoraSalmon)
+                        .foregroundColor(.sonoraMauve)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Proposed: Salmon-based")
+                        Text("Proposed: Mauve-based")
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundColor(.sonoraSalmon)
+                            .foregroundColor(.sonoraMauve)
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Primary Text")
                                 .foregroundColor(.primary)
                             Text("Secondary Text with warm undertone")
                                 .font(.caption)
-                                .foregroundColor(Color.sonoraSalmon.opacity(0.6))
+                                .foregroundColor(Color.sonoraMauve.opacity(0.6))
                         }
                         .padding()
                         .background(Color(.systemBackground))
                         .cornerRadius(8)
 
-                        Text("sonoraSalmon @ 60% opacity")
+                        Text("sonoraMauve @ 60% opacity")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
@@ -355,7 +552,7 @@ struct ColorMockupView: View {
 
             changeNote(
                 token: "Color.reflectionGray",
-                change: "Replace with Color.sonoraSalmon.opacity(0.6)"
+                change: "Replace with Color.sonoraMauve.opacity(0.6)"
             )
         }
     }
@@ -386,9 +583,9 @@ struct ColorMockupView: View {
                     VStack(spacing: 8) {
                         Text("Proposed")
                             .font(.caption)
-                            .foregroundColor(.sonoraSalmon)
+                            .foregroundColor(.sonoraMauve)
                         Slider(value: .constant(0.6), in: 0...1)
-                            .tint(.sonoraSalmon)
+                            .tint(.sonoraMauve)
                     }
                 }
 
@@ -404,9 +601,9 @@ struct ColorMockupView: View {
                     VStack(spacing: 8) {
                         Text("Progress")
                             .font(.caption)
-                            .foregroundColor(.sonoraSalmon)
+                            .foregroundColor(.sonoraMauve)
                         ProgressView(value: 0.7)
-                            .tint(.sonoraSalmon)
+                            .tint(.sonoraMauve)
                     }
                 }
 
@@ -418,7 +615,7 @@ struct ColorMockupView: View {
 
                     Button("Action") {}
                         .buttonStyle(.borderedProminent)
-                        .tint(.sonoraSalmon)
+                        .tint(.sonoraMauve)
                 }
             }
             .padding()
@@ -438,31 +635,31 @@ struct ColorMockupView: View {
                 changeItem(
                     number: "1",
                     title: "Update SemanticColors.swift",
-                    detail: "brandPrimary fallback: .systemBlue → Custom Salmon asset"
+                    detail: "brandPrimary fallback: .systemBlue → Custom Mauve asset"
                 )
 
                 changeItem(
                     number: "2",
                     title: "Update SonoraBrandColors.swift",
-                    detail: "Remove whisperBlue & reflectionGray, add salmon tint utilities"
+                    detail: "Remove whisperBlue & reflectionGray, add mauve tint utilities"
                 )
 
                 changeItem(
                     number: "3",
                     title: "Replace Direct Blue Usage",
-                    detail: "Onboarding files: .blue → .sonoraSalmon (2 files)"
+                    detail: "Onboarding files: .blue → .sonoraMauve (2 files)"
                 )
 
                 changeItem(
                     number: "4",
                     title: "Replace whisperBlue",
-                    detail: "7 files: Replace with sonoraSalmon.opacity(0.1)"
+                    detail: "7 files: Replace with sonoraMauve.opacity(0.1)"
                 )
 
                 changeItem(
                     number: "5",
                     title: "Replace reflectionGray",
-                    detail: "7 files: Replace with sonoraSalmon.opacity(0.6)"
+                    detail: "7 files: Replace with sonoraMauve.opacity(0.6)"
                 )
 
                 changeItem(
@@ -485,7 +682,7 @@ struct ColorMockupView: View {
                 .padding(.top, 8)
         }
         .padding()
-        .background(Color.sonoraSalmon.opacity(0.05))
+        .background(Color.sonoraMauve.opacity(0.05))
         .cornerRadius(16)
     }
 
@@ -514,7 +711,7 @@ struct ColorMockupView: View {
                 .fontDesign(.monospaced)
             Text("→ \(change)")
                 .font(.caption)
-                .foregroundColor(.sonoraSalmon)
+                .foregroundColor(.sonoraMauve)
         }
         .padding()
         .background(Color.secondary.opacity(0.05))
@@ -528,7 +725,7 @@ struct ColorMockupView: View {
                 .fontWeight(.bold)
                 .foregroundColor(.white)
                 .frame(width: 24, height: 24)
-                .background(Color.sonoraSalmon)
+                .background(Color.sonoraMauve)
                 .clipShape(Circle())
 
             VStack(alignment: .leading, spacing: 2) {

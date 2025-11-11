@@ -143,7 +143,7 @@ struct SonoraInsightCard: View {
         HStack(spacing: 4) {
             ForEach(0..<5, id: \.self) { index in
                 Circle()
-                    .fill(index < confidenceLevel ? insightColor.opacity(0.8) : Color.salmonLight)
+                    .fill(index < confidenceLevel ? insightColor.opacity(0.8) : Color.mauveLight)
                     .frame(width: 4, height: 4)
             }
         }
@@ -154,7 +154,7 @@ struct SonoraInsightCard: View {
     private var sourceIndicator: some View {
         Text(insight.source)
             .font(SonoraDesignSystem.Typography.caption)
-            .foregroundColor(.salmonSecondary)
+            .foregroundColor(.mauveSecondary)
     }
 
     /// Card background with subtle brand tinting
@@ -196,13 +196,13 @@ struct SonoraInsightCard: View {
     private var insightBackgroundColor: Color {
         switch insightColor {
         case .growthGreen:
-            return .salmonTint
+            return .mauveTint
         case .depthPurple:
-            return .salmonTint.opacity(0.6)
+            return .mauveTint.opacity(0.6)
         case .sparkOrange:
-            return .salmonTint.opacity(0.8)
+            return .mauveTint.opacity(0.8)
         default:
-            return .salmonTint
+            return .mauveTint
         }
     }
 
@@ -332,5 +332,5 @@ struct InsightData {
         )
     }
     .padding()
-    .background(Color.salmonTint.opacity(0.3))
+    .background(Color.mauveTint.opacity(0.3))
 }

@@ -66,9 +66,9 @@ struct SonoraLaunchView: View {
     private var backgroundGradient: some View {
         LinearGradient(
             colors: [
-                Color.sonoraSalmon.opacity(backgroundGradientPhase ? 0.15 : 0.25),
+                Color.sonoraMauve.opacity(backgroundGradientPhase ? 0.15 : 0.25),
                 Color.clarityWhite,
-                Color.sonoraSalmon.opacity(backgroundGradientPhase ? 0.1 : 0.2)
+                Color.sonoraMauve.opacity(backgroundGradientPhase ? 0.1 : 0.2)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -129,7 +129,7 @@ struct SonoraLaunchView: View {
 
             Text("Clarity through Voice")
                 .font(.system(.subheadline, design: .serif))
-                .foregroundColor(.sonoraSalmon.opacity(0.7))
+                .foregroundColor(.sonoraMauve.opacity(0.7))
                 .italic()
         }
         .opacity(brandTextOpacity)

@@ -43,8 +43,8 @@ extension Color {
     /// Sonora Coral: Bright, warm coral (logo left side) - inviting and energetic
     static let sonoraCoral = Color(hexString: "#FF995E")
 
-    /// Sonora Salmon: Softer coral/salmon for smooth transitions
-    static let sonoraSalmon = Color(hexString: "#EB725C")
+    /// Sonora Mauve: Sophisticated dusty rose for smooth transitions
+    static let sonoraMauve = Color(hexString: "#AD596C")
 
     /// Sonora Warm Pink: Warm pink blend point in the gradient
     static let sonoraWarmPink = Color(hexString: "#C95B68")
@@ -61,14 +61,14 @@ extension Color {
     // MARK: - Logo Color Tints & Utilities
     // Commonly-used opacity variants of logo colors for backgrounds and UI elements
 
-    /// Very light salmon tint for backgrounds (replaces whisperBlue)
-    static let salmonTint = sonoraSalmon.opacity(0.1)
+    /// Very light mauve tint for backgrounds (replaces whisperBlue)
+    static let mauveTint = sonoraMauve.opacity(0.1)
 
-    /// Medium salmon for secondary text and UI elements (replaces reflectionGray)
-    static let salmonSecondary = sonoraSalmon.opacity(0.6)
+    /// Medium mauve for secondary text and UI elements (replaces reflectionGray)
+    static let mauveSecondary = sonoraMauve.opacity(0.6)
 
-    /// Light salmon for subtle UI elements
-    static let salmonLight = sonoraSalmon.opacity(0.3)
+    /// Light mauve for subtle UI elements
+    static let mauveLight = sonoraMauve.opacity(0.3)
 }
 
 // MARK: - Semantic Color Mappings
@@ -80,8 +80,8 @@ extension Color {
     /// Active recording state - uses Insight Gold for premium feel
     static let recordingActive = insightGold
 
-    /// Inactive recording state - uses Salmon with reduced opacity
-    static let recordingInactive = sonoraSalmon.opacity(0.6)
+    /// Inactive recording state - uses Mauve with reduced opacity
+    static let recordingInactive = sonoraMauve.opacity(0.6)
 
     // MARK: - Interface Elements
 
@@ -96,8 +96,8 @@ extension Color {
     /// Primary text on light backgrounds
     static let textPrimary = sonoraDep
 
-    /// Secondary text and metadata - uses Salmon with reduced opacity for warmth
-    static let textSecondary = sonoraSalmon.opacity(0.6)
+    /// Secondary text and metadata - uses Mauve with reduced opacity for warmth
+    static let textSecondary = sonoraMauve.opacity(0.6)
 
     /// Text on dark or colored backgrounds
     static let textOnColored = clarityWhite
