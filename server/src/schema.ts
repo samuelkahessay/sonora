@@ -82,7 +82,7 @@ export const DistillDataSchema = z.object({
   personalInsight: z.object({
     type: z.enum(['emotionalTone', 'wordPattern', 'valueGlimpse', 'energyShift', 'stoicMoment', 'recurringPhrase']),
     observation: z.string(),
-    invitation: z.string().nullable()
+    invitation: z.string().nullable().optional()
   }).optional(),
   action_items: z.array(z.object({
     text: z.string(),
@@ -165,7 +165,7 @@ export const DistillPersonalInsightDataSchema = z.object({
   personalInsight: z.object({
     type: z.enum(['emotionalTone', 'wordPattern', 'valueGlimpse', 'energyShift', 'stoicMoment', 'recurringPhrase']),
     observation: z.string(),
-    invitation: z.string().nullable()
+    invitation: z.string().nullable().optional()
   })
 });
 
@@ -185,7 +185,7 @@ export const LiteDistillDataSchema = z.object({
     id: z.string().optional(),
     type: z.enum(['emotionalTone', 'wordPattern', 'valueGlimpse', 'energyShift', 'stoicMoment', 'recurringPhrase']),
     observation: z.string(),
-    invitation: z.string().nullable()
+    invitation: z.string().nullable().optional()
   }),
   simpleTodos: z.array(z.object({
     id: z.string().optional(),
@@ -224,7 +224,7 @@ export const DistillJsonSchema = {
           observation: { type: "string", description: "Brief noticing in warm, curious tone (1-2 sentences)" },
           invitation: { type: ["string", "null"], description: "Optional reflection prompt (1 sentence)" }
         },
-        required: ["type", "observation", "invitation"],
+        required: ["type", "observation"],
         additionalProperties: false
       },
       action_items: {
@@ -320,7 +320,7 @@ export const LiteDistillJsonSchema = {
             description: "Optional: A question to invite deeper reflection"
           }
         },
-        required: ["type", "observation", "invitation"],
+        required: ["type", "observation"],
         additionalProperties: false
       },
       simpleTodos: {
@@ -500,7 +500,7 @@ export const DistillPersonalInsightJsonSchema = {
           observation: { type: "string", description: "Meaningful noticing in warm, curious tone (1-2 sentences)" },
           invitation: { type: ["string", "null"], description: "Optional reflection prompt (1 sentence)" }
         },
-        required: ["type", "observation", "invitation"],
+        required: ["type", "observation"],
         additionalProperties: false
       }
     },
