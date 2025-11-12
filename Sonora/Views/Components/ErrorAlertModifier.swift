@@ -128,7 +128,7 @@ struct LoadingStateView: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             LoadingIndicator(size: .large)
-                .tint(.semantic(.brandPrimary))
+                .tint(.accentColor)
 
             Text(message)
                 .font(.body)

@@ -26,7 +26,7 @@ struct MemoSwipeActionsView: View {
                 Label(MemoListConstants.SwipeActions.transcribeTitle,
                       systemImage: MemoListConstants.SwipeActions.transcribeIcon)
             }
-            .tint(.semantic(.brandPrimary))
+            .tint(.accentColor)
             .accessibilityLabel("Transcribe \(memo.displayName)")
             .accessibilityHint(MemoListConstants.AccessibilityLabels.transcribeHint)
         } else if state.isFailed {

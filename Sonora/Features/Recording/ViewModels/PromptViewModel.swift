@@ -17,12 +17,20 @@ final class PromptViewModel: ObservableObject {
 
     private let getDynamic: any GetDynamicPromptUseCaseProtocol
     private let getCategory: any GetPromptCategoryUseCaseProtocol
+    private let onboardingConfiguration: OnboardingConfiguration
+    private var cancellables: Set<AnyCancellable> = []
     private var refreshTask: Task<Void, Never>?
     private var rotationToken: PromptRotationToken?
 
-    init(getDynamic: any GetDynamicPromptUseCaseProtocol, getCategory: any GetPromptCategoryUseCaseProtocol) {
+    init(
+        getDynamic: any GetDynamicPromptUseCaseProtocol,
+        getCategory: any GetPromptCategoryUseCaseProtocol,
+        onboardingConfiguration: OnboardingConfiguration = .shared
+    ) {
         self.getDynamic = getDynamic
         self.getCategory = getCategory
+        self.onboardingConfiguration = onboardingConfiguration
+        observeUserNameChanges()
     }
 
     func loadInitial() {
@@ -38,7 +46,7 @@ final class PromptViewModel: ObservableObject {
         refreshTask?.cancel()
         isLoading = true
         state = .loading(current: currentPrompt)
-        let name = OnboardingConfiguration.shared.getUserName()
+        let name = onboardingConfiguration.getUserName()
         let currentId = excludingCurrent ? currentPrompt?.id : nil
         refreshTask = Task { [weak self] in
             do {
@@ -90,5 +98,18 @@ final class PromptViewModel: ObservableObject {
     func markUsed() {
         guard let id = currentPrompt?.id else { return }
         try? getCategory.markUsed(promptId: id)
+    }
+
+    private func observeUserNameChanges() {
+        onboardingConfiguration.$currentUserName
+            .dropFirst()
+            .removeDuplicates()
+            .sink { [weak self] _ in
+                guard let self else { return }
+                Task { @MainActor in
+                    self.refresh()
+                }
+            }
+            .store(in: &cancellables)
     }
 }

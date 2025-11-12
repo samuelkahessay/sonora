@@ -53,6 +53,10 @@ final class DIContainer: ObservableObject, Resolver {
     private var _autoTitleJobRepository: (any AutoTitleJobRepository)?
     private var _titleGenerationCoordinator: TitleGenerationCoordinator?
     private var _generateAutoTitleUseCase: (any GenerateAutoTitleUseCaseProtocol)?
+    // Recording Use Cases
+    private var _startRecordingUseCase: (any StartRecordingUseCaseProtocol)?
+    // Notifications
+    private var _notificationService: (any NotificationServiceProtocol)?
 
     // MARK: - Phase 2: Core Optimization Services
     private var _audioQualityManager: AudioQualityManager?
@@ -487,6 +491,34 @@ final class DIContainer: ObservableObject, Resolver {
         }
         guard let de = _dataExporter else { fatalError("Failed to init dataExporter") }
         return de
+    }
+
+    // MARK: - Recording Use Cases
+
+    /// Factory: StartRecordingUseCase
+    @MainActor
+    func startRecordingUseCase() -> any StartRecordingUseCaseProtocol {
+        ensureConfigured()
+        if let uc = _startRecordingUseCase { return uc }
+        let uc = StartRecordingUseCase(
+            audioRepository: audioRepository(),
+            operationCoordinator: operationCoordinator(),
+            logger: logger()
+        )
+        _startRecordingUseCase = uc
+        return uc
+    }
+
+    // MARK: - Notification Service
+
+    /// Factory: NotificationService
+    @MainActor
+    func notificationService() -> any NotificationServiceProtocol {
+        ensureConfigured()
+        if let svc = _notificationService { return svc }
+        let svc = NotificationService()
+        _notificationService = svc
+        return svc
     }
 
     @MainActor

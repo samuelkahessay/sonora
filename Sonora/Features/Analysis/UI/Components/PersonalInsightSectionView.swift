@@ -11,7 +11,7 @@ struct PersonalInsightSectionView: View {
             HStack(spacing: headerSpacing) {
                 Image(systemName: "lightbulb.max")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Personal Insight")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.textPrimary))

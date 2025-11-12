@@ -172,11 +172,11 @@ private struct HowItWorksCard: View {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "mic.fill")
                     .font(.title2)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
 
                 ForEach(Array(barHeights.enumerated()), id: \.offset) { index, height in
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.semantic(.brandPrimary))
+                        .fill(Color.semantic(.fillSecondary))
                         .frame(width: 4, height: height)
                         .scaleEffect(y: isAnimating ? 1.4 : 0.6, anchor: .bottom)
                         .animation(

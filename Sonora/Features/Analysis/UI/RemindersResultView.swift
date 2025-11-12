@@ -9,7 +9,7 @@ struct RemindersResultView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
                 Image(systemName: "bell.badge")
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Detected Reminders")
                     .font(.headline)
                     .fontWeight(.semibold)
@@ -18,7 +18,7 @@ struct RemindersResultView: View {
                     .font(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.semantic(.brandPrimary).opacity(0.1))
+                    .background(Color.accentColor.opacity(0.1))
                     .cornerRadius(8)
             }
 

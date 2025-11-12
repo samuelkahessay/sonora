@@ -66,6 +66,15 @@ struct StatusIndicator: View {
             }
         }
 
+        var iconColor: Color {
+            switch self {
+            case .loading, .inProgress:
+                return .semantic(.fillSecondary)
+            default:
+                return color
+            }
+        }
+
         var text: String? {
             switch self {
             case .success(let text), .warning(let text), .error(let text),
@@ -112,11 +121,11 @@ struct StatusIndicator: View {
             switch status {
             case .loading, .inProgress:
                 LoadingIndicator(size: loadingSize)
-                    .tint(status.color)
+                    .tint(status.iconColor)
             default:
                 Image(systemName: status.icon)
                     .font(size.font)
-                    .foregroundColor(status.color)
+                    .foregroundColor(status.iconColor)
             }
 
             if showText {

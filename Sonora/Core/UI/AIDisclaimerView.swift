@@ -59,22 +59,22 @@ struct AIDisclaimerView: View {
         var backgroundColor: Color {
             switch self {
             case .compact:
-                return .semantic(.brandPrimary).opacity(0.1)
+                return Color.accentColor.opacity(0.1)
             case .detailed:
                 return .semantic(.fillSecondary)
             case .inline:
-                return .semantic(.brandPrimary).opacity(0.1)
+                return Color.accentColor.opacity(0.1)
             }
         }
 
         var foregroundColor: Color {
             switch self {
             case .compact:
-                return .semantic(.brandPrimary)
+                return .accentColor
             case .detailed:
                 return .semantic(.textSecondary)
             case .inline:
-                return .semantic(.brandPrimary)
+                return .accentColor
             }
         }
     }
@@ -172,7 +172,7 @@ private struct DetailedDisclosureRow: View {
 
                     Button("Learn more") { showFullDisclosure = true }
                         .font(.caption)
-                        .foregroundColor(.semantic(.brandPrimary))
+                        .foregroundColor(Color(.systemBlue))
                         .buttonStyle(.plain)
                         .accessibilityLabel("Learn more about AI features")
                 }

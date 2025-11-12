@@ -28,7 +28,7 @@ struct AnalysisSectionView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
                         .font(.subheadline)
-                        .foregroundColor(.semantic(.brandPrimary))
+                        .foregroundColor(.accentColor)
                     Text("Distilled")
                         .font(.subheadline)
                         .fontWeight(.semibold)
@@ -77,7 +77,7 @@ struct AnalysisSectionView: View {
                     Spacer()
                 }
                 .padding()
-                .background(Color.semantic(.brandPrimary).opacity(0.05))
+                .background(Color.semantic(.fillSecondary))
                 .cornerRadius(8)
                 .animation(SonoraDesignSystem.Animation.loaderMessage, value: loaderMessageIndex)
             }
@@ -170,7 +170,7 @@ private struct DistillCTAButton: View {
             HStack(spacing: 12) {
                 Image(systemName: AnalysisMode.distill.iconName)
                     .font(.title3)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
 
                 if isAnalyzing {
                     LoadingIndicator(size: .small)
@@ -192,7 +192,7 @@ private struct DistillCTAButton: View {
             .background(Color.semantic(.fillSecondary))
             .overlay(
                 RoundedRectangle(cornerRadius: DistillLayout.buttonCornerRadius, style: .continuous)
-                    .stroke(Color.semantic(.brandPrimary).opacity(0.2), lineWidth: 1)
+                    .stroke(Color.semantic(.fillSecondary).opacity(0.2), lineWidth: 1)
             )
             .cornerRadius(DistillLayout.buttonCornerRadius)
         }

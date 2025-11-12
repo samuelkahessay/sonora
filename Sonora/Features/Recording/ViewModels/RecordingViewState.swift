@@ -30,7 +30,7 @@ struct RecordingViewState: Equatable {
 
         /// Recording button color based on state  
         var recordingButtonColor: Color {
-            isRecording ? .semantic(.error) : .semantic(.brandPrimary)
+            isRecording ? .semantic(.error) : .semantic(.fillSecondary)
         }
 
         /// Whether to show the recording indicator

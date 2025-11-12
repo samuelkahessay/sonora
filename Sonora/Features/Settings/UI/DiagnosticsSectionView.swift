@@ -40,7 +40,7 @@ struct DiagnosticsSectionView: View {
         SettingsCard {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack(spacing: Spacing.md) {
-                    Image(systemName: "waveform").foregroundColor(.semantic(.brandPrimary))
+                    Image(systemName: "waveform").foregroundColor(.accentColor)
                     Text("Audio Quality").font(SonoraDesignSystem.Typography.headingSmall)
                 }
                 gridRow("Profile", currentProfileName)
@@ -61,7 +61,7 @@ struct DiagnosticsSectionView: View {
         SettingsCard {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack(spacing: Spacing.md) {
-                    Image(systemName: "gauge.with.needle").foregroundColor(.semantic(.brandPrimary))
+                    Image(systemName: "gauge.with.needle").foregroundColor(.accentColor)
                     Text("System Resources").font(SonoraDesignSystem.Typography.headingSmall)
                 }
                 gridRow("Under Pressure", isUnderPressure ? "Yes" : "No")
@@ -81,7 +81,7 @@ struct DiagnosticsSectionView: View {
         SettingsCard {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack(spacing: Spacing.md) {
-                    Image(systemName: "chart.bar").foregroundColor(.semantic(.brandPrimary))
+                    Image(systemName: "chart.bar").foregroundColor(.accentColor)
                     Text("Operations").font(SonoraDesignSystem.Typography.headingSmall)
                 }
                 Text(systemOpsText).font(.caption).foregroundColor(.semantic(.textSecondary))
@@ -96,7 +96,7 @@ struct DiagnosticsSectionView: View {
         SettingsCard {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 HStack(spacing: Spacing.md) {
-                    Image(systemName: "antenna.radiowaves.left.and.right").foregroundColor(.semantic(.brandPrimary))
+                    Image(systemName: "antenna.radiowaves.left.and.right").foregroundColor(.accentColor)
                     Text("Event Bus").font(SonoraDesignSystem.Typography.headingSmall)
                 }
                 Text(eventBusStats).font(.caption).foregroundColor(.semantic(.textSecondary))

@@ -96,7 +96,7 @@ struct MemosView: View {
                             .accessibilityHint("Open app settings")
                     }
                     .buttonStyle(.plain)
-                    .tint(.semantic(.brandPrimary))
+                    .tint(.accentColor)
                 } else {
                     Button(action: { showSettings = true }) {
                         Image(systemName: "gearshape")
@@ -105,7 +105,7 @@ struct MemosView: View {
                             .accessibilityLabel("Settings")
                             .accessibilityHint("Open app settings")
                     }
-                    .tint(.semantic(.brandPrimary))
+                    .tint(.accentColor)
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -127,7 +127,7 @@ struct MemosView: View {
                         .imageScale(.large)
                         .accessibilityLabel("Sort")
                 }
-                .tint(.semantic(.brandPrimary))
+                .tint(.accentColor)
             }
             // Filters button
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -136,7 +136,7 @@ struct MemosView: View {
                         .imageScale(.large)
                         .accessibilityLabel("Filters")
                 }
-                .tint(.semantic(.brandPrimary))
+                .tint(.accentColor)
             }
         }
         .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search memos")

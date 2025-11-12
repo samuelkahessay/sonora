@@ -159,7 +159,7 @@ private struct ExportDataSheetView: View {
             HStack(alignment: .top, spacing: Spacing.sm) {
                 Image(systemName: icon)
                     .font(.body)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -172,7 +172,7 @@ private struct ExportDataSheetView: View {
                 }
             }
         }
-        .toggleStyle(SwitchToggleStyle(tint: .semantic(.brandPrimary)))
+        .toggleStyle(SwitchToggleStyle(tint: .accentColor))
         .disabled(!available)
         .opacity(available ? 1 : 0.4)
         .accessibilityHint(available ? "Include in export" : "No data available")

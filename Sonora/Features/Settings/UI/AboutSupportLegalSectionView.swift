@@ -61,7 +61,7 @@ private struct SettingsRow: View {
     var body: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: icon)
-                .foregroundColor(.semantic(.brandPrimary))
+                .foregroundColor(.accentColor)
                 .frame(width: 28)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -86,7 +86,7 @@ private struct SettingsRow: View {
             if let systemName = trailingSystemImage {
                 Image(systemName: systemName)
                     .font(.caption)
-                    .foregroundColor(.semantic(systemName == "chevron.right" ? .textTertiary : .brandPrimary))
+                    .foregroundColor(systemName == "chevron.right" ? .semantic(.textTertiary) : .accentColor)
             }
         }
         .contentShape(Rectangle())

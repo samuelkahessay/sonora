@@ -35,7 +35,7 @@ struct ActionItemDetectionCard: View {
         .cornerRadius(SonoraDesignSystem.Spacing.md_sm)
         .overlay(
             RoundedRectangle(cornerRadius: SonoraDesignSystem.Spacing.md_sm)
-                .stroke(model.isEditing ? Color.semantic(.brandPrimary) : Color.clear, lineWidth: 1.5)
+                .stroke(model.isEditing ? Color.semantic(.separator) : Color.clear, lineWidth: 1.5)
         )
         .overlay(alignment: .topTrailing) {
             Button(action: { onEvent(.dismiss(id: model.id)) }) {

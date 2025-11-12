@@ -83,7 +83,7 @@ struct FirstRecordingPromptView: View {
         ZStack {
             // Outer pulse circle
             Circle()
-                .stroke(Color.semantic(.brandPrimary).opacity(0.3), lineWidth: 2)
+                .stroke(Color.semantic(.fillSecondary).opacity(0.3), lineWidth: 2)
                 .frame(width: 100, height: 100)
                 .scaleEffect(isAnimating ? 1.2 : 1.0)
                 .opacity(isAnimating ? 0.0 : 0.3)
@@ -95,13 +95,13 @@ struct FirstRecordingPromptView: View {
 
             // Inner circle background
             Circle()
-                .fill(Color.semantic(.brandPrimary).opacity(0.1))
+                .fill(Color.semantic(.fillSecondary).opacity(0.1))
                 .frame(width: 80, height: 80)
 
             // Microphone icon
             Image(systemName: "mic.badge.plus")
                 .font(.system(size: 32, weight: .medium))
-                .foregroundColor(.semantic(.brandPrimary))
+                .foregroundColor(.accentColor)
                 .symbolRenderingMode(.hierarchical)
                 .symbolEffect(.pulse, isActive: isAnimating)
         }

@@ -9,7 +9,7 @@ struct EventsResultView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
                 Image(systemName: "calendar.badge.plus")
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Detected Events")
                     .font(.headline)
                     .fontWeight(.semibold)
@@ -18,7 +18,7 @@ struct EventsResultView: View {
                     .font(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.semantic(.brandPrimary).opacity(0.1))
+                    .background(Color.accentColor.opacity(0.1))
                     .cornerRadius(8)
             }
 

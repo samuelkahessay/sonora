@@ -194,7 +194,7 @@ struct ShareOptionRow: View {
         if !isAvailable {
             return .semantic(.textSecondary)
         }
-        return isEnabled ? .semantic(.brandPrimary) : .semantic(.textSecondary)
+        return isEnabled ? .semantic(.fillSecondary) : .semantic(.textSecondary)
     }
 
     private var textColor: Color {

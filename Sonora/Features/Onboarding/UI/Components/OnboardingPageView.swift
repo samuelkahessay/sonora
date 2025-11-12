@@ -31,7 +31,7 @@ struct OnboardingPageView: View {
         var backgroundColor: Color {
             switch self {
             case .primary:
-                return .semantic(.brandPrimary)
+                return .semantic(.fillSecondary)
             case .secondary:
                 return .semantic(.fillSecondary)
             case .warning:
@@ -73,13 +73,13 @@ struct OnboardingPageView: View {
         ScrollView {
             VStack(spacing: Spacing.xl) {
                 // Header section
-                VStack(spacing: Spacing.lg) {
-                    // Icon
-                    Image(systemName: page.iconName)
-                        .font(.system(size: 64, weight: .medium))
-                        .foregroundColor(.semantic(.brandPrimary))
-                        .symbolRenderingMode(.hierarchical)
-                        .accessibilityHidden(true)
+        VStack(spacing: Spacing.lg) {
+            // Icon
+            Image(systemName: page.iconName)
+                .font(.system(size: 64, weight: .medium))
+                .foregroundColor(.accentColor)
+                .symbolRenderingMode(.hierarchical)
+                .accessibilityHidden(true)
 
                     // Title and description
                     VStack(spacing: Spacing.md) {

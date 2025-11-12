@@ -83,7 +83,7 @@ struct UnifiedStateView: View {
             case .offline:
                 return .semantic(.warning)
             case .loading:
-                return .semantic(.brandPrimary)
+                return .semantic(.fillSecondary)
             }
         }
 
@@ -178,7 +178,7 @@ struct UnifiedStateView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.semantic(.brandPrimary))
+                    .tint(.accentColor)
                     .accessibilityLabel(primaryTitle)
                     .accessibilityHint("Double tap to \(primaryTitle.lowercased())")
                 }
@@ -268,7 +268,7 @@ struct LoadingIndicator: View {
     var body: some View {
         ProgressView()
             .scaleEffect(size.scale)
-            .tint(.semantic(.brandPrimary))
+            .tint(.accentColor)
             .accessibilityLabel("Loading")
     }
 }

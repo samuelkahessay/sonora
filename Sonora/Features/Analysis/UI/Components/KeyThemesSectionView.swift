@@ -12,7 +12,7 @@ struct KeyThemesSectionView: View {
             HStack(spacing: headerSpacing) {
                 Image(systemName: "tag.circle")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Key Themes")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.textPrimary))
@@ -31,11 +31,11 @@ struct KeyThemesSectionView: View {
                         .padding(.vertical, 6)
                         .background(
                             Capsule()
-                                .fill(Color.semantic(.brandPrimary).opacity(0.1))
+                                .fill(Color.accentColor.opacity(0.1))
                         )
                         .overlay(
                             Capsule()
-                                .stroke(Color.semantic(.brandPrimary).opacity(0.3), lineWidth: 1)
+                                .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
                         )
                         .accessibilityLabel("Theme: \(theme)")
                 }

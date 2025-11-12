@@ -2,12 +2,53 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Minimal privacy manifest (no tracking, no accessed APIs declared) -->
+	<!-- Privacy Tracking Configuration -->
 	<key>NSPrivacyTracking</key>
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
+
+	<!-- Required Reasons API Usage Declarations -->
 	<key>NSPrivacyAccessedAPITypes</key>
-	<array/>
+	<array>
+		<!-- UserDefaults API Usage -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- CA92.1: Access info from same app only -->
+				<!-- Used for: User preferences (theme, display name), onboarding state,
+				     transcription settings, audio quality preferences, subscription state -->
+				<string>CA92.1</string>
+			</array>
+		</dict>
+
+		<!-- File Timestamp API Usage -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- C617.1: Display to user or file management -->
+				<!-- Used for: Sorting voice memos by date, displaying recording timestamps,
+				     managing audio file metadata, historical context analysis -->
+				<string>C617.1</string>
+			</array>
+		</dict>
+
+		<!-- Disk Space API Usage -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- E174.1: Display disk space to user or manage files -->
+				<!-- Used for: Checking available storage before recording,
+				     memory pressure detection, audio chunk management -->
+				<string>E174.1</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

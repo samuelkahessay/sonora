@@ -144,7 +144,7 @@ struct PaywallView: View {
     private func benefitRow(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "checkmark.seal.fill")
-                .foregroundColor(.semantic(.brandPrimary))
+                .foregroundColor(.accentColor)
                 .font(.body)
             Text(text)
                 .foregroundColor(.semantic(.textPrimary))
@@ -175,7 +175,7 @@ struct PaywallView: View {
                 }
             }
             .buttonStyle(.bordered)
-            .tint(.semantic(.brandPrimary))
+            .tint(.accentColor)
 
             Button("Debug Fetch Products") {
                 Task { @MainActor in

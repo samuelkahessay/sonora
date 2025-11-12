@@ -80,4 +80,14 @@ extension DIContainer {
         _getRemainingMonthlyQuotaUseCase = uc
         return uc
     }
+
+    /// Get model context for direct SwiftData access (use sparingly)
+    @MainActor
+    func modelContext() -> ModelContext {
+        ensureConfigured()
+        guard let ctx = _modelContext else {
+            fatalError("DIContainer not configured: modelContext")
+        }
+        return ctx
+    }
 }

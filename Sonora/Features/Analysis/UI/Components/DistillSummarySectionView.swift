@@ -12,7 +12,7 @@ internal struct DistillSummarySectionView: View {
             HStack(spacing: headerSpacing) {
                 Image(systemName: "text.quote")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Summary")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.textPrimary))

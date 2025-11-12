@@ -44,7 +44,7 @@ extension Color {
     static let sonoraCoral = Color(hexString: "#FF995E")
 
     /// Sonora Mauve: Sophisticated dusty rose for smooth transitions
-    static let sonoraMauve = Color(hexString: "#AD596C")
+    static let sonoraMauve = Color(hexString: "#5c2e4a")
 
     /// Sonora Warm Pink: Warm pink blend point in the gradient
     static let sonoraWarmPink = Color(hexString: "#C95B68")
@@ -64,8 +64,12 @@ extension Color {
     /// Very light mauve tint for backgrounds (replaces whisperBlue)
     static let mauveTint = sonoraMauve.opacity(0.1)
 
-    /// Medium mauve for secondary text and UI elements (replaces reflectionGray)
-    static let mauveSecondary = sonoraMauve.opacity(0.6)
+    /// Medium mauve for secondary text and UI elements (replaces reflectionGray) - adapts to dark mode
+    static var mauveSecondary: Color {
+        Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(clarityWhite.opacity(0.7)) : UIColor(sonoraMauve.opacity(0.6))
+        })
+    }
 
     /// Light mauve for subtle UI elements
     static let mauveLight = sonoraMauve.opacity(0.3)
@@ -93,11 +97,19 @@ extension Color {
 
     // MARK: - Text Hierarchy
 
-    /// Primary text on light backgrounds
-    static let textPrimary = sonoraDep
+    /// Primary text - adapts to dark mode (dark in light mode, light in dark mode)
+    static var textPrimary: Color {
+        Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(clarityWhite) : UIColor(sonoraDep)
+        })
+    }
 
-    /// Secondary text and metadata - uses Mauve with reduced opacity for warmth
-    static let textSecondary = sonoraMauve.opacity(0.6)
+    /// Secondary text and metadata - adapts to dark mode for proper contrast
+    static var textSecondary: Color {
+        Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(clarityWhite.opacity(0.7)) : UIColor(sonoraMauve.opacity(0.6))
+        })
+    }
 
     /// Text on dark or colored backgrounds
     static let textOnColored = clarityWhite

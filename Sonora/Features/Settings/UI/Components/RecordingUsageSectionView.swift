@@ -63,7 +63,7 @@ struct MonthlyRecordingUsageSectionView: View {
                                 .font(.body)
                                 .foregroundColor(.semantic(.textPrimary))
                             ProgressView(value: vm.progress)
-                                .tint(.semantic(.brandPrimary))
+                                .tint(.accentColor)
                         }
                     }
                 }
@@ -82,7 +82,7 @@ struct MonthlyUsageProgressView: View {
                 .frame(width: 44, height: 44)
             Circle()
                 .trim(from: 0, to: progress)
-                .stroke(Color.semantic(.brandPrimary), style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                .stroke(Color.semantic(.fillSecondary), style: StrokeStyle(lineWidth: 8, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .frame(width: 44, height: 44)
         }
@@ -111,7 +111,7 @@ struct UpgradeCallToActionView: View {
     }
     private func bullet(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "checkmark.circle.fill").foregroundColor(.semantic(.brandPrimary))
+            Image(systemName: "checkmark.circle.fill").foregroundColor(.accentColor)
             Text(text).foregroundColor(.semantic(.textPrimary)).font(.subheadline)
         }
     }

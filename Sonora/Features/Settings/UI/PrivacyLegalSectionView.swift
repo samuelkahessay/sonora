@@ -52,7 +52,7 @@ private struct SettingsRowLink: View {
     var body: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: icon)
-                .foregroundColor(.semantic(.brandPrimary))
+                .foregroundColor(.accentColor)
                 .frame(width: 28)
 
             VStack(alignment: .leading, spacing: 2) {

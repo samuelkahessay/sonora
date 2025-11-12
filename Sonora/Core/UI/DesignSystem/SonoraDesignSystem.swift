@@ -96,8 +96,8 @@ enum SonoraDesignSystem {
 
         // MARK: - Special Typography
 
-        /// Serif font for quotes and emotional moments (system serif)
-        static let insightSerif = Font.system(.body, design: .serif)
+        /// Serif font for quotes and emotional moments (system serif, 20% larger than body)
+        static let insightSerif = Font.system(size: 20.4, weight: .regular, design: .serif)
             .leading(.loose)
 
         /// Recording timer display (Large title serif, monospaced)

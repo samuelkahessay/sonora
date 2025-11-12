@@ -11,7 +11,7 @@ internal struct DistillProgressSectionView: View {
             HStack(spacing: headerSpacing) {
                 Image(systemName: "clock.fill")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Processing Components (\(progress.completedComponents)/\(progress.totalComponents))")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
 
@@ -31,11 +31,11 @@ internal struct DistillProgressSectionView: View {
             .accessibilityLabel("Processing \(progress.completedComponents) of \(progress.totalComponents) components\(progress.latestComponent.map { ", currently processing \($0.displayName)" } ?? "")")
 
             ProgressView(value: progress.progress)
-                .progressViewStyle(LinearProgressViewStyle(tint: .semantic(.brandPrimary)))
+                .progressViewStyle(LinearProgressViewStyle(tint: .accentColor))
                 .accessibilityLabel("Progress: \(Int(progress.progress * 100))%")
         }
         .padding(SonoraDesignSystem.Spacing.md_sm)
-        .background(Color.semantic(.brandPrimary).opacity(0.05))
+        .background(Color.semantic(.fillSecondary))
         .cornerRadius(SonoraDesignSystem.Spacing.cardRadius)
         .animation(SonoraDesignSystem.Animation.progressUpdate, value: progress.completedComponents)
     }

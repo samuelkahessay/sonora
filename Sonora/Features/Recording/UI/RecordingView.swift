@@ -66,10 +66,10 @@ struct RecordingView: View {
         if !viewModel.isProUser {
             HStack(spacing: 4) {
                 Image(systemName: "clock.fill")
-                    .font(.caption2)
+                    .font(.footnote)
                 Text("\(60 - viewModel.monthlyUsageMinutes) min left this month")
             }
-            .font(.caption2)
+            .font(.footnote)
             .foregroundColor(.semantic(.textSecondary))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -77,6 +77,7 @@ struct RecordingView: View {
                 Capsule()
                     .fill(Color.semantic(.fillSecondary))
             )
+            .offset(y: 100)
             .accessibilityLabel("\(60 - viewModel.monthlyUsageMinutes) minutes remaining this month")
         }
     }

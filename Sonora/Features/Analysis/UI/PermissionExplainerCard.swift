@@ -11,7 +11,7 @@ struct PermissionExplainerCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Image(systemName: "calendar.badge.exclamationmark")
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Add items to your Calendar and Reminders")
                     .font(.subheadline.weight(.semibold))
             }

@@ -37,7 +37,7 @@ struct PersonalizationSectionView: View {
 
                 if savedBannerOpacity > 0 {
                     HStack(spacing: Spacing.xs) {
-                        Image(systemName: "checkmark.circle.fill").foregroundColor(.semantic(.brandPrimary))
+                        Image(systemName: "checkmark.circle.fill").foregroundColor(.accentColor)
                         Text("Saved")
                     }
                     .font(.caption)

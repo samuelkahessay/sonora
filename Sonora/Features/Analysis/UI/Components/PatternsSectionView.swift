@@ -16,7 +16,7 @@ internal struct PatternsSectionView: View {
             HStack(spacing: headerSpacing) {
                 Image(systemName: "link.circle")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Patterns & Connections")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.textPrimary))
@@ -47,7 +47,7 @@ private struct PatternCard: View {
             HStack(spacing: 6) {
                 Image(systemName: "sparkle")
                     .font(.caption)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
 
                 Text(pattern.theme)
                     .font(SonoraDesignSystem.Typography.cardBody)
@@ -76,8 +76,8 @@ private struct PatternCard: View {
         .background(
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color.semantic(.brandPrimary).opacity(0.05),
-                    Color.semantic(.brandPrimary).opacity(0.02)
+                    Color.semantic(.fillSecondary).opacity(0.05),
+                    Color.semantic(.fillSecondary).opacity(0.02)
                 ]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing

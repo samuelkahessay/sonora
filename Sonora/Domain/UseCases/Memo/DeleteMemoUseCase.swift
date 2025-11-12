@@ -44,7 +44,34 @@ final class DeleteMemoUseCase: DeleteMemoUseCaseProtocol {
         logger.useCase("Starting memo deletion with cascading cleanup", context: context)
 
         do {
-            // Validate memo exists in repository
+            // Check if this is an orphaned memo (not in repository but may have leftover data)
+            let memoExistsInRepository = memoRepository.memos.contains(where: { $0.id == memo.id })
+            let fileExists = FileManager.default.fileExists(atPath: memo.fileURL.path)
+
+            if !memoExistsInRepository && !fileExists {
+                // Memo is already gone from repository and file system - just clean up orphaned data
+                logger.useCase("Memo already deleted, cleaning up orphaned data",
+                             context: LogContext(correlationId: correlationId, additionalInfo: [
+                                 "memoId": memo.id.uuidString,
+                                 "reason": "stale_ui_reference"
+                             ]))
+
+                // Clean up any orphaned analysis and transcription data
+                await deleteAnalysisResults(for: memo, correlationId: correlationId)
+                await deleteTranscription(for: memo, correlationId: correlationId)
+
+                // Update Spotlight index (best-effort)
+                Task {
+                    await spotlightIndexer.delete(memoID: memo.id)
+                }
+
+                logger.useCase("Orphaned data cleanup completed",
+                             level: .info,
+                             context: LogContext(correlationId: correlationId, additionalInfo: ["memoId": memo.id.uuidString]))
+                return
+            }
+
+            // Normal deletion flow - validate memo exists in repository
             try validateMemoExists(memo)
 
             // Check if memo is currently playing and stop if needed

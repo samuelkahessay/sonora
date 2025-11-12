@@ -9,7 +9,7 @@ struct SelectedRowBackground: View {
         // Use a clear background when not selected to let the
         // list's container background show through and avoid
         // an unintended white gutter around our card.
-        let fill: Color = selected ? Color.semantic(.brandPrimary).opacity(0.1) : .clear
+        let fill: Color = selected ? Color.semantic(.fillSecondary) : .clear
         return RoundedRectangle(cornerRadius: 12, style: .continuous)
             .fill(fill)
     }

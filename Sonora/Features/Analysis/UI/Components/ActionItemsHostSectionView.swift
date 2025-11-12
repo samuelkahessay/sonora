@@ -36,7 +36,7 @@ internal struct ActionItemsHostSectionView: View {
 
             HStack(spacing: headerSpacing) {
                 Image(systemName: "calendar.badge.clock")
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Action Items")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                 Spacer()

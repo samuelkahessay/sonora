@@ -347,7 +347,7 @@ struct MemoDetailView: View {
                         isScrubbing = editing
                         if !editing { viewModel.seek(to: scrubValue) }
                 }
-                .tint(.semantic(.brandPrimary))
+                .tint(.accentColor)
                 .accessibilityLabel("Playback position")
                 .accessibilityValue("\(Int((isScrubbing ? scrubValue : viewModel.currentTime) / max(viewModel.totalDuration, 1) * 100)) percent")
                 Text(formatTime(viewModel.totalDuration))
@@ -363,7 +363,7 @@ struct MemoDetailView: View {
                 }) {
                     Image(systemName: "gobackward.15")
                         .font(.title3)
-                        .foregroundColor(.semantic(.brandPrimary))
+                        .foregroundColor(.accentColor)
                         .frame(width: 36, height: 36)
                 }
                 .buttonStyle(.plain)
@@ -378,7 +378,7 @@ struct MemoDetailView: View {
                         .font(.title2)
                         .foregroundColor(.semantic(.textOnColored))
                         .frame(width: 40, height: 40)
-                        .background(Color.semantic(.brandPrimary))
+                        .background(Color.accentColor)
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
@@ -392,7 +392,7 @@ struct MemoDetailView: View {
                 }) {
                     Image(systemName: "goforward.15")
                         .font(.title3)
-                        .foregroundColor(.semantic(.brandPrimary))
+                        .foregroundColor(.accentColor)
                         .frame(width: 36, height: 36)
                 }
                 .buttonStyle(.plain)
@@ -420,7 +420,7 @@ struct MemoDetailView: View {
                 Text("Transcription")
                     .font(.system(.headline, design: .serif))
                     .fontWeight(.semibold)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.semantic(.textPrimary))
 
                 Spacer()
                 if viewModel.transcriptionState.isFailed {
@@ -487,7 +487,7 @@ struct MemoDetailView: View {
                     Text("Transcription")
                         .font(.system(.headline, design: .serif))
                         .fontWeight(.semibold)
-                        .foregroundColor(.semantic(.brandPrimary))
+                        .foregroundColor(.semantic(.textPrimary))
                     Spacer()
                     if viewModel.transcriptionState.isInProgress {
                         LoadingIndicator(size: .small)
@@ -538,12 +538,12 @@ struct MemoDetailView: View {
                 VStack(spacing: 8) {
                     if let pct = viewModel.transcriptionProgressPercent {
                         ProgressView(value: pct)
-                            .tint(.semantic(.brandPrimary))
+                            .tint(.accentColor)
                             .background(.secondary.opacity(0.2))
                             .accessibilityValue("\(Int(pct * 100)) percent complete")
                     } else {
                         ProgressView()
-                            .tint(.semantic(.brandPrimary))
+                            .tint(.accentColor)
                             .scaleEffect(1.0)
                             .accessibilityLabel("Transcription in progress")
                     }
@@ -558,7 +558,7 @@ struct MemoDetailView: View {
             .accessibilityAddTraits(.updatesFrequently)
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.semantic(.brandPrimary).opacity(0.05))
+            .background(Color.semantic(.fillSecondary))
             .cornerRadius(8)
         case .completed(let text):
             completedTranscriptionView(text: text)

@@ -325,6 +325,11 @@ public final class MemoEventHandler {
                    category: .analysis,
                    context: context)
 
+        // Schedule notification for distill completion if app is backgrounded
+        if type == .distill || type == .liteDistill {
+            await scheduleDistillCompletionNotificationIfNeeded(memoId: memoId, type: type)
+        }
+
         // Log analysis performance metrics
         if let duration = duration {
             logger.info("Analysis metrics - Type: \(type.displayName), Duration: \(String(format: "%.1f", duration))s, Result: \(result.prefix(50))...",
@@ -420,6 +425,31 @@ private extension MemoEventHandler {
             try await addNotificationRequest(request, center: center)
         } catch {
             logger.warning("Failed to schedule transcription completion notification", category: .transcription, context: nil, error: error)
+        }
+    }
+
+    func scheduleDistillCompletionNotificationIfNeeded(memoId: UUID, type: AnalysisMode) async {
+        let appState = await MainActor.run { UIApplication.shared.applicationState }
+        guard appState != .active else { return }
+
+        let center = UNUserNotificationCenter.current()
+        guard await ensureNotificationAuthorization(center: center) else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Memo Distilled"
+        content.body = "Your memo insights are ready to review."
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "distill.\(memoId.uuidString)",
+            content: content,
+            trigger: nil
+        )
+
+        do {
+            try await addNotificationRequest(request, center: center)
+        } catch {
+            logger.warning("Failed to schedule distill completion notification", category: .analysis, context: nil, error: error)
         }
     }
 

@@ -83,7 +83,7 @@ struct MemoRowView: View {
                 ? "checkmark.circle.fill"
                 : "circle")
                 .foregroundColor(viewModel.isMemoSelected(memo)
-                    ? .semantic(.brandPrimary)
+                    ? .accentColor
                     : .semantic(.textSecondary))
                 .imageScale(.large)
                 .font(.title2)

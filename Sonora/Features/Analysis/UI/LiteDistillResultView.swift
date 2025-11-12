@@ -49,7 +49,7 @@ struct LiteDistillResultView: View {
             HStack(spacing: headerSpacing) {
                 Image(systemName: "text.quote")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Summary")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.textPrimary))
@@ -70,7 +70,7 @@ struct LiteDistillResultView: View {
             HStack(spacing: headerSpacing) {
                 Image(systemName: "tag.circle")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Key Themes")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.textPrimary))
@@ -89,11 +89,11 @@ struct LiteDistillResultView: View {
                         .padding(.vertical, 6)
                         .background(
                             Capsule()
-                                .fill(Color.semantic(.brandPrimary).opacity(0.1))
+                                .fill(Color.semantic(.fillSecondary).opacity(0.1))
                         )
                         .overlay(
                             Capsule()
-                                .stroke(Color.semantic(.brandPrimary).opacity(0.3), lineWidth: 1)
+                                .stroke(Color.semantic(.fillSecondary).opacity(0.3), lineWidth: 1)
                         )
                         .accessibilityLabel("Theme: \(theme)")
                 }
@@ -106,7 +106,7 @@ struct LiteDistillResultView: View {
             HStack(spacing: headerSpacing) {
                 Image(systemName: "lightbulb.fill")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Personal Insight")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.textPrimary))
@@ -123,7 +123,7 @@ struct LiteDistillResultView: View {
             HStack(spacing: headerSpacing) {
                 Image(systemName: "checklist")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Action Items")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.textPrimary))
@@ -144,7 +144,7 @@ struct LiteDistillResultView: View {
             HStack(spacing: headerSpacing) {
                 Image(systemName: "questionmark.circle")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
-                    .foregroundColor(.semantic(.brandPrimary))
+                    .foregroundColor(.accentColor)
                 Text("Reflection")
                     .font(SonoraDesignSystem.Typography.sectionHeading)
                     .foregroundColor(.semantic(.textPrimary))
@@ -162,10 +162,10 @@ struct LiteDistillResultView: View {
                 .padding(12)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.semantic(.brandPrimary).opacity(0.05))
+                        .fill(Color.semantic(.fillSecondary).opacity(0.05))
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.semantic(.brandPrimary).opacity(0.2), lineWidth: 1)
+                                .stroke(Color.semantic(.fillSecondary).opacity(0.2), lineWidth: 1)
                         )
                 )
         }
