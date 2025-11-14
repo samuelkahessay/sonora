@@ -82,7 +82,7 @@ struct MonthlyUsageProgressView: View {
                 .frame(width: 44, height: 44)
             Circle()
                 .trim(from: 0, to: progress)
-                .stroke(Color.semantic(.fillSecondary), style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                .stroke(Color.semantic(.info), style: StrokeStyle(lineWidth: 8, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .frame(width: 44, height: 44)
         }
