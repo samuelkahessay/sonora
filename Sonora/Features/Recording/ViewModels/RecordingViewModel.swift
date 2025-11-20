@@ -156,10 +156,6 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     deinit {
         // Cancel any pending debounce task
         recordButtonDebounceTask?.cancel()
-        // Unsubscribe from events
-        if let id = eventSubscriptionId {
-            EventBus.shared.unsubscribe(id)
-        }
         print("🎬 RecordingViewModel: Deinitialized and cleaned up debounce task")
     }
 
@@ -546,6 +542,12 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
 
         // Cancel any pending debounce task
         recordButtonDebounceTask?.cancel()
+
+        // Unsubscribe from events
+        if let id = eventSubscriptionId {
+            EventBus.shared.unsubscribe(id)
+            eventSubscriptionId = nil
+        }
 
         // Stop recording if in progress to prevent issues
         if isRecording {
