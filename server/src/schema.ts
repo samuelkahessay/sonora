@@ -32,6 +32,25 @@ function normalizeDateInput(value: unknown, allowNull: boolean): unknown {
 const IsoDateTime = z.preprocess((val) => normalizeDateInput(val, false), z.string().datetime());
 const IsoDateTimeNullable = z.preprocess((val) => normalizeDateInput(val, true), z.string().datetime().nullable());
 
+// Normalize reflection questions: accept both string and typed object, but always return string array
+// This allows the LLM to return typed questions while keeping iOS app compatibility
+function normalizeReflectionQuestions(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.map((item) => {
+    // If it's already a string, return it
+    if (typeof item === 'string') return item;
+
+    // If it's an object with a 'text' field, extract the text
+    if (item && typeof item === 'object' && 'text' in item && typeof item.text === 'string') {
+      return item.text;
+    }
+
+    // Fallback: stringify the object
+    return String(item);
+  });
+}
+
 // GPT-5 Model Settings Configuration - Optimized per complexity
 export const ModelSettings = {
   distill:                { verbosity: 'medium', reasoningEffort: 'medium' }, // Complex analysis with coaching questions
@@ -88,17 +107,17 @@ export const DistillDataSchema = z.object({
     text: z.string(),
     priority: z.enum(['high', 'medium', 'low'])
   })).optional(),
-  reflection_questions: z.array(z.string()),
+  reflection_questions: z.preprocess(normalizeReflectionQuestions, z.array(z.string())),
   closingNote: z.string().optional(),
   patterns: z.array(z.object({
     id: z.string().optional(),
     theme: z.string(),
     description: z.string(),
     relatedMemos: z.array(z.object({
-      memoId: z.string().optional(),
+      memoId: z.string().nullable(),
       title: z.string(),
-      daysAgo: z.number().optional(),
-      snippet: z.string().optional()
+      daysAgo: z.number().nullable(),
+      snippet: z.string().nullable()
     })).optional(),
     confidence: z.number().min(0).max(1).default(0.8)
   })).optional()
@@ -163,7 +182,7 @@ export const DistillThemesDataSchema = z.object({
 
 export const DistillPersonalInsightDataSchema = z.object({
   personalInsight: z.object({
-    id: z.string(),
+    id: z.string().optional(),
     type: z.enum(['emotionalTone', 'wordPattern', 'valueGlimpse', 'energyShift', 'stoicMoment', 'recurringPhrase']),
     observation: z.string(),
     invitation: z.string().nullable().optional()
@@ -175,7 +194,7 @@ export const DistillClosingNoteDataSchema = z.object({
 });
 
 export const DistillReflectionDataSchema = z.object({
-  reflection_questions: z.array(z.string())
+  reflection_questions: z.preprocess(normalizeReflectionQuestions, z.array(z.string()))
 });
 
 // Free Tier Lite Distill Schema
@@ -277,7 +296,8 @@ export const DistillJsonSchema = {
             },
             confidence: { type: "number", minimum: 0, maximum: 1 }
           },
-          required: ["theme", "description", "confidence"],
+          // Responses API requires required[] to include every key in properties.
+          required: ["id", "theme", "description", "relatedMemos", "confidence"],
           additionalProperties: false
         }
       }
