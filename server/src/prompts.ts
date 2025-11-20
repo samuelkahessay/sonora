@@ -43,14 +43,17 @@ export function buildPrompt(mode: string, transcript: string, historicalContext?
         `Return JSON with these exact fields:\n` +
         `1. "summary": 2-3 sentence overview of what they talked about\n` +
         `2. "keyThemes": 3-4 short topic labels (2-4 words each, e.g. ["Work boundaries", "Self-care", "Decision fatigue"])\n` +
-        `3. "personalInsight": ONE observation following Validation → Pivot → Diagnosis structure:\n` +
+        `3. "personalInsight": ONE observation that matches the memo type:\n` +
         `   - "type": emotionalTone|wordPattern|valueGlimpse|energyShift|stoicMoment|recurringPhrase\n` +
-        `   - "observation": MUST include three distinct sentences in this exact order:\n` +
-        `      1. Validation sentence: Acknowledge what they said/realized\n` +
-        `      2. Pivot sentence: Reframe the problem or add missing context (use transition words: "But", "However", "What's required")\n` +
-        `      3. Diagnosis sentence: Identify the real bottleneck/lever (often starting with "The real lever is" or "Bottom line:")\n` +
-        `   - "invitation": Strategic question (string or null; include the key even if null)\n` +
-        `   Example: "You've identified the salary gap as the issue. But the real bottleneck isn't just compensation—it's that you're building skills that don't transfer to $100K roles. Bottom line: Which technical gaps close the fastest?"\n` +
+        `   - "observation": Match memo type:\n` +
+        `     * Gratitude/reflection: 1-2 simple sentences that acknowledge and deepen the practice\n` +
+        `       Example: "You're anchoring your day in gratitude for health, nature, and meaningful work. This practice builds emotional resilience."\n` +
+        `     * Problem-solving: 3 sentences using Validation → Pivot → Diagnosis structure:\n` +
+        `       1. Validation: Acknowledge what they said/realized\n` +
+        `       2. Pivot: Reframe the problem (use "But", "However", "What's required")\n` +
+        `       3. Diagnosis: Identify the real bottleneck/lever\n` +
+        `       Example: "You've identified the salary gap as the issue. But the real bottleneck isn't just compensation—it's that you're building skills that don't transfer to $100K roles. Which technical gaps close the fastest?"\n` +
+        `   - "invitation": Question that matches memo type (string or null; include the key even if null)\n` +
         `4. "action_items": Explicit tasks or commitments mentioned (empty [] if none). Format: [{"text":"...","priority":"high|medium|low"}]\n` +
         `5. "reflection_questions": 2-3 questions grounded in THIS transcript:\n` +
         `   - Gratitude/reflection: "What else are you grateful for?" "How does this practice affect you?" - NOT action questions\n` +
@@ -84,10 +87,12 @@ export function buildPrompt(mode: string, transcript: string, historicalContext?
         `Return JSON with these exact fields:\n` +
         `1. "summary": 2-3 sentence overview of what they talked about\n` +
         `2. "keyThemes": 2-3 short topic labels (2-4 words each, e.g. ["Work boundaries", "Self-care"])\n` +
-        `3. "personalInsight": ONE observation with:\n` +
+        `3. "personalInsight": ONE observation that matches the memo type:\n` +
         `   - "type": emotionalTone|wordPattern|valueGlimpse|energyShift|stoicMoment|recurringPhrase\n` +
-        `   - "observation": MUST include 2-3 distinct sentences following Validation → Pivot → Diagnosis structure. Use transition words ("But", "However") for the pivot.\n` +
-        `   - "invitation": Strategic question (string or null; include the key even if null)\n` +
+        `   - "observation": Match memo type:\n` +
+        `     * Gratitude/reflection: 1-2 simple sentences that acknowledge and deepen the practice (e.g., "You're anchoring your day in gratitude for health and nature. This practice builds resilience.")\n` +
+        `     * Problem-solving: 2-3 sentences using Validation → Pivot → Diagnosis structure with transition words ("But", "However")\n` +
+        `   - "invitation": Question that matches memo type (string or null; include the key even if null)\n` +
         `4. "simpleTodos": ONLY explicit action items mentioned (empty [] if none). Format: [{"text":"...","priority":"high|medium|low"}]\n` +
         `5. "reflectionQuestion": ONE question grounded in THIS transcript:\n` +
         `   - Gratitude/reflection: "What else are you noticing?" or "How does this practice serve you?" - NOT action questions\n` +
