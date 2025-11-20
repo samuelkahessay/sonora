@@ -78,6 +78,8 @@ struct RecordingViewState: Equatable {
     /// Alert state for auto-stop notifications
     struct AlertState: Equatable {
         var showAutoStopAlert: Bool = false
+        var showSaveSuccessBanner: Bool = false
+        var saveSuccessMessage: String = ""
     }
 
     /// Operation tracking state

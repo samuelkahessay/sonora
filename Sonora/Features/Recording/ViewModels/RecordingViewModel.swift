@@ -24,6 +24,9 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     private let storeKitService: any StoreKitServiceProtocol
     private var cancellables = Set<AnyCancellable>()
 
+    // Event subscription
+    private var eventSubscriptionId: UUID?
+
     // MARK: - Debounce Management
     private var recordButtonDebounceTask: Task<Void, Never>?
     private var wasRecording = false
@@ -125,6 +128,7 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
         setupBindings()
         setupRecordingCallback()
         setupOperationStatusMonitoring()
+        setupEventSubscription()
 
         // Subscribe to monthly usage and Pro entitlement
         usageRepository.monthUsagePublisher
@@ -152,6 +156,10 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
     deinit {
         // Cancel any pending debounce task
         recordButtonDebounceTask?.cancel()
+        // Unsubscribe from events
+        if let id = eventSubscriptionId {
+            EventBus.shared.unsubscribe(id)
+        }
         print("🎬 RecordingViewModel: Deinitialized and cleaned up debounce task")
     }
 
@@ -285,6 +293,17 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
             Task { @MainActor in
                 print("🎤 RecordingViewModel: Recording finished callback triggered for \(url.lastPathComponent)")
                 self?.handleRecordingFinished(at: url)
+            }
+        }
+    }
+
+    private func setupEventSubscription() {
+        // Subscribe to memoCreated events to show save confirmation
+        eventSubscriptionId = EventBus.shared.subscribe(to: AppEvent.self) { [weak self] event in
+            Task { @MainActor in
+                if case .memoCreated(let memo) = event {
+                    self?.showSaveConfirmation(for: memo)
+                }
             }
         }
     }
@@ -497,6 +516,23 @@ final class RecordingViewModel: ObservableObject, OperationStatusDelegate {
                 print("❌ RecordingViewModel: Failed to handle new recording: \(error)")
             }
         }
+    }
+
+    /// Show success confirmation banner when a memo is saved
+    private func showSaveConfirmation(for memo: Memo) {
+        let duration = formatTime(memo.duration)
+        state.alert.saveSuccessMessage = "Voice memo saved (\(duration))"
+        state.alert.showSaveSuccessBanner = true
+
+        // Auto-dismiss after 3 seconds
+        Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+            await MainActor.run {
+                state.alert.showSaveSuccessBanner = false
+            }
+        }
+
+        print("✅ RecordingViewModel: Showing save confirmation for memo: \(memo.filename)")
     }
 
     // MARK: - Lifecycle
@@ -731,6 +767,16 @@ extension RecordingViewModel {
     var showAutoStopAlert: Bool {
         get { state.alert.showAutoStopAlert }
         set { state.alert.showAutoStopAlert = newValue }
+    }
+
+    var showSaveSuccessBanner: Bool {
+        get { state.alert.showSaveSuccessBanner }
+        set { state.alert.showSaveSuccessBanner = newValue }
+    }
+
+    var saveSuccessMessage: String {
+        get { state.alert.saveSuccessMessage }
+        set { state.alert.saveSuccessMessage = newValue }
     }
 
     // MARK: - Operation Properties
