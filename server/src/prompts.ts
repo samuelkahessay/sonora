@@ -47,8 +47,11 @@ export function buildPrompt(mode: string, transcript: string, historicalContext?
         `   - "invitation": Strategic question (string or null; include the key even if null)\n` +
         `   Example: "You've identified the salary gap as the issue. But the real bottleneck isn't just compensation—it's that you're building skills that don't transfer to $100K roles. Bottom line: Which technical gaps close the fastest?"\n` +
         `4. "action_items": Explicit tasks or commitments mentioned (empty [] if none). Format: [{"text":"...","priority":"high|medium|low"}]\n` +
-        `5. "reflection_questions": 2-3 strategic questions as a simple string array:\n` +
-        `   - Format: ["What's the real bottleneck?", "What are you optimizing for?", "What's the first testable move?"]\n` +
+        `5. "reflection_questions": 2-3 strategic questions that directly respond to what they said in THIS transcript:\n` +
+        `   - MUST be grounded in the actual content, themes, and context - not generic templates\n` +
+        `   - If gratitude/positive: deepen the reflection. If problem-solving: explore blockers or next moves\n` +
+        `   - Use their own words/themes when possible for personalization\n` +
+        `   - Format: ["question1?", "question2?", "question3?"]\n` +
         `   - Return plain strings ONLY - do NOT use typed objects with type/text fields\n` +
         `6. "closingNote": One-sentence bottom line that prescribes next move. Format: "Bottom line: [specific action or decision]"\n` +
         `7. "patterns": (Pro feature) If historical context provided, detect recurring themes across memos:\n` +
@@ -114,15 +117,20 @@ export function buildPrompt(mode: string, transcript: string, historicalContext?
       break;
     case 'distill-reflection':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
-        `Generate 2-3 strategic questions as a simple string array:\n` +
-        `- Format: {"reflection_questions": ["question1?", "question2?", "question3?"]}\n` +
-        `- Return plain strings ONLY - do NOT use typed objects with type/text fields\n` +
-        `- Question types for inspiration (but return as plain strings):\n` +
-        `  - Diagnostic reframe: Identify the core blocker\n` +
-        `  - Trade-off exploration: "What are you optimizing for - X or Y?"\n` +
-        `  - Execution clarity: "What's the first testable move?"\n` +
-        `  - Pattern detection: "When else have you seen this?"\n` +
-        `Return JSON with reflection_questions array (strings only).`;
+        `Generate 2-3 strategic questions that directly respond to what they said in this specific transcript.\n\n` +
+        `IMPORTANT: Questions must be grounded in the actual content, themes, and context of THIS transcript - not generic coaching templates.\n\n` +
+        `Guidelines:\n` +
+        `- If they're reflecting on gratitude or positive emotions, ask questions that deepen that reflection\n` +
+        `- If they're working through a problem, ask about the core blocker or next move\n` +
+        `- If they mention multiple themes, help them prioritize or see connections\n` +
+        `- Use their own words/themes when possible to make questions feel personalized\n\n` +
+        `Question types (adapt to transcript content):\n` +
+        `  - Deepening: Explore what they mentioned more deeply\n` +
+        `  - Connection: Link themes or patterns they mentioned\n` +
+        `  - Action: If appropriate, what's the next move?\n` +
+        `  - Perspective: Reframe what they said in a new light\n\n` +
+        `Format: {"reflection_questions": ["question1?", "question2?", "question3?"]}\n` +
+        `Return plain strings ONLY - do NOT use typed objects with type/text fields.`;
       break;
     case 'events':
       user = `Transcript (delimited by <<< >>>):\n<<<${safe}>>>\n` +
