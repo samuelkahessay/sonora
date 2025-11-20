@@ -85,6 +85,15 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
                 self?.refreshAutoTitleStatesFromJobs()
             }
             .store(in: &cancellables)
+
+        // Subscribe to transcription state changes to refresh memo list when transcription completes
+        // This enables auto-title to trigger immediately after transcription finishes
+        transcriptionRepository.stateChangesPublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] stateChange in
+                self?.handleTranscriptionStateChange(stateChange)
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Directory Management
@@ -291,6 +300,28 @@ final class MemoRepositoryImpl: ObservableObject, MemoRepository {
         updateMemos(updated)
         memosCache = updated
         memosCacheTime = Date()
+    }
+
+    private func handleTranscriptionStateChange(_ stateChange: TranscriptionStateChange) {
+        let currentMemos = memosSubject.value
+        guard let index = currentMemos.firstIndex(where: { $0.id == stateChange.memoId }) else {
+            return
+        }
+
+        let memo = currentMemos[index]
+        let newDomainStatus = mapToDomainStatus(stateChange.currentState)
+
+        // Only update if the status actually changed
+        guard memo.transcriptionStatus != newDomainStatus else { return }
+
+        var updated = currentMemos
+        updated[index] = memo.withTranscriptionStatus(newDomainStatus)
+
+        updateMemos(updated)
+        memosCache = updated
+        memosCacheTime = Date()
+
+        print("🔄 MemoRepository: Updated transcription status for memo \(memo.filename) to \(stateChange.currentState.statusText)")
     }
 
     func loadMemos() {
