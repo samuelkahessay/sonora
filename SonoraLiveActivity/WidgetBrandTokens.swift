@@ -15,6 +15,8 @@ enum WidgetSemanticColor {
     case separator
     case brandPrimary   // insightGold
     case brandSecondary // growthGreen
+    case info           // systemBlue
+    case error          // systemRed
 }
 
 extension Color {
@@ -29,6 +31,8 @@ extension Color {
         case .separator:      return Color(UIColor.separator)
         case .brandPrimary:   return Color(hex: 0xD4AF37) // insightGold
         case .brandSecondary: return Color(hex: 0x4A9B8E) // growthGreen
+        case .info:           return Color(UIColor.systemBlue)
+        case .error:          return Color(UIColor.systemRed)
         }
     }
 

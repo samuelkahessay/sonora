@@ -19,7 +19,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                     HStack(spacing: 6) {
                         Image(systemName: context.state.isCountdown ? "hourglass.circle.fill" : "mic.fill")
                             .font(.title3)
-                            .foregroundStyle(Color.semantic(.fillSecondary))
+                            .foregroundStyle(Color.semantic(.info))
                             .symbolEffect(.pulse, options: .repeating, value: !context.state.isCountdown)
                         Text("SONORA")
                             .font(.caption.smallCaps())
@@ -33,7 +33,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
                             .foregroundStyle(Color.semantic(.textOnColored))
                             .padding(.horizontal, 14)
                             .padding(.vertical, 6)
-                            .background(Capsule().fill(Color.semantic(.fillSecondary)))
+                            .background(Capsule().fill(Color.semantic(.error)))
                     }
                     .buttonStyle(.plain)
                 }
@@ -43,7 +43,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
             } compactLeading: {
                 Image(systemName: "mic.fill")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.semantic(.fillSecondary))
+                    .foregroundStyle(Color.semantic(.info))
                     .symbolEffect(.pulse, options: .repeating, value: true)
             } compactTrailing: {
                 Text(shortElapsed(from: context.state.startTime))
@@ -52,7 +52,7 @@ struct SonoraLiveActivityLiveActivity: Widget {
             } minimal: {
                 Image(systemName: "mic.fill")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(Color.semantic(.fillSecondary))
+                    .foregroundStyle(Color.semantic(.info))
             }
             .widgetURL(URL(string: "sonora://open"))
         }
@@ -69,7 +69,7 @@ struct PremiumLiveActivityView: View {
         HStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(Color.semantic(.fillSecondary))
+                    .fill(Color.semantic(.info))
                     .frame(width: 36, height: 36)
                 Image(systemName: context.state.isCountdown ? "hourglass" : "mic.fill")
                     .foregroundStyle(Color.semantic(.textOnColored))
@@ -113,7 +113,7 @@ struct PremiumLiveActivityView: View {
                     .foregroundStyle(Color.semantic(.textOnColored))
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
-                    .background(Capsule().fill(Color.semantic(.fillSecondary)))
+                    .background(Capsule().fill(Color.semantic(.error)))
             }
             .buttonStyle(.plain)
         }
