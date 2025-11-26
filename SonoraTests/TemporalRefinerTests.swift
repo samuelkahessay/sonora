@@ -163,4 +163,142 @@ final class TemporalRefinerTests: XCTestCase {
         XCTAssertEqual(components.hour, 10)
         XCTAssertEqual(components.minute, 0)
     }
+
+    func testRefinesEventFromNonNoonBackendTime() {
+        // Test case: Backend incorrectly returns 7 AM, but sourceText says "2 pm"
+        let transcript = "I have to go to meal prep tomorrow at 2 pm tomorrow"
+        let calendar = Calendar.current
+
+        var comps = DateComponents()
+        comps.year = 2_025
+        comps.month = 11
+        comps.day = 25 // Today
+        comps.hour = 10
+        let now = calendar.date(from: comps) ?? Date()
+
+        let baseDay = calendar.startOfDay(for: now)
+        let tomorrowDay = calendar.date(byAdding: .day, value: 1, to: baseDay) ?? baseDay
+
+        // Backend incorrectly returns 7 AM
+        let upstreamStart = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: tomorrowDay)
+        let upstreamEnd = upstreamStart.flatMap { calendar.date(byAdding: .hour, value: 1, to: $0) }
+
+        let event = EventsData.DetectedEvent(
+            title: "Meal prep",
+            startDate: upstreamStart,
+            endDate: upstreamEnd,
+            location: nil,
+            participants: nil,
+            confidence: 0.9,
+            sourceText: "I have to go to meal prep tomorrow at 2 pm tomorrow",
+            memoId: UUID()
+        )
+
+        let input = EventsData(events: [event])
+
+        let refined = TemporalRefiner.refine(eventsData: input, transcript: transcript, now: now)
+
+        guard let e = refined?.events.first, let start = e.startDate else {
+            XCTFail("Expected refined event with start date")
+            return
+        }
+
+        let startComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: start)
+        XCTAssertEqual(startComponents.year, 2_025)
+        XCTAssertEqual(startComponents.month, 11)
+        XCTAssertEqual(startComponents.day, 26) // Tomorrow
+        XCTAssertEqual(startComponents.hour, 14) // 2 PM, not 7 AM
+        XCTAssertEqual(startComponents.minute, 0)
+    }
+
+    func testRefinesEventWithBareHourDefaultsToPM() {
+        // Test case: Backend incorrectly returns 10 AM, but sourceText says "at 5"
+        // Should default to 5 PM (17:00)
+        let transcript = "I have to go to the gym today at 5 today"
+        let calendar = Calendar.current
+
+        var comps = DateComponents()
+        comps.year = 2_025
+        comps.month = 11
+        comps.day = 25
+        comps.hour = 9
+        let now = calendar.date(from: comps) ?? Date()
+
+        let baseDay = calendar.startOfDay(for: now)
+
+        // Backend incorrectly returns 10 AM
+        let upstreamStart = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: baseDay)
+        let upstreamEnd = upstreamStart.flatMap { calendar.date(byAdding: .hour, value: 1, to: $0) }
+
+        let event = EventsData.DetectedEvent(
+            title: "Gym",
+            startDate: upstreamStart,
+            endDate: upstreamEnd,
+            location: "Gym",
+            participants: nil,
+            confidence: 0.9,
+            sourceText: "I have to go to the gym today at 5 today",
+            memoId: UUID()
+        )
+
+        let input = EventsData(events: [event])
+
+        let refined = TemporalRefiner.refine(eventsData: input, transcript: transcript, now: now)
+
+        guard let e = refined?.events.first, let start = e.startDate else {
+            XCTFail("Expected refined event with start date")
+            return
+        }
+
+        let startComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: start)
+        XCTAssertEqual(startComponents.year, 2_025)
+        XCTAssertEqual(startComponents.month, 11)
+        XCTAssertEqual(startComponents.day, 25) // Today
+        XCTAssertEqual(startComponents.hour, 17) // 5 PM, not 10 AM
+        XCTAssertEqual(startComponents.minute, 0)
+    }
+
+    func testRefinesReminderFromNonNoonBackendTime() {
+        // Test case: Backend incorrectly returns 7 AM, but sourceText says "2 pm"
+        let transcript = "Remember to meal prep tomorrow at 2 pm"
+        let calendar = Calendar.current
+
+        var comps = DateComponents()
+        comps.year = 2_025
+        comps.month = 11
+        comps.day = 25
+        comps.hour = 10
+        let now = calendar.date(from: comps) ?? Date()
+
+        let baseDay = calendar.startOfDay(for: now)
+        let tomorrowDay = calendar.date(byAdding: .day, value: 1, to: baseDay) ?? baseDay
+
+        // Backend incorrectly returns 7 AM
+        let upstreamDue = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: tomorrowDay)
+
+        let reminder = RemindersData.DetectedReminder(
+            title: "Meal prep",
+            dueDate: upstreamDue,
+            priority: .medium,
+            confidence: 0.9,
+            sourceText: "Remember to meal prep tomorrow at 2 pm",
+            memoId: UUID()
+        )
+
+        let input = RemindersData(reminders: [reminder])
+
+        let refined = TemporalRefiner.refine(remindersData: input, transcript: transcript, now: now)
+
+        guard let r = refined?.reminders.first, let due = r.dueDate else {
+            XCTFail("Expected refined reminder with due date")
+            return
+        }
+
+        let dueComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: due)
+        XCTAssertEqual(dueComponents.year, 2_025)
+        XCTAssertEqual(dueComponents.month, 11)
+        XCTAssertEqual(dueComponents.day, 26) // Tomorrow
+        XCTAssertEqual(dueComponents.hour, 14) // 2 PM, not 7 AM
+        XCTAssertEqual(dueComponents.minute, 0)
+    }
 }

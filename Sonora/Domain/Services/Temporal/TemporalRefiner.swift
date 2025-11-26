@@ -44,9 +44,12 @@ enum TemporalRefiner {
                 if let (h, m) = explicitTime {
                     if let due = newDue {
                         let comps = calendar.dateComponents([.hour, .minute], from: due)
-                        let isDefaultNoon = comps.hour == 12 && comps.minute == 0
-                        let isDefaultMidnight = comps.hour == 0 && comps.minute == 0
-                        if isDefaultNoon || isDefaultMidnight {
+                        let currentHour = comps.hour ?? 12
+                        let currentMinute = comps.minute ?? 0
+
+                        // Apply explicit time if it differs from backend time
+                        // (previously only applied if backend was noon/midnight)
+                        if currentHour != h || currentMinute != m {
                             newDue = calendar.date(bySettingHour: h, minute: m, second: 0, of: due)
                         }
                     } else if let relative = relative {
@@ -61,10 +64,15 @@ enum TemporalRefiner {
                 } else if let due = newDue, let md = matchedDate {
                     let dueComps = calendar.dateComponents([.hour, .minute], from: due)
                     let mdComps = calendar.dateComponents([.hour, .minute], from: md)
-                    let isDueDefaultNoon = dueComps.hour == 12 && dueComps.minute == 0
-                    let mdIsNonNoon = !(mdComps.hour == 12 && mdComps.minute == 0)
-                    if isDueDefaultNoon && mdIsNonNoon {
-                        newDue = calendar.date(bySettingHour: mdComps.hour ?? 12, minute: mdComps.minute ?? 0, second: 0, of: due)
+                    let currentHour = dueComps.hour ?? 12
+                    let currentMinute = dueComps.minute ?? 0
+                    let mdHour = mdComps.hour ?? 12
+                    let mdMinute = mdComps.minute ?? 0
+
+                    // Apply NSDataDetector's parsed time if it differs from backend time
+                    // (previously only applied if backend was noon and matched was non-noon)
+                    if currentHour != mdHour || currentMinute != mdMinute {
+                        newDue = calendar.date(bySettingHour: mdHour, minute: mdMinute, second: 0, of: due)
                     }
                 }
 
@@ -134,9 +142,12 @@ enum TemporalRefiner {
                 if let (h, m) = explicitTime {
                     if let start = newStart {
                         let startComps = calendar.dateComponents([.hour, .minute], from: start)
-                        let isDefaultNoon = startComps.hour == 12 && startComps.minute == 0
-                        let isDefaultMidnight = startComps.hour == 0 && startComps.minute == 0
-                        if isDefaultNoon || isDefaultMidnight {
+                        let currentHour = startComps.hour ?? 12
+                        let currentMinute = startComps.minute ?? 0
+
+                        // Apply explicit time if it differs from backend time
+                        // (previously only applied if backend was noon/midnight)
+                        if currentHour != h || currentMinute != m {
                             let originalStart = start
                             newStart = calendar.date(bySettingHour: h, minute: m, second: 0, of: start)
                             if let duration = durationBetween(start: originalStart, end: newEnd), let adjustedStart = newStart {
@@ -164,11 +175,16 @@ enum TemporalRefiner {
                 } else if let start = newStart, let md = matchedDate {
                     let startComps = calendar.dateComponents([.hour, .minute], from: start)
                     let mdComps = calendar.dateComponents([.hour, .minute], from: md)
-                    let isStartDefaultNoon = startComps.hour == 12 && startComps.minute == 0
-                    let mdIsNonNoon = !(mdComps.hour == 12 && mdComps.minute == 0)
-                    if isStartDefaultNoon && mdIsNonNoon {
+                    let currentHour = startComps.hour ?? 12
+                    let currentMinute = startComps.minute ?? 0
+                    let mdHour = mdComps.hour ?? 12
+                    let mdMinute = mdComps.minute ?? 0
+
+                    // Apply NSDataDetector's parsed time if it differs from backend time
+                    // (previously only applied if backend was noon and matched was non-noon)
+                    if currentHour != mdHour || currentMinute != mdMinute {
                         let originalStart = start
-                        newStart = calendar.date(bySettingHour: mdComps.hour ?? 12, minute: mdComps.minute ?? 0, second: 0, of: start)
+                        newStart = calendar.date(bySettingHour: mdHour, minute: mdMinute, second: 0, of: start)
                         if let duration = durationBetween(start: originalStart, end: newEnd), let adjustedStart = newStart {
                             newEnd = adjustedStart.addingTimeInterval(duration)
                         }
@@ -262,6 +278,20 @@ enum TemporalRefiner {
             let token = String(lower[match])
             let parts = token.split(separator: ":")
             if let h = Int(parts[0]), let m = Int(parts[1]) { return (h, m) }
+        }
+
+        // Bare hour without am/pm (e.g., "at 5" or "at 3") - default to PM for 1-11, AM for 12
+        let patternBare = #"\b(?:at|around|about)\s+(1[0-2]|0?[1-9])(?:\s|$|[,.])"#
+        if let regex = try? NSRegularExpression(pattern: patternBare, options: []) {
+            let range = NSRange(lower.startIndex..<lower.endIndex, in: lower)
+            if let match = regex.firstMatch(in: lower, options: [], range: range), match.numberOfRanges >= 2 {
+                let hourStr = (lower as NSString).substring(with: match.range(at: 1))
+                if let hour = Int(hourStr) {
+                    // Default to PM for hours 1-11, keep 12 as 12 (noon)
+                    let adjustedHour = (hour >= 1 && hour <= 11) ? hour + 12 : hour
+                    return (adjustedHour, 0)
+                }
+            }
         }
 
         return nil
