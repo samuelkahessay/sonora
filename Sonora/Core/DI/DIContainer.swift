@@ -53,6 +53,9 @@ final class DIContainer: ObservableObject, Resolver {
     private var _autoTitleJobRepository: (any AutoTitleJobRepository)?
     private var _titleGenerationCoordinator: TitleGenerationCoordinator?
     private var _generateAutoTitleUseCase: (any GenerateAutoTitleUseCaseProtocol)?
+    // Distill
+    private var _autoDistillJobRepository: (any AutoDistillJobRepository)?
+    private var _distillationCoordinator: DistillationCoordinator?
     // Recording Use Cases
     private var _startRecordingUseCase: (any StartRecordingUseCaseProtocol)?
     // Notifications
@@ -456,6 +459,16 @@ final class DIContainer: ObservableObject, Resolver {
     }
 
     @MainActor
+    func autoDistillJobRepository() -> any AutoDistillJobRepository {
+        ensureConfigured()
+        if let repo = _autoDistillJobRepository { return repo }
+        guard let ctx = _modelContext else { fatalError("ModelContext not configured: autoDistillJobRepository") }
+        let repo = AutoDistillJobRepositoryImpl(context: ctx)
+        _autoDistillJobRepository = repo
+        return repo
+    }
+
+    @MainActor
     func titleGenerationCoordinator() -> TitleGenerationCoordinator {
         ensureConfigured()
         if let coordinator = _titleGenerationCoordinator { return coordinator }
@@ -467,6 +480,40 @@ final class DIContainer: ObservableObject, Resolver {
             logger: logger()
         )
         _titleGenerationCoordinator = coordinator
+        return coordinator
+    }
+
+    @MainActor
+    func distillationCoordinator() -> DistillationCoordinator {
+        ensureConfigured()
+        if let coordinator = _distillationCoordinator { return coordinator }
+        let coordinator = DistillationCoordinator(
+            analyzeLiteDistillUseCase: analyzeLiteDistillUseCase(),
+            analyzeDistillUseCase: AnalyzeDistillUseCase(
+                analysisService: analysisService(),
+                analysisRepository: analysisRepository(),
+                logger: logger(),
+                eventBus: eventBus(),
+                operationCoordinator: operationCoordinator()
+            ),
+            analyzeDistillParallelUseCase: AnalyzeDistillParallelUseCase(
+                analysisService: analysisService(),
+                analysisRepository: analysisRepository(),
+                logger: logger(),
+                eventBus: eventBus(),
+                operationCoordinator: operationCoordinator(),
+                detectUseCase: detectEventsAndRemindersUseCase(),
+                buildHistoricalContextUseCase: buildHistoricalContextUseCase(),
+                storeKitService: storeKitService()
+            ),
+            memoRepository: memoRepository(),
+            transcriptionRepository: transcriptionRepository(),
+            analysisRepository: analysisRepository(),
+            jobRepository: autoDistillJobRepository(),
+            storeKitService: storeKitService(),
+            logger: logger()
+        )
+        _distillationCoordinator = coordinator
         return coordinator
     }
 
@@ -792,6 +839,8 @@ final class DIContainer: ObservableObject, Resolver {
         self._analysisRepository = anRepo
         let titleJobRepo = AutoTitleJobRepositoryImpl(context: ctx)
         self._autoTitleJobRepository = titleJobRepo
+        let distillJobRepo = AutoDistillJobRepositoryImpl(context: ctx)
+        self._autoDistillJobRepository = distillJobRepo
 
         guard let trFactory = _transcriptionServiceFactory, let bus = _eventBus, let mod = _moderationService else {
             fatalError("DIContainer not fully configured: missing dependencies for memo repository")
@@ -813,6 +862,16 @@ final class DIContainer: ObservableObject, Resolver {
             transcriptionRepository: trRepo,
             autoTitleJobRepository: titleJobRepo
         )
+
+        // Initialize coordinators now that persistence is ready
+        self._titleGenerationCoordinator = TitleGenerationCoordinator(
+            titleService: titleService(),
+            memoRepository: memoRepository(),
+            transcriptionRepository: transcriptionRepository(),
+            jobRepository: titleJobRepo,
+            logger: logger()
+        )
+        // DistillationCoordinator will be lazily initialized via distillationCoordinator() factory method
 
         // Initialize PromptUsageRepository (SwiftData)
         self._promptUsageRepository = PromptUsageRepositoryImpl(context: ctx)

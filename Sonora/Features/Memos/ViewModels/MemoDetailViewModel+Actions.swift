@@ -183,4 +183,11 @@ extension MemoDetailViewModel {
             await updateOperationStatus()
         }
     }
+
+    /// Retry auto-distillation for the current memo
+    func retryDistillation() {
+        guard let memoId = currentMemo?.id else { return }
+        distillationCoordinator.enqueue(memoId: memoId)
+        isAnalyzing = true
+    }
 }

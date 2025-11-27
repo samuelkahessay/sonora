@@ -150,6 +150,9 @@ struct MemoDetailView: View {
                     isTranscriptExpanded = true
                 }
             }
+            if viewModel.autoDistillState.isSuccess {
+                isTranscriptExpanded = false
+            }
         }
         .initialFocus {
             focusedElement = .playButton
@@ -174,6 +177,13 @@ struct MemoDetailView: View {
                 ) {
                     focusedElement = .analysisResults
                 }
+            }
+        }
+        .onChange(of: viewModel.autoDistillState) { _, state in
+            if state.isSuccess {
+                isTranscriptExpanded = false
+            } else if case .failed = state {
+                isTranscriptExpanded = true
             }
         }
         .onChange(of: viewModel.didDeleteMemo) { _, deleted in
@@ -220,7 +230,7 @@ struct MemoDetailView: View {
     // MARK: - Extracted Sections
 
     // Collapsed transcript + banners state
-    @State private var isTranscriptExpanded: Bool = false
+    @State private var isTranscriptExpanded: Bool = true
     @State private var dismissTranscriptionErrorBanner: Bool = false
     // Scrubber state
     @State private var isScrubbing: Bool = false
@@ -477,33 +487,25 @@ struct MemoDetailView: View {
 
     @ViewBuilder
     private var transcriptCollapsedView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            DisclosureGroup(isExpanded: $isTranscriptExpanded) {
-                // Body
-                transcriptionStateView
-                    .padding(.top, 8)
-            } label: {
-                HStack(spacing: 8) {
-                    Text("Transcription")
-                        .font(.system(.headline, design: .serif))
-                        .fontWeight(.semibold)
-                        .foregroundColor(.semantic(.textPrimary))
-                    Spacer()
-                    if viewModel.transcriptionState.isInProgress {
-                        LoadingIndicator(size: .small)
-                    } else if viewModel.transcriptionState.isFailed {
-                        if case .failed(let err) = viewModel.transcriptionState,
-                           err != TranscriptionError.noSpeechDetected.errorDescription {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.semantic(.warning))
-                                .font(.body)
-                        }
-                    } else if viewModel.transcriptionState.isCompleted {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.semantic(.success))
-                            .font(.body)
+        let hasDistillation = viewModel.autoDistillState.isSuccess
+        return VStack(alignment: .leading, spacing: 12) {
+            if hasDistillation {
+                DisclosureGroup(isExpanded: $isTranscriptExpanded) {
+                    transcriptionStateView
+                        .padding(.top, 8)
+                } label: {
+                    HStack(spacing: 8) {
+                        Text("Transcript")
+                            .font(.system(.headline, design: .serif))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.semantic(.textPrimary))
+                        Spacer()
+                        Image(systemName: isTranscriptExpanded ? "chevron.up" : "chevron.down")
+                            .foregroundColor(.secondary)
                     }
                 }
+            } else {
+                transcriptionStateView
             }
         }
         .padding()

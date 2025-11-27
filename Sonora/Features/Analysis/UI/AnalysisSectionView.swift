@@ -7,67 +7,31 @@ struct AnalysisSectionView: View {
     @State private var loaderMessageIndex = -1
 
     var body: some View {
-        let isDistillCompleted = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisPayload != nil)
+        let state = viewModel.autoDistillState
+        let isDistillCompleted = state.isSuccess || viewModel.analysisPayload != nil
         let showDebugBorders = LayoutDebug.distillButton
         VStack(alignment: .leading, spacing: 16) {
-            // Analysis error banner at top with retry
             if let err = viewModel.analysisError {
                 NotificationBanner(
                     type: .error,
                     message: err,
                     onPrimaryAction: {
-                        viewModel.performAnalysis(mode: .distill, transcript: transcript)
+                        viewModel.retryDistillation()
                     },
                     onDismiss: {
                         viewModel.analysisError = nil
                     }
                 )
             }
-            if isDistillCompleted {
-                // Flatter header once analysis is complete (centered)
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .font(.subheadline)
-                        .foregroundColor(.accentColor)
-                    Text("Distilled")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.semantic(.textPrimary))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 8)
-            } else {
-                let hasCached = viewModel.hasCachedDistill
-                let hasShown = (viewModel.selectedAnalysisMode == .distill && viewModel.analysisPayload != nil)
-                let isAnalyzing = viewModel.isAnalyzing
 
-                DistillCTAButton(
-                    isAnalyzing: isAnalyzing,
-                    hasCachedResult: hasCached,
-                    hasShownCachedResult: hasShown
-                ) {
-                        HapticManager.shared.playSelection()
-                        if hasCached {
-                            if !hasShown {
-                                Task {
-                                    await viewModel.restoreCachedDistill()
-                                }
-                            }
-                        } else {
-                            viewModel.performAnalysis(mode: .distill, transcript: transcript)
-                        }
+            if case .failed(let reason, let message) = state {
+                DistillFailureView(reason: reason, message: message) {
+                    viewModel.retryDistillation()
                 }
-                .buttonStyle(PressableCardButtonStyle())
-                .contentShape(RoundedRectangle(cornerRadius: DistillLayout.buttonCornerRadius, style: .continuous))
-                .disabled(isAnalyzing || (hasCached && hasShown))
-                .accessibilityLabel(hasCached ? "View Distill" : "Distill")
-                .accessibilityHint(hasCached ? "Double tap to open the saved AI insight" : "Double tap to generate AI insights for this memo")
-                .debugBorder(showDebugBorders, color: DistillLayout.debugButtonBorder, cornerRadius: DistillLayout.buttonCornerRadius)
             }
 
-            // Loading State
-            if viewModel.isAnalyzing {
-                let loaderMessage = DistillCopy.loaderMessages[safe: loaderMessageIndex] ?? DistillCopy.loaderMessages.first ?? "Distilling your voice"
+            if isLoading(state: state) {
+                let loaderMessage = currentLoaderMessage
                 HStack(spacing: 12) {
                     LoadingIndicator(size: .small)
                     Text(loaderMessage)
@@ -82,46 +46,64 @@ struct AnalysisSectionView: View {
                 .animation(SonoraDesignSystem.Animation.loaderMessage, value: loaderMessageIndex)
             }
 
-            // Results with AI disclaimer (only when there are results)
-            if let mode = viewModel.selectedAnalysisMode {
-                VStack(alignment: .leading, spacing: 12) {
-                    // Show progressive results for parallel distill or final results
-                    if mode == .distill && viewModel.isParallelDistillEnabled,
-                       let partialData = viewModel.partialDistillData,
-                       let progress = viewModel.distillProgress {
-                        DistillResultView(partialData: partialData, progress: progress, memoId: viewModel.memoId)
-                            // Avoid scale transitions that can cause visual overlap with siblings
+            VStack(alignment: .leading, spacing: 12) {
+                if case .streaming(let progress) = state, let progress = progress {
+                    DistillResultView(partialData: progress.completedResults, progress: progress, memoId: viewModel.memoId)
+                        .transition(.opacity)
+                        .animation(SonoraDesignSystem.Animation.progressUpdate, value: progress.completedComponents)
+                    if progress.completedComponents > 0 {
+                        AIDisclaimerView.analysis()
                             .transition(.opacity)
                             .animation(SonoraDesignSystem.Animation.progressUpdate, value: progress.completedComponents)
-
-                        // Show disclaimer when any partial results are present
-                        if progress.completedComponents > 0 {
-                            AIDisclaimerView.analysis()
-                                .transition(.opacity)
-                                .animation(SonoraDesignSystem.Animation.progressUpdate, value: progress.completedComponents)
-                        }
-                    } else if let payload = viewModel.analysisPayload {
-                        AnalysisResultsView(
-                            payload: payload,
-                            memoId: viewModel.memoId
-                        )
-
-                        // Show disclaimer only with actual results
-                        AIDisclaimerView.analysis()
-                            .accessibilityLabel("AI disclaimer. Review for accuracy. Learn more.")
                     }
+                } else if case .success = state, let payload = viewModel.analysisPayload {
+                    AnalysisResultsView(
+                        payload: payload,
+                        memoId: viewModel.memoId
+                    )
+                    AIDisclaimerView.analysis()
+                        .accessibilityLabel("AI disclaimer. Review for accuracy. Learn more.")
+                } else if case .success = state {
+                    loaderPlaceholder
                 }
-                // Do not animate container height when toggling analyzing state
-                .animation(nil, value: viewModel.isAnalyzing)
-                .accessibilityElement(children: .contain)
             }
+            .animation(nil, value: state)
+            .accessibilityElement(children: .contain)
         }
         .modifier(AnalysisContainerStyle(isCompleted: isDistillCompleted, showDebugBorder: showDebugBorders))
         .frame(maxWidth: .infinity)
-        .onChange(of: viewModel.isAnalyzing) { _, isAnalyzing in
-            guard isAnalyzing, !DistillCopy.loaderMessages.isEmpty else { return }
+        .onChange(of: state) { _, newValue in
+            guard case .inProgress = newValue, !DistillCopy.loaderMessages.isEmpty else { return }
             loaderMessageIndex = (loaderMessageIndex + 1) % DistillCopy.loaderMessages.count
         }
+    }
+
+    private var currentLoaderMessage: String {
+        DistillCopy.loaderMessages[safe: loaderMessageIndex] ?? DistillCopy.loaderMessages.first ?? "Analyzing your memo..."
+    }
+
+    private func isLoading(state: DistillationState) -> Bool {
+        switch state {
+        case .inProgress:
+            return true
+        case .streaming:
+            return false
+        case .success, .failed, .idle:
+            return false
+        }
+    }
+
+    private var loaderPlaceholder: some View {
+        HStack(spacing: 12) {
+            LoadingIndicator(size: .small)
+            Text("Loading analysis...")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Spacer()
+        }
+        .padding()
+        .background(Color.semantic(.fillSecondary))
+        .cornerRadius(8)
     }
 }
 
@@ -145,75 +127,37 @@ private struct AnalysisContainerStyle: ViewModifier {
     }
 }
 
-private struct DistillCTAButton: View {
-    let isAnalyzing: Bool
-    let hasCachedResult: Bool
-    let hasShownCachedResult: Bool
-    let action: () -> Void
-
-    private var displayText: String {
-        hasCachedResult ? "View Distill" : AnalysisMode.distill.displayName
-    }
-
-    private var trailingIcon: some View {
-        Group {
-            if hasCachedResult && !isAnalyzing && !hasShownCachedResult {
-                Image(systemName: "chevron.right")
-                    .font(.subheadline)
-                    .foregroundColor(.semantic(.textSecondary))
-            }
-        }
-    }
+private struct DistillFailureView: View {
+    let reason: DistillationFailureReason
+    let message: String?
+    let onRetry: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: AnalysisMode.distill.iconName)
-                    .font(.title3)
-                    .foregroundColor(.accentColor)
-
-                if isAnalyzing {
-                    LoadingIndicator(size: .small)
-                        .frame(width: 16, height: 16)
-                }
-
-                Text(displayText)
-                    .font(.system(.headline, design: .serif))
-                    .fontWeight(.semibold)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text("Analysis failed: \(reason.displayName)")
+                    .font(.headline)
                     .foregroundColor(.semantic(.textPrimary))
-
-                Spacer(minLength: 0)
-
-                trailingIcon
             }
-            .padding(.vertical, DistillLayout.buttonVerticalPadding)
-            .padding(.horizontal, DistillLayout.buttonHorizontalPadding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.semantic(.fillSecondary))
-            .overlay(
-                RoundedRectangle(cornerRadius: DistillLayout.buttonCornerRadius, style: .continuous)
-                    .stroke(Color.semantic(.fillSecondary).opacity(0.2), lineWidth: 1)
-            )
-            .cornerRadius(DistillLayout.buttonCornerRadius)
+            if let message, !message.isEmpty {
+                Text(message)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Button("Retry Analysis", action: onRetry)
+                .buttonStyle(.borderedProminent)
         }
-    }
-}
-
-private struct PressableCardButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .opacity(configuration.isPressed ? 0.9 : 1.0)
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .animation(SonoraDesignSystem.Animation.buttonPress, value: configuration.isPressed)
+        .padding()
+        .background(Color.semantic(.fillSecondary))
+        .cornerRadius(10)
     }
 }
 
 private enum DistillLayout {
     static let containerCornerRadius: CGFloat = 12
     static let containerVerticalPadding: CGFloat = 12
-    static let buttonCornerRadius: CGFloat = 12
-    static let buttonVerticalPadding: CGFloat = 14
-    static let buttonHorizontalPadding: CGFloat = 16
     static let debugButtonBorder: Color = .red.opacity(0.5)
     static let debugContainerBorder: Color = .blue.opacity(0.4)
 }

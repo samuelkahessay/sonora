@@ -24,6 +24,9 @@ final class MemoModel {
     @Relationship(deleteRule: .cascade)
     var autoTitleJob: AutoTitleJobModel?
 
+    @Relationship(deleteRule: .cascade)
+    var autoDistillJob: AutoDistillJobModel?
+
     init(
         id: UUID = UUID(),
         creationDate: Date,
@@ -34,7 +37,8 @@ final class MemoModel {
         shareableFileName: String? = nil,
         transcription: TranscriptionModel? = nil,
         analysisResults: [AnalysisResultModel] = [],
-        autoTitleJob: AutoTitleJobModel? = nil
+        autoTitleJob: AutoTitleJobModel? = nil,
+        autoDistillJob: AutoDistillJobModel? = nil
     ) {
         self.id = id
         self.creationDate = creationDate
@@ -46,5 +50,6 @@ final class MemoModel {
         self.transcription = transcription
         self.analysisResults = analysisResults
         self.autoTitleJob = autoTitleJob
+        self.autoDistillJob = autoDistillJob
     }
 }

@@ -24,6 +24,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     internal let memoRepository: any MemoRepository // Still needed for state updates
     internal let operationCoordinator: any OperationCoordinatorProtocol
     internal let storeKitService: StoreKitServiceProtocol
+    internal let distillationCoordinator: DistillationCoordinator
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Subscription State
@@ -36,6 +37,8 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     @Published var latestAnalysisUpdatedAt: Date?
     /// Whether a cached Distill result exists (loaded asynchronously)
     @Published var hasCachedDistill: Bool = false
+    /// Auto-distillation state derived from coordinator
+    @Published var autoDistillState: DistillationState = .idle
 
     // MARK: - Current Memo
     internal var currentMemo: Memo?
@@ -54,6 +57,9 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
     // Track temp files created for sharing so we can clean them up afterward
     internal var lastShareTempURLs: [URL] = []
     internal var pendingShareItems: [Any] = []
+
+    // Guard to prevent concurrent cache restoration
+    private var isRestoringCache = false
 
     // MARK: - Computed Properties
 
@@ -166,7 +172,8 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         deleteMemoUseCase: DeleteMemoUseCaseProtocol,
         memoRepository: any MemoRepository,
         operationCoordinator: any OperationCoordinatorProtocol,
-        storeKitService: StoreKitServiceProtocol
+        storeKitService: StoreKitServiceProtocol,
+        distillationCoordinator: DistillationCoordinator = DIContainer.shared.distillationCoordinator()
     ) {
         self.playMemoUseCase = playMemoUseCase
         self.startTranscriptionUseCase = startTranscriptionUseCase
@@ -182,6 +189,7 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         self.memoRepository = memoRepository
         self.operationCoordinator = operationCoordinator
         self.storeKitService = storeKitService
+        self.distillationCoordinator = distillationCoordinator
 
         setupBindings()
         setupOperationMonitoring()
@@ -465,34 +473,16 @@ final class MemoDetailViewModel: ObservableObject, OperationStatusDelegate, Erro
         // If we are (or defaulted to) Distill and no result is currently in memory, restore from cache if available
         if selectedAnalysisMode == .distill, analysisPayload == nil {
             Task {
-                if let env: AnalyzeEnvelope<DistillData> = await DIContainer.shared
-                    .analysisRepository()
-                    .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
-                    await MainActor.run {
-                        self.analysisPayload = .distill(env.data, env)
-                        self.isAnalyzing = false
-                        self.analysisCacheStatus = "✅ Restored from cache"
-                        self.analysisPerformanceInfo = "Restored on appear"
-                    }
-                }
+                await restoreCachedAnalysisIfNeeded(reason: "on appear")
             }
         }
     }
 
-        /// Restore analysis UI state when returning from background or view re-appear
+    /// Restore analysis UI state when returning from background or view re-appear
     func restoreAnalysisStateIfNeeded() async {
-        guard let memo = currentMemo else { return }
+        guard currentMemo != nil else { return }
         if selectedAnalysisMode == .distill, analysisPayload == nil {
-            if let env: AnalyzeEnvelope<DistillData> = await DIContainer.shared
-                .analysisRepository()
-                .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
-                await MainActor.run {
-                    self.analysisPayload = .distill(env.data, env)
-                    self.isAnalyzing = false
-                    self.analysisCacheStatus = "✅ Restored from cache"
-                    self.analysisPerformanceInfo = "Restored on return"
-                }
-            }
+            await restoreCachedAnalysisIfNeeded(reason: "on return")
         }
     }
 
@@ -701,6 +691,9 @@ extension MemoDetailViewModel {
         // Initialize audio duration/current for scrubber before playback starts
         state.audio.duration = memo.duration
         state.audio.currentTime = 0
+        partialDistillData = nil
+        distillProgress = nil
+        autoDistillState = .idle
 
         // Initial state update
         Task {
@@ -710,6 +703,43 @@ extension MemoDetailViewModel {
 
         // Load analysis cache metadata
         loadAnalysisCacheMetadata()
+
+        // Subscribe to auto-distillation coordinator state
+        distillationCoordinator.statePublisher(for: memo.id)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] state in
+                guard let self else { return }
+                self.autoDistillState = state
+                switch state {
+                case .inProgress:
+                    self.isAnalyzing = true
+                case .streaming(let progress):
+                    self.isAnalyzing = true
+                    if let progress {
+                        self.distillProgress = progress
+                        self.partialDistillData = progress.completedResults
+                    }
+                case .success:
+                    self.isAnalyzing = false
+                    Task {
+                        await self.restoreCachedAnalysisIfNeeded(reason: "from coordinator")
+                    }
+                case .failed:
+                    self.isAnalyzing = false
+                case .idle:
+                    break
+                }
+            }
+            .store(in: &cancellables)
+        Task {
+            let state = await distillationCoordinator.state(for: memo.id)
+            await MainActor.run {
+                self.autoDistillState = state
+                if case .success = state {
+                    Task { await self.restoreCachedAnalysisIfNeeded(reason: "from initial state") }
+                }
+            }
+        }
 
         // Subscribe to transcription state changes for this memo to avoid race conditions
         DIContainer.shared.transcriptionRepository()
@@ -730,19 +760,46 @@ extension MemoDetailViewModel {
         }
     }
 
-    /// Restore cached Distill result into the UI if present
-    func restoreCachedDistill() async {
+    /// Consolidated method to restore cached analysis results
+    /// Prevents concurrent restoration attempts and handles both Distill and LiteDistill modes
+    private func restoreCachedAnalysisIfNeeded(reason: String = "on demand") async {
+        // Prevent concurrent restoration
+        guard !isRestoringCache else { return }
         guard let memo = currentMemo else { return }
-        if let env: AnalyzeEnvelope<DistillData> = await DIContainer.shared
-            .analysisRepository()
+
+        isRestoringCache = true
+        defer { isRestoringCache = false }
+
+        let repo = DIContainer.shared.analysisRepository()
+
+        // Try full Distill first
+        if let env: AnalyzeEnvelope<DistillData> = await repo
             .getAnalysisResult(for: memo.id, mode: .distill, responseType: DistillData.self) {
             await MainActor.run {
                 self.selectedAnalysisMode = .distill
                 self.analysisPayload = .distill(env.data, env)
                 self.isAnalyzing = false
                 self.analysisCacheStatus = "✅ Restored from cache"
-                self.analysisPerformanceInfo = "Restored on demand"
+                self.analysisPerformanceInfo = "Restored \(reason)"
+            }
+            return
+        }
+
+        // Fall back to LiteDistill
+        if let env: AnalyzeEnvelope<LiteDistillData> = await repo
+            .getAnalysisResult(for: memo.id, mode: .liteDistill, responseType: LiteDistillData.self) {
+            await MainActor.run {
+                self.selectedAnalysisMode = .distill
+                self.analysisPayload = .liteDistill(env.data, env)
+                self.isAnalyzing = false
+                self.analysisCacheStatus = "✅ Restored from cache"
+                self.analysisPerformanceInfo = "Restored \(reason)"
             }
         }
+    }
+
+    /// Public wrapper for manual cache restoration (maintains backward compatibility)
+    func restoreCachedDistill() async {
+        await restoreCachedAnalysisIfNeeded(reason: "on demand")
     }
 }

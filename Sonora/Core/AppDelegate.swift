@@ -64,4 +64,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             }
         }
     }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        DIContainer.shared.distillationCoordinator().appDidBecomeActive()
+        DIContainer.shared.titleGenerationCoordinator().appDidBecomeActive()
+    }
 }

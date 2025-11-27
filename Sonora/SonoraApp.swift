@@ -43,15 +43,12 @@ struct SonoraApp: App {
         DIContainer.shared.configure()
         print("🚀 SonoraApp: DIContainer configured with shared services (App init)")
 
-        // Build SwiftData container early and inject ModelContext into DI
-        let schema = Schema([
-            MemoModel.self,
-            TranscriptionModel.self,
-            AnalysisResultModel.self,
-            AutoTitleJobModel.self
-        ])
+        // Build SwiftData container with versioned schema and migration plan
         do {
-            self.modelContainer = try ModelContainer(for: schema)
+            self.modelContainer = try ModelContainer(
+                for: MemoModel.self, TranscriptionModel.self, AnalysisResultModel.self, AutoTitleJobModel.self, AutoDistillJobModel.self,
+                migrationPlan: SonoraVersionedSchemaMigrationPlan.self
+            )
         } catch {
             fatalError("Failed to create SwiftData ModelContainer: \(error)")
         }
