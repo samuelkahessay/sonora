@@ -74,41 +74,162 @@ final class CreateAnalysisShareFileUseCase: CreateAnalysisShareFileUseCaseProtoc
                 if let env = fullDistill {
                     let ts = timestampByMode[.distill] ?? Date()
                     var s = "📝 DISTILL (Updated: \(Self.fmtDate(ts)))\n\n"
+
+                    // Summary
                     s += env.data.summary + "\n\n"
+
+                    // Key Themes
+                    if let keyThemes = env.data.keyThemes, !keyThemes.isEmpty {
+                        s += "🏷️ Key Themes\n"
+                        keyThemes.forEach { s += "• \($0)\n" }
+                        s += "\n"
+                    }
+
+                    // Personal Insight
+                    if let personalInsight = env.data.personalInsight {
+                        s += "💡 Personal Insight (\(personalInsight.type.displayName))\n"
+                        s += personalInsight.observation + "\n"
+                        if let invitation = personalInsight.invitation {
+                            s += invitation + "\n"
+                        }
+                        s += "\n"
+                    }
+
+                    // Patterns & Connections
+                    if let patterns = env.data.patterns, !patterns.isEmpty {
+                        s += "🔗 Patterns & Connections\n"
+                        for (index, pattern) in patterns.enumerated() {
+                            s += "\(index + 1). \(pattern.theme)\n"
+                            s += "   \(pattern.description)\n"
+                            if let relatedMemos = pattern.relatedMemos, !relatedMemos.isEmpty {
+                                s += "   Related memos:\n"
+                                for memo in relatedMemos.prefix(3) {
+                                    let timeStr = memo.daysAgo.map { "(\($0) days ago)" } ?? ""
+                                    s += "   • \(memo.title) \(timeStr)\n"
+                                }
+                            }
+                        }
+                        s += "\n"
+                    }
+
+                    // Action Items
                     if let actions = env.data.action_items, !actions.isEmpty {
                         s += "✅ Action Items\n"
                         actions.forEach { s += "• \($0.text) [\($0.priority.rawValue)]\n" }
                         s += "\n"
                     }
+
+                    // Events
+                    if let events = env.data.events, !events.isEmpty {
+                        s += "📅 Events\n"
+                        for event in events {
+                            s += "• \(event.title)"
+                            if let start = event.startDate {
+                                let df = DateFormatter()
+                                df.dateStyle = .medium
+                                df.timeStyle = .short
+                                s += " (\(df.string(from: start)))"
+                            }
+                            if let location = event.location {
+                                s += " at \(location)"
+                            }
+                            s += "\n"
+                        }
+                        s += "\n"
+                    }
+
+                    // Reminders
+                    if let reminders = env.data.reminders, !reminders.isEmpty {
+                        s += "⏰ Reminders\n"
+                        for reminder in reminders {
+                            s += "• \(reminder.title) [\(reminder.priority.rawValue)]"
+                            if let due = reminder.dueDate {
+                                let df = DateFormatter()
+                                df.dateStyle = .medium
+                                df.timeStyle = .short
+                                s += " (Due: \(df.string(from: due)))"
+                            }
+                            s += "\n"
+                        }
+                        s += "\n"
+                    }
+
+                    // Reflection Questions
+                    if !env.data.reflection_questions.isEmpty {
+                        s += "💭 Reflection Questions\n"
+                        env.data.reflection_questions.forEach { s += "• \($0)\n" }
+                        s += "\n"
+                    }
+
+                    // Closing Note
+                    if let closingNote = env.data.closingNote {
+                        s += "📝 Note\n\(closingNote)\n\n"
+                    }
+
                     sections.append(Section(mode: .distill, timestamp: ts, text: s))
                 } else {
                     // Consolidate component modes: summary, themes, actions, reflection
                     let sumEnv: AnalyzeEnvelope<DistillSummaryData>? = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillSummary, responseType: DistillSummaryData.self)
                     let actEnv: AnalyzeEnvelope<DistillActionsData>? = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillActions, responseType: DistillActionsData.self)
+                    let themesEnv: AnalyzeEnvelope<DistillThemesData>? = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillThemes, responseType: DistillThemesData.self)
+                    let insightEnv: AnalyzeEnvelope<DistillPersonalInsightData>? = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillPersonalInsight, responseType: DistillPersonalInsightData.self)
+                    let closingEnv: AnalyzeEnvelope<DistillClosingNoteData>? = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillClosingNote, responseType: DistillClosingNoteData.self)
                     let refEnv: AnalyzeEnvelope<DistillReflectionData>? = await analysisRepository.getAnalysisResult(for: memo.id, mode: .distillReflection, responseType: DistillReflectionData.self)
 
-                    if sumEnv != nil || actEnv != nil || refEnv != nil {
+                    if sumEnv != nil || actEnv != nil || themesEnv != nil || insightEnv != nil || closingEnv != nil || refEnv != nil {
                         // Determine latest timestamp among components
                         let compTs: [Date] = [
                             timestampByMode[.distillSummary],
                             timestampByMode[.distillActions],
+                            timestampByMode[.distillThemes],
+                            timestampByMode[.distillPersonalInsight],
+                            timestampByMode[.distillClosingNote],
                             timestampByMode[.distillReflection]
                         ].compactMap { $0 }
                         let ts = compTs.max() ?? Date()
                         var s = "📝 DISTILL (Updated: \(Self.fmtDate(ts)))\n\n"
+
+                        // Summary
                         if let sum = sumEnv?.data.summary {
                             s += sum + "\n\n"
                         }
+
+                        // Key Themes
+                        if let keyThemes = themesEnv?.data.keyThemes, !keyThemes.isEmpty {
+                            s += "🏷️ Key Themes\n"
+                            keyThemes.forEach { s += "• \($0)\n" }
+                            s += "\n"
+                        }
+
+                        // Personal Insight
+                        if let personalInsight = insightEnv?.data.personalInsight {
+                            s += "💡 Personal Insight (\(personalInsight.type.displayName))\n"
+                            s += personalInsight.observation + "\n"
+                            if let invitation = personalInsight.invitation {
+                                s += invitation + "\n"
+                            }
+                            s += "\n"
+                        }
+
+                        // Action Items
                         if let actions = actEnv?.data.action_items, !actions.isEmpty {
                             s += "✅ Action Items\n"
                             actions.forEach { s += "• \($0.text) [\($0.priority.rawValue)]\n" }
                             s += "\n"
                         }
+
+                        // Reflection Questions
                         if let questions = refEnv?.data.reflection_questions, !questions.isEmpty {
                             s += "💭 Reflection Questions\n"
                             questions.forEach { s += "• \($0)\n" }
                             s += "\n"
                         }
+
+                        // Closing Note
+                        if let closingNote = closingEnv?.data.closingNote {
+                            s += "📝 Note\n\(closingNote)\n\n"
+                        }
+
                         sections.append(Section(mode: .distill, timestamp: ts, text: s))
                     }
                 }

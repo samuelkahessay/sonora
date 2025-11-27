@@ -277,6 +277,19 @@ struct RecordingView: View {
         .sheet(isPresented: $viewModel.showingPaywall) {
             PaywallView()
         }
+        .overlay(alignment: .top) {
+            if viewModel.showSaveSuccessBanner {
+                NotificationBanner.success(
+                    message: viewModel.saveSuccessMessage,
+                    compact: false
+                ) {
+                    viewModel.showSaveSuccessBanner = false
+                }
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.showSaveSuccessBanner)
+            }
+        }
     }
 
     // MARK: - Permission UI Helpers

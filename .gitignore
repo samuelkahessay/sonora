@@ -11,6 +11,22 @@ server/.env
 server/uploads/
 server/node_modules/
 
+# Root-level node_modules and package files (for test scripts)
+node_modules/
+package.json
+package-lock.json
+
+# Test scripts and outputs
+test-*.ts
+*-test.ts
+check-*.sh
+extract-*.ts
+generate-*.ts
+extracted-transcripts/
+test-results/
+test-transcript.txt
+*.old.*
+
 # Local memo metadata (contains transcriptions)
 *_metadata.json
 
