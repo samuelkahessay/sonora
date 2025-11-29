@@ -307,8 +307,7 @@ final class DistillationCoordinator: ObservableObject {
                         category: .analysis,
                         context: LogContext(additionalInfo: [
                             "memoId": job.memoId.uuidString
-                        ]),
-                        error: nil
+                        ])
                     )
                     return
                 }
