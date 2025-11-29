@@ -11,7 +11,6 @@ final class AutoDistillJobModel {
     var updatedAt: Date
     var retryCount: Int
     var lastError: String?
-    var nextRetryAt: Date?
     var failureReasonRaw: String?
 
     @Relationship(inverse: \MemoModel.autoDistillJob)
@@ -26,7 +25,6 @@ final class AutoDistillJobModel {
         updatedAt: Date,
         retryCount: Int,
         lastError: String? = nil,
-        nextRetryAt: Date? = nil,
         failureReasonRaw: String? = nil,
         memo: MemoModel? = nil
     ) {
@@ -38,7 +36,6 @@ final class AutoDistillJobModel {
         self.updatedAt = updatedAt
         self.retryCount = retryCount
         self.lastError = lastError
-        self.nextRetryAt = nextRetryAt
         self.failureReasonRaw = failureReasonRaw
         self.memo = memo
     }

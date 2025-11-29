@@ -47,7 +47,6 @@ final class AutoTitleJobRepositoryImplTests: XCTestCase {
             updatedAt: Date(),
             retryCount: 0,
             lastError: nil,
-            nextRetryAt: nil,
             failureReason: nil
         )
     }
@@ -103,7 +102,6 @@ final class AutoTitleJobRepositoryImplTests: XCTestCase {
             updatedAt: Date(),
             retryCount: 3,
             lastError: "Network timeout",
-            nextRetryAt: Date().addingTimeInterval(300),
             failureReason: .timeout
         )
 
@@ -114,7 +112,6 @@ final class AutoTitleJobRepositoryImplTests: XCTestCase {
         XCTAssertEqual(retrieved?.retryCount, 3)
         XCTAssertEqual(retrieved?.lastError, "Network timeout")
         XCTAssertEqual(retrieved?.failureReason, .timeout)
-        XCTAssertNotNil(retrieved?.nextRetryAt)
     }
 
     // MARK: - Fetch All Jobs Tests

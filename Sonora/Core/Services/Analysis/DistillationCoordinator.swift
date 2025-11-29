@@ -4,79 +4,22 @@ import Foundation
 private enum DistillationCoordinatorError: Error {
     case transcriptUnavailable
     case dataUnavailable
+    case memoNotFound
 }
 
-/// Simple LRU cache with maximum size limit
-private struct LRUCache<Key: Hashable, Value> {
-    private var cache: [Key: Value] = [:]
-    private var accessOrder: [Key] = []
-    private let maxSize: Int
-
-    init(maxSize: Int) {
-        self.maxSize = maxSize
-    }
-
-    mutating func get(_ key: Key) -> Value? {
-        guard let value = cache[key] else { return nil }
-        // Move to end (most recently used)
-        accessOrder.removeAll { $0 == key }
-        accessOrder.append(key)
-        return value
-    }
-
-    mutating func set(_ key: Key, value: Value?) {
-        if let value = value {
-            // Remove if exists to update position
-            if cache[key] != nil {
-                accessOrder.removeAll { $0 == key }
-            }
-
-            cache[key] = value
-            accessOrder.append(key)
-
-            // Evict oldest if over capacity
-            while accessOrder.count > maxSize {
-                if let oldest = accessOrder.first {
-                    accessOrder.removeFirst()
-                    cache.removeValue(forKey: oldest)
-                }
-            }
-        } else {
-            // Remove if value is nil
-            cache.removeValue(forKey: key)
-            accessOrder.removeAll { $0 == key }
-        }
-    }
-
-    func contains(_ key: Key) -> Bool {
-        cache[key] != nil
-    }
-
-    subscript(key: Key) -> Value? {
-        get { cache[key] }
-    }
-
-    var allEntries: [(key: Key, value: Value)] {
-        cache.map { ($0.key, $0.value) }
-    }
-}
-
-/// Entry tracking state with optional success retention metadata
-private struct StateEntry {
-    let state: DistillationState
-    let retainedAt: Date?  // Non-nil if success state retained after job deletion
-
-    init(state: DistillationState, retainedAt: Date? = nil) {
-        self.state = state
-        self.retainedAt = retainedAt
-    }
-
-    /// Create a retained success entry
-    static func retainedSuccess(mode: AnalysisMode) -> StateEntry {
-        StateEntry(state: .success(mode), retainedAt: Date())
-    }
-}
-
+/// Coordinates auto-distillation jobs for memos
+///
+/// State Management:
+/// - stateByMemo: Published UI state for all memos
+/// - successStateByMemo: Lightweight cache of analyzed memos
+///   - Prevents redundant analysis checks
+///   - Auto-cleaned when memos deleted
+///   - Memory: ~48 bytes/entry, bounded by memo count
+///
+/// Job Processing:
+/// - Sequential processing (currentTask guards concurrency)
+/// - Failed jobs retry up to 3 times
+/// - Success results cached, jobs deleted from repository
 @MainActor
 final class DistillationCoordinator: ObservableObject {
     @Published private(set) var stateByMemo: [UUID: DistillationState] = [:]
@@ -96,8 +39,13 @@ final class DistillationCoordinator: ObservableObject {
     private var memoCancellable: AnyCancellable?
     private var currentTask: Task<Void, Never>?
 
-    // Single source of truth: combines active states and retained success states
-    private var stateEntries = LRUCache<UUID, StateEntry>(maxSize: 100)
+    /// Success state cache: stores analysis mode for completed distillations
+    /// - Populated: when job succeeds or repository check finds existing result
+    /// - Queried: in state(for:) to avoid repository lookups
+    /// - Cleaned: when memos are deleted via memosPublisher subscription
+    /// - Lifecycle: exists as long as memo exists in repository
+    /// - Memory: ~48 bytes per entry (typical: 10-100 entries = 480-4800 bytes)
+    private var successStateByMemo: [UUID: AnalysisMode] = [:]
 
     init(
         analyzeLiteDistillUseCase: any AnalyzeLiteDistillUseCaseProtocol,
@@ -127,9 +75,9 @@ final class DistillationCoordinator: ObservableObject {
             }
 
         memoCancellable = memoRepository.memosPublisher
-            .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
             .receive(on: RunLoop.main)
             .sink { [weak self] memos in
+                self?.cleanupSuccessStates(validMemos: memos)
                 Task { await self?.resumePendingJobsIfNeeded(memos: memos) }
             }
 
@@ -148,27 +96,27 @@ final class DistillationCoordinator: ObservableObject {
     }
 
     func state(for memoId: UUID) async -> DistillationState {
-        // Check consolidated state cache first
-        if let entry = stateEntries.get(memoId) {
-            return entry.state
-        }
-
-        // Check active jobs
+        // Check active jobs first
         if let job = jobRepository.job(for: memoId) {
             let derived = DistillationState(job: job)
-            stateEntries.set(memoId, value: StateEntry(state: derived))
             stateByMemo[memoId] = derived
             return derived
         }
 
-        // Check if analysis result exists in repository (cache miss)
-        let mode: AnalysisMode = storeKitService.isPro ? .distill : .liteDistill
-        let hasCached = await analysisRepository.hasAnalysisResult(for: memoId, mode: mode)
+        // Check success cache
+        if let mode = successStateByMemo[memoId] {
+            let state = DistillationState.success(mode)
+            stateByMemo[memoId] = state
+            return state
+        }
+
+        // Fallback: check repository
+        let (hasCached, mode) = await hasCachedResult(for: memoId)
         if hasCached {
-            let entry = StateEntry.retainedSuccess(mode: mode)
-            stateEntries.set(memoId, value: entry)
-            stateByMemo[memoId] = entry.state
-            return entry.state
+            successStateByMemo[memoId] = mode
+            let state = DistillationState.success(mode)
+            stateByMemo[memoId] = state
+            return state
         }
 
         return .idle
@@ -176,19 +124,16 @@ final class DistillationCoordinator: ObservableObject {
 
     func enqueue(memoId: UUID) {
         Task {
-            let mode: AnalysisMode = storeKitService.isPro ? .distill : .liteDistill
-            let hasCached = await analysisRepository.hasAnalysisResult(for: memoId, mode: mode)
+            let (hasCached, mode) = await hasCachedResult(for: memoId)
             if hasCached {
                 await MainActor.run {
-                    let entry = StateEntry.retainedSuccess(mode: mode)
-                    stateEntries.set(memoId, value: entry)
-                    stateByMemo[memoId] = entry.state
+                    successStateByMemo[memoId] = mode
+                    stateByMemo[memoId] = .success(mode)
                 }
                 return
             }
 
             await MainActor.run {
-                stateEntries.set(memoId, value: nil)
                 if let existing = jobRepository.job(for: memoId) {
                     switch existing.status {
                     case .queued, .processing:
@@ -216,7 +161,7 @@ final class DistillationCoordinator: ObservableObject {
                             status: .queued,
                             mode: mode,
                             updatedAt: Date(),
-                            retryCount: existing.retryCount + 1,
+                            retryCount: existing.retryCount,
                             lastError: nil,
                             failureReason: nil
                         )
@@ -261,14 +206,11 @@ final class DistillationCoordinator: ObservableObject {
                 state = DistillationState(job: job)
             }
             updatedStates[job.memoId] = state
-            stateEntries.set(job.memoId, value: StateEntry(state: state))
         }
 
         // Preserve retained success states for memos without active jobs
-        for (memoId, entry) in stateEntries.allEntries where updatedStates[memoId] == nil {
-            if entry.retainedAt != nil {  // Only include explicitly retained successes
-                updatedStates[memoId] = entry.state
-            }
+        for (memoId, mode) in successStateByMemo where updatedStates[memoId] == nil {
+            updatedStates[memoId] = .success(mode)
         }
 
         stateByMemo = updatedStates
@@ -307,6 +249,31 @@ final class DistillationCoordinator: ObservableObject {
         }
     }
 
+    /// Remove success state entries for memos that no longer exist
+    ///
+    /// This method is called whenever the memo list changes (via memosPublisher).
+    /// It prevents unbounded memory growth by removing cache entries for deleted memos.
+    ///
+    /// - Parameter validMemos: Current list of memos from repository
+    /// - Complexity: O(m + s) where m = memo count, s = success state count
+    /// - Note: Runs synchronously on main actor; minimal performance impact
+    private func cleanupSuccessStates(validMemos: [Memo]) {
+        let validMemoIds = Set(validMemos.map { $0.id })
+        let entriesToRemove = successStateByMemo.keys.filter { !validMemoIds.contains($0) }
+
+        guard !entriesToRemove.isEmpty else { return }
+
+        for memoId in entriesToRemove {
+            successStateByMemo.removeValue(forKey: memoId)
+        }
+
+        logger.debug(
+            "Cleaned up \(entriesToRemove.count) success state entries for deleted memos",
+            category: .analysis,
+            context: LogContext()
+        )
+    }
+
     private func run(job: AutoDistillJob) async {
         await MainActor.run {
             let processingJob = job.updating(status: .processing, updatedAt: Date())
@@ -319,9 +286,8 @@ final class DistillationCoordinator: ObservableObject {
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 let successMode = storeKitService.isPro ? AnalysisMode.distill : .liteDistill
-                let entry = StateEntry.retainedSuccess(mode: successMode)
-                stateEntries.set(job.memoId, value: entry)
-                stateByMemo[job.memoId] = entry.state
+                successStateByMemo[job.memoId] = successMode
+                stateByMemo[job.memoId] = .success(successMode)
                 jobRepository.deleteJob(for: job.memoId)
                 currentTask = nil
                 processQueueIfNeeded()
@@ -329,6 +295,23 @@ final class DistillationCoordinator: ObservableObject {
         } catch {
             await MainActor.run { [weak self] in
                 guard let self else { return }
+                if let coordinatorError = error as? DistillationCoordinatorError,
+                   coordinatorError == .memoNotFound {
+                    jobRepository.deleteJob(for: job.memoId)
+                    successStateByMemo.removeValue(forKey: job.memoId)
+                    stateByMemo[job.memoId] = .idle
+                    currentTask = nil
+                    processQueueIfNeeded()
+                    logger.info(
+                        "Dropping auto distillation job because memo is missing",
+                        category: .analysis,
+                        context: LogContext(additionalInfo: [
+                            "memoId": job.memoId.uuidString
+                        ]),
+                        error: nil
+                    )
+                    return
+                }
                 let reason = classifyFailure(error)
                 let message = failureMessage(from: error)
                 let failedJob = job.updating(
@@ -340,7 +323,6 @@ final class DistillationCoordinator: ObservableObject {
                 )
                 jobRepository.save(failedJob)
                 let failedState = DistillationState(job: failedJob)
-                stateEntries.set(job.memoId, value: StateEntry(state: failedState))
                 stateByMemo[job.memoId] = failedState
                 currentTask = nil
                 processQueueIfNeeded()
@@ -360,11 +342,17 @@ final class DistillationCoordinator: ObservableObject {
 
     private func executeJob(for job: AutoDistillJob) async throws {
         guard let memo = memoRepository.getMemo(by: job.memoId) else {
-            await MainActor.run {
-                jobRepository.deleteJob(for: job.memoId)
-                stateByMemo[job.memoId] = .idle
-            }
-            return
+            logger.warning(
+                "Memo not found when executing distillation job",
+                category: .analysis,
+                context: LogContext(additionalInfo: [
+                    "memoId": job.memoId.uuidString,
+                    "jobStatus": job.status.rawValue,
+                    "jobCreatedAt": job.createdAt.ISO8601Format()
+                ]),
+                error: nil
+            )
+            throw DistillationCoordinatorError.memoNotFound
         }
 
         guard let transcript = await transcriptionRepository.getTranscriptionText(for: job.memoId), !transcript.isEmpty else {
@@ -391,6 +379,12 @@ final class DistillationCoordinator: ObservableObject {
         }
     }
 
+    private func hasCachedResult(for memoId: UUID) async -> (Bool, AnalysisMode) {
+        let mode: AnalysisMode = storeKitService.isPro ? .distill : .liteDistill
+        let hasCached = await analysisRepository.hasAnalysisResult(for: memoId, mode: mode)
+        return (hasCached, mode)
+    }
+
     private func shouldAutoDistill(_ memo: Memo) async -> Bool {
         guard memo.transcriptionStatus.isCompleted else { return false }
 
@@ -406,8 +400,7 @@ final class DistillationCoordinator: ObservableObject {
             }
         }
 
-        let mode: AnalysisMode = storeKitService.isPro ? .distill : .liteDistill
-        let hasCached = await analysisRepository.hasAnalysisResult(for: memo.id, mode: mode)
+        let (hasCached, _) = await hasCachedResult(for: memo.id)
         if hasCached { return false }
 
         guard let transcript = await transcriptionRepository.getTranscriptionText(for: memo.id),
@@ -423,6 +416,7 @@ final class DistillationCoordinator: ObservableObject {
             switch coordinatorError {
             case .transcriptUnavailable: return .transcriptUnavailable
             case .dataUnavailable: return .configuration
+            case .memoNotFound: return .validation
             }
         }
 

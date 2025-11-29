@@ -23,7 +23,6 @@ public struct AutoTitleJob: Identifiable, Equatable, Sendable {
     public let updatedAt: Date
     public let retryCount: Int
     public let lastError: String?
-    public let nextRetryAt: Date?
     public let failureReason: FailureReason?
 
     public init(
@@ -33,7 +32,6 @@ public struct AutoTitleJob: Identifiable, Equatable, Sendable {
         updatedAt: Date = Date(),
         retryCount: Int = 0,
         lastError: String? = nil,
-        nextRetryAt: Date? = nil,
         failureReason: FailureReason? = nil
     ) {
         self.memoId = memoId
@@ -42,7 +40,6 @@ public struct AutoTitleJob: Identifiable, Equatable, Sendable {
         self.updatedAt = updatedAt
         self.retryCount = retryCount
         self.lastError = lastError
-        self.nextRetryAt = nextRetryAt
         self.failureReason = failureReason
     }
 
@@ -53,7 +50,6 @@ public struct AutoTitleJob: Identifiable, Equatable, Sendable {
         updatedAt: Date = Date(),
         retryCount: Int? = nil,
         lastError: String? = nil,
-        nextRetryAt: Date?? = nil,
         failureReason: FailureReason?? = nil
     ) -> Self {
         Self(
@@ -63,7 +59,6 @@ public struct AutoTitleJob: Identifiable, Equatable, Sendable {
             updatedAt: updatedAt,
             retryCount: retryCount ?? self.retryCount,
             lastError: lastError,
-            nextRetryAt: nextRetryAt ?? self.nextRetryAt,
             failureReason: failureReason ?? self.failureReason
         )
     }

@@ -12,6 +12,19 @@ private actor TitleStreamingFlag {
     func isMarked() -> Bool { value }
 }
 
+/// Coordinates auto-title generation jobs for memos
+///
+/// State Management:
+/// - stateByMemo: Published UI state for all memos
+/// - successStateByMemo: Lightweight cache of generated titles
+///   - Prevents redundant title generation checks
+///   - Auto-cleaned when memos deleted
+///   - Memory: ~80 bytes/entry (UUID + String), bounded by memo count
+///
+/// Job Processing:
+/// - Sequential processing (currentTask guards concurrency)
+/// - Streaming title generation with partial results
+/// - Failed jobs can be retried
 @MainActor
 final class TitleGenerationCoordinator: ObservableObject {
     @Published private(set) var stateByMemo: [UUID: TitleGenerationState] = [:]
@@ -26,6 +39,13 @@ final class TitleGenerationCoordinator: ObservableObject {
     private var jobsCancellable: AnyCancellable?
     private var memoCancellable: AnyCancellable?
     private var currentTask: Task<Void, Never>?
+
+    /// Success state cache: stores generated titles for completed jobs
+    /// - Populated: when title generation succeeds
+    /// - Queried: in handleJobsUpdate to preserve success states
+    /// - Cleaned: when memos are deleted via memosPublisher subscription
+    /// - Lifecycle: exists as long as memo exists in repository
+    /// - Memory: ~80 bytes per entry (typical: 10-100 entries = 800-8000 bytes)
     private var successStateByMemo: [UUID: String] = [:]
     private var streamingTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -51,6 +71,7 @@ final class TitleGenerationCoordinator: ObservableObject {
         memoCancellable = memoRepository.memosPublisher
             .receive(on: RunLoop.main)
             .sink { [weak self] memos in
+                self?.cleanupSuccessStates(validMemos: memos)
                 Task {
                     await self?.resumePendingJobsIfNeeded(memos: memos)
                 }
@@ -80,7 +101,6 @@ final class TitleGenerationCoordinator: ObservableObject {
                     updatedAt: Date(),
                     retryCount: existing.retryCount + 1,
                     lastError: nil,
-                    nextRetryAt: nil,
                     failureReason: nil
                 )
                 jobRepository.save(retryJob)
@@ -170,6 +190,31 @@ final class TitleGenerationCoordinator: ObservableObject {
         }
     }
 
+    /// Remove success state entries for memos that no longer exist
+    ///
+    /// This method is called whenever the memo list changes (via memosPublisher).
+    /// It prevents unbounded memory growth by removing cache entries for deleted memos.
+    ///
+    /// - Parameter validMemos: Current list of memos from repository
+    /// - Complexity: O(m + s) where m = memo count, s = success state count
+    /// - Note: Runs synchronously on main actor; minimal performance impact
+    private func cleanupSuccessStates(validMemos: [Memo]) {
+        let validMemoIds = Set(validMemos.map { $0.id })
+        let entriesToRemove = successStateByMemo.keys.filter { !validMemoIds.contains($0) }
+
+        guard !entriesToRemove.isEmpty else { return }
+
+        for memoId in entriesToRemove {
+            successStateByMemo.removeValue(forKey: memoId)
+        }
+
+        logger.debug(
+            "Cleaned up \(entriesToRemove.count) title success state entries for deleted memos",
+            category: .system,
+            context: LogContext()
+        )
+    }
+
     private func run(job: AutoTitleJob) async {
         await MainActor.run {
             let processingJob = AutoTitleJob(
@@ -178,8 +223,7 @@ final class TitleGenerationCoordinator: ObservableObject {
                 createdAt: job.createdAt,
                 updatedAt: Date(),
                 retryCount: job.retryCount,
-                lastError: job.lastError,
-                nextRetryAt: job.nextRetryAt
+                lastError: job.lastError
             )
             jobRepository.save(processingJob)
             stateByMemo[job.memoId] = .inProgress
@@ -198,7 +242,6 @@ final class TitleGenerationCoordinator: ObservableObject {
                     updatedAt: Date(),
                     retryCount: job.retryCount + 1,
                     lastError: message,
-                    nextRetryAt: nil,
                     failureReason: reason
                 )
                 jobRepository.save(failedJob)

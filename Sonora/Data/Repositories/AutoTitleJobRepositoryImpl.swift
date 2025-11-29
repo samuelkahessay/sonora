@@ -41,7 +41,6 @@ final class AutoTitleJobRepositoryImpl: AutoTitleJobRepository {
                 updatedAt: job.updatedAt,
                 retryCount: job.retryCount,
                 lastError: job.lastError,
-                nextRetryAt: job.nextRetryAt,
                 failureReasonRaw: job.failureReason?.rawValue
             )
             model.memo = fetchMemoModel(for: job.memoId)
@@ -54,7 +53,6 @@ final class AutoTitleJobRepositoryImpl: AutoTitleJobRepository {
         model.updatedAt = job.updatedAt
         model.retryCount = job.retryCount
         model.lastError = job.lastError
-        model.nextRetryAt = job.nextRetryAt
         model.failureReasonRaw = job.failureReason?.rawValue
 
         if model.memo == nil {
@@ -102,7 +100,6 @@ final class AutoTitleJobRepositoryImpl: AutoTitleJobRepository {
             updatedAt: model.updatedAt,
             retryCount: model.retryCount,
             lastError: model.lastError,
-            nextRetryAt: model.nextRetryAt,
             failureReason: model.failureReasonRaw.flatMap(AutoTitleJob.FailureReason.init(rawValue:))
         )
     }
