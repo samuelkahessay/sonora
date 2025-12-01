@@ -1,16 +1,17 @@
 import SwiftData
 import Foundation
 
+// Legacy model snapshots for V1/V2 live in LegacySchemaV1Models.swift and LegacySchemaV2Models.swift.
 // MARK: - Schema V1 (Before AutoDistillJob)
 enum SonoraSchemaV1: VersionedSchema {
     static let versionIdentifier = Schema.Version(1, 0, 0)
 
     static var models: [any PersistentModel.Type] {
         [
-            MemoModel.self,
-            TranscriptionModel.self,
-            AnalysisResultModel.self,
-            AutoTitleJobModel.self
+            MemoModelV1.self,
+            TranscriptionModelV1.self,
+            AnalysisResultModelV1.self,
+            AutoTitleJobModelV1.self
         ]
     }
 }
@@ -21,11 +22,11 @@ enum SonoraSchemaV2: VersionedSchema {
 
     static var models: [any PersistentModel.Type] {
         [
-            MemoModel.self,
-            TranscriptionModel.self,
-            AnalysisResultModel.self,
-            AutoTitleJobModel.self,
-            AutoDistillJobModel.self  // NEW
+            MemoModelV2.self,
+            TranscriptionModelV2.self,
+            AnalysisResultModelV2.self,
+            AutoTitleJobModelV2.self,
+            AutoDistillJobModelV2.self  // NEW
         ]
     }
 }
