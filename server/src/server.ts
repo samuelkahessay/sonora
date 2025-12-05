@@ -13,8 +13,7 @@ import { FormData, File } from 'undici';
 import pinoHttp from 'pino-http';
 import { RequestSchema, DistillDataSchema, LiteDistillDataSchema, EventsDataSchema, RemindersDataSchema, AnalysisJsonSchemas, DistillThemesDataSchema, DistillPersonalInsightDataSchema, DistillClosingNoteDataSchema } from './schema.js';
 import { buildPrompt } from './prompts.js';
-import { createChatCompletionsJSON, createModeration } from './openai.js';
-import { chatCompletionsSupportsTemperature } from './caps.js';
+import { createChatCompletionsJSON, createChatCompletionsText, createModeration } from './openai.js';
 import { sanitizeTranscript } from './sanitize.js';
 import { correlationMiddleware } from './middleware/correlation.js';
 import logger from './logging/logger.js';
@@ -23,7 +22,6 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://sonora.app';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 // Ensure uploads directory exists (defensive)
 try {
@@ -87,7 +85,7 @@ app.get('/health', (req, res) => {
   res.json({ ok: true });
 });
 
-// Title generation (OpenRouter: llama free)
+// Title generation (OpenAI: gpt-5-mini)
 const TitleRequest = z.object({
   transcript: z.string().min(1).max(100_000),
   language: z.string().optional(),
@@ -173,8 +171,8 @@ function buildFallbackTitle(source: string): string {
 app.post('/title', async (req, res) => {
   try {
     const { transcript, language, rules } = TitleRequest.parse(req.body || {});
-    if (!OPENROUTER_API_KEY) {
-      return res.status(500).json({ error: 'Server missing OPENROUTER_API_KEY' });
+    if (!OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'Server missing OPENAI_API_KEY' });
     }
 
     const sanitized = sanitizeTranscript(String(transcript));
@@ -200,178 +198,22 @@ app.post('/title', async (req, res) => {
       sliced
     ].filter(Boolean).join('\n');
 
-    const wantsStream = (req.headers['accept'] || '').toLowerCase().includes('text/event-stream') || req.query.stream === '1';
+    const selectedModel = process.env.SONORA_MODEL || 'gpt-5-mini';
 
-    const basePayload: Record<string, any> = {
-      model: 'meta-llama/llama-3.3-8b-instruct:free',
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user }
-      ],
-      temperature: 0.2,
-      max_tokens: 32
-    };
-
-    const upstreamHeaders: Record<string, string> = {
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.SONORA_SITE_URL || 'https://sonora.app',
-      'X-Title': process.env.SONORA_SITE_NAME || 'Sonora'
-    };
-
-    if (wantsStream) {
-      res.status(200);
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      (res as any).flushHeaders?.();
-
-      const sendEvent = (event: string, data: Record<string, unknown>) => {
-        res.write(`event: ${event}\n`);
-        res.write(`data: ${JSON.stringify(data)}\n\n`);
-      };
-
-      try {
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            ...upstreamHeaders,
-            'Accept': 'text/event-stream'
-          },
-          body: JSON.stringify({
-            ...basePayload,
-            stream: true
-          })
-        });
-
-        if (!response.ok || !response.body) {
-          const text = await response.text().catch(() => '');
-          logger.error({
-            endpoint: '/title',
-            mode: 'stream',
-            status: response.status,
-            statusText: response.statusText,
-            responsePreview: text.slice(0, 200),
-          }, 'OpenRouter /title stream error');
-          sendEvent('error', { error: 'UpstreamFailed', status: response.status });
-          res.end();
-          return;
-        }
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let aggregated = '';
-        let finished = false;
-
-        const processEvent = (rawEvent: string) => {
-          if (!rawEvent.trim()) {
-            return;
-          }
-          const lines = rawEvent.split('\n');
-          const dataLines = lines
-            .filter(line => line.startsWith('data:'))
-            .map(line => line.slice(5).trim())
-            .filter(Boolean);
-          if (dataLines.length === 0) {
-            return;
-          }
-          const payload = dataLines.join('');
-          if (payload === '[DONE]') {
-            const candidate = normalizeWhitespace(aggregated.replace(/\n/g, ' '));
-            const validated = validateTitle(candidate, {
-              maxChars: constraints.maxChars,
-              language,
-              isShortTranscript
-            });
-            if (validated) {
-              sendEvent('final', { title: validated });
-            } else {
-              logger.warn({
-                endpoint: '/title',
-                mode: 'stream',
-                candidate,
-                constraints,
-              }, 'Streaming title validation failed; using fallback');
-              const fallback = validateTitle(buildFallbackTitle(sliced), {
-                maxChars: constraints.maxChars,
-                language,
-                isShortTranscript: true
-              }) || 'Voice Memo';
-              sendEvent('final', { title: fallback, fallback: true });
-            }
-            res.end();
-            finished = true;
-            return;
-          }
-          try {
-            const json = JSON.parse(payload);
-            const delta = json?.choices?.[0]?.delta?.content ?? '';
-            if (typeof delta === 'string' && delta.length > 0) {
-              aggregated += delta;
-              const partial = normalizeWhitespace(aggregated.replace(/\n/g, ' '));
-              if (partial.length > 0) {
-                sendEvent('interim', { title: partial.slice(0, constraints.maxChars * 2) });
-              }
-            }
-          } catch (error) {
-            logger.error({ error, endpoint: '/title', mode: 'stream' }, 'Failed to parse streaming chunk');
-          }
-        };
-
-        for await (const chunk of response.body as any) {
-          buffer += decoder.decode(chunk, { stream: true });
-          let separatorIndex = buffer.indexOf('\n\n');
-          while (separatorIndex !== -1) {
-            const rawEvent = buffer.slice(0, separatorIndex);
-            buffer = buffer.slice(separatorIndex + 2);
-            processEvent(rawEvent);
-            if (finished) {
-              return;
-            }
-            separatorIndex = buffer.indexOf('\n\n');
-          }
-        }
-
-        if (buffer.trim().length > 0) {
-          processEvent(buffer);
-        }
-
-        if (!res.writableEnded && !finished) {
-          res.end();
-        }
-        return;
-      } catch (error) {
-        logger.error({ error, endpoint: '/title', mode: 'stream' }, 'Streaming /title error');
-        sendEvent('error', { error: 'Internal' });
-        res.end();
-        return;
-      }
-    }
-
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: upstreamHeaders,
-      body: JSON.stringify(basePayload)
+    const result = await createChatCompletionsText({
+      system,
+      user,
+      model: selectedModel,
+      maxTokens: 32
     });
 
-    if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      logger.error({
-        endpoint: '/title',
-        status: response.status,
-        statusText: response.statusText,
-        responsePreview: text.slice(0, 200),
-      }, 'OpenRouter /title error');
-      return res.status(502).json({ error: 'UpstreamFailed' });
-    }
-    const data: any = await response.json();
-    const content: string = data?.choices?.[0]?.message?.content ?? '';
-    const candidate = normalizeWhitespace(content.replace(/\n/g, ' '));
+    const candidate = normalizeWhitespace(result.text.replace(/\n/g, ' '));
     const validated = validateTitle(candidate, {
       maxChars: constraints.maxChars,
       language,
       isShortTranscript
     });
+
     if (validated) {
       return res.json({ title: validated });
     }
@@ -394,6 +236,11 @@ app.post('/title', async (req, res) => {
   } catch (e: any) {
     if (e instanceof z.ZodError) {
       return res.status(400).json({ error: 'BadRequest', details: e.errors });
+    }
+    // OpenAI errors are already logged/captured by createChatCompletionsText
+    const isUpstreamError = e?.message?.includes('Chat Completions API error');
+    if (isUpstreamError) {
+      return res.status(502).json({ error: 'UpstreamFailed' });
     }
     logger.error({ error: e, endpoint: '/title' }, 'Title generation error');
     return res.status(500).json({ error: 'Internal' });

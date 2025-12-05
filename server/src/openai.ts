@@ -370,6 +370,141 @@ export async function createChatCompletionsJSON({
   return result;
 }
 
+// Chat Completions API for plain text responses (e.g., title generation)
+export async function createChatCompletionsText({
+  system,
+  user,
+  model,
+  maxTokens = 32
+}: {
+  system: string;
+  user: string;
+  model?: string;
+  maxTokens?: number;
+}): Promise<{ text: string; usage: { input: number; output: number } }> {
+  const { result } = await requestWithRetry(async () => {
+    const startTime = Date.now();
+    const controller = new AbortController();
+    // Shorter timeout for simple text generation (30s)
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const selectedModel = model || MODEL;
+      const mLower = selectedModel.toLowerCase();
+
+      const requestBody: Record<string, any> = {
+        model: selectedModel,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user }
+        ]
+      };
+
+      // GPT-5 uses max_completion_tokens, others use max_tokens
+      if (mLower.startsWith('gpt-5')) {
+        requestBody.max_completion_tokens = maxTokens;
+      } else {
+        requestBody.max_tokens = maxTokens;
+      }
+
+      // Only add temperature for non-GPT-5 models
+      if (chatCompletionsSupportsTemperature(selectedModel)) {
+        requestBody.temperature = 1.0;
+      }
+
+      const correlationId = getCorrelationId();
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+          ...(correlationId && { 'X-Correlation-ID': correlationId })
+        },
+        signal: controller.signal,
+        body: JSON.stringify(requestBody)
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        const errorMessage = `Chat Completions API error: ${response.status} - ${response.statusText}`;
+        let errorJson: any;
+        try {
+          errorJson = JSON.parse(text);
+        } catch {}
+
+        logger.error({
+          correlationId: getCorrelationId(),
+          service: 'openai',
+          operation: 'chatCompletionsText',
+          status: response.status,
+          statusText: response.statusText,
+          bodyPreview: text ? text.slice(0, 400) : '',
+          errorMessage: errorJson?.error?.message,
+          errorType: errorJson?.error?.type,
+        }, 'Chat Completions Text API Error');
+
+        const error = new Error(errorMessage);
+        Sentry.captureException(error, {
+          level: response.status >= 500 ? 'error' : 'warning',
+          tags: {
+            service: 'openai',
+            operation: 'chatCompletionsText',
+            status: String(response.status),
+          },
+          extra: {
+            errorMessage: errorJson?.error?.message,
+            model: selectedModel,
+            correlationId: getCorrelationId(),
+          },
+        });
+
+        throw error;
+      }
+
+      const data: any = await response.json();
+      const latency = Date.now() - startTime;
+
+      logger.info({
+        correlationId: getCorrelationId(),
+        service: 'openai',
+        operation: 'chatCompletionsText',
+        latency_ms: latency,
+        model: selectedModel,
+        tokens: {
+          input: data?.usage?.prompt_tokens || 0,
+          output: data?.usage?.completion_tokens || 0,
+        }
+      }, 'Chat Completions Text completed');
+
+      const content = data?.choices?.[0]?.message?.content;
+      if (typeof content !== 'string') {
+        const error = new Error('No text content in response');
+        Sentry.captureException(error, {
+          level: 'error',
+          tags: { service: 'openai', operation: 'chatCompletionsText' },
+          extra: { correlationId: getCorrelationId(), model: selectedModel },
+        });
+        throw error;
+      }
+
+      return {
+        text: content.trim(),
+        usage: {
+          input: data?.usage?.prompt_tokens ?? 0,
+          output: data?.usage?.completion_tokens ?? 0
+        }
+      };
+    } catch (e) {
+      clearTimeout(timeout);
+      throw e;
+    }
+  });
+
+  return result;
+}
+
 export async function createModeration(text: string): Promise<ModerationOutput> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
